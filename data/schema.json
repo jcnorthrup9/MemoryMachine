@@ -5,6 +5,6 @@
     {"name": "Year", "type": "integer", "description": "Year of residence"},
     {"name": "Location", "type": "string", "description": "City/Context"},
     {"name": "Spatial_Logic", "type": "string", "description": "Geometric rules (e.g. Linear, Courtyard)"},
-    {"name": "Danteum_Ref", "type": "string", "description": "Symbolic room link (e.g. Inferno, Purgatory)"}
+    {"name": "Material_Palette", "type": "string", "description": "List of materials used"}
   ]
 }

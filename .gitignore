@@ -1,3 +1,25 @@
-# Ignore Rhino 3DM files and temporary files
+# --- Memory Machine Exclusions ---
+
+# Ignore heavy 3D model files (too big for GitHub)
 *.3dm
+*.3mb
+*.gh
+*.ghx
+
+# Ignore temporary Rhino/Grasshopper backup files
 *.tmp
+*.bak
+*.autosave
+*.~*
+
+# Ignore System & IDE junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Keep These (Safety Check) ---
+!data/*.csv
+!data/*.json
+!logic/*.py
+!*.html
