@@ -1,0 +1,3 @@
+# Ignore Rhino 3DM files and temporary files
+*.3dm
+*.tmp
