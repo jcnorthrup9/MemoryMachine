@@ -1,4 +1,4 @@
-UID,Residence,Year,Location,Spatial_Logic,Material_Palette
-MM-01,Trailer,1988,Fresno,Linear,Aluminium_Siding
-MM-02,Birthday House,1992,Fresno,Focal,
-MM-03,Ponding Basin House,1994,Fresno,Courtyard,
+UID,Residence,Year,Orientation,Primary_Material,Status
+MM-01,Trailer_Home_88,1988,North-Facing-Hitch,Aluminum_Siding,RECONSTRUCTING
+MM-02,Birthday_Home_92,1992,TBD,TBD,PENDING
+MM-03,Clovis_Home_94,1994,TBD,TBD,PENDING

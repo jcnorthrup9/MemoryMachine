@@ -1,0 +1,39 @@
+ID,Zone,Element,Material,Logic_Note
+S01,Exterior,4ft_Fence,Galvanized_Steel,Low-authority demarcation
+S02,Yard,Scratchy_Grass,Organic_Mesh,Terminated at tree roots
+S03,Kitchen,Dinette_Table,White_Vinyl_Brass,"White top, corrugated trim"
+S04,Hallway,West_Wall,Dark_Wood_Panel,Sequential door logic (3)
+S05,Bathroom,Bathtub,Porcelain_White,Perpendicular to trailer length
+S06,Yard,tree_solitary,Wood_Bark,15ft radius
+S07,Yard,a_frame_swingset,Metal_Blue,North side
+S08,Living,vintage_couch,Fabric_Brown,Against East Wall
+S09,Exterior,trailer_mass,Aluminum,60x24ft
+S10,Yard,chain_link_fence,Metal,4ft high boundary
+S11,Yard,scratchy_grass,Organic,Wide blades
+S12,Yard,tree_solitary,Wood_Bark,Play area
+S13,Yard,monster_truck_winch,Plastic_Blue,Broken RC car in dirt
+S14,Yard,a_frame_swingset,Metal_Blue_White,Modular construction
+S15,Yard,redwood_fence,Wood,Fades to eastern side
+S16,Exterior,trailer_hitch,Metal,Pointed north toward road
+S17,Exterior,flower_pots,Ceramic_Dirt,Around the hitch
+S18,Exterior,porch_canopy,Wood_Fabric,Shades entrance
+S19,Exterior,front_door,Wood_Vinyl,Window with blinds
+S20,Living_Room,vintage_couch,Fabric_Brown_Orange_Green,Facing entrance
+S21,Living_Room,carpet_orange,Fabric_Orange_Green_Brown,70s/80s colors
+S22,Kitchen_Dining,vinyl_flooring,Vinyl_Brown_White,Geometric pattern
+S23,Living_Room,crt_tv,Plastic_Glass,Across from couch
+S24,Living_Room,small_table,Wood_Dark,Between couch and TV
+S25,Hallway,wood_paneling,Wood_Dark,Interior walls
+S26,Kitchen_Dining,dinette_table,Vinyl_White_Brass,Filleted edges
+S27,Kitchen_Dining,north_window,Glass,Northern end
+S28,Kitchen_Dining,potato_root_jar,Glass_Organic,In north window
+S29,Kitchen_Dining,refrigerator,Metal_White,Near western wall
+S30,Hallway,hallway_doors,Wood,3 sequential doors on right
+S31,Hallway,coat_closet,Wood,First door on right
+S32,Bathroom,bathroom_door,Wood,Second door on right
+S33,Bedroom_2,bedroom_door,Wood,Third door on right
+S34,Master_Bedroom,master_bedroom_door,Wood,Straight ahead at end
+S35,Master_Bedroom,crib_playpen,Wood_Fabric,Main room
+S36,Master_Bedroom,wood_paneling_master,Wood_Dark,Wall material
+S37,Bathroom,bathtub,Porcelain,South end perpendicular
+S38,Bathroom,toilet,Porcelain,Orange flushed

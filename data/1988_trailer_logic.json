@@ -1,17 +1,15 @@
 {
-  "iteration": "1988_V2_BLOOM",
-  "orientation": "NORTH_HITCH",
-  "spatial_nodes": {
-    "exterior": ["fence_4ft", "scratchy_grass", "tree_play_radius"],
-    "interior_kitchen": ["vinyl_brass_table", "potato_jar_window"],
-    "interior_hall": ["wood_panel_west", "three_door_east"],
-    "interior_south": ["perpendicular_tub", "panel_master"]
-  },
-  "materials": {
-    "carpet": "#a34b25",
-    "paneling": "#3d2b1f",
-    "vinyl": "#e8e4d9",
-    "brass": "#b5a642"
-  },
-  "assets": ["swingset_blue_white", "monster_truck_winch"]
+  "node_id": "MM-01",
+  "iteration": "1988_TRAILER_V3",
+  "geo_lock": {"lat": 36.8252, "lon": -119.7029},
+  "dimensions": {"unit": "feet", "length": 60, "width": 12, "height": 8.5},
+  "chromatic_palette": [
+    {"material": "wood_panel", "hex": "#3d2b1f"},
+    {"material": "carpet_shag", "hex": "#a34b25"},
+    {"material": "vinyl_kitchen", "hex": "#e8e4d9"}
+  ],
+  "spatial_logic": [
+    {"zone": "exterior", "elements": ["fence_chainlink", "tree_play_radius", "trailer_hitch"]},
+    {"zone": "interior", "elements": ["vignette_potato_jar", "vignette_blue_swingset", "sequential_hall_doors"]}
+  ]
 }
