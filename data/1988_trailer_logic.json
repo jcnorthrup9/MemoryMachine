@@ -1,0 +1,17 @@
+{
+  "iteration": "1988_V2_BLOOM",
+  "orientation": "NORTH_HITCH",
+  "spatial_nodes": {
+    "exterior": ["fence_4ft", "scratchy_grass", "tree_play_radius"],
+    "interior_kitchen": ["vinyl_brass_table", "potato_jar_window"],
+    "interior_hall": ["wood_panel_west", "three_door_east"],
+    "interior_south": ["perpendicular_tub", "panel_master"]
+  },
+  "materials": {
+    "carpet": "#a34b25",
+    "paneling": "#3d2b1f",
+    "vinyl": "#e8e4d9",
+    "brass": "#b5a642"
+  },
+  "assets": ["swingset_blue_white", "monster_truck_winch"]
+}

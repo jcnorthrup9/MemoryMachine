@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Memory Machine | Style Guide</title>
+    <style>
+        :root {
+            /* Palette: Blueprint Blue, Terminal Green, and "Hazy" Grey */
+            --bg-color: #0a0b10;
+            --accent-blue: #0070ff;
+            --terminal-green: #00ff41;
+            --text-main: #e0e0e0;
+            --border-dim: #333;
+            --font-mono: 'Courier New', monospace;
+            --font-sans: 'Inter', Helvetica, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            margin: 40px;
+            /* constrain to an 8.5x11 inch portrait page */
+            width: 8.5in;
+            height: 11in;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* print/page size for when rendered or printed */
+        @page {
+            size: 8.5in 11in;
+            margin: 0;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border-dim);
+            padding-bottom: 10px;
+        }
+
+        h1 { color: var(--accent-blue); }
+        h2 { color: var(--terminal-green); }
+
+        /* Code & JSON Blocks (For the Python/Blender logic) */
+        pre {
+            background: #161821;
+            border-left: 3px solid var(--terminal-green);
+            padding: 15px;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+        }
+
+        /* The "Memory Card" - Layout for specific locations */
+        .memory-node {
+            border: 1px solid var(--border-dim);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+
+        .memory-node:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .metadata {
+            font-family: var(--font-mono);
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        /* Interactive Elements */
+        .btn-execute {
+            background: none;
+            border: 1px solid var(--terminal-green);
+            color: var(--terminal-green);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: var(--font-mono);
+        }
+
+        .btn-execute:hover {
+            background: var(--terminal-green);
+            color: var(--bg-color);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Project: Memory Machine</h1>
+    <p class="metadata">ID: NORTHRUP_J_THESIS | LOC: LOS_ANGELES_CA</p>
+
+    <div class="memory-node">
+        <h2>01_The Fresno Fragment</h2>
+        <p>A procedural recreation of the childhood home based on 1990s recall data.</p>
+        <pre>
+{
+  "location": "Fresno",
+  "fidelity": 0.65,
+  "objects": ["living_room_rug", "hallway_shadows"]
+}
+        </pre>
+        <button class="btn-execute">GENERATE MESH</button>
+    </div>
+
+</body>
+</html>
