@@ -26,14 +26,23 @@
         .left-page { padding: 60px 100px 60px 60px; } 
         .right-page { padding: 60px 60px 60px 100px; } 
 
+<<<<<<< HEAD
         /* MULTI-COLUMN FLOW: Fixed Height No Scroll */
+=======
+        /* MULTI-COLUMN FLOW */
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
         .abstract-flow {
             column-count: 2;
             column-gap: 40px;
             column-rule: 1px solid #1a1a1a;
             text-align: justify;
+<<<<<<< HEAD
             font-size: 0.65rem;
             line-height: 1.4;
+=======
+            font-size: 0.95rem;
+            line-height: 1.6;
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
             color: #bbb;
             height: 100%;
             column-fill: auto;
@@ -44,7 +53,11 @@
         .vignette { border-left: 1px solid var(--accent-glow); padding-left: 20px; margin-bottom: 30px; font-size: 0.9em; color: #aaa; text-align: left;}
 
         h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; }
+<<<<<<< HEAD
         h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; }
+=======
+        h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; flex-shrink: 0;}
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
         
         pre { margin: 0; font-size: 0.75rem; line-height: 1.5; color: #555; white-space: pre-wrap; }
         .json-block { color: #88ff88; text-align: left; width: 100%; }
@@ -57,7 +70,11 @@
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
 
         /* CATALOG GRID */
+<<<<<<< HEAD
         .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 20px;}
+=======
+        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin: auto 0;}
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
         .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #111; display: flex; align-items: center; justify-content: center; overflow: hidden;}
         .matrix-item img { width: 100%; height: 100%; object-fit: cover; }
     </style>
@@ -80,6 +97,7 @@
 
             <div class="spread" id="spread-2">
                 <div class="page-side left-page">
+<<<<<<< HEAD
                     <h2 class="page-header">01 // Table of Contents</h2>
                     <div class="vessel" style="align-items: flex-start;">
                         <pre style="color: #666; font-size: 0.7rem;">01 // TABLE OF CONTENTS
@@ -519,10 +537,78 @@ Noise is not Nothing. It is the initiating generative information that can produ
                     <h2 class="page-header">10 // Visual Output // Rhino Arctic</h2>
                     <div class="vessel">
                         <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; border: 1px solid #111;">
+=======
+                    <h2 class="page-header">01 // System Manifest & Index</h2>
+                    <div class="vessel" style="align-items: flex-start;">
+                        <pre style="color: #666; font-size: 0.7rem;">{{SYSTEM_DATA}}</pre>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <h2 class="page-header">02 // The Machine That Forgets // A</h2>
+                    <div class="abstract-flow">{{ABSTRACT_1}}</div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-3">
+                <div class="page-side left-page">
+                    <h2 class="page-header">02 // The Machine That Forgets // B</h2>
+                    <div class="abstract-flow">{{ABSTRACT_2}}</div>
+                </div>
+                <div class="page-side right-page">
+                    <h2 class="page-header">02 // The Machine That Forgets // C</h2>
+                    <div class="abstract-flow">{{ABSTRACT_3}}</div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-4">
+                <div class="page-side left-page">
+                    <h2 class="page-header">03 // Forensic Asset Catalog</h2>
+                    <div class="matrix-grid">
+                        <div class="matrix-item"><img src="../archive/assets/thumbnails/monster_truck.jpg"></div>
+                        <div class="matrix-item"><img src="../archive/assets/thumbnails/carpet_orange.jpg"></div>
+                        <div class="matrix-item"></div>
+                        <div class="matrix-item"></div>
+                        <div class="matrix-item"></div>
+                        <div class="matrix-item"></div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <h2 class="page-header">04 // Node: 1988_Trailer // Narrative</h2>
+                    <div class="vessel" style="justify-content: flex-start; overflow-y: auto;">
+                        {{NARRATIVE_DATA}}
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
                     </div>
                 </div>
             </div>
 
+<<<<<<< HEAD
+=======
+            <div class="spread" id="spread-5">
+                <div class="page-side left-page">
+                    <h2 class="page-header">05 // Structural Logic // JSON</h2>
+                    <div class="vessel">
+                        <pre class="json-block">{{JSON_DATA}}</pre>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <h2 class="page-header">06 // Forensic Strata // Binary</h2>
+                    <div class="vessel">
+                        <pre class="binary-block">{{BINARY_DATA}}</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-6">
+                <div class="page-side left-page" style="background-color: #030303;"></div>
+                <div class="page-side right-page">
+                    <h2 class="page-header">07 // Visual Output // Rhino Arctic</h2>
+                    <div class="vessel">
+                        <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; border: 1px solid #111;">
+                    </div>
+                </div>
+            </div>
+
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
         </div>
 
         <footer class="zine-footer">
@@ -540,7 +626,11 @@ Noise is not Nothing. It is the initiating generative information that can produ
         function showSpread(n) {
             document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
             document.getElementById(`spread-${n}`).classList.add('active');
+<<<<<<< HEAD
             const labels = ["I", "II // INDEX", "III // THEORY", "IV // CATALOG", "V // LOGIC", "VI // OUTPUT"];
+=======
+            const labels = ["I", "II // INDEX", "III // THEORY", "IV // CATALOG & NARRATIVE", "V // LOGIC & STRATA", "VI // OUTPUT"];
+>>>>>>> fd3cf11 (Save current compiled HTML and script state)
             document.getElementById('page-indicator').innerText = labels[n-1];
             currentSpread = n;
         }
