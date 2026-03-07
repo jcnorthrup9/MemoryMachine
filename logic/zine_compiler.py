@@ -1,6 +1,5 @@
 import os
 
-# RELATIVE PATHS FOR PORTABILITY
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 HTML_FILE = os.path.join(BASE_DIR, 'html', 'digitalPalimpsest.html')
@@ -11,35 +10,56 @@ def get_data(filename):
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:
             return f.read()
-    return f"[ERROR: {filename} NOT FOUND]"
+    return ""
 
 
 def compile_zine():
     print("--- Memory Machine: Compiling Portable Zine ---")
 
-    # 1. Fetch live docs
-    system_data = get_data('system_manifest.txt')  # Create this for TOC/Diagrams
+    # FETCH DATA
+    system_content = get_data('system_manifest.txt')
     abstract = get_data('thesis_abstract.txt')
     narrative = get_data('1988_trailer_parsed.txt')
     json_data = get_data('1988_trailer_logic.json')
     binary = get_data('1988_trailer_binary_strata.txt')
 
-    # 2. Open Template
+    # PARSE SYSTEM MANIFEST
+    lines = system_content.split('\n')
+    toc_start = next(i for i, line in enumerate(lines) if '01 // TABLE OF CONTENTS' in line)
+    system_start = next(i for i, line in enumerate(lines) if '02 // SYSTEM PIPELINE LOGIC' in line)
+    toc_data = '\n'.join(lines[toc_start:system_start]).strip()
+    system_data = '\n'.join(lines[system_start:]).strip()
+
+    # SPLIT ABSTRACT INTO 4 PARTS
+    chunk = len(abstract) // 4
+    abs_parts = [abstract[i:i + chunk] for i in range(0, len(abstract), chunk)]
+    # Ensure we have exactly 4 parts
+    while len(abs_parts) < 4: abs_parts.append("")
+
+    # READ TEMPLATE
     with open(HTML_FILE, 'r', encoding='utf-8') as f:
         html = f.read()
 
-    # 3. Injection Logic
+    # PROCESS VIGNETTES
+    snippets = narrative.split('---')
+    vignette_html = "".join([f'<div class="vignette">{s.strip()}</div>' for s in snippets if s.strip()])
+
+    # INJECTION
+    html = html.replace('{{TOC_DATA}}', toc_data)
     html = html.replace('{{SYSTEM_DATA}}', system_data)
-    html = html.replace('{{ABSTRACT_DATA}}', abstract)
-    html = html.replace('{{NARRATIVE_DATA}}', narrative)
+    html = html.replace('{{ABSTRACT_1}}', abs_parts[0])
+    html = html.replace('{{ABSTRACT_2}}', abs_parts[1])
+    html = html.replace('{{ABSTRACT_3}}', abs_parts[2])
+    html = html.replace('{{ABSTRACT_4}}', abs_parts[3])
+    html = html.replace('{{NARRATIVE_DATA}}', vignette_html)
     html = html.replace('{{JSON_DATA}}', json_data)
     html = html.replace('{{BINARY_DATA}}', binary)
 
-    # 4. Save
+    # SAVE
     with open(HTML_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
 
-    print("✅ PORTABLE BUILD SUCCESSFUL.")
+    print(f"✅ FINAL BUILD SUCCESSFUL.")
 
 
 if __name__ == "__main__":
