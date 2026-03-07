@@ -1,147 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Machine // Palimpsest Zine</title>
-    <style>
-        :root {
-            --bg-color: #050505;
-            --text-color: #e0e0e0;
-            --accent-glow: #fff4ca;
-            --border-dim: #222;
-            --panel-bg: #0a0a0a;
-        }
+01 // TABLE OF CONTENTS
+--------------------------------------------------
+01 // Thesis Abstract ..................... [ 02 ]
+02 // System Architecture & Logic ......... [ 03 ]
+03 // Forensic Mapping Logic .............. [ 04 ]
+04 // Node: 1988_Trailer .................. [ 05 ]
+05 // High-Quality Synthesis .............. [ 07 ]
 
-        * { box-sizing: border-box; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+02 // SYSTEM PIPELINE LOGIC
+--------------------------------------------------
+[INPUT]   -> 1988_trailer_parsed.txt
+[PROCESS] -> zine_compiler.py (Vignette Splitter)
+[STRATA]  -> logic.json + binary_strata.txt
+[ENGINE]  -> Rhino Arctic + Web Scraper
 
-        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; max-height: 1000px; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; }
-        .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; }
-        .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; background: linear-gradient(to right, #000 0%, #111 40%, #111 60%, #000 100%); z-index: 10; }
-
-        .page-side { width: 50%; height: 100%; padding: 40px; display: flex; flex-direction: column; position: relative; }
-        
-        /* NEWSPAPER / MAGAZINE STYLE ABSTRACT */
-        .abstract-columns {
-            column-count: 2;
-            column-gap: 40px;
-            column-rule: 1px solid var(--border-dim);
-            text-align: justify;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: #aaa;
-        }
-
-        /* FIXING SPREAD 4 SQUISHING */
-        .split-spread {
-            display: flex;
-            flex-direction: row;
-            height: 100%;
-            width: 100%;
-            gap: 20px;
-        }
-
-        .data-panel { flex: 1; display: flex; flex-direction: column; }
-
-        h1.zine-title { font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--accent-glow); margin-bottom: 5px; }
-        h2.page-header { color: #555; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px dashed var(--border-dim); padding-bottom: 10px; margin-bottom: 20px; }
-        
-        .scroll-panel { background-color: var(--panel-bg); padding: 20px; border: 1px solid #111; overflow-y: auto; height: 100%; }
-        pre { margin: 0; font-size: 0.75rem; color: #444; }
-        .json-block { color: #88ff88; white-space: pre-wrap; }
-
-        .cover-image { width: 100%; height: 45vh; object-fit: cover; border: 1px solid var(--border-dim); }
-
-        .spread { display: none; width: 100%; height: 100%; }
-        .spread.active { display: flex; }
-
-        .zine-footer { padding: 10px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; }
-        .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="zine-viewer">
-        <div class="spread-container">
-            <div class="spine"></div>
-
-            <div class="spread active" id="spread-1">
-                <div class="page-side" style="background-color: #030303;"></div>
-                <div class="page-side">
-                    <div style="margin-top: 5vh;">
-                        <h1 class="zine-title">Forensic_Palimpsest</h1>
-                        <div class="zine-subtitle">The Digital Reconstruction of Memory</div>
-                        <img class="cover-image" src="../archive/render_output/front_cover.jpg">
-                        <div style="margin-top: 4vh; font-size: 0.9em; color: #666;">John C. Northrup II // SCI-Arc</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="spread" id="spread-2">
-                <div class="page-side">
-                    <h2 class="page-header">01 // System_Manifest</h2>
-                    <div class="scroll-panel">
-                        <pre style="color:#888;">{{SYSTEM_DATA}}</pre>
-                    </div>
-                </div>
-                <div class="page-side">
-                    <h2 class="page-header">02 // Thesis_Abstract</h2>
-                    <div class="abstract-columns">
-                        {{ABSTRACT_DATA}}
-                    </div>
-                </div>
-            </div>
-
-            <div class="spread" id="spread-3">
-                <div class="page-side">
-                    <h2 class="page-header">04 // Node: 1988_Trailer // Vignettes</h2>
-                    <div class="scroll-panel">
-                        {{NARRATIVE_DATA}}
-                    </div>
-                </div>
-                <div class="page-side">
-                    <h2 class="page-header">04 // Structural_Data // JSON</h2>
-                    <div class="scroll-panel">
-                        <pre class="json-block">{{JSON_DATA}}</pre>
-                    </div>
-                </div>
-            </div>
-
-            <div class="spread" id="spread-4">
-                <div class="page-side">
-                    <h2 class="page-header">04 // Forensic_Strata // Binary</h2>
-                    <div class="scroll-panel">
-                        <pre>{{BINARY_DATA}}</pre>
-                    </div>
-                </div>
-                <div class="page-side">
-                    <h2 class="page-header">04 // Visual_Capture // Rhino</h2>
-                    <div class="center-content" style="height:100%; display:flex; align-items:center;">
-                        <img src="../archive/render_output/1988_trailer.png" style="max-width:100%; border: 1px solid #111;">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <footer class="zine-footer">
-            <div id="page-indicator">FRONT MATTER</div>
-            <div class="nav-controls">
-                <button onclick="prevSpread()">[ PREV ]</button>
-                <button onclick="nextSpread()">[ NEXT ]</button>
-            </div>
-        </footer>
-    </div>
-
-    <script>
-        let currentSpread = 1;
-        const totalSpreads = 4;
-        function showSpread(n) {
-            document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
-            document.getElementById(`spread-${n}`).classList.add('active');
-            currentSpread = n;
-        }
-        function nextSpread() { currentSpread < totalSpreads ? showSpread(currentSpread + 1) : showSpread(1); }
-        function prevSpread() { currentSpread > 1 ? showSpread(currentSpread - 1) : showSpread(totalSpreads); }
-    </script>
-</body>
-</html>
+03 // DIRECTORY HIERARCHY
+--------------------------------------------------
+MemoryMachine/
+├── archive/        (Renders & PDF)
+├── data/           (TXT/JSON/CSV)
+├── html/           (digitalPalimpsest.html)
+└── logic/          (zine_compiler.py)
