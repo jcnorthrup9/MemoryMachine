@@ -1,29 +1,200 @@
 import os
 
-# RELATIVE PATHS
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-HTML_FILE = os.path.join(BASE_DIR, 'html', 'digitalPalimpsest.html')
+OUTPUT_FILE = os.path.join(BASE_DIR, 'html', 'digitalPalimpsest.html')
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Machine // Palimpsest Zine</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #e0e0e0;
+            --accent-glow: #fff4ca;
+            --border-dim: #222;
+        }
+        * { box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; position: relative; }
+        .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; z-index: 2; }
+        .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border-dim); z-index: 10; }
+        
+        .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; }
+        
+        .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; }
+        .left-page { padding: 60px 100px 60px 60px; } 
+        .right-page { padding: 60px 60px 60px 100px; } 
+
+        .grid-layout { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: auto 1fr; gap: 20px; height: 100%; }
+        
+        .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: auto; overflow: hidden; grid-column: 1 / -1; }
+        
+        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .vessel-span-8 { grid-column: span 8; }
+        .vessel-span-4 { grid-column: span 4; border-left: 1px solid var(--border-dim); padding-left: 20px; }
+        
+        .vignette { border-left: 1px solid var(--accent-glow); padding-left: 20px; margin-bottom: 30px; font-size: 0.85em; color: #aaa; text-align: left; }
+        h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; }
+        h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; flex-shrink: 0; grid-column: 1 / -1; }
+        
+        pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; }
+        .json-block { color: #88ff88; text-align: left; width: 100%; }
+        
+        .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .spread.active { display: flex; }
+        
+        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 20; }
+        .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
+
+        .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
+        .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .matrix-item img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .bleed-center { position: absolute; left: -100px; width: calc(100% + 160px); top: 20%; z-index: 0; opacity: 0.8; mix-blend-mode: screen; }
+    </style>
+</head>
+<body>
+    <div class="zine-viewer">
+        <div class="binary-texture">{{BINARY_DATA}}</div>
+        
+        <div class="spread-container">
+            <div class="spine"></div>
+
+            <div class="spread active" id="spread-1">
+                <div class="page-side left-page" style="background-color: #030303; z-index: 10;"></div>
+                <div class="page-side right-page" style="background-color: #000; z-index: 10;">
+                    <div style="margin: auto 0;">
+                        <h1 class="zine-title">Forensic_Palimpsest</h1>
+                        <div style="letter-spacing: 5px; color: #444; margin-bottom: 40px;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
+                        <img src="../archive/render_output/front_cover.jpg" style="width: 100%; border: 1px solid var(--border-dim); filter: grayscale(100%);">
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-2">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">01 // System Manifest & Index</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <pre style="color: #666; font-size: 0.65rem;">{{SYSTEM_DATA}}</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">02 // The Machine That Forgets // A</h2>
+                        <div class="abstract-flow">{{ABSTRACT_1}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-3">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">02 // The Machine That Forgets // B</h2>
+                        <div class="abstract-flow">{{ABSTRACT_2}}</div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">02 // The Machine That Forgets // C</h2>
+                        <div class="abstract-flow">{{ABSTRACT_3}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-4">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">03 // Forensic Asset Catalog</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="matrix-grid">
+                                <div class="matrix-item"><img src="../archive/assets/thumbnails/monster_truck.jpg"></div>
+                                <div class="matrix-item"><img src="../archive/assets/thumbnails/carpet_orange.jpg"></div>
+                                <div class="matrix-item"></div>
+                                <div class="matrix-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">04 // Node: 1988_Trailer // Narrative</h2>
+                        <div class="vessel vessel-span-8">
+                            {{NARRATIVE_DATA}}
+                        </div>
+                        <div class="vessel vessel-span-4">
+                            <pre class="json-block" style="font-size: 0.55rem;">{{JSON_DATA}}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-5">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">05 // Memory Construct // Output</h2>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">06 // Rendering Layer</h2>
+                    </div>
+                    <img src="../archive/render_output/1988_trailer.png" class="bleed-center">
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="zine-footer">
+            <div id="page-indicator">I</div>
+            <div class="nav-controls">
+                <button onclick="prevSpread()">[ PREV ]</button>
+                <button onclick="nextSpread()">[ NEXT ]</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let currentSpread = 1;
+        const totalSpreads = 5;
+        function showSpread(n) {
+            document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+            document.getElementById(`spread-${n}`).classList.add('active');
+            const labels = ["I", "II // INDEX", "III // THEORY", "IV // LAYERED GRID", "V // OUTPUT"];
+            document.getElementById('page-indicator').innerText = labels[n-1];
+            currentSpread = n;
+        }
+        function nextSpread() { currentSpread < totalSpreads ? showSpread(currentSpread + 1) : showSpread(1); }
+        function prevSpread() { currentSpread > 1 ? showSpread(currentSpread - 1) : showSpread(totalSpreads); }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSpread();
+            if (e.key === 'ArrowLeft') prevSpread();
+        });
+    </script>
+</body>
+</html>"""
 
 def get_data(filename):
     path = os.path.join(DATA_DIR, filename)
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:
             return f.read().strip()
-    print(f"⚠️  WARNING: Could not find {filename} in the data folder.")        
     return f"[MISSING DATA: {filename}]"
 
 def compile_zine():
-    print("\n--- Memory Machine: Compiling & Diagnosing ---")
-
-    # 1. FETCH DATA
+    print("\n--- Waking up the Memory Machine ---")
+    
     system_data = get_data('system_manifest.txt')
     abstract = get_data('thesis_abstract.txt')
     narrative = get_data('1988_trailer_parsed.txt')
     json_data = get_data('1988_trailer_logic.json')
     binary = get_data('1988_trailer_binary_strata.txt')
 
-    # 2. SAFELY SPLIT ABSTRACT (By whole words, not raw characters)
     words = abstract.split()
     if len(words) > 0:
         chunk = len(words) // 3 + 1
@@ -33,36 +204,11 @@ def compile_zine():
     else:
         abs_1 = abs_2 = abs_3 = ""
 
-    # 3. READ HTML FILE
-    if not os.path.exists(HTML_FILE):
-        print(f"❌ FATAL ERROR: Cannot find {HTML_FILE}")
-        return
-        
-    with open(HTML_FILE, 'r', encoding='utf-8') as f:
-        html = f.read()
-
-    # 4. DIAGNOSTIC CHECK (Tells you what is missing in VS Code terminal)
-    print("\n[ TAG CONNECTION CHECK ]")
-    tags = ["{{SYSTEM_DATA}}", "{{ABSTRACT_1}}", "{{ABSTRACT_2}}", "{{ABSTRACT_3}}", "{{NARRATIVE_DATA}}", "{{JSON_DATA}}", "{{BINARY_DATA}}"]
-    missing_tags = False
-    for tag in tags:
-        if tag in html:
-            print(f"✅ Found: {tag}")
-        else:
-            print(f"❌ Missing: {tag} (Was the file already compiled?)")
-            missing_tags = True
-            
-    if missing_tags:
-        print("\n⚠️  HALTING BUILD: Missing tags detected.")
-        print("Please paste the empty HTML template (with the {{TAGS}}) back into digitalPalimpsest.html and try again.\n")
-        return
-
-    # 5. PROCESS VIGNETTES
     snippets = narrative.split('---')
     vignette_html = "".join([f'<div class="vignette">{s.strip()}</div>' for s in snippets if s.strip()])
 
-    # 6. INJECTION
-    html = html.replace('{{ABSTRACT_1}}', abs_1)
+    print("Injecting data into HTML matrix...")
+    html = HTML_TEMPLATE.replace('{{ABSTRACT_1}}', abs_1)
     html = html.replace('{{ABSTRACT_2}}', abs_2)
     html = html.replace('{{ABSTRACT_3}}', abs_3)
     html = html.replace('{{SYSTEM_DATA}}', system_data)
@@ -70,11 +216,11 @@ def compile_zine():
     html = html.replace('{{JSON_DATA}}', json_data)
     html = html.replace('{{BINARY_DATA}}', binary)
 
-    # 7. SAVE OUTPUT
-    with open(HTML_FILE, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
-    
-    print("\n✅ BUILD SUCCESSFUL. Data successfully injected into HTML!\n")
+        
+    print(f"✅ BUILD SUCCESSFUL: {OUTPUT_FILE} has been updated!\n")
 
 if __name__ == "__main__":
     compile_zine()
