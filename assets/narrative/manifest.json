@@ -1,0 +1,9 @@
+﻿{
+  "project": "Memory Machine - 1988 Trailer",
+  "entities": [
+    {"name": "Toy Car", "type": "box", "pos": [15, 6, 0], "dim": [0.5, 0.25, 0.2], "desc": "Red balsa wood and plastic, left near the hallway threshold."},
+    {"name": "The Tree", "type": "cylinder", "pos": [-10, 20, 0], "dim": [2, 2, 30], "desc": "The large oak visible through the hitch window, skewed by memory scale."},
+    {"name": "Velvet Couch", "type": "box", "pos": [40, 2, 0], "dim": [7, 3, 2.5], "desc": "Dusty blue velvet, positioned against the long wall in the living area."},
+    {"name": "CRT TV", "type": "box", "pos": [35, 11, 2], "dim": [2, 2, 2], "desc": "Wood-grain plastic casing, static-heavy screen sitting on a milk crate."}
+  ]
+}

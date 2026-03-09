@@ -1,0 +1,15 @@
+<b>Primary Sources</b><br>
+Steyerl, Hito. "A Sea of Data: Apophenia and Pattern (Mis-)Recognition." e-flux, no. 72 (April 2016).<br><br>
+Fisher, Mark. "The Weird and the Eerie." Repeater Books, 2016.<br><br>
+Kirby, James Leyland (The Caretaker). "Everywhere at the End of Time." History Always Favors the Winners, 2016-2019.<br><br>
+
+<b>Secondary Sources</b><br>
+Pasquinelli, Matteo. "The Automaton of the Anthropocene: On Carbosilicon Machines and Cyberfossil Capital."<br><br>
+Bratton, Benjamin H. "The Stack: On Software and Sovereignty." MIT Press, 2016.<br><br>
+
+<b>Technical References</b><br>
+Stable Diffusion Documentation (v1.5). Stability AI.<br><br>
+LoRA: Low-Rank Adaptation of Large Language Models. Hu et al., 2021.<br><br>
+
+<b>Archival Assets</b><br>
+Family Archives (1988-1992). Northrup Collection.<br><br>
