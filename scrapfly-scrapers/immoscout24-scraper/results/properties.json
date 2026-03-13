@@ -1,0 +1,693 @@
+[
+  {
+    "localization": {
+      "en": {
+        "urls": [],
+        "text": {
+          "title": "Your new home facilitates all your travels",
+          "description": "<b>Situation</b><br />Two steps from the city center, you will appreciate the proximity of the bus stop and the highway. You live here in a neighborhood offering numerous facilities (fitness, pharmacy, hairdresser, bar).<br /><br /><b>Description of your apartment</b><br />Thanks to the intelligent distribution of space of around 87 m2, the accommodation will seduce you with its large, comfortable and bright rooms. This accommodation also has the following advantages:<br /><br /> - entrance hall with storage<br /> - fully equipped open kitchen<br /> - dining area<br /> - large living room<br /> - balcony<br /> - 2 bedrooms<br /> - bathroom with shower<br /> - cellar<br /><br /><br /><b>Details</b><br />On request, it is possible to rent a parking space in the underground car park in addition.<br /><br />The building has modern equipment, a lift and a concierge service.<br /><br /><b>Call. Visit. Rent.</b><br />Would you like to live in a spacious and quiet apartment? We will be happy to help you.<br /><br />As a tenant of Helvetia, you benefit from a 40% discount on your first annual premium for a selection of Helvetia insurance products!<br /><br />The published photos represent apartments of the same type or similar type. Differences from the actual offer are therefore possible.<br /><br />You can find other interesting rental objects at: www.helvetia.ch/immobilien<br /><br />*The landlord grants a free rent of one month. The deposit for heating costs and ancillary costs is due during this period.",
+          "situation": "No information available"
+        },
+        "attachments": [
+          {
+            "file": "ff0000000026618320.jpg",
+            "type": "IMAGE",
+            "title": "NE-3201-02-0122-cuisine.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/a6a840585d39bf530a731ac600927ee8.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/c6c8819d48875e2dd4fe8476ab60c1a0.jpg",
+            "file": "ff0000000011424312.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/b96922306a9482af5877e1d8dc64ba8e.jpg",
+            "file": "ff0000000011424314.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/992b6274dbbd12aa958f4365fee49a87.jpg",
+            "file": "ff0000000011424315.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/1fc441b03690687d9d6224a62edf16d4.jpg",
+            "file": "ff0000000011424316.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/5af16f3b593f6bd679185172ad8520cc.jpg",
+            "file": "ff0000000011424317.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/c82000f5c3aa196680f5592ebfab529b.jpg",
+            "file": "ff0000000011424318.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/6a0406959fd50962786a33458f4e345a.jpg",
+            "file": "ff0000000011424319.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/70720f17157bd2e4bbcbaec445a449f7.jpg",
+            "file": "ff0000000011424320.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/088e10f432e1831b4f333d9c3941f161.jpg",
+            "file": "ff0000000011424321.jpg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/ad5b81da0c831d28aefe88e1b0bc09dc.jpg",
+            "file": "ff0000000011424311.jpg"
+          },
+          {
+            "file": "ff0000000011424322.jpg",
+            "type": "IMAGE",
+            "title": "CH_IMMO_Vermarktung_Wohnungen_Schluss-Teaser_Mieter-Bonus_1600x1200px_f_23-07.png",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002460484/image/ddc48884cbb8dd1418f897bdc8222f10.jpg"
+          }
+        ],
+        "isMachineTranslated": true
+      },
+      "primary": "en"
+    },
+    "lister": {
+      "legalName": "Helvetia Compagnie Suisse d'Assurances sur la Vie SA",
+      "website": {
+        "value": "http://www.helvetia.ch/miete"
+      },
+      "address": {
+        "locality": "Neuchâtel",
+        "country": "CH",
+        "street": "Rue du Concert 6",
+        "postalCode": "2000"
+      },
+      "phone": "+41 58 280 75 78",
+      "id": "hpvrem",
+      "logoUrl": "https://media2.homegate.ch/t_customer_logo/logos/l_hpvrem_v1.jpg",
+      "contacts": {
+        "inquiry": {
+          "givenName": "Adeline Joset"
+        },
+        "viewing": {
+          "phone": "058 280 75 80",
+          "givenName": "Giovampietro Aline"
+        }
+      }
+    },
+    "characteristics": {
+      "distanceHighSchool": 2500,
+      "distanceKindergarten": 500,
+      "distancePrimarySchool": 500,
+      "distancePublicTransport": 100,
+      "hasElevator": true,
+      "livingSpace": 87,
+      "numberOfRooms": 3.5,
+      "floor": 2,
+      "distanceShop": 500,
+      "yearBuilt": 1985
+    },
+    "address": {
+      "country": "CH",
+      "geoTags": [
+        "geo-region-neuenburg",
+        "geo-city-neuchatel",
+        "geo-canton-neuchatel",
+        "geo-citydistrict-alpes-neuenburg",
+        "geo-country-switzerland",
+        "geo-zipcode-2000"
+      ],
+      "street": "Rue des Parcs 86",
+      "postalCode": "2000",
+      "locality": "Neuchâtel",
+      "geoCoordinates": {
+        "accuracy": "HIGH",
+        "latitude": 46.9917170784745,
+        "longitude": 6.91617388442
+      },
+      "region": "NE"
+    },
+    "legacy": {
+      "deliveryGroupId": 0,
+      "personId": 322075,
+      "publishingGroupId": 1153
+    },
+    "externalIds": {
+      "refObject": "0122",
+      "refProperty": "3201",
+      "propertyReferenceId": "hpvrem#0122#02#3201",
+      "internalReferenceId": "hpvrem#0122#02#3201",
+      "refHouse": "02",
+      "displayReferenceId": "3201.02.0122",
+      "displayPropertyReferenceId": "3201.02.0122"
+    },
+    "contactForm": {
+      "size": "NO_ADDRESS",
+      "deliveryFormat": "REM"
+    },
+    "availableFrom": "2025-09-23",
+    "bfs": {
+      "egrid": "CH407887434995",
+      "egid": "1479212",
+      "ewidCandidates": []
+    },
+    "platforms": [
+      "homegate",
+      "immoscout24",
+      "alleimmobilien",
+      "home",
+      "immostreet",
+      "anibis",
+      "tutti",
+      "acheterlouer"
+    ],
+    "offerType": "RENT",
+    "meta": {
+      "createdAt": "2025-08-22T09:27:37.193Z",
+      "updatedAt": "2025-09-23T06:40:06.471Z",
+      "source": "FILSINGER"
+    },
+    "id": "4002460484",
+    "categories": [
+      "APARTMENT",
+      "FLAT"
+    ],
+    "prices": {
+      "rent": {
+        "area": "ALL",
+        "interval": "MONTH",
+        "net": 1590,
+        "gross": 1810,
+        "extra": 220
+      },
+      "currency": "CHF"
+    }
+  },
+  {
+    "localization": {
+      "en": {
+        "urls": [],
+        "text": {
+          "title": "Spacious 4.5 rooms, 120 m², Rue des Moulins, Neuchâtel",
+          "description": "<p>Spacious 4.5 rooms, 120 m², Rue des Moulins, Neuchâtel</p><p>Location: In the heart of the city, very quiet as it does not overlook the street but the collegiate, ideal for shared accommodation or family.  Close to shops, transportation, and all amenities. Pleasant and temperate, even in the middle of summer.</p><p>Characteristics:</p><p>* 120 m² living space</p><p>* 3 large bedrooms + large living room</p><p>* 1 bathroom with bathtub, WC and double sink</p><p>* 1 separate WC</p><p>* Large kitchen with possibility to install your own washing column</p><p>* Elevator in the building</p><p>* Common laundry room available</p><p>* Pets accepted</p><p>* Private cellar included</p><p>* Parking possible in blue zone with parking permit</p><p>Rent: 1'920 CHF including charges Available from: 1st November 2025</p>"
+        },
+        "attachments": [
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/dc5a2e50ae34541bf2a6b4282512ad99.jpg",
+            "file": "8fdb7e9d59.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/febc0b5bfb7d6fd85e53e8d093bb07df.jpg",
+            "file": "fae9e00753.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/bf08b936a96b154f3886524eeab1fee9.jpg",
+            "file": "a2b5fd0051.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/a44698160f16e212923d5cbab33ededd.jpg",
+            "file": "7cd613954a.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/1e7786c24d8ec1f490751b7ec03e525c.jpg",
+            "file": "29c83c16f9.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/eb651ca990aef595782c54672c67a537.jpg",
+            "file": "debbd6cfaa.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/d9b3b20aebe095f7e073a9b4cc87145f.jpg",
+            "file": "1066b1279f.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hgonif/4002446339/image/72fae690aaf09635440b075ef9f961fc.jpg",
+            "file": "4cbb9150a5.jpeg"
+          }
+        ],
+        "isMachineTranslated": true
+      },
+      "primary": "en"
+    },
+    "lister": {
+      "id": "hgonif",
+      "phone": "+41796398884",
+      "contacts": {
+        "inquiry": {
+          "givenName": "Marius Rey"
+        },
+        "viewing": {}
+      }
+    },
+    "characteristics": {
+      "hasElevator": true,
+      "livingSpace": 120,
+      "numberOfRooms": 4.5,
+      "arePetsAllowed": true,
+      "hasWashingMachine": true,
+      "floor": 2
+    },
+    "legacy": {
+      "personId": 1755344924289165,
+      "publishingGroupId": 1153,
+      "ppaPersonId": 1755344924289165,
+      "deliveryGroupId": 0
+    },
+    "address": {
+      "country": "CH",
+      "geoTags": [
+        "geo-region-neuenburg",
+        "geo-city-neuchatel",
+        "geo-canton-neuchatel",
+        "geo-citydistrict-centre-neuenburg",
+        "geo-country-switzerland",
+        "geo-zipcode-2000"
+      ],
+      "street": "Rue des Moulins",
+      "postalCode": "2000",
+      "locality": "Neuchâtel",
+      "geoCoordinates": {
+        "accuracy": "HIGH",
+        "latitude": 46.99253960000001,
+        "longitude": 6.9280876
+      },
+      "region": "NE"
+    },
+    "externalIds": {
+      "internalReferenceId": "hgonif#ffif8.v6pij##",
+      "refObject": "ffif8.v6pij",
+      "displayPropertyReferenceId": "ffif8.v6pij",
+      "propertyReferenceId": "hgonif#ffif8.v6pij##"
+    },
+    "contactForm": {
+      "size": "NO_ADDRESS",
+      "deliveryFormat": "NORMAL"
+    },
+    "availableFrom": "2025-11-01",
+    "platforms": [
+      "immoscout24",
+      "homegate",
+      "alleimmobilien",
+      "home",
+      "immostreet"
+    ],
+    "offerType": "RENT",
+    "meta": {
+      "createdAt": "2025-08-16T11:58:57.841Z",
+      "updatedAt": "2025-08-16T11:58:57.841Z",
+      "source": "INSERTION_FUNNEL"
+    },
+    "publishers": [
+      {
+        "options": [
+          {
+            "key": "immoscout24"
+          },
+          {
+            "key": "homegate"
+          }
+        ],
+        "id": "ppa-platforms"
+      }
+    ],
+    "id": "4002446339",
+    "categories": [
+      "APARTMENT",
+      "FLAT"
+    ],
+    "prices": {
+      "rent": {
+        "gross": 1920,
+        "interval": "MONTH"
+      },
+      "currency": "CHF",
+      "buy": {}
+    },
+    "valueAddedServices": {
+      "bundle": "BUNDLE_T2T-PKP-3864_HG_RR_NE_CROSSLISTING_TOP"
+    }
+  },
+  {
+    "localization": {
+      "en": {
+        "urls": [
+          {
+            "label": "virtual tour",
+            "type": "VIRTUAL_TOUR",
+            "title": "virtual tour",
+            "value": "https://my.matterport.com/show/?m=YgN5V6pBQjo"
+          },
+          {
+            "type": "LINK",
+            "value": "https://my.matterport.com/show/?m=YgN5V6pBQjo"
+          }
+        ],
+        "text": {
+          "title": "Your new home facilitates your travels",
+          "description": "<p><b>Situation</b><br /> Two steps from the city center, you will appreciate the proximity to the train station as well as the various shops and services. You live here in a neighborhood offering quick access on foot to various amenities.<br /> <br /> <b>Description of your apartment</b><br /> Thanks to the intelligent distribution of the space of around 81 m2, the accommodation will seduce you with its comfortable rooms. The apartment is easily furnished and has a terrace. Also, it presents the following advantages:<br /> <br /> - entrance hall with storage<br /> - fully equipped kitchen<br /> - bright living room with parquet<br /> - two bedrooms with parquet<br /> - bathroom with bathtub<br /> - balcony<br /> - cellar<br /> <br /> <b>Details</b><br /> On request, it is possible to rent a parking space in the underground parking lot. The building has modern equipment, an elevator, a professional concierge service, and a playground.<br /> <br /> <b>Call. Visit. Rent.</b><br /> Do you want to live close to amenities? We will be happy to help you.</p><p><br /></p><p> As a Helvetia tenant, you benefit from a 40% discount on your first annual premium for a selection of Helvetia insurance products!<br /> <br /> You can find other interesting rental properties at: www.helvetia.ch/immobilien </p>",
+          "situation": "No information available"
+        },
+        "attachments": [
+          {
+            "file": "ff0000000026618429.jpg",
+            "type": "IMAGE",
+            "title": "NE-9006-faade.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/39fa31bd2ce79f8cbfcd99c4b0b0c6d7.jpg"
+          },
+          {
+            "file": "ff0000000018585858.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Sejour.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/369ee31b364fb3ae6827e3fa69a7ed79.jpg"
+          },
+          {
+            "file": "ff0000000018585859.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Coin-a-manger.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/063678ce8e37f4497e7fe5bcfdf408c3.jpg"
+          },
+          {
+            "file": "ff0000000018585860.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Cuisine.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/ea2d191764514e41dbc8b0bd207885b4.jpg"
+          },
+          {
+            "file": "ff0000000018585861.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Sejour-2.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/df97e2e982e6b17aef2732ca91996123.jpg"
+          },
+          {
+            "file": "ff0000000018585862.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Chambre-1.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/02f232e6a68dc28531837f140b946023.jpg"
+          },
+          {
+            "file": "ff0000000018585863.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Chambre-2.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/2d45a38eceb6c84922660782e4999511.jpg"
+          },
+          {
+            "file": "ff0000000018585857.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Entree.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/7b7e17a23493a056ddad1a753c36a448.jpg"
+          },
+          {
+            "file": "ff0000000018585864.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Balcon.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/bfdbdc85e418d11ff45776e6d09902a9.jpg"
+          },
+          {
+            "file": "ff0000000018585865.jpg",
+            "type": "IMAGE",
+            "title": "9006.01.0021-Bad.jpg",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/278546d34499735ee5a4107919ce36d1.jpg"
+          },
+          {
+            "file": "ff0000000011457924.jpg",
+            "type": "IMAGE",
+            "title": "CH_IMMO_Vermarktung_Wohnungen_Schluss-Teaser_Mieter-Bonus_1600x1200px_f_23-07.png",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/image/57d0d0cbc75098c5ba82549c75fd560d.jpg"
+          },
+          {
+            "file": "ff0000000000525150.pdf",
+            "type": "DOCUMENT",
+            "title": "GR_9006.01.0021.pdf",
+            "url": "https://cdn.immoscout24.ch/listings/v2/hpvrem/4002438055/document/d4c81feb317abfcc96f77fe65b98f18e.pdf"
+          }
+        ],
+        "isMachineTranslated": true
+      },
+      "primary": "en"
+    },
+    "lister": {
+      "legalName": "Helvetia Compagnie Suisse d'Assurances sur la Vie SA",
+      "website": {
+        "value": "http://www.helvetia.ch/miete"
+      },
+      "address": {
+        "locality": "Neuchâtel",
+        "country": "CH",
+        "street": "Rue du Concert 6",
+        "postalCode": "2000"
+      },
+      "phone": "+41 58 280 75 78",
+      "id": "hpvrem",
+      "logoUrl": "https://media2.homegate.ch/t_customer_logo/logos/l_hpvrem_v1.jpg",
+      "contacts": {
+        "inquiry": {
+          "givenName": "Adeline Joset"
+        },
+        "viewing": {
+          "phone": "+41 58 280 75 75",
+          "givenName": "Helvetia Assurances"
+        }
+      }
+    },
+    "characteristics": {
+      "distanceHighSchool": 1000,
+      "hasBalcony": true,
+      "distancePrimarySchool": 200,
+      "distancePublicTransport": 100,
+      "hasElevator": true,
+      "livingSpace": 79,
+      "numberOfRooms": 3.5,
+      "floor": 2,
+      "distanceShop": 1000,
+      "yearBuilt": 1992
+    },
+    "address": {
+      "country": "CH",
+      "geoTags": [
+        "geo-region-neuenburg",
+        "geo-city-neuchatel",
+        "geo-canton-neuchatel",
+        "geo-citydistrict-alpes-neuenburg",
+        "geo-country-switzerland",
+        "geo-zipcode-2000"
+      ],
+      "street": "Rue des Parcs 46",
+      "postalCode": "2000",
+      "locality": "Neuchâtel",
+      "geoCoordinates": {
+        "accuracy": "HIGH",
+        "latitude": 46.9926678697246,
+        "longitude": 6.92010869069184
+      },
+      "region": "NE"
+    },
+    "legacy": {
+      "deliveryGroupId": 0,
+      "personId": 322075,
+      "publishingGroupId": 1153
+    },
+    "externalIds": {
+      "refObject": "0021",
+      "refProperty": "9006",
+      "propertyReferenceId": "hpvrem#0021#01#9006",
+      "internalReferenceId": "hpvrem#0021#01#9006",
+      "refHouse": "01",
+      "displayReferenceId": "9006.01.0021",
+      "displayPropertyReferenceId": "9006.01.0021"
+    },
+    "contactForm": {
+      "size": "NO_ADDRESS",
+      "deliveryFormat": "REM"
+    },
+    "availableFrom": "2025-09-23",
+    "bfs": {
+      "egrid": "CH948749790821",
+      "egid": "2247986",
+      "ewidCandidates": []
+    },
+    "platforms": [
+      "homegate",
+      "immoscout24",
+      "alleimmobilien",
+      "home",
+      "immostreet",
+      "anibis",
+      "tutti",
+      "acheterlouer"
+    ],
+    "offerType": "RENT",
+    "meta": {
+      "createdAt": "2025-08-13T14:12:26.357Z",
+      "updatedAt": "2025-09-23T06:40:05.180Z",
+      "source": "FILSINGER"
+    },
+    "id": "4002438055",
+    "categories": [
+      "APARTMENT",
+      "FLAT"
+    ],
+    "prices": {
+      "rent": {
+        "area": "ALL",
+        "interval": "MONTH",
+        "net": 1420,
+        "gross": 1640,
+        "extra": 220
+      },
+      "currency": "CHF"
+    }
+  },
+  {
+    "localization": {
+      "en": {
+        "urls": [],
+        "text": {
+          "title": "Apartment in Neuchâtel",
+          "description": "<p>2-room apartment with great amenities! It is located on the 3rd floor with an elevator and has a parking space in the basement with an electric charging station. The accommodation includes: Entrance with two closets, bathroom with toilet, living room with open-plan kitchen, bedroom.</p>"
+        },
+        "attachments": [
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/is24nif/4001732069/image/07eb1640c388f06c8e4fa1352295527c.jpg",
+            "file": "07a54208e1.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/is24nif/4001732069/image/07dfe925c186a8c4791c85b2fca7fca9.jpg",
+            "file": "dd4c721cce.jpeg"
+          },
+          {
+            "type": "IMAGE",
+            "url": "https://cdn.immoscout24.ch/listings/v2/is24nif/4001732069/image/d14e2216126f8b84dda8cf744af21bc2.jpg",
+            "file": "bbd1bb11f0.jpeg"
+          }
+        ],
+        "isMachineTranslated": true
+      },
+      "primary": "en"
+    },
+    "lister": {
+      "id": "is24nif",
+      "phone": "+41779742652",
+      "contacts": {
+        "inquiry": {
+          "givenName": "Muhammad Noor"
+        },
+        "viewing": {}
+      }
+    },
+    "characteristics": {
+      "livingSpace": 45,
+      "numberOfRooms": 2
+    },
+    "legacy": {
+      "personId": 1732787288897003,
+      "publishingGroupId": 1153,
+      "ppaPersonId": 1732787288897003,
+      "deliveryGroupId": 0
+    },
+    "address": {
+      "country": "CH",
+      "geoTags": [
+        "geo-region-neuenburg",
+        "geo-city-neuchatel",
+        "geo-canton-neuchatel",
+        "geo-citydistrict-centre-neuenburg",
+        "geo-country-switzerland",
+        "geo-zipcode-2000"
+      ],
+      "street": "Rue de la Treille 7",
+      "postalCode": "2000",
+      "locality": "Neuchâtel",
+      "geoCoordinates": {
+        "accuracy": "HIGH",
+        "latitude": 46.9904684,
+        "longitude": 6.9297318
+      },
+      "region": "NE"
+    },
+    "externalIds": {
+      "internalReferenceId": "is24nif#r7ddj.fmwja##",
+      "refObject": "r7ddj.fmwja",
+      "displayPropertyReferenceId": "r7ddj.fmwja",
+      "propertyReferenceId": "is24nif#r7ddj.fmwja##"
+    },
+    "contactForm": {
+      "size": "WITH_ADDRESS",
+      "deliveryFormat": "NORMAL"
+    },
+    "availableFrom": "2024-11-28",
+    "bfs": {
+      "egrid": "CH648749786767",
+      "egid": "1480477",
+      "ewidCandidates": [
+        {
+          "ewid": "1",
+          "rooms": 5,
+          "livingSpace": 0,
+          "floor": 2
+        },
+        {
+          "ewid": "2",
+          "rooms": 5,
+          "livingSpace": 0,
+          "floor": 3
+        },
+        {
+          "ewid": "3",
+          "rooms": 2,
+          "livingSpace": 0,
+          "floor": 4
+        }
+      ]
+    },
+    "platforms": [
+      "immoscout24"
+    ],
+    "offerType": "RENT",
+    "meta": {
+      "createdAt": "2024-11-28T10:51:02.098Z",
+      "updatedAt": "2025-06-12T14:10:54.233Z",
+      "source": "INSERTION_FUNNEL"
+    },
+    "publishers": [
+      {
+        "options": [
+          {
+            "key": "immoscout24"
+          }
+        ],
+        "id": "ppa-platforms"
+      }
+    ],
+    "id": "4001732069",
+    "categories": [
+      "APARTMENT",
+      "FLAT"
+    ],
+    "prices": {
+      "rent": {
+        "gross": 2300,
+        "interval": "MONTH"
+      },
+      "currency": "CHF",
+      "buy": {}
+    },
+    "valueAddedServices": {
+      "bundle": "BUNDLE_PRIVATE-PKP-3598_IS24_RR_NE_28D_PREMIUM"
+    }
+  }
+]

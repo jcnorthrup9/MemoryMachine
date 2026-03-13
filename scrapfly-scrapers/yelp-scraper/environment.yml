@@ -1,0 +1,12 @@
+name: yelp_env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - scrapfly-sdk
+    - loguru
+    - jmespath
+    - cerberus
+    - pytest

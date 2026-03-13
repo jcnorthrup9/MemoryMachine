@@ -1,0 +1,944 @@
+[
+  {
+    "__typename": "StartupResult",
+    "id": "10710511",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-10710511"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-10710511"
+      }
+    ],
+    "companySize": "SIZE_1_10",
+    "highConcept": "Investment Management",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3499529"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10710511-430cd834c8e61bf1f76c73b2cc066ab4-medium_jpg.jpg?buster=1759081318",
+    "name": "Quantumvest",
+    "slug": "quantumvest-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "1147664",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:B2B-1147664"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-1147664"
+      }
+    ],
+    "companySize": "SIZE_1001_5000",
+    "highConcept": "Influencing business decisions by introducing various automation using AI / ML Tech",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:1053169"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/1147664-c8adc0af0a27ba68530d97436199645b-medium_jpg.jpg?buster=1690367308",
+    "name": "Impact Analytics",
+    "slug": "impact-analytics-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "731321",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-731321"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "Simplifying Car Ownership",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3476255"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/731321-b26d922eea98d101bb7e92cf6ba5b6c0-medium_jpg.jpg?buster=1434400023",
+    "name": "DriveU",
+    "slug": "driveu"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "6575569",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-6575569"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-6575569"
+      }
+    ],
+    "companySize": "SIZE_201_500",
+    "highConcept": "Niche Boutique Firm engaged in High Frequency Trading",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3418158"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/6575569-88bdf15bee725c003444d0a5d0ec2140-medium_jpg.jpg?buster=1542191015",
+    "name": "Dolat Capital",
+    "slug": "dolat-capital-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "3378943",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-3378943"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-3378943"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-3378943"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "The Co-Creation Partner!",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3499803"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/3378943-861a8fa87b3d4883c8bc7d572ee53f3e-medium_jpg.jpg?buster=1675946922",
+    "name": "Innovatily",
+    "slug": "innovatily-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "3782948",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:B2B-3782948"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-3782948"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "Forward Thinking Digital Innovation Partner ",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3495666"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/3782948-7292134f6e384b49dc6d2733d6e6a701-medium_jpg.jpg?buster=1650883730",
+    "name": "Gleecus TechLabs",
+    "slug": "gleecus-techlabs"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "6930300",
+    "badges": [
+      {
+        "__ref": "Badge:B2B-6930300"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-6930300"
+      },
+      {
+        "__ref": "Badge:HIGHLY_RATED-6930300"
+      },
+      {
+        "__ref": "Badge:WORK_LIFE_BALANCE-6930300"
+      },
+      {
+        "__ref": "Badge:STRONG_LEADERSHIP-6930300"
+      }
+    ],
+    "companySize": "SIZE_1001_5000",
+    "highConcept": "We co‑innovate with the world's most ambitious brands to create digital experiences",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3338464"
+      },
+      {
+        "__ref": "JobListingSearchResult:3357748"
+      },
+      {
+        "__ref": "JobListingSearchResult:3314951"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/6930300-f7a20a95d3457fdfa215c33eddaeae68-medium_jpg.jpg?buster=1726652120",
+    "name": "Bounteous",
+    "slug": "bounteous"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "987655",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-987655"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-987655"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-987655"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Machine learning based lending platform for banks, card issuers and other lenders",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3077430"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/987655-eedb319ec00574c2b4785180ba569cc2-medium_jpg.jpg?buster=1453631645",
+    "name": "Monsoon CreditTech",
+    "slug": "monsoon-fintech"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "8447568",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-8447568"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-8447568"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Building future CTOs",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3468497"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/8447568-29c4c11bee81f6c2736eed5b30c9773d-medium_jpg.jpg?buster=1627728663",
+    "name": "StartupFactory.ai",
+    "slug": "startup-factory-5"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9546248",
+    "badges": [
+      {
+        "__ref": "Badge:B2B-9546248"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-9546248"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:2747178"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9546248-2e65f89c3da03209d6d7d59e1b59085a-medium_jpg.jpg?buster=1684417765",
+    "name": "SkillTurk Automation",
+    "slug": "skillturk-automation"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "7093539",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:B2B-7093539"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-7093539"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Fintech",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3527931"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/7093539-ec922d40ec6b6a966bc03a9fb3969a16-medium_jpg.jpg?buster=1564439724",
+    "name": "Nammu21",
+    "slug": "nammu21"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9291897",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-9291897"
+      },
+      {
+        "__ref": "Badge:GROWING_FAST-9291897"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3329056"
+      },
+      {
+        "__ref": "JobListingSearchResult:3325789"
+      },
+      {
+        "__ref": "JobListingSearchResult:3498845"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9291897-41e8054841c11fdaa95331a50b2dffc2-medium_jpg.jpg?buster=1673248572",
+    "name": "Arting Digital",
+    "slug": "arting-digital"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "7454739",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-7454739"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Let us take care of the technology, so you can keep building what got you here in the 1st place",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3309567"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/7454739-d020d96dc0e1c0a567d6b0fc19aa6dd3-medium_jpg.jpg?buster=1718261449",
+    "name": "Steinn Labs",
+    "slug": "steinnlabspvtltd"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "6790754",
+    "badges": [
+      {
+        "__ref": "Badge:COMPANY_STAGE-6790754"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "We help startups & enterprises navigate the technical nuances!",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3301629"
+      },
+      {
+        "__ref": "JobListingSearchResult:3352264"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/6790754-ff01f03471a2a53907c93a45ff8a00b4-medium_jpg.jpg?buster=1675424555",
+    "name": "Codemonk",
+    "slug": "codemonkhq"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "8227072",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": null,
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3416880"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/8227072-3ec4b84aa76a08caa730255c83a2b444-medium_jpg.jpg?buster=1749890157",
+    "name": "Verismart.Ai",
+    "slug": "verismart-ai"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10690998",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_201_500",
+    "highConcept": "At Technoidentity, we’re a Data + AI product engineering company trusted for delivering scalable",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3428352"
+      },
+      {
+        "__ref": "JobListingSearchResult:3428369"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10690998-116701ca83230b396f09d7ea37ecb1e7-medium_jpg.jpg?buster=1757974434",
+    "name": "Technoidentity",
+    "slug": "technoidentity-4"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "1146602",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-1146602"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "We design and develop the most innovative solutions for your users!",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3233055"
+      },
+      {
+        "__ref": "JobListingSearchResult:3363076"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/1146602-855aae95ec4bdbe5e578e08c0611a38a-medium_jpg.jpg?buster=1709632329",
+    "name": "Navtech ",
+    "slug": "navtech-solutions"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9356738",
+    "badges": [],
+    "companySize": "SIZE_11_50",
+    "highConcept": "a Niche Human Supply Chain",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3341947"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9356738-464e585d123ff72f81d43b6e4279429e-medium_jpg.jpg?buster=1675882324",
+    "name": "Umanist Staffing",
+    "slug": "umanist-staffing"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "8380449",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-8380449"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "We build web3 and blockchain solutions that redefine the fintech ecosystem of the future",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3300767"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/8380449-940d7bf5e452cbe033cbeed54924c33d-medium_jpg.jpg?buster=1720712636",
+    "name": "Stackera",
+    "slug": "stackera"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10639078",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Pintopay — a cutting-edge fintech revolutionizing global payments with crypto wallets",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3361357"
+      },
+      {
+        "__ref": "JobListingSearchResult:3361355"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10639078-d6cb5faed1707941b134a947b68d8516-medium_jpg.jpg?buster=1754617612",
+    "name": "UANT",
+    "slug": "uant"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9356738",
+    "badges": [],
+    "companySize": "SIZE_11_50",
+    "highConcept": "a Niche Human Supply Chain",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3341947"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9356738-464e585d123ff72f81d43b6e4279429e-medium_jpg.jpg?buster=1675882324",
+    "name": "Umanist Staffing",
+    "slug": "umanist-staffing"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "82519",
+    "badges": [
+      {
+        "__ref": "Badge:B2B-82519"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-82519"
+      },
+      {
+        "__ref": "Badge:TOP_INVESTORS-82519"
+      },
+      {
+        "__ref": "Badge:YC-82519"
+      }
+    ],
+    "companySize": "SIZE_1001_5000",
+    "highConcept": "Powering how the world works together",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3325402"
+      },
+      {
+        "__ref": "JobListingSearchResult:3289927"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/82519-ca9b67f5e587be1c568a843c83a75c84-medium_jpg.jpg?buster=1690515388",
+    "name": "Box",
+    "slug": "box"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "736125",
+    "badges": [
+      {
+        "__ref": "Badge:B2C-736125"
+      },
+      {
+        "__ref": "Badge:B2B-736125"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-736125"
+      }
+    ],
+    "companySize": "SIZE_1_10",
+    "highConcept": "An Edge Cloud for Autonomous Driving",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:481105"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/736125-f0657778e6aa466e837c7f03519a53b4-medium_jpg.jpg?buster=1546577720",
+    "name": "GVOS ",
+    "slug": "stentortech"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "8138031",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-8138031"
+      }
+    ],
+    "companySize": "SIZE_201_500",
+    "highConcept": "Empowering companies at the intersection of UX DESIGN, DEVELOPMENT, & BUSINESS",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3470602"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/8138031-df09af7abd74b06db005e881a7933d09-medium_jpg.jpg?buster=1715070057",
+    "name": "Codal",
+    "slug": "codal-5"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10662736",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-10662736"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-10662736"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Sual.ai provides AI solutions using ML,LLM, NPL,and CV",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3388531"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10662736-41985f8d9199b3fa140d5b74353cc3e2-medium_jpg.jpg?buster=1756186303",
+    "name": "sual.ai",
+    "slug": "sual-ai"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10381850",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_1_10",
+    "highConcept": "AI Co-Pilot for Wealth",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3263452"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10381850-bf1b408f2591dab6cf55e695a42ea4d1-medium_jpg.jpg?buster=1754888100",
+    "name": "Qonfido",
+    "slug": "qonfido"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "7906239",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-7906239"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-7906239"
+      },
+      {
+        "__ref": "Badge:B2B-7906239"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-7906239"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "We build cloud native B2B SaaS software helping customers in their cloud transformation",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3523290"
+      },
+      {
+        "__ref": "JobListingSearchResult:3202976"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/7906239-16f4283a96384a072b328386267383f0-medium_jpg.jpg?buster=1612421304",
+    "name": "Ibexlabs",
+    "slug": "ibexlabs"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10643568",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-10643568"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-10643568"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "At Oxidian we create software products for government organisations in the UK and EU",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3364263"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10643568-722168ed66dd0a6aecda34a0df810898-medium_jpg.jpg?buster=1755002614",
+    "name": "Oxidian",
+    "slug": "oxidian"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "5889172",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-5889172"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "Simplify Your Work. Using Intelligent Process Automation",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3280338"
+      },
+      {
+        "__ref": "JobListingSearchResult:3292930"
+      },
+      {
+        "__ref": "JobListingSearchResult:3209036"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/5889172-94acb55789617aa2fa83e37032d1fcf3-medium_jpg.jpg?buster=1529114798",
+    "name": "senzcraft technologies",
+    "slug": "senzcraft-technologies"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9459835",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:B2B-9459835"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-9459835"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "SynMax is a geospatial intelligence company focused on delivering SaaS solutions to opaque markets",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3334739"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9459835-a895e57f4617f91ca6cc44e931999eab-medium_jpg.jpg?buster=1680303348",
+    "name": "SynMax",
+    "slug": "synmax-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "6631596",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": null,
+    "highConcept": "",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3516918"
+      },
+      {
+        "__ref": "JobListingSearchResult:3516919"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/6631596-078da93cc9a0b51eb8ec5681915fe749-medium_jpg.jpg?buster=1749844222",
+    "name": "Kutir",
+    "slug": "kutir-corporation"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10606741",
+    "badges": [],
+    "companySize": "SIZE_1_10",
+    "highConcept": "A data company that builds high-performance scraping systems and automation workflows",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3350176"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10606741-37253ccc3ea9ada1c404c70ed1ebb336-medium_jpg.jpg?buster=1753438419",
+    "name": "Upscrape",
+    "slug": "upscrape"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10689242",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_1_10",
+    "highConcept": "",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3427692"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10689242-fb46f61ce5ff6d91bd96064c20c57f5d-medium_jpg.jpg?buster=1757830497",
+    "name": "Nearhop",
+    "slug": "nearhop"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9826334",
+    "badges": [
+      {
+        "__ref": "Badge:COMPANY_STAGE-9826334"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "We simplify ride hailing for users, drivers and Business",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3164691"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9826334-b37e6e36a9370599dad3a7715b522fdf-medium_jpg.jpg?buster=1697007724",
+    "name": "Bharatcabs",
+    "slug": "bharatcabs"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "6421744",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:B2B-6421744"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-6421744"
+      }
+    ],
+    "companySize": "SIZE_51_200",
+    "highConcept": "Data Science, Retail, AI, Technology",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3287957"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/6421744-6a4c4b76754a9d9c288d5d8e4aa7ff79-medium_jpg.jpg?buster=1566890922",
+    "name": "CrowdANALYTIX / dataX.ai",
+    "slug": "crowdanalytix-com"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "9985120",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:TOP_RESPONDER-9985120"
+      },
+      {
+        "__ref": "Badge:QUICK_RESPONDER-9985120"
+      },
+      {
+        "__ref": "Badge:GROWING_FAST-9985120"
+      }
+    ],
+    "companySize": "SIZE_1_10",
+    "highConcept": "You Think We Create",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3527852"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/9985120-73ce99dfbfd8a9828ccedba6c289d819-medium_jpg.jpg?buster=1707307709",
+    "name": "Ideomethod Technologies",
+    "slug": "ideomethod-technologies"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10431996",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_11_50",
+    "highConcept": "A fast-growing lead generation network focused on Personal Loans",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3289446"
+      },
+      {
+        "__ref": "JobListingSearchResult:3351098"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10431996-620e3f45e5437bef2cbe02b0f32be32f-medium_jpg.jpg?buster=1740442702",
+    "name": "True Path Leads",
+    "slug": "true-path-leads-1"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "7898903",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      },
+      {
+        "__ref": "Badge:COMPANY_STAGE-7898903"
+      }
+    ],
+    "companySize": "SIZE_1001_5000",
+    "highConcept": "Build your dream product in 100 days",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3203168"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/7898903-e5d5c92b318ea15a1076047ed7e338f5-medium_jpg.jpg?buster=1597605503",
+    "name": "Feature Ventures",
+    "slug": "feature-ventures"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10651665",
+    "badges": [],
+    "companySize": "SIZE_1_10",
+    "highConcept": "Early-stage AI startup on a mission to build the most user-friendly search engine for lawyers",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3385762"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10651665-0f0d2d359f263be5c16627e9205e1dcd-medium_jpg.jpg?buster=1755569194",
+    "name": "Law & Verdict",
+    "slug": "law-verdict"
+  },
+  {
+    "__typename": "StartupResult",
+    "id": "10201105",
+    "badges": [
+      {
+        "__ref": "Badge:ACTIVELY_HIRING"
+      }
+    ],
+    "companySize": "SIZE_201_500",
+    "highConcept": "",
+    "highlightedJobListings": [
+      {
+        "__ref": "JobListingSearchResult:3367687"
+      }
+    ],
+    "logoUrl": "https://photos.wellfound.com/startups/i/10201105-b844aa4e6bbe1d47ee6fe910c46141e1-medium_jpg.jpg?buster=1754946721",
+    "name": "Ottimate",
+    "slug": "ottimate-1"
+  }
+]

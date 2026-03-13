@@ -1,0 +1,2696 @@
+[
+  {
+    "brand": "seloger",
+    "id": "253UIV2RMEXW",
+    "metadata": {
+      "legacyId": "251248753",
+      "creationDate": "2025-10-01T19:44:00Z",
+      "updateDate": "2025-10-28T20:30:08.727Z",
+      "status": {
+        "status": true,
+        "enrichments": {
+          "contactSettings": false,
+          "geo": false,
+          "intermediary": false,
+          "media": false,
+          "onlineId": false
+        }
+      },
+      "isNewBuildProject": false
+    },
+    "sections": {
+      "location": {
+        "address": {
+          "country": "FRA",
+          "city": "Bordeaux",
+          "zipCode": "33000",
+          "district": "Saint Jean-Belcier-Carle Vernet-Albert 1er"
+        },
+        "isAddressPublished": false,
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [
+            [
+              [
+                [
+                  -0.56989,
+                  44.83023
+                ],
+                [
+                  -0.56077,
+                  44.82819
+                ],
+                [
+                  -0.56226,
+                  44.82585
+                ],
+                [
+                  -0.56282,
+                  44.82537
+                ],
+                [
+                  -0.56493,
+                  44.82672
+                ],
+                [
+                  -0.57023,
+                  44.82698
+                ],
+                [
+                  -0.56989,
+                  44.83023
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "description": {
+        "description": "Bordeaux centre proche du marchÃ© des Capucins, appartement rÃ©novÃ© entiÃ¨rement de type T3 d'une surface de 55,20 mÂ² + une surface infÃ©rieure Ã  1,80 m de 30 mÂ², avec rooftop privatif de 43 mÂ² sans vis Ã  vis.\r\nIl se compose d'un grand salon avec cuisine ouverte, 2 chambres, une salle d'eau avec wc.\r\nParties communes avec local vÃ©los et poubelles.\r\n\r\nLe bien comprend 1 lot, et il est situÃ© dans une copropriÃ©tÃ© de 6 lots (il n'y a pas de charges courantes liÃ©es Ã  la copropriÃ©tÃ© et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 505 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Walter LE FORESTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 820 014 488",
+        "texts": [
+          {
+            "text": "Bordeaux centre proche du marchÃ© des Capucins, appartement rÃ©novÃ© entiÃ¨rement de type T3 d'une surface de 55,20 mÂ² + une surface infÃ©rieure Ã  1,80 m de 30 mÂ², avec rooftop privatif de 43 mÂ² sans vis Ã  vis.\r\nIl se compose d'un grand salon avec cuisine ouverte, 2 chambres, une salle d'eau avec wc.\r\nParties communes avec local vÃ©los et poubelles.\r\n\r\nLe bien comprend 1 lot, et il est situÃ© dans une copropriÃ©tÃ© de 6 lots (il n'y a pas de charges courantes liÃ©es Ã  la copropriÃ©tÃ© et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 505 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Walter LE FORESTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 820 014 488"
+          }
+        ],
+        "headline": "APPARTEMENT T3 AVEC ROOFTOP"
+      },
+      "hardFacts": {
+        "title": "Appartement Ã  vendre",
+        "keyfacts": [
+          "3 piÃ¨ces",
+          "2 chambres",
+          "85 mÂ²",
+          "Ãtage 3/3"
+        ],
+        "facts": [
+          {
+            "type": "numberOfRooms",
+            "value": "3 piÃ¨ces",
+            "splitValue": "3",
+            "label": "piÃ¨ces"
+          },
+          {
+            "type": "numberOfBedrooms",
+            "value": "2 chambres",
+            "splitValue": "2",
+            "label": "chambres"
+          },
+          {
+            "type": "livingSpace",
+            "value": "85 mÂ²",
+            "splitValue": "85",
+            "label": "mÂ²"
+          },
+          {
+            "type": "numberOfFloors",
+            "value": "Ãtage 3/3",
+            "splitValue": "Ãtage",
+            "label": "3/3"
+          }
+        ],
+        "price": {
+          "value": "505â¯000Â â¬",
+          "formatted": "505â¯000Â â¬",
+          "additionalInformation": "5â¯941Â â¬/mÂ²",
+          "addition": {
+            "value": "5â¯941Â â¬/mÂ²",
+            "ariaLabel": "5941,18 euros par mÃ¨tre carrÃ©"
+          },
+          "financialLink": {
+            "href": "https://e-immobilier.credit-agricole.fr/pret/lp_acquisition.html?ORI=EDESLAT&at_medium=affiliation&at_campaign=EDE_PC_EMP_EIMMO_FR&at_presta=SeLoger&at_format=Lien_PDD",
+            "label": "Demander un financement",
+            "partnerName": "CA"
+          },
+          "ariaLabel": "505000 â¬"
+        }
+      },
+      "energy": {
+        "features": [
+          {
+            "type": "yearOfConstruction",
+            "label": "AnnÃ©e de construction",
+            "value": "2024"
+          },
+          {
+            "type": "heatingSystem",
+            "label": "Type de chauffage",
+            "value": "Chauffage individuel"
+          },
+          {
+            "type": "energySource",
+            "label": "Sources d'Ã©nergie",
+            "value": "Ãlectrique"
+          }
+        ],
+        "certificates": [
+          {
+            "key": "cebcad7b-519d-4850-9cad-e2a4b398462e",
+            "features": [
+              {
+                "type": "minMaxEstimation",
+                "label": "Estimation de la facture Ã©nergÃ©tique",
+                "value": "entre 868 et 1174 â¬/an"
+              },
+              {
+                "type": "nameOfCertificate",
+                "label": "Diagnostic rÃ©alisÃ©",
+                "value": "AprÃ¨s le 1er juillet 2021"
+              },
+              {
+                "type": "estimationDescription",
+                "label": "estimationDescription",
+                "value": "Montant estimÃ© des dÃ©penses annuelles d'Ã©nergie pour un usage standard: entre 868 et 1174 â¬ par an. Prix moyens des Ã©nergies indexÃ©s au 31/12/2020 (abonnement compris)."
+              }
+            ],
+            "scales": [
+              {
+                "key": "fa368b36-56e3-4484-9799-ce356ed84476",
+                "efficiencyClass": {
+                  "index": 3,
+                  "rating": "D"
+                },
+                "values": [
+                  {
+                    "value": "2â¯232 kWh/mÂ².an",
+                    "label": "Consommation (Ã©nergie primaire)"
+                  },
+                  {
+                    "value": "7 kg COâ/mÂ².an",
+                    "label": "Ãmissions"
+                  }
+                ],
+                "name": "Diagnostic de performance Ã©nergÃ©tique (DPE)",
+                "segments": [
+                  {
+                    "label": "A",
+                    "value": ""
+                  },
+                  {
+                    "label": "B",
+                    "value": ""
+                  },
+                  {
+                    "label": "C",
+                    "value": ""
+                  },
+                  {
+                    "label": "D",
+                    "value": ""
+                  },
+                  {
+                    "label": "E",
+                    "value": ""
+                  },
+                  {
+                    "label": "F",
+                    "value": "Passoire Ã©nergÃ©tique"
+                  },
+                  {
+                    "label": "G",
+                    "value": "Passoire Ã©nergÃ©tique"
+                  }
+                ],
+                "type": "FR_ENERGY_AFTER_2021",
+                "ariaLabel": "EfficiencyClassÂ : D avec une plage allant de A Ã  G .La consommation d'Ã©nergie est undefined kWhEP/mÂ².an kilowattheures par mÃ¨tre carrÃ©.",
+                "displayUnhappyHouseIcon": false
+              },
+              {
+                "key": "2836cfba-fbf1-4b35-bf36-37ca57ee51a1",
+                "efficiencyClass": {
+                  "index": 1,
+                  "rating": "B"
+                },
+                "values": [
+                  {
+                    "value": "7 kg COâ/mÂ².an",
+                    "label": "Ãmissions"
+                  }
+                ],
+                "name": "Indice d'Ã©mission de gaz Ã  effet de serre (GES)",
+                "segments": [
+                  {
+                    "label": "A",
+                    "value": ""
+                  },
+                  {
+                    "label": "B",
+                    "value": ""
+                  },
+                  {
+                    "label": "C",
+                    "value": ""
+                  },
+                  {
+                    "label": "D",
+                    "value": ""
+                  },
+                  {
+                    "label": "E",
+                    "value": ""
+                  },
+                  {
+                    "label": "F",
+                    "value": ""
+                  },
+                  {
+                    "label": "G",
+                    "value": ""
+                  }
+                ],
+                "type": "FR_GHG_AFTER_2021",
+                "ariaLabel": "EfficiencyClassÂ : B avec une plage allant de A Ã  G .La consommation d'Ã©nergie est undefined kWhEP/mÂ².an kilowattheures par mÃ¨tre carrÃ©.",
+                "displayUnhappyHouseIcon": false
+              }
+            ]
+          }
+        ],
+        "hasScales": true
+      },
+      "key": {
+        "keys": [
+          {
+            "label": "Identifiant",
+            "value": "251248753"
+          },
+          {
+            "label": "RÃ©fÃ©rence annonce",
+            "value": "1427490"
+          }
+        ]
+      },
+      "price": {
+        "base": {
+          "main": {
+            "key": "0868a194-c99b-4b36-9899-f3216e57ba9f",
+            "label": {
+              "main": "Prix du bien"
+            },
+            "value": {
+              "main": {
+                "value": "505â¯000Â â¬",
+                "ariaLabel": "505000 â¬"
+              },
+              "alt": {
+                "value": "5â¯941,18Â â¬/mÂ²",
+                "ariaLabel": "5941,18 euros par mÃ¨tre carrÃ©"
+              }
+            }
+          },
+          "type": "SALE"
+        },
+        "components": [
+          {
+            "key": "62a23c16-ae43-4ff8-9b6b-730588661a0c",
+            "type": "PRIMARY",
+            "units": [
+              {
+                "key": "85528a37-b109-455d-999a-595d98bee8ba",
+                "main": {
+                  "price": {
+                    "key": "49d4a213-f982-46b2-bb8a-874eddc7e4f7",
+                    "label": {
+                      "main": "Prix du bien"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "505â¯000Â â¬",
+                        "ariaLabel": "505000 â¬"
+                      },
+                      "alt": {
+                        "value": "5â¯941,18Â â¬/mÂ²",
+                        "ariaLabel": "5941,18 euros par mÃ¨tre carrÃ©"
+                      }
+                    },
+                    "highlighted": true
+                  },
+                  "message": {
+                    "type": "SUCCESS",
+                    "value": "Les honoraires sont Ã  la charge du vendeur"
+                  }
+                }
+              },
+              {
+                "key": "5549b2bc-0fed-4fb9-a9e7-1f397a99d953",
+                "main": {
+                  "price": {
+                    "key": "91588f3c-e707-4be1-afc7-e77b96a418f7",
+                    "label": {
+                      "main": "Frais de notaires estimÃ©s"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "40â¯400Â â¬",
+                        "ariaLabel": "40400 â¬"
+                      }
+                    },
+                    "info": {
+                      "value": "Les frais de notaire reprÃ©sentent environ 8% du prix du bien dans l'ancien et 3% dans le neuf. Le montant estimÃ© est donnÃ© Ã  titre indicatif."
+                    }
+                  }
+                }
+              },
+              {
+                "key": "f367294f-738a-4376-81af-b8467201cc10",
+                "main": {
+                  "price": {
+                    "key": "e68ae322-df26-4964-8a8f-a352ddb89631",
+                    "label": {
+                      "main": "Montant estimÃ© du projet"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "545â¯400Â â¬",
+                        "ariaLabel": "545400 â¬"
+                      }
+                    },
+                    "highlighted": true
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "key": "2ed6328a-54f9-45c5-9b69-b18f0f86228d",
+            "type": "SECONDARY",
+            "units": [
+              {
+                "key": "e646e5bd-2419-4b28-8cce-85accbe6b5fc",
+                "details": [
+                  {
+                    "key": "ecb4ff5b-ec52-4346-8836-80aa967e2b60",
+                    "prices": [
+                      {
+                        "key": "696ec841-02b4-4e0f-9768-070df028e5fb",
+                        "label": {
+                          "main": "Estimation de la facture Ã©nergÃ©tique"
+                        },
+                        "value": {
+                          "main": {
+                            "value": "entre 868 et 1174 â¬/an"
+                          }
+                        },
+                        "highlighted": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "layout": "FRENCH_SALE",
+        "breakdown": {
+          "groups": [
+            {
+              "key": "dd1a3f2c-2c07-4819-9214-f28770ee02ba",
+              "label": {
+                "main": "Prix du bien"
+              },
+              "value": {
+                "main": {
+                  "value": "505â¯000Â â¬",
+                  "ariaLabel": "505000 â¬"
+                },
+                "alt": {
+                  "value": "5â¯941,18Â â¬/mÂ²",
+                  "ariaLabel": "5941,18 euros par mÃ¨tre carrÃ©"
+                }
+              },
+              "colorType": "MAIN_PRICE",
+              "highlighted": true
+            },
+            {
+              "key": "47ccc693-09cf-4ab7-a31a-fff759bc4e53",
+              "label": {
+                "main": "Frais de notaire estimÃ©s (8%)"
+              },
+              "value": {
+                "main": {
+                  "value": "40â¯400Â â¬",
+                  "ariaLabel": "40400 â¬"
+                }
+              },
+              "colorType": "NOTARY_FEE",
+              "infoBox": "Les frais de notaire reprÃ©sentent environ 8% du prix du bien dans l'ancien et 3% dans le neuf. Le montant estimÃ© est donnÃ© Ã  titre indicatif.",
+              "highlighted": true
+            }
+          ],
+          "totalProjectCosts": {
+            "key": "46953b88-9584-4839-9947-31dfb22dec6c",
+            "label": {
+              "main": "Montant estimÃ© du projet"
+            },
+            "value": {
+              "main": {
+                "value": "545â¯400Â â¬",
+                "ariaLabel": "545400 â¬"
+              }
+            }
+          },
+          "message": {
+            "type": "SUCCESS",
+            "value": "Les honoraires sont Ã  la charge du vendeur"
+          },
+          "bar": [
+            {
+              "key": "dd1a3f2c-2c07-4819-9214-f28770ee02ba",
+              "colorType": "MAIN_PRICE",
+              "percentage": 0.9259
+            },
+            {
+              "key": "47ccc693-09cf-4ab7-a31a-fff759bc4e53",
+              "colorType": "NOTARY_FEE",
+              "percentage": 0.0741
+            }
+          ]
+        }
+      },
+      "coOwnership": {
+        "items": [
+          {
+            "label": "Nombre de lots",
+            "value": "6",
+            "type": "numberOfUnits"
+          },
+          {
+            "label": "ProcÃ©dures syndicales",
+            "value": "Pas de procÃ©dure en cours",
+            "type": "syndicProcedures"
+          }
+        ]
+      },
+      "features": {
+        "preview": [
+          {
+            "icon": "floors",
+            "value": "Dernier Ã©tage, 3Ã¨me Ã©tage/3 Ã©tages"
+          },
+          {
+            "icon": "elevator",
+            "value": "Pas d'ascenseur"
+          },
+          {
+            "icon": "cellar",
+            "value": "Pas de cave"
+          },
+          {
+            "icon": "toilet-amenities",
+            "value": "1 WC"
+          },
+          {
+            "icon": "balcony",
+            "value": "Pas de balcon"
+          },
+          {
+            "value": "Sans vis-Ã -vis",
+            "icon": "with-view"
+          },
+          {
+            "icon": "furnished",
+            "value": "Non meublÃ©"
+          },
+          {
+            "icon": "bedroom",
+            "value": "2 chambres"
+          }
+        ],
+        "details": {
+          "categories": [
+            {
+              "elements": [
+                {
+                  "icon": "furnished",
+                  "value": "Non meublÃ©"
+                },
+                {
+                  "icon": "floors",
+                  "value": "Dernier Ã©tage, 3Ã¨me Ã©tage/3 Ã©tages"
+                }
+              ],
+              "title": "Informations gÃ©nÃ©rales"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "barrier-free",
+                  "value": "Non accessible aux personnes Ã  mobilitÃ© rÃ©duite"
+                },
+                {
+                  "icon": "elevator",
+                  "value": "Pas d'ascenseur"
+                }
+              ],
+              "title": "AccessibilitÃ©"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "bathroom-amenities",
+                  "value": "1 salle de bain; 1 salle de douches"
+                },
+                {
+                  "icon": "toilet-amenities",
+                  "value": "1 WC"
+                },
+                {
+                  "icon": "bedroom",
+                  "value": "2 chambres"
+                },
+                {
+                  "icon": "cellar",
+                  "value": "Pas de cave"
+                }
+              ],
+              "title": "IntÃ©rieur"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "balcony",
+                  "value": "Pas de balcon"
+                },
+                {
+                  "value": "Sans vis-Ã -vis",
+                  "icon": "with-view"
+                }
+              ],
+              "title": "ExtÃ©rieur"
+            }
+          ]
+        }
+      },
+      "gallery": {
+        "images": [
+          {
+            "key": "1cd60c3f-5ecd-467a-856a-39aef8053d50",
+            "url": "https://mms.seloger.com/1/c/d/6/1cd60c3f-5ecd-467a-856a-39aef8053d50.jpg?ci_seal=4092498da061e4c4a99a2516afe0f98f2e965f8e",
+            "alt": "Appartement Ã  vendre 505â¯000Â â¬ 3 piÃ¨ces 2 chambres 85 mÂ² Ãtage 3/3 Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux 33000",
+            "classification": {
+              "name": "EXTERIOR_VIEW",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "89e6ce0f-63a7-4c82-9563-ffc8b60a663b",
+            "url": "https://mms.seloger.com/8/9/e/6/89e6ce0f-63a7-4c82-9563-ffc8b60a663b.jpg?ci_seal=f0def1a39419ae0bbae891239aa7d25dca5ca14f",
+            "classification": {
+              "name": "TERRACE",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "ec24b4c9-8edf-4f13-a178-7f68b31391a9",
+            "url": "https://mms.seloger.com/e/c/2/4/ec24b4c9-8edf-4f13-a178-7f68b31391a9.jpg?ci_seal=c46f2393297fe37ad9afd5eff43be49aa9e9794c",
+            "classification": {
+              "name": "STAIRCASE",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "cd697c4b-23ab-41ee-b6a5-c15866a6cb72",
+            "url": "https://mms.seloger.com/c/d/6/9/cd697c4b-23ab-41ee-b6a5-c15866a6cb72.jpg?ci_seal=9e98825044eed117650fd79116567477890e94df",
+            "classification": {
+              "name": "EMPTY_ROOM",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "6d47be3d-8c33-40b7-a8d9-d38f41826dcd",
+            "url": "https://mms.seloger.com/6/d/4/7/6d47be3d-8c33-40b7-a8d9-d38f41826dcd.jpg?ci_seal=18adbaf02ed9d0372cd418bd4de63c4f182442b9",
+            "classification": {
+              "name": "KITCHEN",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "cbdbdf33-a4e5-44a7-8e15-7629f67f12c7",
+            "url": "https://mms.seloger.com/c/b/d/b/cbdbdf33-a4e5-44a7-8e15-7629f67f12c7.jpg?ci_seal=a341462768caaab17e4f993957d6db1a536a5b85",
+            "classification": {
+              "name": "EMPTY_ROOM",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "e97e5960-ac3e-4d77-b219-2b6558231ba7",
+            "url": "https://mms.seloger.com/e/9/7/e/e97e5960-ac3e-4d77-b219-2b6558231ba7.jpg?ci_seal=d86b2ca2a7b36ff36f7e0e07ab8e55a47b9523f0",
+            "classification": {
+              "name": "BATHROOM",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          },
+          {
+            "key": "9c9a5cfa-da50-4f06-a802-f4a2d201e210",
+            "url": "https://mms.seloger.com/9/c/9/a/9c9a5cfa-da50-4f06-a802-f4a2d201e210.jpg?ci_seal=7ec9b45516de36bb7aee5999a403d9fd31e5e254",
+            "classification": {
+              "name": "HALLWAY",
+              "version": "scene-classification-sagemaker-endpoint-live-1-3-10"
+            }
+          }
+        ]
+      },
+      "documents": {
+        "display": false,
+        "files": []
+      },
+      "enrichedMedia": {
+        "medias": []
+      },
+      "mortgage": {
+        "brand": "seloger",
+        "id": "251248753",
+        "federalStateGeoId": "AD04FR27",
+        "zip": "33000",
+        "city": "Bordeaux",
+        "country": "FRA",
+        "subType": "RESALE",
+        "region": "Nouvelle-Aquitaine",
+        "showRentLabel": false,
+        "showMonthlyRateLabel": true,
+        "price": 505000,
+        "monthlyAmount": 2550,
+        "formattedMonthlyAmount": "2â¯550"
+      },
+      "partnerAd": {
+        "showPartnerAd": false
+      },
+      "sellerLeadLink": {
+        "funnel": "https://www.seloger.com/estimation-immobiliere/simulateur-prix",
+        "landing": "https://www.seloger.com/estimation-immobiliere.html"
+      },
+      "priceComparison": {
+        "data": {
+          "value": 4557,
+          "accuracy": 2,
+          "high": "5â¯377",
+          "low": "3â¯359"
+        },
+        "markerPosition": 100,
+        "hasMainPrice": true,
+        "isSale": true,
+        "pricePerSqm": "5â¯941,18",
+        "legalText": "Le prix au m2 est automatiquement calculÃ© par Se Loger en fonction du prix de vente et du nombre de m2 du bien. La comparaison est rÃ©alisÃ©e Ã  partir des informations relatives au prix du marchÃ© sur le mÃªme secteur dont dispose Se Loger. Cette information ne prÃ©juge en aucun cas de l'Ã©valuation du bien, qui dÃ©pend de son Ã©tat, ses caractÃ©ristiques et de sa localisation."
+      },
+      "mainDescription": {
+        "headline": "APPARTEMENT T3 AVEC ROOFTOP",
+        "description": "Bordeaux centre proche du marchÃ© des Capucins, appartement rÃ©novÃ© entiÃ¨rement de type T3 d'une surface de 55,20 mÂ² + une surface infÃ©rieure Ã  1,80 m de 30 mÂ², avec rooftop privatif de 43 mÂ² sans vis Ã  vis.\r\nIl se compose d'un grand salon avec cuisine ouverte, 2 chambres, une salle d'eau avec wc.\r\nParties communes avec local vÃ©los et poubelles.\r\n\r\nLe bien comprend 1 lot, et il est situÃ© dans une copropriÃ©tÃ© de 6 lots (il n'y a pas de charges courantes liÃ©es Ã  la copropriÃ©tÃ© et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 505 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Walter LE FORESTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 820 014 488",
+        "metadata": {
+          "language": "fr"
+        }
+      },
+      "areaDescription": {
+        "headline": "Emplacement"
+      },
+      "extendedInfoDescription": {
+        "headline": "Informations supplÃ©mentaires"
+      },
+      "statistics": {
+        "published": "1 mois en ligne",
+        "views": "10 vues",
+        "saves": "0 favori"
+      }
+    },
+    "contactSections": {
+      "id": "253UIV2RMEXW",
+      "legacyId": "251248753",
+      "brand": "seloger",
+      "agencyId": "RC-108709",
+      "static": {
+        "phoneNumbers": [
+          "0764099450"
+        ]
+      },
+      "sticky": {
+        "phoneNumbers": [
+          "0764099450"
+        ]
+      },
+      "contactCard": {
+        "title": "SAFTI   LE FORESTIER Walter  conseiller indÃ©pendant",
+        "subtitle": "Walter Le Forestier",
+        "phoneNumbers": [
+          "0764099450"
+        ],
+        "isPrivateOwner": false,
+        "agencyLogo": {
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05",
+          "display": true
+        },
+        "contactLogo": {
+          "logoUrl": null,
+          "display": false
+        }
+      },
+      "contactForm": {
+        "contactCard": {
+          "title": "SAFTI   LE FORESTIER Walter  conseiller indÃ©pendant",
+          "subtitle": "Walter Le Forestier",
+          "phoneNumbers": [
+            "0764099450"
+          ],
+          "isPrivateOwner": false,
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05"
+        },
+        "displayOwnerFlag": true,
+        "subjectLabel": "Votre message Ã  Walter Le Forestier",
+        "shouldSendLeadValue": true
+      },
+      "mobilePhones": {
+        "title": "SAFTI   LE FORESTIER Walter  conseiller indÃ©pendant",
+        "subtitle": "SAFTI   LE FORESTIER Walter  conseiller indÃ©pendant",
+        "phoneNumbers": [
+          "0764099450"
+        ],
+        "logoUrl": null,
+        "isPrivateOwner": false
+      },
+      "provider": {
+        "intermediaryCard": {
+          "title": "SAFTI   LE FORESTIER Walter  conseiller indÃ©pendant",
+          "subtitle": "Agence professionnelle",
+          "display": true,
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05",
+          "logoHref": "https://www.seloger.com/professionnels/agents-commerciaux/ares-33740/agence-6062/"
+        },
+        "contactCard": {
+          "title": "Walter Le Forestier",
+          "subtitle": "Votre contact",
+          "display": true,
+          "logoUrl": null
+        },
+        "website": "https://www.safti.fr/votre-conseiller-safti/walter-le-forestier",
+        "isPrivateOwner": false,
+        "profileUrl": "https://www.seloger.com/professionnels/agents-commerciaux/ares-33740/agence-6062/",
+        "imprintUrl": null,
+        "feeUrl": "https://www.safti.fr/bareme",
+        "agencyLegalInformations": [],
+        "publisherType": "REAL_ESTATE_AGENT",
+        "displayLinks": true,
+        "address": "33740 ARES",
+        "description": "Faites confiance Ã  un rÃ©seau puissant pour votre projet immobilier.\n\nLes avantages SAFTI :\n\n- + 6500 conseillers en France et Ã  lâinternational\n\n- Le rÃ©seau NÂ°1 en notoriÃ©tÃ©*\n\n- Des outils performants et innovants\n\n- Une communication massive\n\nNos conseillers immobiliers partout en France seront vos interlocuteurs privilÃ©giÃ©s pour un suivi personnalisÃ© et de qualitÃ© tout au long de votre projet.\n\nSAFTI, la vie vous rÃ©ussit.\n\n\n* Parmi les rÃ©seaux de mandataires immobiliers selon sondage IFOP",
+        "phoneNumbers": [
+          "0764099450"
+        ]
+      },
+      "confirmationPage": {
+        "isFinanceOfferButtonEnabled": false
+      }
+    },
+    "tracking": {
+      "av_category": "classified",
+      "av_initiative": "wl_cdp",
+      "av_environment": "live",
+      "av_estate_type_global": "av_2",
+      "av_distribution_type_global": "2",
+      "av_client_type": "pro",
+      "av_language": "fr",
+      "av_zip_code": "33000",
+      "av_city": "Bordeaux",
+      "av_items": [
+        {
+          "index": 0,
+          "name": "classified",
+          "list_name": "classified_detail",
+          "id": "253UIV2RMEXW",
+          "price": 505000,
+          "estate_type": "av_2",
+          "distribution_type": "2",
+          "country": "France",
+          "city": "Bordeaux",
+          "region": "Nouvelle-Aquitaine",
+          "zip_code": "33000",
+          "legacy_id": "251248753",
+          "product_type": "standard",
+          "client_id": "RC-108709"
+        }
+      ]
+    },
+    "legacyTracking": {
+      "site": "SL",
+      "pagename": "detail",
+      "environment": "prod",
+      "language": "fr",
+      "temp_variable_1": "WL",
+      "products": [
+        {
+          "client_id": "144414",
+          "client_type": "pro",
+          "distribution_type": "2",
+          "energy_letter": "D",
+          "estate_postalcode": "33000",
+          "estate_type": 1,
+          "id": "251248753",
+          "id_duo": 251248753,
+          "id_solo": 251248753,
+          "list_name": "detail",
+          "media": 0,
+          "nb_bedrooms": 2,
+          "nb_rooms": 3,
+          "parent_site": "SL",
+          "photos_nb": 8,
+          "position": 0,
+          "price": 505000,
+          "product_geolocation": "localisation_city",
+          "product_type": "estate",
+          "product_variant": "classified",
+          "space": 85,
+          "year_of_construction": 2024
+        }
+      ]
+    },
+    "advertising": {
+      "slots_config": [
+        {
+          "id": "div-gam-ad-desktop-top-banner",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/leaderboard",
+          "size": [
+            728,
+            90
+          ],
+          "specificTargeting": {
+            "pos": "leaderboard"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-medium-rectangle-1",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-haut",
+          "size": [
+            [
+              300,
+              250
+            ],
+            "fluid"
+          ],
+          "specificTargeting": {
+            "pos": "pave-haut"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-medium-rectangle-2",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-bas",
+          "size": [
+            [
+              300,
+              250
+            ],
+            "fluid"
+          ],
+          "specificTargeting": {
+            "pos": "pave-bas"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-masonry",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/image-galerie",
+          "size": [
+            [
+              624,
+              468
+            ],
+            [
+              300,
+              250
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "image-galerie"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-carousel",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-carrousel",
+          "size": [
+            [
+              624,
+              468
+            ],
+            [
+              300,
+              250
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "pave-carrousel"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-banner-mobile",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/banniere-mobile",
+          "size": [
+            [
+              320,
+              50
+            ],
+            [
+              320,
+              100
+            ],
+            [
+              320,
+              150
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "banniere-mobile"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "ad-masonry",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/image-galerie",
+          "size": [
+            300,
+            250
+          ],
+          "specificTargeting": {
+            "pos": "image-galerie"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "ad-carousel",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-carrousel",
+          "size": [
+            300,
+            250
+          ],
+          "specificTargeting": {
+            "pos": "pave-carrousel"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "partnerbox-1-commercial",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native1",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native1"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-2-commercial",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native2",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native2"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-3-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native3",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native3"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-4-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native4",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native4"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-5-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native5",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native5"
+          },
+          "device": "all"
+        }
+      ],
+      "tracking_config": {
+        "localite": "33063",
+        "cp": "33000",
+        "geodp": "33",
+        "pays": "250",
+        "idtt": "2",
+        "idtypebien": "1",
+        "naturebien": "1",
+        "idtiers": "251248753",
+        "prix": 510000,
+        "nb_pieces": 3,
+        "nb_chambres": 2,
+        "surface": 85,
+        "etage": 3,
+        "commodites": [
+          "Chauffage-individuel",
+          "Chauffage-electrique",
+          "dernier%20etage",
+          "SalleDEau-douche",
+          "SalleDeBain-baignoire",
+          "sansVisAVis"
+        ],
+        "mensualitefinance": 2029,
+        "si_parking": 0,
+        "DPE": "D"
+      }
+    },
+    "seo": {
+      "breadcrumb": {
+        "type": "cdp-breadcrumb",
+        "name": "breadcrumb",
+        "title": "cdp-breadcrumb",
+        "slug": "cdp-breadcrumb",
+        "links": [
+          {
+            "order": 1,
+            "url": "https://www.seloger.com/",
+            "label": "Immobilier",
+            "hoverLabel": "Immobilier",
+            "serpKey": ""
+          },
+          {
+            "order": 2,
+            "url": "https://www.seloger.com/immobilier/pays/achat/bien-appartement/france.htm",
+            "label": "Appartements Ã  vendre France",
+            "hoverLabel": "Appartements Ã  vendre France",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre France"
+          },
+          {
+            "order": 3,
+            "url": "https://www.seloger.com/immobilier/achat/bien-appartement/aquitaine.htm",
+            "label": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "hoverLabel": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Nouvelle-Aquitaine"
+          },
+          {
+            "order": 4,
+            "url": "https://www.seloger.com/immobilier/achat/33/bien-appartement/",
+            "label": "Appartements Ã  vendre Gironde 33",
+            "hoverLabel": "Appartements Ã  vendre Gironde 33",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Gironde 33"
+          },
+          {
+            "order": 5,
+            "url": "https://www.seloger.com/immobilier/achat/immo-bordeaux-33/bien-appartement/",
+            "label": "Appartements Ã  vendre Bordeaux 33000",
+            "hoverLabel": "Appartements Ã  vendre Bordeaux 33000",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Bordeaux 33000"
+          },
+          {
+            "order": 100,
+            "url": "",
+            "label": "Annonce",
+            "hoverLabel": "Annonce",
+            "serpKey": "",
+            "title": "Annonce"
+          }
+        ]
+      },
+      "headInfo": {
+        "title": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)",
+        "titleWithCount": "",
+        "description": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)",
+        "canonical": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/saint-jean-belcier-carle-vernet-albert-1er/251248753.htm",
+        "robots": "index, follow, max-snippet:-1",
+        "icons": [
+          {
+            "relation": "shortcut icon",
+            "link": "https://www.seloger.com/favicon.ico",
+            "type": "image/ico"
+          }
+        ],
+        "openGraphs": [
+          {
+            "property": "locale",
+            "content": "fr_FR"
+          },
+          {
+            "property": "url",
+            "content": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/saint-jean-belcier-carle-vernet-albert-1er/251248753.htm"
+          },
+          {
+            "property": "type",
+            "content": "website"
+          },
+          {
+            "property": "site_name",
+            "content": "SeLoger"
+          },
+          {
+            "property": "title",
+            "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+          },
+          {
+            "property": "description",
+            "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+          },
+          {
+            "property": "image",
+            "content": "https://mms.seloger.com/1/c/d/6/1cd60c3f-5ecd-467a-856a-39aef8053d50.jpg?ci_seal=4092498da061e4c4a99a2516afe0f98f2e965f8e"
+          }
+        ],
+        "socials": [
+          {
+            "name": "twitter:card",
+            "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:url",
+            "content": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/saint-jean-belcier-carle-vernet-albert-1er/251248753.htm"
+          },
+          {
+            "name": "twitter:site",
+            "content": "@seloger"
+          },
+          {
+            "name": "twitter:title",
+            "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:description",
+            "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:image",
+            "content": "https://mms.seloger.com/1/c/d/6/1cd60c3f-5ecd-467a-856a-39aef8053d50.jpg?ci_seal=4092498da061e4c4a99a2516afe0f98f2e965f8e"
+          }
+        ],
+        "structuredData": [
+          [
+            {
+              "type": "@context",
+              "content": "https://schema.org"
+            },
+            {
+              "type": "@type",
+              "content": "Organization"
+            },
+            {
+              "type": "name",
+              "content": "SeLoger"
+            },
+            {
+              "type": "address",
+              "content": "2 Rue des Italiens, 75009 Paris"
+            },
+            {
+              "type": "telephone",
+              "content": "01 53 38 28 00"
+            },
+            {
+              "type": "url",
+              "content": "https://www.seloger.com/"
+            },
+            {
+              "type": "logo",
+              "content": "https://static-seloger.com/commons/header/logo_header.svg"
+            }
+          ],
+          [
+            {
+              "type": "@context",
+              "content": "https://schema.org"
+            },
+            {
+              "type": "@type",
+              "content": "RealEstateListing"
+            },
+            {
+              "type": "datePosted",
+              "content": ""
+            },
+            {
+              "type": "description",
+              "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+            },
+            {
+              "type": "name",
+              "content": "Appartement Ã  vendre T3/F3 85 mÂ² 505000 â¬ Saint Jean-Belcier-Carle Vernet-Albert 1er Bordeaux (33000)"
+            }
+          ]
+        ],
+        "breadcrumb": [
+          {
+            "order": 1,
+            "url": "https://www.seloger.com/",
+            "label": "Immobilier",
+            "hoverLabel": "Immobilier",
+            "serpKey": ""
+          },
+          {
+            "order": 2,
+            "url": "https://www.seloger.com/immobilier/pays/achat/bien-appartement/france.htm",
+            "label": "Appartements Ã  vendre France",
+            "hoverLabel": "Appartements Ã  vendre France",
+            "serpKey": ""
+          },
+          {
+            "order": 3,
+            "url": "https://www.seloger.com/immobilier/achat/bien-appartement/aquitaine.htm",
+            "label": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "hoverLabel": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "serpKey": ""
+          },
+          {
+            "order": 4,
+            "url": "https://www.seloger.com/immobilier/achat/33/bien-appartement/",
+            "label": "Appartements Ã  vendre Gironde 33",
+            "hoverLabel": "Appartements Ã  vendre Gironde 33",
+            "serpKey": ""
+          },
+          {
+            "order": 5,
+            "url": "https://www.seloger.com/immobilier/achat/immo-bordeaux-33/bien-appartement/",
+            "label": "Appartements Ã  vendre Bordeaux 33000",
+            "hoverLabel": "Appartements Ã  vendre Bordeaux 33000",
+            "serpKey": ""
+          }
+        ],
+        "redirectUrl": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/saint-jean-belcier-carle-vernet-albert-1er/251248753.htm"
+      }
+    },
+    "defaultBackToSearch": "distributionTypes=Buy&estateTypes=Apartment&locations=NBH2FR9334&priceMax=606000&priceMin=404000",
+    "tags": {
+      "isExclusive": false,
+      "has3DVisit": false,
+      "hasBrokerageFee": false,
+      "isNew": false,
+      "isHdExclusive": false
+    },
+    "rawData": {
+      "distributionType": "BUY",
+      "propertyType": "APARTMENT",
+      "geoIdHierarchy": [
+        {
+          "id": "NBH2FR9334",
+          "typeKey": "NBH2"
+        },
+        {
+          "id": "AD08FR13100",
+          "typeKey": "AD08"
+        },
+        {
+          "id": "AD06FR34",
+          "typeKey": "AD06"
+        },
+        {
+          "id": "AD04FR27",
+          "typeKey": "AD04"
+        },
+        {
+          "id": "AD03FR2",
+          "typeKey": "AD03"
+        },
+        {
+          "id": "AD02FR1",
+          "typeKey": "AD02"
+        }
+      ],
+      "distributionSubType": {
+        "buy": "RESALE"
+      }
+    }
+  },
+  {
+    "statusCode": 410,
+    "message": "classified not available. Http status: Gone Exception",
+    "timestamp": "2025-11-12T18:22:08.798Z",
+    "requestUrl": "/v2/classified/245875571",
+    "traceId": "5cbbbfe1-3681-40a9-a102-b55fd57b36f2",
+    "method": "GET",
+    "brand": "seloger",
+    "id": null,
+    "metadata": {
+      "status": {
+        "status": "Failure",
+        "enrichments": {
+          "contactSettings": false,
+          "geo": false,
+          "intermediary": false,
+          "media": false,
+          "onlineId": false
+        }
+      },
+      "isNewBuildProject": false
+    },
+    "sections": {
+      "tracking": {
+        "av_category": "classified",
+        "av_initiative": "wl_cdp",
+        "av_environment": "live",
+        "av_language": "fr",
+        "av_items": [
+          {
+            "index": 0,
+            "name": "classified",
+            "list_name": "classified_detail",
+            "id": null,
+            "product_type": "standard"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "brand": "seloger",
+    "id": "24C53IR4IS85",
+    "metadata": {
+      "legacyId": "193612259",
+      "creationDate": "2022-11-01T06:25:00Z",
+      "updateDate": "2025-07-09T16:54:05.927Z",
+      "status": {
+        "status": true,
+        "enrichments": {
+          "contactSettings": false,
+          "geo": false,
+          "intermediary": false,
+          "media": false,
+          "onlineId": false
+        }
+      },
+      "isNewBuildProject": false
+    },
+    "sections": {
+      "location": {
+        "address": {
+          "country": "FRA",
+          "city": "Bordeaux",
+          "zipCode": "33000",
+          "district": "Capucins-Saint Michel-Nansouty-Saint GenÃ¨s"
+        },
+        "isAddressPublished": false,
+        "geometry": {
+          "type": "MultiPolygon",
+          "coordinates": [
+            [
+              [
+                [
+                  -0.57791,
+                  44.83202
+                ],
+                [
+                  -0.57726,
+                  44.83188
+                ],
+                [
+                  -0.57716,
+                  44.831
+                ],
+                [
+                  -0.57687,
+                  44.83086
+                ],
+                [
+                  -0.57647,
+                  44.82838
+                ],
+                [
+                  -0.57578,
+                  44.82741
+                ],
+                [
+                  -0.57765,
+                  44.82554
+                ],
+                [
+                  -0.58076,
+                  44.82623
+                ],
+                [
+                  -0.58068,
+                  44.82638
+                ],
+                [
+                  -0.58199,
+                  44.82674
+                ],
+                [
+                  -0.58279,
+                  44.82731
+                ],
+                [
+                  -0.5824,
+                  44.82765
+                ],
+                [
+                  -0.58352,
+                  44.82863
+                ],
+                [
+                  -0.58062,
+                  44.83013
+                ],
+                [
+                  -0.57842,
+                  44.83093
+                ],
+                [
+                  -0.57808,
+                  44.83133
+                ],
+                [
+                  -0.57791,
+                  44.83202
+                ]
+              ]
+            ]
+          ]
+        }
+      },
+      "description": {
+        "description": "Proche de tous les commerces et Ã©coles (Saint GenÃ¨s La Salle/Albert Legrand/Alain Fournier) venez dÃ©couvrir ce magnifique appartement de 86 M2, vous serez sÃ©duit par sa piÃ¨ce de vie avec ses beaux volumes.\r\n\r\nCe charmant duplex aux prestations anciennes (Belle HSP et parquet) se compose d'un grand salon-sÃ©jour donnant sur un balcon filant, d'une cuisine et d'un WC.\r\n\r\nEt Ã  l'Ã©tage, nous avons deux chambres dont une en mezzanine et une salle de bains.\r\nUne cave de 16 M2 complÃ¨te ce bien.\r\n\r\nLes + : appartement lumineux et spacieux, proche des commoditÃ©s, du centre de bordeaux et du magnifique parc arborÃ© (jardin des dames).\r\nFaibles charges de copro (50 euros/mois)\r\n\r\nLe bien comprend 4 lots, et il est situÃ© dans une copropriÃ©tÃ© de 12 lots (les charges courantes annuelles moyennes de copropriÃ©tÃ© sont de 600 euros et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 390 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Emilie LEPOULTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 889 267 498",
+        "texts": [
+          {
+            "text": "Proche de tous les commerces et Ã©coles (Saint GenÃ¨s La Salle/Albert Legrand/Alain Fournier) venez dÃ©couvrir ce magnifique appartement de 86 M2, vous serez sÃ©duit par sa piÃ¨ce de vie avec ses beaux volumes.\r\n\r\nCe charmant duplex aux prestations anciennes (Belle HSP et parquet) se compose d'un grand salon-sÃ©jour donnant sur un balcon filant, d'une cuisine et d'un WC.\r\n\r\nEt Ã  l'Ã©tage, nous avons deux chambres dont une en mezzanine et une salle de bains.\r\nUne cave de 16 M2 complÃ¨te ce bien.\r\n\r\nLes + : appartement lumineux et spacieux, proche des commoditÃ©s, du centre de bordeaux et du magnifique parc arborÃ© (jardin des dames).\r\nFaibles charges de copro (50 euros/mois)\r\n\r\nLe bien comprend 4 lots, et il est situÃ© dans une copropriÃ©tÃ© de 12 lots (les charges courantes annuelles moyennes de copropriÃ©tÃ© sont de 600 euros et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 390 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Emilie LEPOULTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 889 267 498"
+          }
+        ],
+        "headline": "Magnifique appartement au coeur du quartier de Saint GenÃ¨s"
+      },
+      "hardFacts": {
+        "title": "Duplex Ã  vendre",
+        "keyfacts": [
+          "3 piÃ¨ces",
+          "2 chambres",
+          "86 mÂ²"
+        ],
+        "facts": [
+          {
+            "type": "numberOfRooms",
+            "value": "3 piÃ¨ces",
+            "splitValue": "3",
+            "label": "piÃ¨ces"
+          },
+          {
+            "type": "numberOfBedrooms",
+            "value": "2 chambres",
+            "splitValue": "2",
+            "label": "chambres"
+          },
+          {
+            "type": "livingSpace",
+            "value": "86 mÂ²",
+            "splitValue": "86",
+            "label": "mÂ²"
+          }
+        ],
+        "price": {
+          "value": "390â¯000Â â¬",
+          "formatted": "390â¯000Â â¬",
+          "additionalInformation": "4â¯535Â â¬/mÂ²",
+          "addition": {
+            "value": "4â¯535Â â¬/mÂ²",
+            "ariaLabel": "4534,88 euros par mÃ¨tre carrÃ©"
+          },
+          "financialLink": {
+            "href": "https://e-immobilier.credit-agricole.fr/pret/lp_acquisition.html?ORI=EDESLAT&at_medium=affiliation&at_campaign=EDE_PC_EMP_EIMMO_FR&at_presta=SeLoger&at_format=Lien_PDD",
+            "label": "Demander un financement",
+            "partnerName": "CA"
+          },
+          "ariaLabel": "390000 â¬"
+        }
+      },
+      "energy": {
+        "features": [
+          {
+            "type": "yearOfConstruction",
+            "label": "AnnÃ©e de construction",
+            "value": "1900"
+          },
+          {
+            "type": "heatingSystem",
+            "label": "Type de chauffage",
+            "value": "Chauffage individuel"
+          },
+          {
+            "type": "energySource",
+            "label": "Sources d'Ã©nergie",
+            "value": "Ãlectrique"
+          }
+        ],
+        "certificates": [
+          {
+            "key": "95df2f61-d97d-4ca0-a9b1-847bda015d15",
+            "features": [
+              {
+                "type": "minMaxEstimation",
+                "label": "Estimation de la facture Ã©nergÃ©tique",
+                "value": "entre 1200 et 1670 â¬/an"
+              },
+              {
+                "type": "nameOfCertificate",
+                "label": "Diagnostic rÃ©alisÃ©",
+                "value": "AprÃ¨s le 1er juillet 2021"
+              },
+              {
+                "type": "estimationDescription",
+                "label": "estimationDescription",
+                "value": "Montant estimÃ© des dÃ©penses annuelles d'Ã©nergie pour un usage standard: entre 1200 et 1670 â¬ par an. Date d'indexation du prix des Ã©nergies non communiquÃ©e."
+              }
+            ],
+            "scales": [
+              {
+                "key": "096abc03-e820-4da9-aaa5-d7acc2f49b65",
+                "efficiencyClass": {
+                  "index": 3,
+                  "rating": "D"
+                },
+                "values": [
+                  {
+                    "value": "229 kWh/mÂ².an",
+                    "label": "Consommation (Ã©nergie primaire)"
+                  },
+                  {
+                    "value": "7 kg COâ/mÂ².an",
+                    "label": "Ãmissions"
+                  }
+                ],
+                "name": "Diagnostic de performance Ã©nergÃ©tique (DPE)",
+                "segments": [
+                  {
+                    "label": "A",
+                    "value": ""
+                  },
+                  {
+                    "label": "B",
+                    "value": ""
+                  },
+                  {
+                    "label": "C",
+                    "value": ""
+                  },
+                  {
+                    "label": "D",
+                    "value": ""
+                  },
+                  {
+                    "label": "E",
+                    "value": ""
+                  },
+                  {
+                    "label": "F",
+                    "value": "Passoire Ã©nergÃ©tique"
+                  },
+                  {
+                    "label": "G",
+                    "value": "Passoire Ã©nergÃ©tique"
+                  }
+                ],
+                "type": "FR_ENERGY_AFTER_2021",
+                "ariaLabel": "EfficiencyClassÂ : D avec une plage allant de A Ã  G .La consommation d'Ã©nergie est undefined kWhEP/mÂ².an kilowattheures par mÃ¨tre carrÃ©.",
+                "displayUnhappyHouseIcon": false
+              },
+              {
+                "key": "c19f1730-a94c-4ef9-9816-4dba054023d8",
+                "efficiencyClass": {
+                  "index": 1,
+                  "rating": "B"
+                },
+                "values": [
+                  {
+                    "value": "7 kg COâ/mÂ².an",
+                    "label": "Ãmissions"
+                  }
+                ],
+                "name": "Indice d'Ã©mission de gaz Ã  effet de serre (GES)",
+                "segments": [
+                  {
+                    "label": "A",
+                    "value": ""
+                  },
+                  {
+                    "label": "B",
+                    "value": ""
+                  },
+                  {
+                    "label": "C",
+                    "value": ""
+                  },
+                  {
+                    "label": "D",
+                    "value": ""
+                  },
+                  {
+                    "label": "E",
+                    "value": ""
+                  },
+                  {
+                    "label": "F",
+                    "value": ""
+                  },
+                  {
+                    "label": "G",
+                    "value": ""
+                  }
+                ],
+                "type": "FR_GHG_AFTER_2021",
+                "ariaLabel": "EfficiencyClassÂ : B avec une plage allant de A Ã  G .La consommation d'Ã©nergie est undefined kWhEP/mÂ².an kilowattheures par mÃ¨tre carrÃ©.",
+                "displayUnhappyHouseIcon": false
+              }
+            ]
+          }
+        ],
+        "hasScales": true
+      },
+      "key": {
+        "keys": [
+          {
+            "label": "Identifiant",
+            "value": "193612259"
+          },
+          {
+            "label": "RÃ©fÃ©rence annonce",
+            "value": "748467"
+          }
+        ]
+      },
+      "price": {
+        "base": {
+          "main": {
+            "key": "3203d0a7-afb5-458a-b31b-ec4df0019d83",
+            "label": {
+              "main": "Prix du bien"
+            },
+            "value": {
+              "main": {
+                "value": "390â¯000Â â¬",
+                "ariaLabel": "390000 â¬"
+              },
+              "alt": {
+                "value": "4â¯534,88Â â¬/mÂ²",
+                "ariaLabel": "4534,88 euros par mÃ¨tre carrÃ©"
+              }
+            }
+          },
+          "type": "SALE"
+        },
+        "components": [
+          {
+            "key": "b67e6705-235f-431a-9114-434f4785f0f5",
+            "type": "PRIMARY",
+            "units": [
+              {
+                "key": "11c4b632-4736-44e4-80c9-f218e766a7ab",
+                "main": {
+                  "price": {
+                    "key": "a309bc57-a910-4219-b70e-e87948801028",
+                    "label": {
+                      "main": "Prix du bien"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "390â¯000Â â¬",
+                        "ariaLabel": "390000 â¬"
+                      },
+                      "alt": {
+                        "value": "4â¯534,88Â â¬/mÂ²",
+                        "ariaLabel": "4534,88 euros par mÃ¨tre carrÃ©"
+                      }
+                    },
+                    "highlighted": true
+                  },
+                  "message": {
+                    "type": "SUCCESS",
+                    "value": "Les honoraires sont Ã  la charge du vendeur"
+                  }
+                }
+              },
+              {
+                "key": "f3780d6d-d70d-4569-b543-615d21e1856c",
+                "main": {
+                  "price": {
+                    "key": "41ed20a3-b49b-4eb0-8fd3-b1910a199268",
+                    "label": {
+                      "main": "Frais de notaires estimÃ©s"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "31â¯200Â â¬",
+                        "ariaLabel": "31200 â¬"
+                      }
+                    },
+                    "info": {
+                      "value": "Les frais de notaire reprÃ©sentent environ 8% du prix du bien dans l'ancien et 3% dans le neuf. Le montant estimÃ© est donnÃ© Ã  titre indicatif."
+                    }
+                  }
+                }
+              },
+              {
+                "key": "1d9aeda7-83ab-4402-a4e1-d7b2c46c3ce7",
+                "main": {
+                  "price": {
+                    "key": "7b889d1c-55db-4895-8206-a710240c5811",
+                    "label": {
+                      "main": "Montant estimÃ© du projet"
+                    },
+                    "value": {
+                      "main": {
+                        "value": "421â¯200Â â¬",
+                        "ariaLabel": "421200 â¬"
+                      }
+                    },
+                    "highlighted": true
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "key": "e9136d0a-dcf3-4797-be81-00d6b4762db1",
+            "type": "SECONDARY",
+            "units": [
+              {
+                "key": "a08f4c3f-896e-403d-91aa-f7255f92dbb8",
+                "details": [
+                  {
+                    "key": "d74932b6-56fa-446e-aa07-0739e9cb363c",
+                    "prices": [
+                      {
+                        "key": "10b5a829-e463-48fb-84e8-34e5ca76cd99",
+                        "label": {
+                          "main": "Charges de copropriÃ©tÃ©"
+                        },
+                        "value": {
+                          "main": {
+                            "value": "600Â â¬/an",
+                            "ariaLabel": "600 â¬"
+                          }
+                        },
+                        "info": {
+                          "value": "Montant annuel de la quote-part du budget prÃ©visionnel des dÃ©penses courantes."
+                        },
+                        "highlighted": true
+                      },
+                      {
+                        "key": "2ec55ed4-f1f6-483a-815f-ae2bf61dd412",
+                        "label": {
+                          "main": "Estimation de la facture Ã©nergÃ©tique"
+                        },
+                        "value": {
+                          "main": {
+                            "value": "entre 1200 et 1670 â¬/an"
+                          }
+                        },
+                        "highlighted": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "layout": "FRENCH_SALE",
+        "breakdown": {
+          "groups": [
+            {
+              "key": "97315931-d3b5-4754-a879-863af7624a44",
+              "label": {
+                "main": "Prix du bien"
+              },
+              "value": {
+                "main": {
+                  "value": "390â¯000Â â¬",
+                  "ariaLabel": "390000 â¬"
+                },
+                "alt": {
+                  "value": "4â¯534,88Â â¬/mÂ²",
+                  "ariaLabel": "4534,88 euros par mÃ¨tre carrÃ©"
+                }
+              },
+              "colorType": "MAIN_PRICE",
+              "highlighted": true
+            },
+            {
+              "key": "069c1bed-0dba-4d58-b73a-36af8838cc47",
+              "label": {
+                "main": "Frais de notaire estimÃ©s (8%)"
+              },
+              "value": {
+                "main": {
+                  "value": "31â¯200Â â¬",
+                  "ariaLabel": "31200 â¬"
+                }
+              },
+              "colorType": "NOTARY_FEE",
+              "infoBox": "Les frais de notaire reprÃ©sentent environ 8% du prix du bien dans l'ancien et 3% dans le neuf. Le montant estimÃ© est donnÃ© Ã  titre indicatif.",
+              "highlighted": true
+            }
+          ],
+          "totalProjectCosts": {
+            "key": "b894b428-61c5-4bcd-bf89-e87b28f8fef5",
+            "label": {
+              "main": "Montant estimÃ© du projet"
+            },
+            "value": {
+              "main": {
+                "value": "421â¯200Â â¬",
+                "ariaLabel": "421200 â¬"
+              }
+            }
+          },
+          "message": {
+            "type": "SUCCESS",
+            "value": "Les honoraires sont Ã  la charge du vendeur"
+          },
+          "bar": [
+            {
+              "key": "97315931-d3b5-4754-a879-863af7624a44",
+              "colorType": "MAIN_PRICE",
+              "percentage": 0.9259
+            },
+            {
+              "key": "069c1bed-0dba-4d58-b73a-36af8838cc47",
+              "colorType": "NOTARY_FEE",
+              "percentage": 0.0741
+            }
+          ]
+        }
+      },
+      "coOwnership": {
+        "items": [
+          {
+            "label": "Nombre de lots",
+            "value": "12",
+            "type": "numberOfUnits"
+          },
+          {
+            "label": "Charges de copropriÃ©tÃ©",
+            "value": "600Â â¬/an",
+            "type": "operatingCosts"
+          },
+          {
+            "label": "ProcÃ©dures syndicales",
+            "value": "Pas de procÃ©dure en cours",
+            "type": "syndicProcedures"
+          }
+        ]
+      },
+      "features": {
+        "preview": [
+          {
+            "icon": "elevator",
+            "value": "Pas d'ascenseur"
+          },
+          {
+            "icon": "cellar",
+            "value": "Pas de cave"
+          },
+          {
+            "icon": "toilet-amenities",
+            "value": "1 WC"
+          },
+          {
+            "icon": "balcony",
+            "value": "Pas de balcon"
+          },
+          {
+            "icon": "garden",
+            "value": "Jardin"
+          },
+          {
+            "icon": "furnished",
+            "value": "Non meublÃ©"
+          },
+          {
+            "icon": "bedroom",
+            "value": "2 chambres"
+          },
+          {
+            "icon": "barrier-free",
+            "value": "Non accessible aux personnes Ã  mobilitÃ© rÃ©duite"
+          }
+        ],
+        "details": {
+          "categories": [
+            {
+              "elements": [
+                {
+                  "icon": "furnished",
+                  "value": "Non meublÃ©"
+                }
+              ],
+              "title": "Informations gÃ©nÃ©rales"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "barrier-free",
+                  "value": "Non accessible aux personnes Ã  mobilitÃ© rÃ©duite"
+                },
+                {
+                  "icon": "elevator",
+                  "value": "Pas d'ascenseur"
+                }
+              ],
+              "title": "AccessibilitÃ©"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "bathroom-amenities",
+                  "value": "1 salle de bain"
+                },
+                {
+                  "icon": "toilet-amenities",
+                  "value": "1 WC"
+                },
+                {
+                  "icon": "bedroom",
+                  "value": "2 chambres"
+                },
+                {
+                  "icon": "cellar",
+                  "value": "Pas de cave"
+                },
+                {
+                  "icon": "floor-covering",
+                  "value": "RevÃªtement du sol: Parquet"
+                }
+              ],
+              "title": "IntÃ©rieur"
+            },
+            {
+              "elements": [
+                {
+                  "icon": "balcony",
+                  "value": "Pas de balcon"
+                },
+                {
+                  "icon": "garden",
+                  "value": "Jardin"
+                }
+              ],
+              "title": "ExtÃ©rieur"
+            }
+          ]
+        }
+      },
+      "gallery": {
+        "images": [
+          {
+            "key": "bd83fbf3-52c0-4618-8811-40341023f567",
+            "url": "https://mms.seloger.com/b/d/8/3/bd83fbf3-52c0-4618-8811-40341023f567.jpg?ci_seal=ca79cf2075784e552ec26e77a3500022534cd8e1",
+            "alt": "Duplex Ã  vendre 390â¯000Â â¬ 3 piÃ¨ces 2 chambres 86 mÂ² Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux 33000"
+          },
+          {
+            "key": "38ab49fa-7c0d-4d58-a331-210d13a23487",
+            "url": "https://mms.seloger.com/3/8/a/b/38ab49fa-7c0d-4d58-a331-210d13a23487.jpg?ci_seal=bdeb2851b3437319eceb8de9c1df20743adedca9"
+          },
+          {
+            "key": "5e20c4ef-890d-4b56-b875-1fcac66fb96f",
+            "url": "https://mms.seloger.com/5/e/2/0/5e20c4ef-890d-4b56-b875-1fcac66fb96f.jpg?ci_seal=68ede23146eec3d6fa12381fff535880b45ffd5d"
+          },
+          {
+            "key": "c55768de-ad02-45c0-b20c-d93e7e226402",
+            "url": "https://mms.seloger.com/c/5/5/7/c55768de-ad02-45c0-b20c-d93e7e226402.jpg?ci_seal=1819fdcb43ffbf775c3c43389dbb3d2970e9092c"
+          },
+          {
+            "key": "6414b231-51cd-49e2-88ee-dd5519d3a55f",
+            "url": "https://mms.seloger.com/6/4/1/4/6414b231-51cd-49e2-88ee-dd5519d3a55f.jpg?ci_seal=c521583def24fb589df8a056a8e1bc31d4b8b1d6"
+          },
+          {
+            "key": "108f0161-f697-4bfc-858d-51f96f47d14f",
+            "url": "https://mms.seloger.com/1/0/8/f/108f0161-f697-4bfc-858d-51f96f47d14f.jpg?ci_seal=5ce6af7ba91dbc4c5f70c36cb40896ed5762f780"
+          },
+          {
+            "key": "208fe7b4-3ee3-4fc9-adc5-93a22fe45f89",
+            "url": "https://mms.seloger.com/2/0/8/f/208fe7b4-3ee3-4fc9-adc5-93a22fe45f89.jpg?ci_seal=7fa621a171f7e17f1ea004dc8a13066b62dfd50c"
+          }
+        ]
+      },
+      "documents": {
+        "display": false,
+        "files": []
+      },
+      "enrichedMedia": {
+        "medias": []
+      },
+      "mortgage": {
+        "brand": "seloger",
+        "id": "193612259",
+        "federalStateGeoId": "AD04FR27",
+        "zip": "33000",
+        "city": "Bordeaux",
+        "country": "FRA",
+        "subType": "RESALE",
+        "region": "Nouvelle-Aquitaine",
+        "showRentLabel": false,
+        "showMonthlyRateLabel": true,
+        "price": 390000,
+        "monthlyAmount": 1969,
+        "formattedMonthlyAmount": "1â¯969"
+      },
+      "partnerAd": {
+        "showPartnerAd": false
+      },
+      "sellerLeadLink": {
+        "funnel": "https://www.seloger.com/estimation-immobiliere/simulateur-prix",
+        "landing": "https://www.seloger.com/estimation-immobiliere.html"
+      },
+      "priceComparison": {
+        "data": {
+          "value": 4863,
+          "accuracy": 2,
+          "high": "5â¯952",
+          "low": "3â¯264"
+        },
+        "markerPosition": 47,
+        "hasMainPrice": true,
+        "isSale": true,
+        "pricePerSqm": "4â¯534,88",
+        "legalText": "Le prix au m2 est automatiquement calculÃ© par Se Loger en fonction du prix de vente et du nombre de m2 du bien. La comparaison est rÃ©alisÃ©e Ã  partir des informations relatives au prix du marchÃ© sur le mÃªme secteur dont dispose Se Loger. Cette information ne prÃ©juge en aucun cas de l'Ã©valuation du bien, qui dÃ©pend de son Ã©tat, ses caractÃ©ristiques et de sa localisation."
+      },
+      "mainDescription": {
+        "headline": "Magnifique appartement au coeur du quartier de Saint GenÃ¨s",
+        "description": "Proche de tous les commerces et Ã©coles (Saint GenÃ¨s La Salle/Albert Legrand/Alain Fournier) venez dÃ©couvrir ce magnifique appartement de 86 M2, vous serez sÃ©duit par sa piÃ¨ce de vie avec ses beaux volumes.\r\n\r\nCe charmant duplex aux prestations anciennes (Belle HSP et parquet) se compose d'un grand salon-sÃ©jour donnant sur un balcon filant, d'une cuisine et d'un WC.\r\n\r\nEt Ã  l'Ã©tage, nous avons deux chambres dont une en mezzanine et une salle de bains.\r\nUne cave de 16 M2 complÃ¨te ce bien.\r\n\r\nLes + : appartement lumineux et spacieux, proche des commoditÃ©s, du centre de bordeaux et du magnifique parc arborÃ© (jardin des dames).\r\nFaibles charges de copro (50 euros/mois)\r\n\r\nLe bien comprend 4 lots, et il est situÃ© dans une copropriÃ©tÃ© de 12 lots (les charges courantes annuelles moyennes de copropriÃ©tÃ© sont de 600 euros et le syndicat des copropriÃ©taires ne fait pas l'objet d'une procÃ©dure citÃ©e Ã  l'article L. 721-1 du code de la construction et de l'habitation).\r\n\r\nLes informations sur les risques auxquels ce bien est exposÃ© sont disponibles sur le site GÃ©orisques : \r\nPrix de vente : 390 000 euros\r\nHonoraires charge vendeur\r\n\r\nContactez votre conseiller SAFTI : Emilie LEPOULTIER - EI - Agent commercial immatriculÃ© au RSAC de BORDEAUX sous le numÃ©ro 889 267 498",
+        "metadata": {
+          "language": "fr"
+        }
+      },
+      "areaDescription": {
+        "headline": "Emplacement"
+      },
+      "extendedInfoDescription": {
+        "headline": "Informations supplÃ©mentaires"
+      },
+      "statistics": {
+        "published": "en nov. 2022",
+        "views": "111 vues",
+        "saves": "8 favoris"
+      }
+    },
+    "contactSections": {
+      "id": "24C53IR4IS85",
+      "legacyId": "193612259",
+      "brand": "seloger",
+      "agencyId": "RC-1865217",
+      "static": {
+        "phoneNumbers": [
+          "0682132293"
+        ]
+      },
+      "sticky": {
+        "phoneNumbers": [
+          "0682132293"
+        ]
+      },
+      "contactCard": {
+        "title": "SAFTI - LEPOULTIER Emilie conseiller indÃ©pendant",
+        "subtitle": "Emilie Lepoultier",
+        "phoneNumbers": [
+          "0682132293"
+        ],
+        "isPrivateOwner": false,
+        "agencyLogo": {
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05",
+          "display": true
+        },
+        "contactLogo": {
+          "logoUrl": null,
+          "display": false
+        }
+      },
+      "contactForm": {
+        "contactCard": {
+          "title": "SAFTI - LEPOULTIER Emilie conseiller indÃ©pendant",
+          "subtitle": "Emilie Lepoultier",
+          "phoneNumbers": [
+            "0682132293"
+          ],
+          "isPrivateOwner": false,
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05"
+        },
+        "displayOwnerFlag": true,
+        "subjectLabel": "Votre message Ã  Emilie Lepoultier",
+        "shouldSendLeadValue": true
+      },
+      "mobilePhones": {
+        "title": "SAFTI - LEPOULTIER Emilie conseiller indÃ©pendant",
+        "subtitle": "SAFTI - LEPOULTIER Emilie conseiller indÃ©pendant",
+        "phoneNumbers": [
+          "0682132293"
+        ],
+        "logoUrl": null,
+        "isPrivateOwner": false
+      },
+      "provider": {
+        "intermediaryCard": {
+          "title": "SAFTI - LEPOULTIER Emilie conseiller indÃ©pendant",
+          "subtitle": "Agence professionnelle",
+          "display": true,
+          "logoUrl": "https://mms.seloger.com/2/6/9/5/2695541e-995d-4d02-b016-c9d6a64c864c.jpg?ci_seal=4fbaa705db9b23bef2564d0f640847984a818e05",
+          "logoHref": "https://www.seloger.com/professionnels/agents-commerciaux/bordeaux-33000/agence-282050/"
+        },
+        "contactCard": {
+          "title": "Emilie Lepoultier",
+          "subtitle": "Votre contact",
+          "display": true,
+          "logoUrl": null
+        },
+        "isPrivateOwner": false,
+        "profileUrl": "https://www.seloger.com/professionnels/agents-commerciaux/bordeaux-33000/agence-282050/",
+        "imprintUrl": null,
+        "feeUrl": "https://www.safti.fr/bareme",
+        "agencyLegalInformations": [
+          "<b>RCS:</b> 889267498",
+          "<b>SIRET:</b> 88926749800018"
+        ],
+        "publisherType": "REAL_ESTATE_AGENT",
+        "displayLinks": true,
+        "address": "33000 Bordeaux",
+        "description": "Faites confiance Ã  un rÃ©seau puissant pour votre projet immobilier.\n\nLes avantages SAFTI :\n\n- + 6500 conseillers en France et Ã  lâinternational\n\n- Le rÃ©seau NÂ°1 en notoriÃ©tÃ©*\n\n- Des outils performants et innovants\n\n- Une communication massive\n\nNos conseillers immobiliers partout en France seront vos interlocuteurs privilÃ©giÃ©s pour un suivi personnalisÃ© et de qualitÃ© tout au long de votre projet.\n\nSAFTI, la vie vous rÃ©ussit.\n\n\n* Parmi les rÃ©seaux de mandataires immobiliers selon sondage IFOP",
+        "phoneNumbers": [
+          "0682132293"
+        ]
+      },
+      "confirmationPage": {
+        "isFinanceOfferButtonEnabled": false
+      }
+    },
+    "tracking": {
+      "av_category": "classified",
+      "av_initiative": "wl_cdp",
+      "av_environment": "live",
+      "av_estate_type_global": "av_2",
+      "av_distribution_type_global": "2",
+      "av_client_type": "pro",
+      "av_language": "fr",
+      "av_zip_code": "33000",
+      "av_city": "Bordeaux",
+      "av_items": [
+        {
+          "index": 0,
+          "name": "classified",
+          "list_name": "classified_detail",
+          "id": "24C53IR4IS85",
+          "price": 390000,
+          "estate_type": "av_2",
+          "distribution_type": "2",
+          "country": "France",
+          "city": "Bordeaux",
+          "region": "Nouvelle-Aquitaine",
+          "zip_code": "33000",
+          "legacy_id": "193612259",
+          "product_type": "standard",
+          "client_id": "RC-1865217"
+        }
+      ]
+    },
+    "legacyTracking": {
+      "site": "SL",
+      "pagename": "detail",
+      "environment": "prod",
+      "language": "fr",
+      "temp_variable_1": "WL",
+      "products": [
+        {
+          "client_id": "508124",
+          "client_type": "pro",
+          "distribution_type": "2",
+          "energy_letter": "D",
+          "estate_postalcode": "33000",
+          "estate_type": 9,
+          "id": "193612259",
+          "id_duo": 193612259,
+          "id_solo": 193612259,
+          "list_name": "detail",
+          "media": 0,
+          "nb_bedrooms": 2,
+          "nb_rooms": 3,
+          "parent_site": "SL",
+          "photos_nb": 7,
+          "position": 0,
+          "price": 390000,
+          "product_geolocation": "localisation_city",
+          "product_type": "estate",
+          "product_variant": "classified",
+          "space": 86,
+          "year_of_construction": 1900
+        }
+      ]
+    },
+    "advertising": {
+      "slots_config": [
+        {
+          "id": "div-gam-ad-desktop-top-banner",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/leaderboard",
+          "size": [
+            728,
+            90
+          ],
+          "specificTargeting": {
+            "pos": "leaderboard"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-medium-rectangle-1",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-haut",
+          "size": [
+            [
+              300,
+              250
+            ],
+            "fluid"
+          ],
+          "specificTargeting": {
+            "pos": "pave-haut"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-medium-rectangle-2",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-bas",
+          "size": [
+            [
+              300,
+              250
+            ],
+            "fluid"
+          ],
+          "specificTargeting": {
+            "pos": "pave-bas"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-masonry",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/image-galerie",
+          "size": [
+            [
+              624,
+              468
+            ],
+            [
+              300,
+              250
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "image-galerie"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-carousel",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-carrousel",
+          "size": [
+            [
+              624,
+              468
+            ],
+            [
+              300,
+              250
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "pave-carrousel"
+          },
+          "device": "desktop"
+        },
+        {
+          "id": "ad-banner-mobile",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/banniere-mobile",
+          "size": [
+            [
+              320,
+              50
+            ],
+            [
+              320,
+              100
+            ],
+            [
+              320,
+              150
+            ]
+          ],
+          "specificTargeting": {
+            "pos": "banniere-mobile"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "ad-masonry",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/image-galerie",
+          "size": [
+            300,
+            250
+          ],
+          "specificTargeting": {
+            "pos": "image-galerie"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "ad-carousel",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/pave-carrousel",
+          "size": [
+            300,
+            250
+          ],
+          "specificTargeting": {
+            "pos": "pave-carrousel"
+          },
+          "device": "mobile"
+        },
+        {
+          "id": "partnerbox-1-commercial",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native1",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native1"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-2-commercial",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native2",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native2"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-3-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native3",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native3"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-4-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native4",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native4"
+          },
+          "device": "all"
+        },
+        {
+          "id": "partnerbox-5-tools-and-service",
+          "adUnit": "/199043128/360-seloger/achat/general/page-de-detail/native5",
+          "size": "fluid",
+          "specificTargeting": {
+            "pos": "native5"
+          },
+          "device": "all"
+        }
+      ],
+      "tracking_config": {
+        "localite": "33063",
+        "cp": "33000",
+        "geodp": "33",
+        "pays": "250",
+        "idtt": "2",
+        "idtypebien": "1",
+        "naturebien": "1",
+        "idtiers": "193612259",
+        "prix": 390000,
+        "nb_pieces": 3,
+        "nb_chambres": 2,
+        "surface": 86,
+        "commodites": [
+          "Chauffage-individuel",
+          "Chauffage-electrique",
+          "parquet",
+          "SalleDeBain-baignoire"
+        ],
+        "mensualitefinance": 1567,
+        "si_parking": 0,
+        "DPE": "D"
+      }
+    },
+    "seo": {
+      "breadcrumb": {
+        "type": "cdp-breadcrumb",
+        "name": "breadcrumb",
+        "title": "cdp-breadcrumb",
+        "slug": "cdp-breadcrumb",
+        "links": [
+          {
+            "order": 1,
+            "url": "https://www.seloger.com/",
+            "label": "Immobilier",
+            "hoverLabel": "Immobilier",
+            "serpKey": ""
+          },
+          {
+            "order": 2,
+            "url": "https://www.seloger.com/immobilier/pays/achat/bien-appartement/france.htm",
+            "label": "Appartements Ã  vendre France",
+            "hoverLabel": "Appartements Ã  vendre France",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre France"
+          },
+          {
+            "order": 3,
+            "url": "https://www.seloger.com/immobilier/achat/bien-appartement/aquitaine.htm",
+            "label": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "hoverLabel": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Nouvelle-Aquitaine"
+          },
+          {
+            "order": 4,
+            "url": "https://www.seloger.com/immobilier/achat/33/bien-appartement/",
+            "label": "Appartements Ã  vendre Gironde 33",
+            "hoverLabel": "Appartements Ã  vendre Gironde 33",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Gironde 33"
+          },
+          {
+            "order": 5,
+            "url": "https://www.seloger.com/immobilier/achat/immo-bordeaux-33/bien-appartement/",
+            "label": "Appartements Ã  vendre Bordeaux 33000",
+            "hoverLabel": "Appartements Ã  vendre Bordeaux 33000",
+            "serpKey": "",
+            "title": "Appartements Ã  vendre Bordeaux 33000"
+          },
+          {
+            "order": 100,
+            "url": "",
+            "label": "Annonce",
+            "hoverLabel": "Annonce",
+            "serpKey": "",
+            "title": "Annonce"
+          }
+        ]
+      },
+      "headInfo": {
+        "title": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)",
+        "titleWithCount": "",
+        "description": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)",
+        "canonical": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/capucins-saint-michel-nansouty-saint-genes/193612259.htm",
+        "robots": "index, follow, max-snippet:-1",
+        "icons": [
+          {
+            "relation": "shortcut icon",
+            "link": "https://www.seloger.com/favicon.ico",
+            "type": "image/ico"
+          }
+        ],
+        "openGraphs": [
+          {
+            "property": "locale",
+            "content": "fr_FR"
+          },
+          {
+            "property": "url",
+            "content": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/capucins-saint-michel-nansouty-saint-genes/193612259.htm"
+          },
+          {
+            "property": "type",
+            "content": "website"
+          },
+          {
+            "property": "site_name",
+            "content": "SeLoger"
+          },
+          {
+            "property": "title",
+            "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+          },
+          {
+            "property": "description",
+            "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+          },
+          {
+            "property": "image",
+            "content": "https://mms.seloger.com/b/d/8/3/bd83fbf3-52c0-4618-8811-40341023f567.jpg?ci_seal=ca79cf2075784e552ec26e77a3500022534cd8e1"
+          }
+        ],
+        "socials": [
+          {
+            "name": "twitter:card",
+            "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:url",
+            "content": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/capucins-saint-michel-nansouty-saint-genes/193612259.htm"
+          },
+          {
+            "name": "twitter:site",
+            "content": "@seloger"
+          },
+          {
+            "name": "twitter:title",
+            "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:description",
+            "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+          },
+          {
+            "name": "twitter:image",
+            "content": "https://mms.seloger.com/b/d/8/3/bd83fbf3-52c0-4618-8811-40341023f567.jpg?ci_seal=ca79cf2075784e552ec26e77a3500022534cd8e1"
+          }
+        ],
+        "structuredData": [
+          [
+            {
+              "type": "@context",
+              "content": "https://schema.org"
+            },
+            {
+              "type": "@type",
+              "content": "Organization"
+            },
+            {
+              "type": "name",
+              "content": "SeLoger"
+            },
+            {
+              "type": "address",
+              "content": "2 Rue des Italiens, 75009 Paris"
+            },
+            {
+              "type": "telephone",
+              "content": "01 53 38 28 00"
+            },
+            {
+              "type": "url",
+              "content": "https://www.seloger.com/"
+            },
+            {
+              "type": "logo",
+              "content": "https://static-seloger.com/commons/header/logo_header.svg"
+            }
+          ],
+          [
+            {
+              "type": "@context",
+              "content": "https://schema.org"
+            },
+            {
+              "type": "@type",
+              "content": "RealEstateListing"
+            },
+            {
+              "type": "datePosted",
+              "content": ""
+            },
+            {
+              "type": "description",
+              "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+            },
+            {
+              "type": "name",
+              "content": "Duplex Ã  vendre T3/F3 86 mÂ² 390000 â¬ Capucins-Saint Michel-Nansouty-Saint GenÃ¨s Bordeaux (33000)"
+            }
+          ]
+        ],
+        "breadcrumb": [
+          {
+            "order": 1,
+            "url": "https://www.seloger.com/",
+            "label": "Immobilier",
+            "hoverLabel": "Immobilier",
+            "serpKey": ""
+          },
+          {
+            "order": 2,
+            "url": "https://www.seloger.com/immobilier/pays/achat/bien-appartement/france.htm",
+            "label": "Appartements Ã  vendre France",
+            "hoverLabel": "Appartements Ã  vendre France",
+            "serpKey": ""
+          },
+          {
+            "order": 3,
+            "url": "https://www.seloger.com/immobilier/achat/bien-appartement/aquitaine.htm",
+            "label": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "hoverLabel": "Appartements Ã  vendre Nouvelle-Aquitaine",
+            "serpKey": ""
+          },
+          {
+            "order": 4,
+            "url": "https://www.seloger.com/immobilier/achat/33/bien-appartement/",
+            "label": "Appartements Ã  vendre Gironde 33",
+            "hoverLabel": "Appartements Ã  vendre Gironde 33",
+            "serpKey": ""
+          },
+          {
+            "order": 5,
+            "url": "https://www.seloger.com/immobilier/achat/immo-bordeaux-33/bien-appartement/",
+            "label": "Appartements Ã  vendre Bordeaux 33000",
+            "hoverLabel": "Appartements Ã  vendre Bordeaux 33000",
+            "serpKey": ""
+          }
+        ],
+        "redirectUrl": "https://www.seloger.com/annonces/achat/appartement/bordeaux-33/capucins-saint-michel-nansouty-saint-genes/193612259.htm"
+      }
+    },
+    "defaultBackToSearch": "distributionTypes=Buy&estateTypes=Apartment&locations=NBH2FR9333&priceMax=468000&priceMin=312000",
+    "tags": {
+      "isExclusive": false,
+      "has3DVisit": false,
+      "hasBrokerageFee": false,
+      "isNew": false,
+      "isHdExclusive": false
+    },
+    "rawData": {
+      "distributionType": "BUY",
+      "propertyType": "APARTMENT",
+      "geoIdHierarchy": [
+        {
+          "id": "NBH2FR9333",
+          "typeKey": "NBH2"
+        },
+        {
+          "id": "AD08FR13100",
+          "typeKey": "AD08"
+        },
+        {
+          "id": "AD06FR34",
+          "typeKey": "AD06"
+        },
+        {
+          "id": "AD04FR27",
+          "typeKey": "AD04"
+        },
+        {
+          "id": "AD03FR2",
+          "typeKey": "AD03"
+        },
+        {
+          "id": "AD02FR1",
+          "typeKey": "AD02"
+        }
+      ],
+      "propertySubType": "MULTI_STOREY",
+      "distributionSubType": {
+        "buy": "RESALE"
+      }
+    }
+  }
+]

@@ -1,0 +1,2091 @@
+[
+  {
+    "id": "7786657",
+    "title": "BP. Fleece Hoodie",
+    "type": "Sweatshirt/Hoody/Zipfront",
+    "typeParent": "Tops",
+    "ageGroups": [
+      "ADULT"
+    ],
+    "reviewAverageRating": null,
+    "numberOfReviews": null,
+    "brand": {
+      "brandName": "BP.",
+      "brandUrl": "/brands/bp--814?origin=productBrandLink",
+      "hasBrandPage": false,
+      "imsBrandId": 2601
+    },
+    "description": "Soften your vibe in this sporty hoodie designed with dropped shoulders for a slouchy fit.",
+    "features": [
+      "27\" length (size Medium)",
+      "Ribbed cuffs and hem",
+      "Kangaroo pocket",
+      "70% cotton, 30% polyester",
+      "Machine wash, tumble dry",
+      "Imported",
+      "This brand has committed to science-based climate action, with targets validated by the Science Based Targets initiative to reduce greenhouse gas emissions in line with the latest climate science",
+      "This brand meets Nordstrom Responsible Brands criteria: brand adheres to responsible social and environmental practices",
+      "Item #10296958"
+    ],
+    "gender": "Male",
+    "isAvailable": true,
+    "media": [
+      {
+        "colorCode": "001",
+        "colorName": "BLACK FADED",
+        "urls": [
+          "https://n.nordstrommedia.com/it/14581705-3a53-42c2-9d98-15f82aad7792.jpeg",
+          "https://n.nordstrommedia.com/it/8d5f5023-fd88-4bb1-beac-8aaaee74c6fa.jpeg",
+          "https://n.nordstrommedia.com/it/b6fe1318-8d93-4d11-b88e-3407fa0edf93.jpeg",
+          "https://n.nordstrommedia.com/it/dc865889-2cd7-49e5-9163-137dd473ba15.jpeg",
+          "https://n.nordstrommedia.com/it/8cc97dbb-060a-493e-91d0-f60f4da1e568.jpeg",
+          "https://n.nordstrommedia.com/it/2d761274-42c2-4b5b-b050-47364519150a.jpeg",
+          "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg"
+        ]
+      },
+      {
+        "colorCode": "030",
+        "colorName": "GREY SOFT HEATHER",
+        "urls": [
+          "https://n.nordstrommedia.com/it/c2d80a96-a9c5-4804-b75d-0db79abe9228.jpeg",
+          "https://n.nordstrommedia.com/it/3d691daf-ee87-4874-a17f-a3e8ea7a9751.jpeg",
+          "https://n.nordstrommedia.com/it/a3907bbd-b712-485b-aa3e-c84cf7504f5a.jpeg",
+          "https://n.nordstrommedia.com/it/1e0e3b6c-d725-4e75-9978-aec995fbf913.jpeg",
+          "https://n.nordstrommedia.com/it/4ab23175-9d05-4b94-82dd-b2a390b2a2ae.jpeg",
+          "https://n.nordstrommedia.com/it/44b6fed9-70fb-4a34-8bc9-f24b987edd96.jpeg",
+          "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg"
+        ]
+      },
+      {
+        "colorCode": "031",
+        "colorName": "GREY JET HEATHER",
+        "urls": [
+          "https://n.nordstrommedia.com/it/153aac91-7a9f-4c88-af88-060bc607f1d9.jpeg",
+          "https://n.nordstrommedia.com/it/6dc89276-e453-4aa6-a94f-6dff43a4fa25.jpeg",
+          "https://n.nordstrommedia.com/it/04a910c6-4134-41fc-9b55-0e5b749d8d44.jpeg",
+          "https://n.nordstrommedia.com/it/90ae1ced-aa4b-48f7-87c1-dea96137c363.jpeg",
+          "https://n.nordstrommedia.com/it/c167ffc8-a20e-43db-9a90-4784627198ca.jpeg",
+          "https://n.nordstrommedia.com/it/6949c51b-a0b9-4862-8701-050cadde2552.jpeg",
+          "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg"
+        ]
+      },
+      {
+        "colorCode": "050",
+        "colorName": "GREY OWL",
+        "urls": [
+          "https://n.nordstrommedia.com/it/23dfe6d4-e6bf-4baa-a74d-b92a46731ad7.jpeg",
+          "https://n.nordstrommedia.com/it/6f732de7-dc59-453f-8248-dfed394ec051.jpeg",
+          "https://n.nordstrommedia.com/it/a45b04af-8094-4a63-ade8-8152b43ceb5d.jpeg",
+          "https://n.nordstrommedia.com/it/177a6c78-1405-4d5b-a900-bec7a5ba366b.jpeg",
+          "https://n.nordstrommedia.com/it/b4ec691b-c04d-4cb1-9149-4473eabea8e2.jpeg",
+          "https://n.nordstrommedia.com/it/c47b76f0-19ed-40e4-9dbf-f6c912c78cff.jpeg",
+          "https://n.nordstrommedia.com/it/c6cf4c14-bf08-47a9-a1e7-dc16a15edf52.jpeg",
+          "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg"
+        ]
+      },
+      {
+        "colorCode": "202",
+        "colorName": "BROWN COFFEE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/2e1d87e2-bc39-4ffd-a559-0b770d5e93d4.jpeg",
+          "https://n.nordstrommedia.com/it/37873e51-f061-4130-b63a-2dbfaa39a0f4.jpeg",
+          "https://n.nordstrommedia.com/it/c94973c8-7f16-48e2-ac26-27315f6173df.jpeg",
+          "https://n.nordstrommedia.com/it/ea068f00-9049-4ac3-b7d4-e948d584e083.jpeg",
+          "https://n.nordstrommedia.com/it/9f9e4858-a85a-46ff-a738-2a925465ff0b.jpeg",
+          "https://n.nordstrommedia.com/it/d2680839-6f73-4c0c-903f-32e2bfd4f4b4.jpeg",
+          "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg"
+        ]
+      },
+      {
+        "colorCode": "231",
+        "colorName": "TAN CARTOUCHE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/f80975ec-121e-4829-86ee-0a1e22a310a2.jpeg",
+          "https://n.nordstrommedia.com/it/1ed3139a-aeb1-4f34-af54-c9ec941024e8.jpeg",
+          "https://n.nordstrommedia.com/it/e3e670e5-4b59-4fb4-80c8-24bac9ab17ed.jpeg",
+          "https://n.nordstrommedia.com/it/db00437f-834a-4f8d-aa01-f63aa7b1e104.jpeg",
+          "https://n.nordstrommedia.com/it/49e682ba-18bd-4017-bc8b-452eada7398d.jpeg",
+          "https://n.nordstrommedia.com/it/e2f58d02-457b-4386-899a-4315fed5acc3.jpeg",
+          "https://n.nordstrommedia.com/it/433a8af2-2752-4b50-89a7-e4e0d7ee2771.jpeg"
+        ]
+      },
+      {
+        "colorCode": "232",
+        "colorName": "BROWN SHIITAKE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/9de4c359-bcc8-4c88-9166-0ee7ef8b8b53.jpeg",
+          "https://n.nordstrommedia.com/it/7a43a837-986d-4580-88be-8c9bf519aed9.jpeg",
+          "https://n.nordstrommedia.com/it/2936b020-b153-4128-9827-f315d10c0350.jpeg",
+          "https://n.nordstrommedia.com/it/aa529985-4215-43d5-83cb-e61ebd0d910b.jpeg",
+          "https://n.nordstrommedia.com/it/f3500b79-7efd-4db7-90ee-303bc04b3e47.jpeg",
+          "https://n.nordstrommedia.com/it/81589985-dc33-4da0-9ffc-95f6abeea3fe.jpeg",
+          "https://n.nordstrommedia.com/it/1a6c14f7-3b7c-441b-9b5a-c2cfb143cf1d.jpeg"
+        ]
+      },
+      {
+        "colorCode": "311",
+        "colorName": "GREEN PINECONE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/77deddbe-4008-4a36-a4bc-3add00b04f51.jpeg",
+          "https://n.nordstrommedia.com/it/9bbed0c4-58d4-4bf5-8aae-e8d74adbc1aa.jpeg",
+          "https://n.nordstrommedia.com/it/b0e9dc57-9352-49ef-9c13-1c81f72fe3b9.jpeg",
+          "https://n.nordstrommedia.com/it/4e13793a-0ac2-40df-92b7-497c467c9cf0.jpeg",
+          "https://n.nordstrommedia.com/it/d12111b6-7011-40df-9e7c-f04c167800c5.jpeg",
+          "https://n.nordstrommedia.com/it/11e2557e-20f3-489e-aa58-e283af60d910.jpeg",
+          "https://n.nordstrommedia.com/it/ca527453-c633-46bd-8b93-54dd1af83076.jpeg"
+        ]
+      },
+      {
+        "colorCode": "401",
+        "colorName": "BLUE INDIGO",
+        "urls": [
+          "https://n.nordstrommedia.com/it/4a511a46-9c59-49cc-b812-1bc9e0a33ff0.jpeg",
+          "https://n.nordstrommedia.com/it/5620dbe6-87a7-4b6a-b556-5b7838d048dc.jpeg",
+          "https://n.nordstrommedia.com/it/550e9b20-ffef-4746-8877-b678e3d2e150.jpeg",
+          "https://n.nordstrommedia.com/it/d1ea316e-2003-4294-8dd0-46319b344af7.jpeg",
+          "https://n.nordstrommedia.com/it/7e95894b-3f0d-469d-bb9f-4c69ff6c47d1.jpeg",
+          "https://n.nordstrommedia.com/it/5644b6e2-cb0f-4887-9ad0-342dedeb03b5.jpeg",
+          "https://n.nordstrommedia.com/it/ff2c80fe-5c50-46a9-b2a4-e8aac069879b.jpeg"
+        ]
+      },
+      {
+        "colorCode": "402",
+        "colorName": "NAVY IRIS",
+        "urls": [
+          "https://n.nordstrommedia.com/it/df1282ec-b71a-4762-9833-b80f6fd1a6af.jpeg",
+          "https://n.nordstrommedia.com/it/8f61201f-9dd5-4ea4-8e2b-dba4ea954384.jpeg",
+          "https://n.nordstrommedia.com/it/fa4ca21b-627e-448f-b6f1-75911117a844.jpeg",
+          "https://n.nordstrommedia.com/it/e4465457-bef5-4cb6-9c5b-cdf0b64256d8.jpeg",
+          "https://n.nordstrommedia.com/it/3f2e0f01-ea8b-49bf-8e8c-012482aa049d.jpeg",
+          "https://n.nordstrommedia.com/it/614b13b9-827d-49cb-a0bc-2a2bb2212e67.jpeg",
+          "https://n.nordstrommedia.com/it/c536827d-d92c-4bb3-8dcc-3524ce1fe7d8.jpeg"
+        ]
+      },
+      {
+        "colorCode": "450",
+        "colorName": "BLUE SUBDUED",
+        "urls": [
+          "https://n.nordstrommedia.com/it/7da1afa4-70c1-4964-a6ac-0e82537ab812.jpeg",
+          "https://n.nordstrommedia.com/it/2d3dd1ab-55df-4c7f-9d78-b28f45e4f935.jpeg",
+          "https://n.nordstrommedia.com/it/6aaa6f45-7456-43da-9c09-0698bc98908a.jpeg",
+          "https://n.nordstrommedia.com/it/5860c8fd-a705-42a6-90a8-1c4aa427fb42.jpeg",
+          "https://n.nordstrommedia.com/it/13276584-eae8-4d30-a5b6-d32d242f7d94.jpeg",
+          "https://n.nordstrommedia.com/it/4b86943b-4d35-4485-9800-e47a9a70f4c0.jpeg",
+          "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg"
+        ]
+      },
+      {
+        "colorCode": "900",
+        "colorName": "IVORY EGRET",
+        "urls": [
+          "https://n.nordstrommedia.com/it/a8e89d6d-8a80-413e-b242-58c7527f2a70.jpeg",
+          "https://n.nordstrommedia.com/it/2c05e4b2-9843-4370-b96e-84384998fbbb.jpeg",
+          "https://n.nordstrommedia.com/it/b6802800-45dc-42a3-8a69-1001024e2df1.jpeg",
+          "https://n.nordstrommedia.com/it/dfb17145-1c9b-4de1-94e5-ccda8735b9c4.jpeg",
+          "https://n.nordstrommedia.com/it/e5f5ff09-6542-4331-86b2-23d41bb3caa7.jpeg",
+          "https://n.nordstrommedia.com/it/9ab216fe-b82a-406c-9a3e-a0edc847cc83.jpeg",
+          "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg"
+        ]
+      },
+      {
+        "colorCode": "901",
+        "colorName": "IVORY CREAM",
+        "urls": [
+          "https://n.nordstrommedia.com/it/02d247bd-38c9-496b-8116-3b6611cdc987.jpeg",
+          "https://n.nordstrommedia.com/it/e8486b9c-5345-4de7-817c-abd1b9d4e47f.jpeg",
+          "https://n.nordstrommedia.com/it/16beaefb-79d4-4077-84a7-7f68a3d04287.jpeg",
+          "https://n.nordstrommedia.com/it/316d093a-0bd5-48bb-b7de-d973735d8778.jpeg",
+          "https://n.nordstrommedia.com/it/1be55c82-432e-442f-9380-fbf4efaf6b1d.jpeg",
+          "https://n.nordstrommedia.com/it/600c0366-b5f6-4b16-9b59-401acad27cae.jpeg",
+          "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg"
+        ]
+      }
+    ],
+    "variants": {
+      "A1166525": {
+        "id": "A1166525",
+        "sizeId": "small",
+        "colorId": "030",
+        "totalQuantityAvailable": 167,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Grey Soft Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1166526": {
+        "id": "A1166526",
+        "sizeId": "medium",
+        "colorId": "030",
+        "totalQuantityAvailable": 159,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Grey Soft Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1166527": {
+        "id": "A1166527",
+        "sizeId": "large",
+        "colorId": "030",
+        "totalQuantityAvailable": 36,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Grey Soft Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1166529": {
+        "id": "A1166529",
+        "sizeId": "xx-large",
+        "colorId": "030",
+        "totalQuantityAvailable": 2,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Grey Soft Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1553199": {
+        "id": "A1553199",
+        "sizeId": "small",
+        "colorId": "401",
+        "totalQuantityAvailable": 0,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "401",
+          "value": "Blue Indigo",
+          "sizes": "_s:small|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/ff2c80fe-5c50-46a9-b2a4-e8aac069879b.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1600653": {
+        "id": "A1600653",
+        "sizeId": "small",
+        "colorId": "001",
+        "totalQuantityAvailable": 352,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1600654": {
+        "id": "A1600654",
+        "sizeId": "medium",
+        "colorId": "001",
+        "totalQuantityAvailable": 346,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1600655": {
+        "id": "A1600655",
+        "sizeId": "large",
+        "colorId": "001",
+        "totalQuantityAvailable": 229,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1600656": {
+        "id": "A1600656",
+        "sizeId": "x-large",
+        "colorId": "001",
+        "totalQuantityAvailable": 61,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1600657": {
+        "id": "A1600657",
+        "sizeId": "xx-large",
+        "colorId": "001",
+        "totalQuantityAvailable": 35,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1767282": {
+        "id": "A1767282",
+        "sizeId": "small",
+        "colorId": "900",
+        "totalQuantityAvailable": 53,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "900",
+          "value": "Ivory Egret",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1767283": {
+        "id": "A1767283",
+        "sizeId": "medium",
+        "colorId": "900",
+        "totalQuantityAvailable": 47,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "900",
+          "value": "Ivory Egret",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1767284": {
+        "id": "A1767284",
+        "sizeId": "large",
+        "colorId": "900",
+        "totalQuantityAvailable": 31,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "900",
+          "value": "Ivory Egret",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1767286": {
+        "id": "A1767286",
+        "sizeId": "xx-large",
+        "colorId": "900",
+        "totalQuantityAvailable": 24,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "900",
+          "value": "Ivory Egret",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A3535220": {
+        "id": "A3535220",
+        "sizeId": "x-small",
+        "colorId": "030",
+        "totalQuantityAvailable": 8,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Grey Soft Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/39e0e727-92c1-4095-bcaa-f41d7383eba0.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A3535222": {
+        "id": "A3535222",
+        "sizeId": "x-small",
+        "colorId": "001",
+        "totalQuantityAvailable": 41,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black Faded",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45385454-2886-4bfa-b4da-c641721301b1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A3535223": {
+        "id": "A3535223",
+        "sizeId": "large",
+        "colorId": "231",
+        "totalQuantityAvailable": 0,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "231",
+          "value": "Tan Cartouche",
+          "sizes": "_s:large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/433a8af2-2752-4b50-89a7-e4e0d7ee2771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772280": {
+        "id": "A4772280",
+        "sizeId": "small",
+        "colorId": "232",
+        "totalQuantityAvailable": 94,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "232",
+          "value": "Brown Shiitake",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/1a6c14f7-3b7c-441b-9b5a-c2cfb143cf1d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772296": {
+        "id": "A4772296",
+        "sizeId": "medium",
+        "colorId": "232",
+        "totalQuantityAvailable": 55,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "232",
+          "value": "Brown Shiitake",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/1a6c14f7-3b7c-441b-9b5a-c2cfb143cf1d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772297": {
+        "id": "A4772297",
+        "sizeId": "xx-large",
+        "colorId": "232",
+        "totalQuantityAvailable": 3,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "232",
+          "value": "Brown Shiitake",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/1a6c14f7-3b7c-441b-9b5a-c2cfb143cf1d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772300": {
+        "id": "A4772300",
+        "sizeId": "x-small",
+        "colorId": "232",
+        "totalQuantityAvailable": 18,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "232",
+          "value": "Brown Shiitake",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/1a6c14f7-3b7c-441b-9b5a-c2cfb143cf1d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772301": {
+        "id": "A4772301",
+        "sizeId": "x-small",
+        "colorId": "450",
+        "totalQuantityAvailable": 11,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "450",
+          "value": "Blue Subdued",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772303": {
+        "id": "A4772303",
+        "sizeId": "small",
+        "colorId": "450",
+        "totalQuantityAvailable": 35,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "450",
+          "value": "Blue Subdued",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772304": {
+        "id": "A4772304",
+        "sizeId": "xx-large",
+        "colorId": "450",
+        "totalQuantityAvailable": 21,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "450",
+          "value": "Blue Subdued",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772311": {
+        "id": "A4772311",
+        "sizeId": "large",
+        "colorId": "450",
+        "totalQuantityAvailable": 19,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "450",
+          "value": "Blue Subdued",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4772312": {
+        "id": "A4772312",
+        "sizeId": "medium",
+        "colorId": "450",
+        "totalQuantityAvailable": 41,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "450",
+          "value": "Blue Subdued",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/d7d95a4f-aa5d-4512-af84-1f24c35ca771.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A6318699": {
+        "id": "A6318699",
+        "sizeId": "small",
+        "colorId": "311",
+        "totalQuantityAvailable": 11,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "311",
+          "value": "Green Pinecone",
+          "sizes": "_s:x-small|_s:small|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/ca527453-c633-46bd-8b93-54dd1af83076.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A6318995": {
+        "id": "A6318995",
+        "sizeId": "x-small",
+        "colorId": "900",
+        "totalQuantityAvailable": 8,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "900",
+          "value": "Ivory Egret",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/83d114f9-02ed-4bd0-b402-425d906d220e.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A6318998": {
+        "id": "A6318998",
+        "sizeId": "x-small",
+        "colorId": "311",
+        "totalQuantityAvailable": 1,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "311",
+          "value": "Green Pinecone",
+          "sizes": "_s:x-small|_s:small|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/ca527453-c633-46bd-8b93-54dd1af83076.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A6319002": {
+        "id": "A6319002",
+        "sizeId": "x-small",
+        "colorId": "402",
+        "totalQuantityAvailable": 1,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "402",
+          "value": "Navy Iris",
+          "sizes": "_s:x-small|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/c536827d-d92c-4bb3-8dcc-3524ce1fe7d8.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8560676": {
+        "id": "A8560676",
+        "sizeId": "x-small",
+        "colorId": "202",
+        "totalQuantityAvailable": 12,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561760": {
+        "id": "A8561760",
+        "sizeId": "large",
+        "colorId": "202",
+        "totalQuantityAvailable": 167,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561761": {
+        "id": "A8561761",
+        "sizeId": "small",
+        "colorId": "202",
+        "totalQuantityAvailable": 82,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561764": {
+        "id": "A8561764",
+        "sizeId": "x-large",
+        "colorId": "202",
+        "totalQuantityAvailable": 46,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561765": {
+        "id": "A8561765",
+        "sizeId": "xx-large",
+        "colorId": "901",
+        "totalQuantityAvailable": 25,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561766": {
+        "id": "A8561766",
+        "sizeId": "medium",
+        "colorId": "202",
+        "totalQuantityAvailable": 156,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561767": {
+        "id": "A8561767",
+        "sizeId": "xx-large",
+        "colorId": "202",
+        "totalQuantityAvailable": 24,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "202",
+          "value": "Brown Coffee",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/cbe9b00b-a2e0-4fa8-be7e-303d156d62aa.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561768": {
+        "id": "A8561768",
+        "sizeId": "medium",
+        "colorId": "901",
+        "totalQuantityAvailable": 163,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561769": {
+        "id": "A8561769",
+        "sizeId": "x-small",
+        "colorId": "901",
+        "totalQuantityAvailable": 15,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561772": {
+        "id": "A8561772",
+        "sizeId": "large",
+        "colorId": "901",
+        "totalQuantityAvailable": 175,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561773": {
+        "id": "A8561773",
+        "sizeId": "small",
+        "colorId": "901",
+        "totalQuantityAvailable": 83,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561774": {
+        "id": "A8561774",
+        "sizeId": "x-large",
+        "colorId": "901",
+        "totalQuantityAvailable": 53,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "901",
+          "value": "Ivory Cream",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/5d9a7379-f6cc-4963-922a-d02a013974fe.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561775": {
+        "id": "A8561775",
+        "sizeId": "xx-large",
+        "colorId": "050",
+        "totalQuantityAvailable": 27,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561793": {
+        "id": "A8561793",
+        "sizeId": "small",
+        "colorId": "050",
+        "totalQuantityAvailable": 90,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561796": {
+        "id": "A8561796",
+        "sizeId": "x-small",
+        "colorId": "050",
+        "totalQuantityAvailable": 16,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561797": {
+        "id": "A8561797",
+        "sizeId": "large",
+        "colorId": "050",
+        "totalQuantityAvailable": 183,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561798": {
+        "id": "A8561798",
+        "sizeId": "medium",
+        "colorId": "050",
+        "totalQuantityAvailable": 177,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561799": {
+        "id": "A8561799",
+        "sizeId": "xx-large",
+        "colorId": "031",
+        "totalQuantityAvailable": 32,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561800": {
+        "id": "A8561800",
+        "sizeId": "medium",
+        "colorId": "031",
+        "totalQuantityAvailable": 191,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561801": {
+        "id": "A8561801",
+        "sizeId": "x-small",
+        "colorId": "031",
+        "totalQuantityAvailable": 18,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561804": {
+        "id": "A8561804",
+        "sizeId": "x-large",
+        "colorId": "050",
+        "totalQuantityAvailable": 55,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "050",
+          "value": "Grey Owl",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/8032e760-a888-4de0-bc95-31307e9afdc6.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561805": {
+        "id": "A8561805",
+        "sizeId": "small",
+        "colorId": "031",
+        "totalQuantityAvailable": 101,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561806": {
+        "id": "A8561806",
+        "sizeId": "x-large",
+        "colorId": "031",
+        "totalQuantityAvailable": 58,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A8561807": {
+        "id": "A8561807",
+        "sizeId": "large",
+        "colorId": "031",
+        "totalQuantityAvailable": 200,
+        "price": {
+          "currencyCode": "USD",
+          "units": 49,
+          "nanos": 0
+        },
+        "color": {
+          "id": "031",
+          "value": "Grey Jet Heather",
+          "sizes": "_s:x-small|_s:small|_s:medium|_s:large|_s:x-large|_s:xx-large|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/45cee2df-0b8d-4737-9056-613490aeb1a1.jpeg?crop=fit&w=31&h=31"
+        }
+      }
+    }
+  },
+  {
+    "id": "7783670",
+    "title": "BOSS Hank Kent Performance Twill Dress Shirt",
+    "type": "Dress-shirt",
+    "typeParent": "Tops",
+    "ageGroups": [
+      "ADULT"
+    ],
+    "reviewAverageRating": null,
+    "numberOfReviews": null,
+    "brand": {
+      "brandName": "BOSS",
+      "brandUrl": "/brands/boss--320?origin=productBrandLink",
+      "hasBrandPage": false,
+      "imsBrandId": 1037
+    },
+    "description": "Achieve an effortlessly polished look in this staple dress shirt made from breathable, moisture-wicking stretch fabric for extra comfort.",
+    "features": [
+      "French placket",
+      "Spread collar",
+      "Rounded, adjustable button cuffs",
+      "Curved hem",
+      "Wrinkle resistant",
+      "Four-way-stretch fabric",
+      "92% polyamide, 8% elastane",
+      "Dry clean or machine wash, line dry",
+      "Imported",
+      "Item #10293910"
+    ],
+    "gender": "Male",
+    "isAvailable": true,
+    "media": [
+      {
+        "colorCode": "001",
+        "colorName": "BLACK",
+        "urls": [
+          "https://n.nordstrommedia.com/it/6a1f7635-dce3-45b4-a298-7ac04646892b.jpeg",
+          "https://n.nordstrommedia.com/it/ef51619a-0034-42a7-9624-610f599debbf.jpeg",
+          "https://n.nordstrommedia.com/it/f343d622-4bf9-4563-ba29-4d1f4f97ebca.jpeg",
+          "https://n.nordstrommedia.com/it/2e7d1613-6279-4c61-8db2-2dcd999ceb61.jpeg",
+          "https://n.nordstrommedia.com/it/2e1b0a0d-514a-47ab-815f-07afe25b7a2d.jpeg",
+          "https://n.nordstrommedia.com/it/839fd481-48c2-49b6-8f1f-5e776c8f5a3a.jpeg",
+          "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg"
+        ]
+      },
+      {
+        "colorCode": "030",
+        "colorName": "MEDIUM GREY",
+        "urls": [
+          "https://n.nordstrommedia.com/it/8674ae46-518e-4b46-8e6e-4cb9fef2440d.jpeg",
+          "https://n.nordstrommedia.com/it/1e676f65-b515-4e4b-b418-4a6edf79c72d.jpeg",
+          "https://n.nordstrommedia.com/it/8819672d-3f5b-4e41-8dcd-ee873c97aac2.jpeg",
+          "https://n.nordstrommedia.com/it/73fa6b48-449a-41d5-b0a2-447f99cee92f.jpeg",
+          "https://n.nordstrommedia.com/it/639c7ba2-0933-4d26-a378-bab35cdfd42d.jpeg",
+          "https://n.nordstrommedia.com/it/be1dc250-9f9c-4fa0-a3c2-f470ea6d365e.jpeg",
+          "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg"
+        ]
+      },
+      {
+        "colorCode": "100",
+        "colorName": "WHITE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/cf94e293-45f1-4438-9467-72d971db452b.jpeg",
+          "https://n.nordstrommedia.com/it/2a1e4235-d420-464e-8436-d22d95321eb6.jpeg",
+          "https://n.nordstrommedia.com/it/98fc1006-7949-4714-b18a-dbbf76e71c6a.jpeg",
+          "https://n.nordstrommedia.com/it/e3641e8f-e257-48c9-b69f-a0f9aeb94d3d.jpeg",
+          "https://n.nordstrommedia.com/it/010f33d4-1f70-4c84-9023-08ba76622ba9.jpeg",
+          "https://n.nordstrommedia.com/it/3491623e-8125-4145-864a-3ade3a7b8707.jpeg",
+          "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg"
+        ]
+      },
+      {
+        "colorCode": "404",
+        "colorName": "DARK BLUE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/9d19bde6-4200-4372-a7ec-20f006629c1a.jpeg",
+          "https://n.nordstrommedia.com/it/4560bb18-8afb-4ffc-9ea7-bbf785fb85bd.jpeg",
+          "https://n.nordstrommedia.com/it/5ccc6d8d-2053-4d05-83dd-3e50cea173de.jpeg",
+          "https://n.nordstrommedia.com/it/fa2048ea-32fc-4b2c-830b-bd39fb45f3cd.jpeg",
+          "https://n.nordstrommedia.com/it/c63bb66a-a653-4315-9b4d-1a9c93d9c6bc.jpeg",
+          "https://n.nordstrommedia.com/it/6bc9426b-fd73-472e-92ff-2bc059332842.jpeg",
+          "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg"
+        ]
+      },
+      {
+        "colorCode": "451",
+        "colorName": "LIGHT BLUE",
+        "urls": [
+          "https://n.nordstrommedia.com/it/47b7dce3-a749-4781-a846-953c8da098d6.jpeg",
+          "https://n.nordstrommedia.com/it/313199a8-9ec7-426b-93a3-1710a4c87bef.jpeg",
+          "https://n.nordstrommedia.com/it/3a3a7670-09c4-411b-8a3c-8340838c83d3.jpeg",
+          "https://n.nordstrommedia.com/it/a3e668c5-6812-4d50-bb37-158fc2cebd26.jpeg",
+          "https://n.nordstrommedia.com/it/84edeb93-5f89-4785-9170-e6cd5d9380b9.jpeg",
+          "https://n.nordstrommedia.com/it/c7c33626-d5fa-4edc-baa1-205c9fcc7605.jpeg",
+          "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg"
+        ]
+      },
+      {
+        "colorCode": "682",
+        "colorName": "LIGHT PINK",
+        "urls": [
+          "https://n.nordstrommedia.com/it/284eedac-8cab-46d4-b87c-a6bb0653d47c.jpeg",
+          "https://n.nordstrommedia.com/it/d424ad7f-b5b5-4c50-8cef-0b30f879e3c7.jpeg",
+          "https://n.nordstrommedia.com/it/26034286-1fec-47e7-98b0-b899f5e46a59.jpeg",
+          "https://n.nordstrommedia.com/it/d11c9292-227f-4f22-9aa0-3df276185128.jpeg",
+          "https://n.nordstrommedia.com/it/2a90c73f-1c7c-4bad-8e1a-e067d0b4d147.jpeg",
+          "https://n.nordstrommedia.com/it/05c5d546-4e48-4590-88cc-37fb3bc9ed98.jpeg",
+          "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg"
+        ]
+      }
+    ],
+    "variants": {
+      "A1136086": {
+        "id": "A1136086",
+        "sizeId": "14.5 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 101,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136087": {
+        "id": "A1136087",
+        "sizeId": "15 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 124,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136088": {
+        "id": "A1136088",
+        "sizeId": "15.5 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 176,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136089": {
+        "id": "A1136089",
+        "sizeId": "16 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 182,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136090": {
+        "id": "A1136090",
+        "sizeId": "16.5 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 151,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136091": {
+        "id": "A1136091",
+        "sizeId": "17 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 129,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136092": {
+        "id": "A1136092",
+        "sizeId": "17.5 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 100,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136093": {
+        "id": "A1136093",
+        "sizeId": "big-18 -",
+        "colorId": "001",
+        "totalQuantityAvailable": 12,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "001",
+          "value": "Black",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/2653d383-f7fb-459b-88f0-e5ccdd5884da.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136118": {
+        "id": "A1136118",
+        "sizeId": "14.5 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 106,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136119": {
+        "id": "A1136119",
+        "sizeId": "15 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 112,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136120": {
+        "id": "A1136120",
+        "sizeId": "15.5 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 177,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136121": {
+        "id": "A1136121",
+        "sizeId": "16 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 157,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136122": {
+        "id": "A1136122",
+        "sizeId": "16.5 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 142,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136123": {
+        "id": "A1136123",
+        "sizeId": "17 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 124,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136124": {
+        "id": "A1136124",
+        "sizeId": "17.5 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 87,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136125": {
+        "id": "A1136125",
+        "sizeId": "big-18 -",
+        "colorId": "404",
+        "totalQuantityAvailable": 9,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "404",
+          "value": "Dark Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/984687e9-05b0-4770-91bf-4631e935c916.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136196": {
+        "id": "A1136196",
+        "sizeId": "14.5 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 98,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136197": {
+        "id": "A1136197",
+        "sizeId": "15 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 101,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136199": {
+        "id": "A1136199",
+        "sizeId": "14.5 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 119,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136200": {
+        "id": "A1136200",
+        "sizeId": "15 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 138,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136201": {
+        "id": "A1136201",
+        "sizeId": "15.5 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 205,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136202": {
+        "id": "A1136202",
+        "sizeId": "16 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 216,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136203": {
+        "id": "A1136203",
+        "sizeId": "16.5 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 201,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136204": {
+        "id": "A1136204",
+        "sizeId": "17 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 174,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136205": {
+        "id": "A1136205",
+        "sizeId": "17.5 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 135,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136206": {
+        "id": "A1136206",
+        "sizeId": "big-18 -",
+        "colorId": "100",
+        "totalQuantityAvailable": 24,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "100",
+          "value": "White",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/9e1f146a-baa7-484b-a048-5fe8f0a0209d.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136207": {
+        "id": "A1136207",
+        "sizeId": "15.5 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 136,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136208": {
+        "id": "A1136208",
+        "sizeId": "16 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 131,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136209": {
+        "id": "A1136209",
+        "sizeId": "16.5 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 114,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136210": {
+        "id": "A1136210",
+        "sizeId": "17 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 91,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136211": {
+        "id": "A1136211",
+        "sizeId": "17.5 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 88,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A1136212": {
+        "id": "A1136212",
+        "sizeId": "big-18 -",
+        "colorId": "451",
+        "totalQuantityAvailable": 16,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "451",
+          "value": "Light Blue",
+          "sizes": "_s:14.5 -|_s:15 -|_s:15.5 -|_s:16 -|_s:16.5 -|_s:17 -|_s:17.5 -|_s:big-18 -|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/3b991478-8bf7-4ca3-ae9a-7a8d302c871a.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544611": {
+        "id": "A4544611",
+        "sizeId": "15 - r",
+        "colorId": "682",
+        "totalQuantityAvailable": 7,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "682",
+          "value": "Light Pink",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544618": {
+        "id": "A4544618",
+        "sizeId": "14.5 - r",
+        "colorId": "682",
+        "totalQuantityAvailable": 8,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "682",
+          "value": "Light Pink",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544667": {
+        "id": "A4544667",
+        "sizeId": "14.5 - r",
+        "colorId": "030",
+        "totalQuantityAvailable": 5,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Medium Grey",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544780": {
+        "id": "A4544780",
+        "sizeId": "16.5 - r",
+        "colorId": "682",
+        "totalQuantityAvailable": 1,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "682",
+          "value": "Light Pink",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544781": {
+        "id": "A4544781",
+        "sizeId": "16 - r",
+        "colorId": "682",
+        "totalQuantityAvailable": 2,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "682",
+          "value": "Light Pink",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544925": {
+        "id": "A4544925",
+        "sizeId": "16 - r",
+        "colorId": "030",
+        "totalQuantityAvailable": 12,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Medium Grey",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544927": {
+        "id": "A4544927",
+        "sizeId": "15 - r",
+        "colorId": "030",
+        "totalQuantityAvailable": 7,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Medium Grey",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544928": {
+        "id": "A4544928",
+        "sizeId": "16.5 - r",
+        "colorId": "030",
+        "totalQuantityAvailable": 2,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Medium Grey",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4544929": {
+        "id": "A4544929",
+        "sizeId": "17.5 - r",
+        "colorId": "030",
+        "totalQuantityAvailable": 4,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "030",
+          "value": "Medium Grey",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/61aa1cb6-c31a-49cb-b99b-756d7a6e53eb.jpeg?crop=fit&w=31&h=31"
+        }
+      },
+      "A4545050": {
+        "id": "A4545050",
+        "sizeId": "17.5 - r",
+        "colorId": "682",
+        "totalQuantityAvailable": 3,
+        "price": {
+          "currencyCode": "USD",
+          "units": 138,
+          "nanos": 0
+        },
+        "color": {
+          "id": "682",
+          "value": "Light Pink",
+          "sizes": "_s:14.5 - r|_s:15 - r|_s:16 - r|_s:16.5 - r|_s:17.5 - r|",
+          "mediaIds": null,
+          "swatch": "https://n.nordstrommedia.com/it/acee5297-5f7e-4954-b990-8f232a19ecfb.jpeg?crop=fit&w=31&h=31"
+        }
+      }
+    }
+  },
+  {
+    "id": "6549520",
+    "title": "Nike Air Max 90 Sneaker",
+    "type": "Sneaker",
+    "typeParent": "Shoes",
+    "ageGroups": [
+      "ADULT"
+    ],
+    "reviewAverageRating": null,
+    "numberOfReviews": null,
+    "brand": {
+      "brandName": "Nike",
+      "brandUrl": "/brands/nike--535?origin=productBrandLink",
+      "hasBrandPage": false,
+      "imsBrandId": 1673
+    },
+    "description": "",
+    "features": [
+      "Cushioning: absorbs impact and distributes weight for consistent, buoyant comfort under each step",
+      "Removable insole",
+      "Visible Max Air unit in the heel provides clear Air-Sole cushioning",
+      "Leather, textile and synthetic upper/synthetic lining/rubber and synthetic sole",
+      "Imported",
+      "Item #6854031"
+    ],
+    "gender": "Male",
+    "isAvailable": false,
+    "media": [
+      {
+        "colorCode": "001",
+        "colorName": "",
+        "urls": [
+          "https://n.nordstrommedia.com/it/b879efa6-7565-4077-94a2-dd78c5103408.jpeg",
+          "https://n.nordstrommedia.com/it/135e489b-58c7-4c46-95c1-03de5c28c2ec.jpeg",
+          "https://n.nordstrommedia.com/it/430505e7-4085-463a-a44f-ae9008db689d.jpeg",
+          "https://n.nordstrommedia.com/it/0c82d718-5ecc-4b7b-bdfe-cdd8e63bf124.jpeg",
+          "https://n.nordstrommedia.com/it/126db967-3dad-4a38-a42e-b5e65d1f1891.jpeg"
+        ]
+      }
+    ],
+    "variants": {}
+  }
+]
