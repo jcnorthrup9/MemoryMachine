@@ -10,6 +10,7 @@
             --text-color: #e0e0e0;
             --accent-glow: #fff4ca;
             --border-dim: #222;
+            --trans-speed: 0.4s;
         }
         * { box-sizing: border-box; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -19,23 +20,23 @@
         
         .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; pointer-events: none; }
         
-        .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; transition: all 0.4s ease-out; }
+        .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; transition: all var(--trans-speed) cubic-bezier(0.2, 0.8, 0.2, 1); }
         .left-page { padding: 60px 100px 60px 60px; } 
         .right-page { padding: 60px 60px 60px 100px; } 
 
         .grid-layout { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: auto 1fr; gap: 20px; height: 100%; }
         
-        .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; text-align-last: left; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: balance; overflow: hidden; grid-column: 1 / -1; transition: all 0.4s ease-out; }
+        .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; text-align-last: left; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: balance; overflow: hidden; grid-column: 1 / -1; transition: all var(--trans-speed) ease-out; }
         
-        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; transition: all 0.4s ease-out; }
+        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; transition: all var(--trans-speed) ease-out; }
         .vessel-span-8 { grid-column: span 8; }
         .vessel-span-4 { grid-column: span 4; border-left: 1px solid var(--border-dim); padding-left: 20px; }
         
         .vignette { border-left: 1px solid var(--accent-glow); padding-left: 20px; margin-bottom: 30px; font-size: 0.85em; color: #aaa; text-align: left; }
-        h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; transition: all 0.4s ease-out; }
-        h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; flex-shrink: 0; grid-column: 1 / -1; transition: all 0.4s ease-out; }
+        h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; transition: all var(--trans-speed) ease-out; }
+        h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; flex-shrink: 0; grid-column: 1 / -1; transition: all var(--trans-speed) ease-out; }
         
-        pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; transition: all 0.4s ease-out; }
+        pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; transition: all var(--trans-speed) ease-out; }
         .json-block { color: #88ff88; text-align: left; width: 100%; }
         
         .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
@@ -45,18 +46,118 @@
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
         .nav-controls button:hover { background: #111; border-color: #444; }
 
-        .matrix-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
-        .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #111; position: relative; overflow: hidden; }
-        .matrix-item img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+        .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; align-content: start; }
+        .matrix-item { background: #080808; border: 1px solid #111; position: relative; display: flex; flex-direction: column; }
+        .matrix-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: center; display: block; }
+        .matrix-label { padding: 8px; font-size: 0.6rem; color: #888; text-transform: uppercase; text-align: center; border-top: 1px solid #111; letter-spacing: 1px; }
+
+        .single-image-view { width: 100%; height: 100%; display: flex; flex-direction: column; border: 1px solid #111; background: #080808; }
+        .single-image-view img { flex-grow: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+        .single-image-view .matrix-label { border-top: 1px solid #111; padding: 10px; font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
 
         .yearbook-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
         .yearbook-entry { display: flex; flex-direction: column; align-items: center; }
         .yearbook-placeholder { width: 100%; aspect-ratio: 1; background: #0a0a0a; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; color: #444; font-size: 0.6rem; overflow: hidden; }
         .yearbook-placeholder img { width: 100%; height: 100%; object-fit: cover; }
         .yearbook-label { margin-top: 5px; font-size: 0.55rem; color: #666; text-transform: uppercase; text-align: center; letter-spacing: 1px; }
+
+        @keyframes fade-in-image {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .watercolor-image {
+            opacity: 0;
+        }
+        .spread.active .watercolor-image {
+            animation: fade-in-image 1.5s ease-out 0.4s forwards;
+        }
+
+        /* GHOST FRAGMENTS (Memory Leakage) */
+        .ghost-fragment {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.6;
+            z-index: 50;
+            filter: grayscale(1) contrast(2) pixelate(4px);
+            mix-blend-mode: hard-light;
+            transform: rotate(var(--r, 0deg)) scale(var(--s, 1));
+            animation: ghost-flicker 4s infinite ease-in-out, ghost-shift 8s infinite ease-in-out;
+            max-width: 300px;
+            /* Pixel Trace Simulation */
+            box-shadow: 2px 0 0 rgba(255,0,0,0.5), -2px 0 0 rgba(0,0,255,0.5);
+            overflow: hidden;
+            border: 1px solid red;
+            background: #000;
+        }
+        @keyframes ghost-flicker {
+            0% { opacity: 0; clip-path: inset(0 0 0 0); filter: blur(0px); }
+            20% { opacity: 0.4; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 90%); filter: blur(2px) hue-rotate(45deg); }
+            50% { opacity: 0.7; clip-path: polygon(0 0, 100% 10%, 100% 90%, 0 100%); filter: blur(1px) hue-rotate(90deg); }
+            80% { opacity: 0.3; clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); filter: blur(4px) hue-rotate(135deg); }
+            100% { opacity: 0; clip-path: inset(0 0 0 0); filter: blur(10px); }
+        }
+        @keyframes ghost-shift {
+            0% { translate: 0 0; }
+            20% { translate: 10px -10px; }
+            40% { translate: -15px 15px; }
+            60% { translate: 20px 5px; }
+            80% { translate: -10px -20px; }
+            100% { translate: 0 0; }
+        }
+
+        /* INVISIBLE STABILIZER BUTTON */
+        .stability-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            z-index: 10000;
+            cursor: crosshair;
+        }
+        .stability-btn:active { background-color: rgba(255, 255, 255, 0.05); }
+
+        /* STAGE 1: SUBTLE DECAY (30s mark) */
+        @keyframes subtle-rot {
+            0% { filter: hue-rotate(0deg) blur(0px); opacity: 1; }
+            50% { filter: hue-rotate(5deg) blur(0.5px) sepia(0.2); opacity: 0.95; }
+            100% { filter: hue-rotate(0deg) blur(0px); opacity: 1; }
+        }
+        body.degrading-mild .spread-container { animation: subtle-rot 6s infinite ease-in-out; }
+
+        /* STAGE 2: SYSTEM FAILURE (60s mark) */
+        @keyframes datamosh-freeze {
+            0% { filter: none; transform: none; clip-path: inset(0 0 0 0); }
+            20% { filter: contrast(1.2) hue-rotate(20deg) blur(2px); transform: scale(1.02) skewX(2deg); }
+            40% { filter: contrast(1.5) hue-rotate(40deg) blur(4px); transform: translate(-5px, 5px) skewY(2deg); clip-path: polygon(0 0, 100% 10%, 100% 100%, 0 90%); }
+            60% { filter: contrast(2) hue-rotate(90deg) blur(8px); transform: scale(1.1) rotate(1deg); clip-path: inset(5% 10% 5% 5%); }
+            80% { filter: contrast(3) hue-rotate(180deg) blur(12px) opacity(0.8); transform: scale(1.2) translate(10px, -10px); }
+            100% { filter: contrast(4) grayscale(1) blur(20px) opacity(0); transform: scale(1.3) rotate(5deg); pointer-events: none; }
+        }
+        @keyframes gpu-tear {
+            0% { transform: translate(0,0) skew(0deg); clip-path: inset(0 0 0 0); filter: none; }
+            20% { transform: translate(-2px, 1px) skew(5deg); clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%); filter: blur(1px); }
+            40% { transform: translate(4px, -4px) skew(-10deg); clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%); filter: contrast(1.5) blur(2px); }
+            60% { transform: translate(-5px, 5px) skew(20deg); clip-path: polygon(0 10%, 100% 0, 90% 100%, 10% 100%); filter: hue-rotate(90deg) blur(4px); }
+            80% { transform: translate(10px, -10px) skew(-30deg) scale(1.1); clip-path: polygon(0 0, 50% 10%, 100% 0, 100% 100%, 50% 90%, 0 100%); filter: hue-rotate(180deg) blur(8px); }
+            100% { transform: translate(50px, 50px) scale(1.2); opacity: 0; filter: blur(15px); }
+        }
+
+        /* Apply severe damage to content, but keep container cleaner for longer */
+        body.degrading-severe .spread-container { animation: datamosh-freeze 45s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        body.degrading-severe .page-side h1, 
+        body.degrading-severe .page-side h2, 
+        body.degrading-severe .page-side p, 
+        body.degrading-severe .page-side img { animation: gpu-tear 40s steps(60) forwards; }
         
-        @keyframes scan { 0% { background-position: 0 0; } 100% { background-position: 0 4px; } }
-        .scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; animation: scan 0.2s linear infinite; pointer-events: none; z-index: 50; opacity: 0.4; }
+        /* Button Reboot State */
+        .nav-controls button.reboot-mode {
+            background-color: #f00;
+            color: #000;
+            border: 1px solid #f00;
+            animation: glitch-anim 0.2s infinite;
+            font-weight: bold;
+        }
 
         @keyframes glitch-anim {
             0% { clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%); transform: translate(0, 0) skew(0); }
@@ -75,9 +176,9 @@
         body.glitch-mode .binary-texture { animation: glitch-anim 0.2s infinite reverse; color: #00ff00; opacity: 0.2; }
     </style>
 </head>
-<body class="glitch-mode">
+<body>
     <div class="zine-viewer">
-        <div class="scanlines"></div>
+        <div class="stability-btn" onclick="resetDegradation()" title="[ MANUAL OVERRIDE ]"></div>
         <div class="binary-texture">[ 1988_TRAILER_RECONSTRUCTION_V3 ]
 01001110 01001111 01010010 01010100 01001000
 01010111 01001111 01001111 01000100 01010111
@@ -110,13 +211,42 @@
                     <div class="grid-layout">
                         <h2 class="page-header">01 // Table of Contents</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <pre style="color: #666; font-size: 1rem;">01 // TABLE OF CONTENTS
---------------------------------------------------
-01 // Thesis Abstract ..................... [ 02 ]
-02 // System Architecture & Logic ......... [ 03 ]
-03 // Forensic Mapping Logic .............. [ 04 ]
-04 // Node: 1988_Trailer .................. [ 05 ]
-05 // High-Quality Synthesis .............. [ 07 ]</pre>
+                            <pre style="color: #666; font-size: 1rem;">01 // Table of Contents
+02 // System Pipeline Logic
+03 // The Machine That Forgets // I
+04 // The Machine That Forgets // II
+05 // The Machine That Forgets // III
+06 // The Machine That Forgets // IV
+07 // The Machine That Forgets // V
+08 // The Machine That Forgets // VI
+09 // Forensic Asset Catalog // A
+10 // Forensic Asset Catalog // B
+11 // Node: 1988_Trailer // Narrative
+12 // Node: 1988_Trailer // Logic
+13 // Node: 1988_Trailer // Binary
+14 // Node: 1988_Trailer // Render
+15 // 1988 Watercolor Study // A
+16 // 1988 Watercolor Study // B
+17 // Node: 1992_Birthday // Narrative
+18 // Node: 1992_Birthday // Logic
+19 // Node: 1992_Birthday // Binary
+20 // Node: 1992_Birthday // Render
+21 // Node: 1994_Basin // Narrative
+22 // Node: 1994_Basin // Logic
+23 // Node: 1994_Basin // Binary
+24 // Node: 1994_Basin // Render
+25 // Precedent: Aldo Rossi
+26 // Theory: Architectural Memory
+27 // Precedent: Neu Museum // I
+28 // Precedent: Neu Museum // II
+29 // Precedent: Zeitz MOCAA // I
+30 // Precedent: Zeitz MOCAA // II
+31 // Precedent: Genbaku Dome // I
+32 // Precedent: Genbaku Dome // II
+33 // Precedent: Do Ho Suh // I
+34 // Precedent: Do Ho Suh // II
+35 // References
+36 // System Status</pre>
                         </div>
                     </div>
                 </div>
@@ -125,19 +255,319 @@
                         <h2 class="page-header">02 // System Pipeline Logic</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
                             <pre style="color: #666; font-size: 1rem;">02 // SYSTEM PIPELINE LOGIC
---------------------------------------------------
-[INPUT]   -> 1988_trailer_parsed.txt
-[PROCESS] -> zine_compiler.py (Vignette Splitter)
-[STRATA]  -> logic.json + binary_strata.txt
-[ENGINE]  -> Rhino Arctic + Web Scraper
 
-03 // DIRECTORY HIERARCHY
---------------------------------------------------
-MemoryMachine/
-├── archive/        (Renders & PDF)
-├── data/           (TXT/JSON/CSV)
-├── html/           (digitalPalimpsest.html)
-└── logic/          (zine_compiler.py)</pre>
+DETECTED PYTHON MODULES:
+
+[ ROOT ]
+   > create_detailed_interior.py
+   > draw_base.py
+   > draw_refined_base.py
+   > import_assets.py
+   > run_rhino_script.py
+   > scraper.py
+   > test_rhino_com.py
+   > yelp_to_memory.py
+
+[ LOGIC ]
+   > generate_trailer_88.py
+   > rhino_bridge.py
+   > scraper_auto.py
+   > validate_assets.py
+   > zine_compiler.py
+
+[ RHINO_MCP ]
+   > server.py
+
+[ SCRAPFLY-SCRAPERS :: ALIEXPRESS-SCRAPER ]
+   > aliexpress.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: ALIEXPRESS-SCRAPER :: SNIPPETS ]
+   > finding_aliexpress_products.py
+   > scraping_aliexpress_products.py
+   > scraping_aliexpress_reviews.py
+   > scraping_aliexpress_search.py
+
+[ SCRAPFLY-SCRAPERS :: ALLEGRO-SCRAPER ]
+   > allegro.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: AMAZON-SCRAPER ]
+   > amazon.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: AMAZON-SCRAPER :: SNIPPETS ]
+   > finding_amazon_products.py
+   > product_variants_regex.py
+   > scraping_amazon_products.py
+   > scraping_amazon_reviews.py
+
+[ SCRAPFLY-SCRAPERS :: BESTBUY-SCRAPER ]
+   > bestbuy.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: BESTBUY-SCRAPER :: SNIPPETS ]
+   > discover_bestbuy_pages.py
+   > scrape_bestbuy_products.py
+   > scrape_bestbuy_reviews.py
+   > scrape_bestbuy_search.py
+
+[ SCRAPFLY-SCRAPERS :: BING-SCRAPER ]
+   > bing.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: BING-SCRAPER :: SNIPPETS ]
+   > scraping_bing_keywords.py
+   > scraping_bing_search_results.py
+
+[ SCRAPFLY-SCRAPERS :: BOOKINGCOM-SCRAPER ]
+   > bookingcom.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: BOOKINGCOM-SCRAPER :: SNIPPETS ]
+   > scraping_booking_hotel_data.py
+   > scraping_booking_search.py
+   > scraping_hotel_reviews.py
+
+[ SCRAPFLY-SCRAPERS :: CRUNCHBASE-SCRAPER ]
+   > crunchbase.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: CRUNCHBASE-SCRAPER :: SNIPPETS ]
+   > scraping_crunchbase_companies.py
+   > scraping_crunchbase_persons.py
+
+[ SCRAPFLY-SCRAPERS :: DOMAINCOM-SCRAPER ]
+   > domaincom.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: DOMAINCOM-SCRAPER :: SNIPPETS ]
+   > scraping_domaincom_property_pages.py
+   > scraping_domaincom_search_pages.py
+
+[ SCRAPFLY-SCRAPERS :: EBAY-SCRAPER ]
+   > ebay.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: EBAY-SCRAPER :: SNIPPETS ]
+   > scraping_ebay_listings.py
+   > scraping_ebay_search.py
+   > scraping_evay_listing_variants.py
+
+[ SCRAPFLY-SCRAPERS :: ETSY-SCRAPER ]
+   > etsy.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: ETSY-SCRAPER :: SNIPPETS ]
+   > scraping_etsy_listings.py
+   > scraping_etsy_search.py
+   > scraping_etsy_shops.py
+
+[ SCRAPFLY-SCRAPERS :: FASHIONPHILE-SCRAPER ]
+   > fashionphile.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: FASHIONPHILE-SCRAPER :: SNIPPETS ]
+   > scraping_fashionphile_products.py
+   > scraping_fashionphile_search.py
+
+[ SCRAPFLY-SCRAPERS :: G2-SCRAPER ]
+   > g2.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: G2-SCRAPER :: SNIPPETS ]
+   > scraping_g2_company_alternatives.py
+   > scraping_g2_company_reviews.py
+   > scraping_g2_search_pages.py
+
+[ SCRAPFLY-SCRAPERS :: GLASSDOOR-SCRAPER ]
+   > glassdoor.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: GOAT-SCRAPER ]
+   > goat.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: GOOGLE-SCRAPER ]
+   > google.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: HOMEGATE-SCRAPER ]
+   > homegate.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: IDEALISTA-SCRAPER ]
+   > idealista.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: IMMOBILIENSCOUT24-SCRAPER ]
+   > immobilienscout24.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: IMMOSCOUT24-SCRAPER ]
+   > immoscout24.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: IMMOWELT-SCRAPER ]
+   > immowelt.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: INDEED-SCRAPER ]
+   > indeed.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: INSTAGRAM-SCRAPER ]
+   > instagram.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: LEBONCOIN-SCRAPER ]
+   > leboncoin.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: LINKEDIN-SCRAPER ]
+   > linkedin.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: NORDSTORM-SCRAPER ]
+   > nordstorm.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: REALESTATECOM-SCRAPER ]
+   > realestate.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: REALTORCOM-SCRAPER ]
+   > realtorcom.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: REDDIT-SCRAPER ]
+   > reddit.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: REDFIN-SCRAPER ]
+   > redfin.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: RIGHTMOVE-SCRAPER ]
+   > rightmove.py
+   > run.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: SELOGER-SCRAPER ]
+   > run.py
+   > seloger.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: SIMILARWEB-SCRAPER ]
+   > run.py
+   > similarweb.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: STOCKX-SCRAPER ]
+   > run.py
+   > stockx.py
+   > test.py
+
+[ SCRAPFLY-SCRAPERS :: THREADS-SCRAPER ]
+   > run.py
+   > test.py
+   > threads.py
+
+[ SCRAPFLY-SCRAPERS :: TIKTOK-SCRAPER ]
+   > run.py
+   > test.py
+   > tiktok.py
+
+[ SCRAPFLY-SCRAPERS :: TRIPADVISOR-SCRAPER ]
+   > run.py
+   > test.py
+   > tripadvisor.py
+
+[ SCRAPFLY-SCRAPERS :: TRUSTPILOT-SCRAPER ]
+   > run.py
+   > test.py
+   > trustpilot.py
+
+[ SCRAPFLY-SCRAPERS :: TWITTER-SCRAPER ]
+   > run.py
+   > test.py
+   > twitter.py
+
+[ SCRAPFLY-SCRAPERS :: VESTIAIRECOLLECTIVE-SCRAPER ]
+   > run.py
+   > test.py
+   > vestiairecollective.py
+
+[ SCRAPFLY-SCRAPERS :: WALMART-SCRAPER ]
+   > run.py
+   > test.py
+   > walmart.py
+
+[ SCRAPFLY-SCRAPERS :: WELLFOUND-SCRAPER ]
+   > run.py
+   > test.py
+   > wellfound.py
+
+[ SCRAPFLY-SCRAPERS :: YELLOWPAGES-SCRAPER ]
+   > run.py
+   > test.py
+   > yellowpages.py
+
+[ SCRAPFLY-SCRAPERS :: YELP-SCRAPER ]
+   > random_site.py
+   > run.py
+   > scraper.py
+   > test.py
+   > yelp.py
+
+[ SCRAPFLY-SCRAPERS :: YOUTUBE-SCRAPER ]
+   > run.py
+   > test.py
+   > youtube.py
+
+[ SCRAPFLY-SCRAPERS :: ZILLOW-SCRAPER ]
+   > run.py
+   > test.py
+   > zillow.py
+
+[ SCRAPFLY-SCRAPERS :: ZOOMINFO-SCRAPER ]
+   > run.py
+   > test.py
+   > zoominfo.py
+
+[ SCRAPFLY-SCRAPERS :: ZOOPLA-SCRAPER ]
+   > run.py
+   > test.py
+   > zoopla.py</pre>
                         </div>
                     </div>
                 </div>
@@ -264,7 +694,7 @@ MemoryMachine/
                     <div class="grid-layout">
                         <h2 class="page-header">14 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222; transform: scale(1.75);">
+                            <img src="../archive/render_output/1988_trailer.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -273,7 +703,230 @@ MemoryMachine/
             <div class="spread" id="spread-9">
                 <div class="page-side left-page">
                     <div class="grid-layout">
-                        <h2 class="page-header">15 // References</h2>
+                        <h2 class="page-header">15 // 1988 Watercolor Study // A</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
+                             <img class="watercolor-image" src="../archive/render_output/1988_trailerWatercolor.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">16 // 1988 Watercolor Study // B</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
+                             <img class="watercolor-image" src="../archive/render_output/1988_trailerwatercolorInterior2.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-10">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">17 // Node: 1992_Birthday // Narrative</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="vignette">[NARRATIVE FRAGMENT // 1992_BIRTHDAY]</div><div class="vignette">September 28, 1992. Grandmother’s mobile home, Fresno area. A candle-lit room where the geometry of the space fades into a soft blackness at the edges.</div><div class="vignette">A specific, warm interiority. The focal point is the cake: a blue monster truck track complete with a checkered flag and four small candles.</div><div class="vignette">[DATA CORRUPTED] The flickering light. A sentimental atmosphere. The soft hum of a memory held in place by sugar and wax.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">18 // Memory Construct // Logic</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <pre class="json-block" style="font-size: 1.1rem;">{
+  "memory_node": "1992_birthday",
+  "reconstruction_confidence": "0.92",
+  "sensory_data": {
+    "visual": "Candlelight, soft black edges, blue frosting, checkered flag, mobile home interior",
+    "auditory": "Hushed singing, faint static",
+    "olfactory": "Wax, vanilla, sugar",
+    "emotional": "Deep sentimentality, warmth, safety"
+  },
+  "spatial_logic": "Enclosed room, boundaries dissolving into darkness, focal point centered on table.",
+  "narrative_coherence": "High. Strongly anchored by the cake artifact."
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-11">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">19 // Binary Strata</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; justify-content: center; overflow-y: auto;">
+                            <pre style="color: #666; font-size: 1.1rem; white-space: pre-wrap;">[BINARY DATA FOR 1992_BIRTHDAY]
+01000010 01101100 01110101 01100101 00100000 01010100 01110010 01110101 01100011 01101011 00001101 00001010 01010011 01000101 01001110 01010011 01001111 01010010 01011001 00111010 00100000 01000011 01000001 01001110 01000100 01001100 01000101 01010111 01000001 01011000 00100000 00101111 00101111 00100000 01010011 01010101 01000111 01000001 01010010 00001101 00001010 01001111 01000010 01001010 01000101 01000011 01010100 00111010 00100000 01000010 01001100 01010101 01000101 00100000 01001001 01000011 01001001 01001110 01000111 00100000 00101101 00100000 01000011 01001000 01000101 01000011 01001011 01000101 01010010 01000101 01000100 00100000 01000110 01001100 01000001 01000111 00001101 00001010 01000011 01001111 01001110 01010100 01000101 01011000 01010100 00111010 00100000 01000110 01010010 01000101 01010011 01001110 01001111 00100000 00101101 00100000 01001101 01001111 01000010 01001001 01001100 01000101 00100000 01001000 01001111 01001101 01000101</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">20 // Rendering Layer</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
+                            <img src="../archive/render_output/1992_birthday.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-12">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">21 // Node: 1994_Basin // Narrative</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="vignette">[NARRATIVE FRAGMENT // 1994_BASIN]</div><div class="vignette">1994. A rental home in the Clovis area. Roughly an acre of land, including a ponding basin and a horse corral for dressage.</div><div class="vignette">Learning to ride a bike on the dirt. The feeling of being small in a large landscape.</div><div class="vignette">[DATA CORRUPTED] Near-disaster. A stuffed raccoon placed on top of a hot lampshade. Smoke rising. The smell of singing synthetic fur.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">22 // Memory Construct // Logic</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <pre class="json-block" style="font-size: 1.1rem;">{
+  "memory_node": "1994_basin",
+  "reconstruction_confidence": "0.74",
+  "sensory_data": {
+    "visual": "Open acre, horse corral, dust, bicycle, glowing lamp, smoke",
+    "auditory": "Wind in the basin, bicycle tires on dirt, alarm",
+    "olfactory": "Dust, horse hay, burning synthetic fur",
+    "emotional": "Freedom mixed with sudden panic"
+  },
+  "spatial_logic": "Exterior expanse vs interior danger. The basin loop vs the hot lamp.",
+  "narrative_coherence": "Oscillating. Calm exterior, chaotic interior."
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-13">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">23 // Binary Strata</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; justify-content: center; overflow-y: auto;">
+                            <pre style="color: #666; font-size: 1.1rem; white-space: pre-wrap;">[BINARY DATA FOR 1994_BASIN]
+01010010 01100001 01100011 01100011 01101111 01101111 01101110 00001101 00001010 01001100 01001111 01000011 01000001 01010100 01001001 01001111 01001110 00111010 00100000 01000011 01001100 01001111 01010110 01001001 01010011 00100000 01010000 01001111 01001110 01000100 01001001 01001110 01000111 00100000 01000010 01000001 01010011 01001001 01001110 00001101 00001010 01001000 01000001 01011010 01000001 01010010 01000100 00111010 00100000 01000010 01010101 01010010 01001110 01001001 01001110 01000111 00100000 01010011 01011001 01001110 01010100 01001000 01000101 01010100 01001001 01000011 00100000 01000110 01010101 01010010 00001101 00001010 01001111 01000010 01001010 01000101 01000011 01010100 00111010 00100000 01001000 01001111 01010100 00100000 01001100 01000001 01001101 01010000 01010011 01001000 01000001 01000100 01000101</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">24 // Rendering Layer</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
+                            <img src="../archive/render_output/1994_basin.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-14">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">25 // Precedent: Aldo Rossi</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/aldo_rossi.jpg"><div class="matrix-label">aldo_rossi</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">26 // Theory: Architectural Memory</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="abstract-flow" style="column-count: 1;"><div class='vignette'>Architecture contains memory. Spaces contain memories, old walls are torn down, types of architectural witness marks are left, with tooling marks and bits of material leftovers. Many of these are hidden below the surface, covered by fresh gypsum and spackle, left to only be discovered by the next entity that tears down these walls; finding hidden messages from years ago only to cover them up again with what they’ve deemed to be the appropriate material, orientation, color, accessory placement or other interventions performed on spaces within their lifespan. We see examples of this even in a city as young as Los Angeles. The easiest example to point to would be the entirety of the SCI-Arc building. Its layers of addition and subtraction repeated countless times has left it with layers of stories. A saturated memory of the palimpsest of information embedded within its walls. 
+
+Other examples of these layers of operations can be found all over the city of Los Angeles. The 110 freeway exhibits stairways to nowhere, the odd remnants of the Belmont (Pacific Electric) Tunnel that once housed the Hollywood Subway.The Bradbury Building reveals its temporal layering through cracked marble floors, patched materials, and the uncanny presence of contemporary fire doors rudely inserted into historic interiors. These collisions of old and new produce moments of dissonance, where architectural time collapses into a single frame.
+
+Architecture’s role is not merely as a container for memory, but it is also a performative actor. Architecture is not a static thing. It ebbs and flows with time, negotiating nature, destruction, and building codes.  Constantly updating itself, gathering new information, morphing into its most recent version, most suitable for whatever its new contemporary context is. Vestiges of previous architectural logic still seep out into the contemporary surface, shifting understandings and contexts as they rise. It is often argued that Los Angeles’ architectural ethos exists in a system of forgetting and erasure, but those pieces of the past are never erased. The materials are shifted to other locations, meant for alternative uses (even if that is just in a landfill) but the material can never be fully erased. Only its physical and temporal context has shifted. Old structures are modified and distorted. In the Art’s District we find the result of its direct connection to the rail lines of the city’s industrial past. Many moments of oddly shaped buildings, wrapped around train tracks with elegant curves, obtuse angles, and extremely long and narrow buildings. Misalignments and forced geometries, blocked in windows that are now structural entities of the building. Memory becomes a spatial constraint, a limitation on the interventions we may deem necessary. These remnants of the past can be seen as an inherited error of the data set. A hole in the boat that must be plugged in order to maintain stability. 
+
+When a container system breaks down, the result is not absence, but of excess. This failed integrity leads not to emptiness but towards noise, ambiguity, and hallucination. Architecture is guilty of the most apophenic tendencies. Forever imagining. Forever Hallucinating. Constantly working with dirty datasets and incomplete memory. Meaning is not retrieved intact, but inferred. Architects extract meaning where there is none. Design does not emerge from certainty, but from negotiating gaps. 
+
+
+Treating degradation as failure leads to two dominant responses. The first is total erasure, demolition, and replacement. The second is rigid preservation, an attempt at perfect recall results in the building being frozen in a simulacrum of completeness, a fabricated condition of wholeness. Both approaches misinterpret memory as something that can be stabilized, or even contained. In practice, memory always leaks.</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-15">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">27 // Precedent: Neu Museum // I</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/neues_museum.jpg"><div class="matrix-label">neues_museum</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">28 // Precedent: Neu Museum // II</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/neues_museum2.jpg"><div class="matrix-label">neues_museum2</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-16">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">29 // Precedent: Zeitz MOCAA // I</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/zeitz_mocaa.jpg"><div class="matrix-label">zeitz_mocaa</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">30 // Precedent: Zeitz MOCAA // II</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/zeitz_mocaa2.jpg"><div class="matrix-label">zeitz_mocaa2</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-17">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">31 // Precedent: Genbaku Dome // I</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/TheGenbakuDome.jpg"><div class="matrix-label">TheGenbakuDome</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">32 // Precedent: Genbaku Dome // II</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="single-image-view"><img src="../archive/precedents/TheGenbakuDome2.jpg"><div class="matrix-label">TheGenbakuDome2</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-18">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">33 // Precedent: Do Ho Suh // I</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="vignette" style="color:#666;">[NO DATA]</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">34 // Precedent: Do Ho Suh // II</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <div class="vignette" style="color:#666;">[NO DATA]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-19">
+                <div class="page-side left-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">35 // References</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
                             <div class="abstract-flow"><b>Primary Sources</b><br>
 Steyerl, Hito. "A Sea of Data: Apophenia and Pattern (Mis-)Recognition." e-flux, no. 72 (April 2016).<br><br>
@@ -295,7 +948,7 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
                 </div>
                 <div class="page-side right-page">
                     <div class="grid-layout">
-                        <h2 class="page-header">16 // System Status</h2>
+                        <h2 class="page-header">36 // System Status</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center;">
                             <div style="color: #333; font-size: 0.8rem;">[ PROCESS TERMINATED ]</div>
                         </div>
@@ -308,27 +961,121 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
         <footer class="zine-footer">
             <div id="page-indicator">I</div>
             <div class="nav-controls">
-                <button onclick="prevSpread()">[ PREV ]</button>
-                <button onclick="nextSpread()">[ NEXT ]</button>
+                <button id="btn-prev" onclick="prevSpread()">[ PREV ]</button>
+                <button id="btn-next" onclick="nextSpread()">[ NEXT ]</button>
             </div>
         </footer>
     </div>
 
     <script>
-        const totalSpreads = 9;
-        const glitchInterval = setInterval(() => {
-            const randomSpread = Math.floor(Math.random() * totalSpreads) + 1;
-            showSpread(randomSpread, true);
-        }, 200);
+        const totalSpreads = 19;
+        let mildTimeout;
+        let severeTimeout;
+        let artifactInterval;
+        let glitchInterval;
+
+        function resetDegradation() {
+            document.body.classList.remove('degrading-mild');
+            document.body.classList.remove('degrading-severe');
+            
+            // Clear ghost artifacts
+            document.querySelectorAll('.ghost-fragment').forEach(el => el.remove());
+            
+            // Reset Button
+            const nextBtn = document.getElementById('btn-next');
+            nextBtn.innerText = "[ NEXT ]";
+            nextBtn.classList.remove('reboot-mode');
+            nextBtn.onclick = nextSpread;
+            
+            clearInterval(artifactInterval);
+            clearTimeout(mildTimeout);
+            clearTimeout(severeTimeout);
+            
+            // Start Timer: 30s to mild decay
+            mildTimeout = setTimeout(() => {
+                document.body.classList.add('degrading-mild');
+                
+                // +30s (total 60s) to severe failure
+                severeTimeout = setTimeout(startSystemFailure, 30000);
+            }, 30000); 
+        }
+
+        function startSystemFailure() {
+            document.body.classList.remove('degrading-mild');
+            document.body.classList.add('degrading-severe');
+            
+            // Start leaking memories (stacking fragments)
+            artifactInterval = setInterval(injectArtifact, 800);
+
+            // Schedule System Break (Button Change)
+            setTimeout(() => {
+                const nextBtn = document.getElementById('btn-next');
+                nextBtn.innerText = "[ REINITIALIZE ]";
+                nextBtn.classList.add('reboot-mode');
+                nextBtn.onclick = () => location.reload();
+                clearInterval(artifactInterval); // Stop adding new ones, freeze state
+            }, 30000);
+        }
+
+        function injectArtifact() {
+            // Grab content from a random hidden spread
+            const hiddenSpreads = document.querySelectorAll('.spread:not(.active)');
+            if (hiddenSpreads.length === 0) return;
+            
+            const randomSpread = hiddenSpreads[Math.floor(Math.random() * hiddenSpreads.length)];
+            const targets = randomSpread.querySelectorAll('p, h1, h2, img, pre');
+            if (targets.length === 0) return;
+            
+            const source = targets[Math.floor(Math.random() * targets.length)];
+            const clone = source.cloneNode(true);
+            
+            clone.classList.add('ghost-fragment');
+            
+            // Random positioning and distortion
+            clone.style.top = Math.random() * 80 + '%';
+            clone.style.left = Math.random() * 80 + '%';
+            
+            // Set variables for the CSS transform to use, allowing keyframes to translate independently
+            clone.style.setProperty('--r', `${Math.random() * 360}deg`);
+            clone.style.setProperty('--s', `${0.5 + Math.random()}`);
+            
+            // Inner fracture: Apply random polygon clip to the artifact itself
+            const p1 = Math.floor(Math.random() * 100);
+            const p2 = Math.floor(Math.random() * 100);
+            clone.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${p1}%, ${p2}% 100%, 0% 100%)`;
+
+            document.querySelector('.zine-viewer').appendChild(clone);
+            
+            // Prevent total DOM crash by limiting artifacts
+            const ghosts = document.querySelectorAll('.ghost-fragment');
+            if (ghosts.length > 40) ghosts[0].remove();
+        }
+
+        // INITIAL LOAD SEQUENCE
+        setTimeout(() => {
+            document.body.classList.add('glitch-mode');
+            glitchInterval = setInterval(() => {
+                const randomSpread = Math.floor(Math.random() * totalSpreads) + 1;
+                showSpread(randomSpread, true);
+            }, 200);
+        }, 2000); // Start glitching after 2s
 
         setTimeout(() => {
             clearInterval(glitchInterval);
             document.body.classList.remove('glitch-mode');
             showSpread(1, true);
-        }, 1875);
+            resetDegradation(); // Start the degradation timer once stabilized
+        }, 5000); // Stop glitching after 5s
 
         let currentSpread = 1;
         function showSpread(n, suppressGlitch) {
+            resetDegradation();
+            
+            // Random transition speed variation: 1-5% variance on 0.4s base (very subtle, organic feel)
+            const baseSpeed = 0.4;
+            const variance = baseSpeed * (Math.random() * 0.04 + 0.01) * (Math.random() < 0.5 ? -1 : 1);
+            document.documentElement.style.setProperty('--trans-speed', (baseSpeed + variance) + 's');
+
             if (!suppressGlitch) {
                 document.body.classList.add('glitch-mode');
                 setTimeout(() => {
@@ -337,7 +1084,7 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
             }
             document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
             document.getElementById(`spread-${n}`).classList.add('active');
-            const labels = ["I", "II // SYSTEM", "III // THEORY A", "IV // THEORY B", "V // THEORY C", "VI // CATALOG", "VII // NARRATIVE", "VIII // RENDER", "IX // REFERENCES"];
+            const labels = ["I", "II // SYSTEM", "III // THEORY A", "IV // THEORY B", "V // THEORY C", "VI // CATALOG", "VII // 1988 TRAILER", "VIII // 1988 RENDER", "IX // 1988 WATERCOLORS", "X // 1992 BIRTHDAY", "XI // 1992 RENDER", "XII // 1994 BASIN", "XIII // 1994 RENDER", "XIV // ROSSI", "XV // NEU MUSEUM", "XVI // ZEITZ MOCAA", "XVII // GENBAKU", "XVIII // DO HO SUH", "XIX // REFERENCES"];
             document.getElementById('page-indicator').innerText = labels[n-1];
             currentSpread = n;
         }

@@ -1,0 +1,12 @@
+{
+  "memory_node": "1994_basin",
+  "reconstruction_confidence": "0.74",
+  "sensory_data": {
+    "visual": "Open acre, horse corral, dust, bicycle, glowing lamp, smoke",
+    "auditory": "Wind in the basin, bicycle tires on dirt, alarm",
+    "olfactory": "Dust, horse hay, burning synthetic fur",
+    "emotional": "Freedom mixed with sudden panic"
+  },
+  "spatial_logic": "Exterior expanse vs interior danger. The basin loop vs the hot lamp.",
+  "narrative_coherence": "Oscillating. Calm exterior, chaotic interior."
+}

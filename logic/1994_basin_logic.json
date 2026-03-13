@@ -1,0 +1,12 @@
+{
+  "memory_node": "1994_basin",
+  "reconstruction_confidence": "0.38",
+  "sensory_data": {
+    "visual": "Open sky, dirt, water trough, low sun, horse silhouette",
+    "auditory": "Wind, distant animal sounds, silence",
+    "olfactory": "Wet earth, hay, horses",
+    "emotional": "Calm, solitude, contemplation"
+  },
+  "spatial_logic": "[PLACEHOLDER: Spatial data for landscape elements pending reconstruction]",
+  "narrative_coherence": "Fragmented, impressionistic."
+}
