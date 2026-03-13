@@ -186,12 +186,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         /* PRINT CONFIGURATION */
         @media print {
             @page { size: letter landscape; margin: 0; }
-            html, body { width: 100%; height: 100%; overflow: visible; background-color: #050505 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .zine-viewer { width: 100%; height: auto; max-width: none; border: none; position: static; overflow: visible; }
-            .spread-container { display: block; position: static; overflow: visible; height: auto; }
+            html, body { display: block !important; width: 100%; height: auto !important; overflow: visible !important; background-color: #050505 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .zine-viewer { display: block !important; width: 100%; height: auto !important; max-width: none; border: none; position: static; overflow: visible; margin: 0 !important; }
+            .spread-container { display: block !important; position: static; overflow: visible; height: auto !important; }
             .spine, .nav-controls, .stability-btn, .binary-texture, #page-indicator { display: none !important; }
             
-            .spread { display: flex !important; position: relative !important; width: 100%; height: 100vh; page-break-after: always; break-after: page; top: auto; left: auto; opacity: 1 !important; visibility: visible !important; }
+            .spread { display: flex !important; position: relative !important; width: 100%; height: 100vh !important; page-break-after: always; break-after: page; top: auto; left: auto; opacity: 1 !important; visibility: visible !important; }
             
             /* Print-Specific Glitch Adjustments: Remove blend modes for safer CMYK conversion */
             .ghost-fragment { mix-blend-mode: normal !important; opacity: 0.7 !important; filter: contrast(1.5) grayscale(1); border-color: #ff0000 !important; }
@@ -209,14 +209,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="spread-container">
             <div class="spine"></div>
 
-            <div class="spread active" id="spread-1">
-                <div class="page-side left-page" style="background-color: #030303; z-index: 10;"></div>
-                <div class="page-side right-page" style="background-color: #000; z-index: 10;">
-                    <div style="margin: auto 0;">
-                        <h1 class="zine-title">Forensic_Palimpsest</h1>
-                        <div style="letter-spacing: 5px; color: #444; margin-bottom: 40px;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
-                        <img src="../archive/render_output/front_cover.jpg" style="width: 100%; border: 1px solid var(--border-dim); filter: grayscale(100%);">
-                    </div>
+            <div class="spread active" id="spread-1" style="justify-content: center; align-items: center; flex-direction: column; background-color: #030303; z-index: 10;">
+                <div style="text-align: center; width: 80%; max-width: 1400px; padding: 40px; position: relative; z-index: 10;">
+                    <h1 class="zine-title" style="font-size: 5rem; margin-bottom: 10px;">Forensic_Palimpsest</h1>
+                    <div style="letter-spacing: 8px; color: #666; margin-bottom: 60px; font-size: 1.2rem;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
+                    <img src="../archive/render_output/front_cover.jpg" style="width: 100%; max-height: 65vh; object-fit: contain; border: 1px solid var(--border-dim); filter: grayscale(100%); box-shadow: 0 0 40px rgba(0,0,0,0.8);">
                 </div>
             </div>
 
@@ -335,7 +332,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="grid-layout">
                         <h2 class="page-header">14 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1988_trailer.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -392,7 +389,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="grid-layout">
                         <h2 class="page-header">20 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1992_birthday.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1992_birthday.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -430,7 +427,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="grid-layout">
                         <h2 class="page-header">24 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1994_basin.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1994_basin.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>

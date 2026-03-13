@@ -174,6 +174,23 @@
         body.glitch-mode h1, body.glitch-mode h2 { animation: glitch-anim 4s infinite linear alternate-reverse; color: #ff0000; text-shadow: 2px 0 #00ff00; }
         body.glitch-mode pre { animation: glitch-anim 1s infinite; opacity: 0.5; }
         body.glitch-mode .binary-texture { animation: glitch-anim 0.2s infinite reverse; color: #00ff00; opacity: 0.2; }
+
+        /* PRINT CONFIGURATION */
+        @media print {
+            @page { size: letter landscape; margin: 0; }
+            html, body { display: block !important; width: 100%; height: auto !important; overflow: visible !important; background-color: #050505 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .zine-viewer { display: block !important; width: 100%; height: auto !important; max-width: none; border: none; position: static; overflow: visible; margin: 0 !important; }
+            .spread-container { display: block !important; position: static; overflow: visible; height: auto !important; }
+            .spine, .nav-controls, .stability-btn, .binary-texture, #page-indicator { display: none !important; }
+            
+            .spread { display: flex !important; position: relative !important; width: 100%; height: 100vh !important; page-break-after: always; break-after: page; top: auto; left: auto; opacity: 1 !important; visibility: visible !important; }
+            
+            /* Print-Specific Glitch Adjustments: Remove blend modes for safer CMYK conversion */
+            .ghost-fragment { mix-blend-mode: normal !important; opacity: 0.7 !important; filter: contrast(1.5) grayscale(1); border-color: #ff0000 !important; }
+            .watercolor-image { opacity: 1 !important; animation: none !important; }
+            
+            .page-break { break-after: page; page-break-after: always; }
+        }
     </style>
 </head>
 <body>
@@ -195,14 +212,11 @@
         <div class="spread-container">
             <div class="spine"></div>
 
-            <div class="spread active" id="spread-1">
-                <div class="page-side left-page" style="background-color: #030303; z-index: 10;"></div>
-                <div class="page-side right-page" style="background-color: #000; z-index: 10;">
-                    <div style="margin: auto 0;">
-                        <h1 class="zine-title">Forensic_Palimpsest</h1>
-                        <div style="letter-spacing: 5px; color: #444; margin-bottom: 40px;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
-                        <img src="../archive/render_output/front_cover.jpg" style="width: 100%; border: 1px solid var(--border-dim); filter: grayscale(100%);">
-                    </div>
+            <div class="spread active" id="spread-1" style="justify-content: center; align-items: center; flex-direction: column; background-color: #030303; z-index: 10;">
+                <div style="text-align: center; width: 80%; max-width: 1400px; padding: 40px; position: relative; z-index: 10;">
+                    <h1 class="zine-title" style="font-size: 5rem; margin-bottom: 10px;">Forensic_Palimpsest</h1>
+                    <div style="letter-spacing: 8px; color: #666; margin-bottom: 60px; font-size: 1.2rem;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
+                    <img src="../archive/render_output/front_cover.jpg" style="width: 100%; max-height: 65vh; object-fit: contain; border: 1px solid var(--border-dim); filter: grayscale(100%); box-shadow: 0 0 40px rgba(0,0,0,0.8);">
                 </div>
             </div>
 
@@ -269,6 +283,7 @@ DETECTED PYTHON MODULES:
    > yelp_to_memory.py
 
 [ LOGIC ]
+   > export_pdf.py
    > generate_trailer_88.py
    > rhino_bridge.py
    > scraper_auto.py
@@ -545,6 +560,7 @@ DETECTED PYTHON MODULES:
 [ SCRAPFLY-SCRAPERS :: YELP-SCRAPER ]
    > random_site.py
    > run.py
+   > scrape_anonymized_reviews.py
    > scraper.py
    > test.py
    > yelp.py
@@ -694,7 +710,7 @@ DETECTED PYTHON MODULES:
                     <div class="grid-layout">
                         <h2 class="page-header">14 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1988_trailer.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -763,7 +779,7 @@ DETECTED PYTHON MODULES:
                     <div class="grid-layout">
                         <h2 class="page-header">20 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1992_birthday.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1992_birthday.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -813,7 +829,7 @@ DETECTED PYTHON MODULES:
                     <div class="grid-layout">
                         <h2 class="page-header">24 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
-                            <img src="../archive/render_output/1994_basin.png?v=2" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
+                            <img src="../archive/render_output/1994_basin.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
                         </div>
                     </div>
                 </div>
@@ -832,16 +848,14 @@ DETECTED PYTHON MODULES:
                     <div class="grid-layout">
                         <h2 class="page-header">26 // Theory: Architectural Memory</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <div class="abstract-flow" style="column-count: 1;"><div class='vignette'>Architecture contains memory. Spaces contain memories, old walls are torn down, types of architectural witness marks are left, with tooling marks and bits of material leftovers. Many of these are hidden below the surface, covered by fresh gypsum and spackle, left to only be discovered by the next entity that tears down these walls; finding hidden messages from years ago only to cover them up again with what they’ve deemed to be the appropriate material, orientation, color, accessory placement or other interventions performed on spaces within their lifespan. We see examples of this even in a city as young as Los Angeles. The easiest example to point to would be the entirety of the SCI-Arc building. Its layers of addition and subtraction repeated countless times has left it with layers of stories. A saturated memory of the palimpsest of information embedded within its walls. 
+                            <div class="abstract-flow" style="column-count: 1;"><div class='vignette'>The Persistent Artifact: Rossi, Gandy, and the Collective Automata
+In the Rossian view, the city is a theater of human events. Architecture is not merely a functional container but a "primary element"—a permanent artifact that survives the functions for which it was built. These artifacts are the repositories of collective memory; they are the fixed points around which the chaos of the city revolves. But what happens when the artifact is not a marble monument in Milan, but a transient trailer in Green Acres?
 
-Other examples of these layers of operations can be found all over the city of Los Angeles. The 110 freeway exhibits stairways to nowhere, the odd remnants of the Belmont (Pacific Electric) Tunnel that once housed the Hollywood Subway.The Bradbury Building reveals its temporal layering through cracked marble floors, patched materials, and the uncanny presence of contemporary fire doors rudely inserted into historic interiors. These collisions of old and new produce moments of dissonance, where architectural time collapses into a single frame.
+The Memory Machine operates at the intersection of Joseph Gandy’s forensic ruins and Aldo Rossi’s urban archetypes. While Gandy provided the visual language of the "cutaway" to reveal the hidden layers of structure, Rossi provides the philosophical justification for the project’s obsession with domestic typologies. To Rossi, memory is the thread that binds the individual to the collective. In this zine, the 1992 mobile home and the Clovis rental are treated as "Urban Artifacts" of the Central Valley—singular forms that persist in the mind long after the lease has ended or the wheels have moved.
 
-Architecture’s role is not merely as a container for memory, but it is also a performative actor. Architecture is not a static thing. It ebbs and flows with time, negotiating nature, destruction, and building codes.  Constantly updating itself, gathering new information, morphing into its most recent version, most suitable for whatever its new contemporary context is. Vestiges of previous architectural logic still seep out into the contemporary surface, shifting understandings and contexts as they rise. It is often argued that Los Angeles’ architectural ethos exists in a system of forgetting and erasure, but those pieces of the past are never erased. The materials are shifted to other locations, meant for alternative uses (even if that is just in a landfill) but the material can never be fully erased. Only its physical and temporal context has shifted. Old structures are modified and distorted. In the Art’s District we find the result of its direct connection to the rail lines of the city’s industrial past. Many moments of oddly shaped buildings, wrapped around train tracks with elegant curves, obtuse angles, and extremely long and narrow buildings. Misalignments and forced geometries, blocked in windows that are now structural entities of the building. Memory becomes a spatial constraint, a limitation on the interventions we may deem necessary. These remnants of the past can be seen as an inherited error of the data set. A hole in the boat that must be plugged in order to maintain stability. 
+By proceduralizing these sites through Python scripts and Blender's generative nodes, we are not just modeling houses; we are constructing a Collective Automata. We are testing the "persistence" of these spaces. The glitchy, smudged palimpsest of the render is a digital manifestation of Rossi's analogous architecture—a process where memory, place, and history are filtered through an individual's consciousness until they become a new, "true" reality.
 
-When a container system breaks down, the result is not absence, but of excess. This failed integrity leads not to emptiness but towards noise, ambiguity, and hallucination. Architecture is guilty of the most apophenic tendencies. Forever imagining. Forever Hallucinating. Constantly working with dirty datasets and incomplete memory. Meaning is not retrieved intact, but inferred. Architects extract meaning where there is none. Design does not emerge from certainty, but from negotiating gaps. 
-
-
-Treating degradation as failure leads to two dominant responses. The first is total erasure, demolition, and replacement. The second is rigid preservation, an attempt at perfect recall results in the building being frozen in a simulacrum of completeness, a fabricated condition of wholeness. Both approaches misinterpret memory as something that can be stabilized, or even contained. In practice, memory always leaks.</div></div>
+These images represent an architecture that is stripped of its immediate utility and returned to its status as a monument of the everyday. Like Soane’s Bank viewed as a ruin, these domestic memories are excavated to find the "skeleton" of the self. They are a testament to the fact that the architecture of our past is never truly demolished; it remains as a permanent artifact within the machine of our own remembrance.</div></div>
                         </div>
                     </div>
                 </div>
@@ -909,7 +923,7 @@ Treating degradation as failure leads to two dominant responses. The first is to
                     <div class="grid-layout">
                         <h2 class="page-header">33 // Precedent: Do Ho Suh // I</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <div class="vignette" style="color:#666;">[NO DATA]</div>
+                            <div class="single-image-view"><img src="../archive/precedents/dohosuh1.jpg"><div class="matrix-label">dohosuh1</div></div>
                         </div>
                     </div>
                 </div>
@@ -917,7 +931,7 @@ Treating degradation as failure leads to two dominant responses. The first is to
                     <div class="grid-layout">
                         <h2 class="page-header">34 // Precedent: Do Ho Suh // II</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <div class="vignette" style="color:#666;">[NO DATA]</div>
+                            <div class="single-image-view"><img src="../archive/precedents/dohosuh2.jpg"><div class="matrix-label">dohosuh2</div></div>
                         </div>
                     </div>
                 </div>
