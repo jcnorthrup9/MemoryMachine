@@ -1,4 +1,7 @@
 import os
+import json
+import csv
+import re
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -24,7 +27,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border-dim); z-index: 10; }
         
         .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; }
-        
+
         .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; }
         .left-page { padding: 60px 100px 60px 60px; } 
         .right-page { padding: 60px 60px 60px 100px; } 
@@ -33,7 +36,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: auto; overflow: hidden; grid-column: 1 / -1; }
         
-        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; justify-content: center; }
         .vessel-span-8 { grid-column: span 8; }
         .vessel-span-4 { grid-column: span 4; border-left: 1px solid var(--border-dim); padding-left: 20px; }
         
@@ -43,6 +46,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; }
         .json-block { color: #88ff88; text-align: left; width: 100%; }
+        .binary-block { color: #444; letter-spacing: 3px; text-align: center; font-size: 0.65rem; }
         
         .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         .spread.active { display: flex; }
@@ -50,7 +54,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 20; }
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
 
-        .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
+        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 20px; }
         .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .matrix-item img { width: 100%; height: 100%; object-fit: cover; }
         
@@ -60,7 +64,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
     <div class="zine-viewer">
         <div class="binary-texture">{{BINARY_DATA}}</div>
-        
         <div class="spread-container">
             <div class="spine"></div>
 
@@ -112,23 +115,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <div class="grid-layout">
                         <h2 class="page-header">03 // Forensic Asset Catalog</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <div class="matrix-grid">
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/monster_truck.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/carpet_orange.jpg"></div>
-                                <div class="matrix-item"></div>
-                                <div class="matrix-item"></div>
-                            </div>
+                            <div class="matrix-grid">{{ASSET_GRID}}</div>
                         </div>
                     </div>
                 </div>
                 <div class="page-side right-page">
                     <div class="grid-layout">
-                        <h2 class="page-header">04 // Node: 1988_Trailer // Narrative</h2>
-                        <div class="vessel vessel-span-8">
+                        <h2 class="page-header">04 // Node: {{NODE_ID}} // Narrative</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; justify-content: flex-start; overflow-y: auto;">
                             {{NARRATIVE_DATA}}
-                        </div>
-                        <div class="vessel vessel-span-4">
-                            <pre class="json-block" style="font-size: 0.55rem;">{{JSON_DATA}}</pre>
                         </div>
                     </div>
                 </div>
@@ -137,14 +132,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="spread" id="spread-5">
                 <div class="page-side left-page">
                     <div class="grid-layout">
-                        <h2 class="page-header">05 // Memory Construct // Output</h2>
+                        <h2 class="page-header">05 // Structural Logic // JSON</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                             <pre class="json-block" style="font-size: 0.55rem;">{{JSON_DATA}}</pre>
+                        </div>
                     </div>
                 </div>
                 <div class="page-side right-page">
                     <div class="grid-layout">
-                        <h2 class="page-header">06 // Rendering Layer</h2>
+                        <h2 class="page-header">06 // Forensic Strata // Binary</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <pre class="binary-block">{{BINARY_DATA}}</pre>
+                        </div>
                     </div>
-                    <img src="../archive/render_output/1988_trailer.png" class="bleed-center">
+                </div>
+            </div>
+
+            <div class="spread" id="spread-6">
+                <div class="page-side left-page" style="background-color: #030303;"></div>
+                <div class="page-side right-page">
+                    <div class="grid-layout">
+                        <h2 class="page-header">07 // Visual Output // Rhino Arctic</h2>
+                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
+                            <img src="../archive/render_output/1988_trailer.png" class="bleed-center">
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -161,11 +173,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <script>
         let currentSpread = 1;
-        const totalSpreads = 5;
+        const totalSpreads = 6;
         function showSpread(n) {
             document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
             document.getElementById(`spread-${n}`).classList.add('active');
-            const labels = ["I", "II // INDEX", "III // THEORY", "IV // LAYERED GRID", "V // OUTPUT"];
+            const labels = ["I", "II // INDEX", "III // THEORY", "IV // CATALOG & NARRATIVE", "V // LOGIC & STRATA", "VI // OUTPUT"];
             document.getElementById('page-indicator').innerText = labels[n-1];
             currentSpread = n;
         }
@@ -186,14 +198,59 @@ def get_data(filename):
             return f.read().strip()
     return f"[MISSING DATA: {filename}]"
 
+def get_asset_grid_html():
+    manifest_path = os.path.join(DATA_DIR, 'asset_manifest.csv')
+    grid_html = ""
+    if os.path.exists(manifest_path):
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # Convert absolute project path to relative HTML path (../archive/...)
+                # Assuming CSV path is like "archive/assets/thumbnails/image.jpg"
+                rel_path = "../" + row['Thumbnail_Path'].replace("\\", "/")
+                grid_html += f'<div class="matrix-item"><img src="{rel_path}"></div>'
+    # Pad with empty items if needed to maintain grid structure (optional)
+    return grid_html
+
+def get_redacted_reviews(filename):
+    path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(path):
+        return f"[MISSING DATA: {filename}]"
+    
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
+        
+    # Redact all variations of the business name (case-insensitive)
+    redacted = re.sub(r'(?i)bottega louie\'s|bottega louie|bottega louis|botegga louie|bottega', '[BUSINESS NAME]', content)
+    
+    # Split by double-newlines so each block of the review becomes its own vignette
+    paragraphs = [p.strip() for p in redacted.split('\n\n') if p.strip()]
+    return "---".join(paragraphs)
+
 def compile_zine():
     print("\n--- Waking up the Memory Machine ---")
     
     system_data = get_data('system_manifest.txt')
     abstract = get_data('thesis_abstract.txt')
     narrative = get_data('1988_trailer_parsed.txt')
-    json_data = get_data('1988_trailer_logic.json')
     binary = get_data('1988_trailer_binary_strata.txt')
+    asset_grid = get_asset_grid_html()
+    
+    # Ingest the manually scraped Yelp reviews instead of the trailer narrative
+    narrative = get_redacted_reviews('bottega_louie_reviews.txt')
+
+    # Check if a dynamic target has been generated, otherwise use default
+    target_file = 'target_node.json' if os.path.exists(os.path.join(DATA_DIR, 'target_node.json')) else '1988_trailer_logic.json'
+    json_data = get_data(target_file)
+    
+    # extract node_id for header
+    node_id = "UNKNOWN_NODE"
+    try:
+        if not json_data.startswith("[MISSING"):
+            data_obj = json.loads(json_data)
+            node_id = data_obj.get("node_id", "1988_TRAILER")
+    except:
+        pass
 
     words = abstract.split()
     if len(words) > 0:
@@ -214,7 +271,9 @@ def compile_zine():
     html = html.replace('{{SYSTEM_DATA}}', system_data)
     html = html.replace('{{NARRATIVE_DATA}}', vignette_html)
     html = html.replace('{{JSON_DATA}}', json_data)
+    html = html.replace('{{NODE_ID}}', node_id)
     html = html.replace('{{BINARY_DATA}}', binary)
+    html = html.replace('{{ASSET_GRID}}', asset_grid)
 
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:

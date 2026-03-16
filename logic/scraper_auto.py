@@ -9,8 +9,9 @@ except ImportError:
     from duckduckgo_search import DDGS
 
 # Configuration Paths
-CSV_PATH = r"D:\MemoryMachine\data\asset_manifest.csv"
-SAVE_DIR = r"D:\MemoryMachine\archive\assets\thumbnails"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CSV_PATH = os.path.join(BASE_DIR, "data", "asset_manifest.csv")
+SAVE_DIR = os.path.join(BASE_DIR, "archive", "assets", "thumbnails")
 
 
 def download_image(urls, save_path, asset_name):
