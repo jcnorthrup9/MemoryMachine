@@ -1,5 +1,6 @@
 import argparse
 import os
+from urllib.parse import quote_plus
 from scrapfly import ScrapflyClient, ScrapeConfig
 
 # --- AUTHENTICATION ---
@@ -10,6 +11,9 @@ def scrape_yelp_search(search_term, location):
     print(f"--- Scraping Yelp: '{search_term}' in '{location}' ---")
     
     target_url = f"https://www.yelp.com/search?find_desc={search_term}&find_loc={location}"
+    encoded_search = quote_plus(search_term)
+    encoded_location = quote_plus(location)
+    target_url = f"https://www.yelp.com/search?find_desc={encoded_search}&find_loc={encoded_location}"
     
     # ADVANCED CONFIG TO BYPASS 403/422
     config = ScrapeConfig(
@@ -18,8 +22,7 @@ def scrape_yelp_search(search_term, location):
         country="US",
         proxy_pool="public_residential_pool", # Uses "home" IPs instead of data centers
         render_js=True,                # Executes JavaScript to look like a real browser
-        wait_for_selector="div.container__09f24__m9SfG", # Waits for content to load before timing out
-        timeout=60000                  # Increased to 60 seconds for slow proxies
+        wait_for_selector="div.container__09f24__m9SfG" # Waits for content to load before timing out
     )
     
     try:

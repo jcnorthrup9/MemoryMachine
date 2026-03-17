@@ -10,6 +10,7 @@ import uuid
 import json
 import math
 import base64
+import re
 import jmespath
 from typing import Dict, List, TypedDict
 from urllib.parse import urlencode
@@ -63,13 +64,34 @@ def parse_business_id(response: ScrapeApiResponse):
     """parse the business id from yelp business pages"""
     selector = response.selector
     business_id = selector.css('meta[name="yelp-biz-id"]::attr(content)').get()
+    
+    if not business_id:
+        # Fallback to regex search within the page content
+        content = response.scrape_result.get("content", "")
+        match = re.search(r'"bizId"\s*:\s*"([^"]+)"', content) or re.search(r'"businessId"\s*:\s*"([^"]+)"', content)
+        if match:
+            business_id = match.group(1)
+            
     return business_id
 
 
 def parse_review_data(response: ScrapeApiResponse):
     """parse review data from the JSON response"""
-    data = json.loads(response.scrape_result["content"])
-    reviews = data[0]["data"]["business"]["reviews"]["edges"]
+    content = response.scrape_result.get("content", "")
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        log.error("Failed to parse GraphQL response as JSON. Saving to 'last_gql_failed.html'")
+        with open("last_gql_failed.html", "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"reviews": [], "total_reviews": 0}
+    
+    business_data = data[0].get("data", {}).get("business")
+    if not business_data:
+        log.error(f"Unexpected GraphQL response: {json.dumps(data)[:250]}")
+        return {"reviews": [], "total_reviews": 0}
+        
+    reviews = business_data.get("reviews", {}).get("edges", [])
     parsed_reviews = []
     for review in reviews:
         result = jmespath.search(
@@ -88,7 +110,7 @@ def parse_review_data(response: ScrapeApiResponse):
             review["node"],
         )
         parsed_reviews.append(result)
-    total_reviews = data[0]["data"]["business"]["reviewCount"]
+    total_reviews = business_data.get("reviewCount", 0)
     return {"reviews": parsed_reviews, "total_reviews": total_reviews}
 
 
@@ -120,7 +142,7 @@ async def scrape_pages(urls: List[str]) -> List[Dict]:
     return result
 
 
-async def request_reviews_api(url: str, start_index: int, business_id):
+async def request_reviews_api(url: str, start_index: int, business_id: str, session_state: list = None):
     """request the graphql API for review data"""
     pagionation_data = {"version": 1, "type": "offset", "offset": start_index}
     pagionation_data = json.dumps(pagionation_data)
@@ -169,22 +191,86 @@ async def request_reviews_api(url: str, start_index: int, business_id):
         "referer": url,  # main business page URL
         "x-apollo-operation-name": "GetBusinessReviewFeed",
     }
-    response = await SCRAPFLY.async_scrape(
-        ScrapeConfig(
-            url="https://www.yelp.com/gql/batch", headers=headers, body=payload, method="POST", asp=True, country="US"
-        )
-    )
+    
+    if session_state is None:
+        session_state = [uuid.uuid4().hex]
+
+    response = None
+    for attempt in range(5):
+        try:
+            config = ScrapeConfig(
+                url="https://www.yelp.com/gql/batch", 
+                headers=headers, 
+                body=payload, 
+                method="POST", 
+                session=session_state[0],
+                **BASE_CONFIG
+            )
+            response = await SCRAPFLY.async_scrape(config)
+            content = response.scrape_result.get("content", "")
+            
+            if not content or content.strip().startswith("<"):
+                raise ValueError("Received HTML or empty response instead of JSON (likely a CAPTCHA block)")
+            
+            # Verify it parses properly before accepting
+            json.loads(content)
+            return response
+        except Exception as e:
+            log.warning(f"GraphQL API request blocked or failed (Attempt {attempt + 1}/5) offset={start_index}: {e}")
+            if attempt < 4:
+                session_state[0] = uuid.uuid4().hex
+                log.info("Re-warming up new session to bypass block...")
+                try:
+                    await SCRAPFLY.async_scrape(ScrapeConfig(url=url, **BASE_CONFIG, render_js=True, session=session_state[0]))
+                except Exception:
+                    pass
+            
     return response
 
 
-async def scrape_reviews(url: str, max_reviews: int = None) -> List[Review]:
-    # first find business ID from business URL
-    log.info("scraping the business id from the business page")
-    response_business = await SCRAPFLY.async_scrape(ScrapeConfig(url, **BASE_CONFIG, render_js=True))
-    business_id = parse_business_id(response_business)
+async def scrape_reviews(url: str, max_reviews: int = None, business_id: str = None) -> List[Review]:
+    session_state = [uuid.uuid4().hex]
+    # first find business ID from business URL if not explicitly provided
+    if not business_id:
+        response_business = None
+        for attempt in range(5):
+            log.info(f"scraping the business id from the business page (Attempt {attempt + 1}/5)")
+            try:
+                session_state[0] = uuid.uuid4().hex
+                # We use wait_for_selector to ensure we don't accidentally accept the Yelp homepage redirect.
+                # Using a unique session ID guarantees a completely fresh proxy and fingerprint on each retry.
+                config = ScrapeConfig(
+                    url=url, 
+                    **BASE_CONFIG, 
+                    render_js=True, 
+                    wait_for_selector="meta[name='yelp-biz-id']",
+                    session=session_state[0]
+                )
+                response_business = await SCRAPFLY.async_scrape(config)
+                extracted_id = parse_business_id(response_business)
+                if extracted_id:
+                    business_id = extracted_id
+                    break
+            except Exception as e:
+                log.warning(f"Scrape timeout or error: {e}")
+                
+            log.warning("Failed to find business ID (likely a CAPTCHA block), retrying with a new proxy...")
+        
+        if not business_id:
+            # Save the raw HTML to help with debugging
+            if response_business and hasattr(response_business, "scrape_result"):
+                with open("last_failed_page.html", "w", encoding="utf-8") as f:
+                    f.write(response_business.scrape_result.get("content", ""))
+            raise ValueError(f"Failed to find business ID for {url}. The page might have been blocked. Raw HTML saved to 'last_failed_page.html'.")
+    else:
+        log.info("Warming up session to bypass anti-bot protections...")
+        try:
+            await SCRAPFLY.async_scrape(ScrapeConfig(url=url, **BASE_CONFIG, render_js=True, session=session_state[0]))
+        except Exception:
+            pass
 
     log.info("scraping the first review page")
-    first_page = await request_reviews_api(url=url, business_id=business_id, start_index=1)
+    first_page = await request_reviews_api(url=url, business_id=business_id, start_index=1, session_state=session_state)
     review_data = parse_review_data(first_page)
     reviews = review_data["reviews"]
     total_reviews = review_data["total_reviews"]
@@ -197,11 +283,11 @@ async def scrape_reviews(url: str, max_reviews: int = None) -> List[Review]:
     log.info(f"scraping review pagination, remaining ({total_reviews // 10}) more pages")
     for offset in range(11, total_reviews, 10):
         try:
-            response = await request_reviews_api(url=url, business_id=business_id, start_index=offset)
+            response = await request_reviews_api(url=url, business_id=business_id, start_index=offset, session_state=session_state)
             new_review_data = parse_review_data(response)["reviews"]
             reviews.extend(new_review_data)
         except Exception as e:
-            log.error(f"An error occurred while scraping search pages", e)
+            log.error(f"An error occurred while scraping review pages: {e}")
             pass
     log.success(f"scraped {len(reviews)} reviews from review pages")
     return reviews
