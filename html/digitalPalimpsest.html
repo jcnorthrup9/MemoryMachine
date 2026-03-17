@@ -18,15 +18,9 @@
         .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; z-index: 2; }
         .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border-dim); z-index: 10; }
         
-<<<<<<< HEAD
         .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; pointer-events: none; }
         
         .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; transition: all var(--trans-speed) cubic-bezier(0.2, 0.8, 0.2, 1); }
-=======
-        .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; }
-
-        .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; }
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
         .left-page { padding: 60px 100px 60px 60px; } 
         .right-page { padding: 60px 60px 60px 100px; } 
 
@@ -34,11 +28,7 @@
         
         .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; text-align-last: left; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: balance; overflow: hidden; grid-column: 1 / -1; transition: all var(--trans-speed) ease-out; }
         
-<<<<<<< HEAD
         .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; transition: all var(--trans-speed) ease-out; }
-=======
-        .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; justify-content: center; }
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
         .vessel-span-8 { grid-column: span 8; }
         .vessel-span-4 { grid-column: span 4; border-left: 1px solid var(--border-dim); padding-left: 20px; }
         
@@ -48,7 +38,6 @@
         
         pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; transition: all var(--trans-speed) ease-out; }
         .json-block { color: #88ff88; text-align: left; width: 100%; }
-        .binary-block { color: #444; letter-spacing: 3px; text-align: center; font-size: 0.65rem; }
         
         .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         .spread.active { display: flex; }
@@ -57,7 +46,6 @@
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; }
         .nav-controls button:hover { background: #111; border-color: #444; }
 
-<<<<<<< HEAD
         .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; align-content: start; }
         .matrix-item { background: #080808; border: 1px solid #111; position: relative; display: flex; flex-direction: column; }
         .matrix-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: center; display: block; }
@@ -161,11 +149,6 @@
         body.degrading-severe .page-side h2, 
         body.degrading-severe .page-side p, 
         body.degrading-severe .page-side img { animation: gpu-tear 40s steps(60) forwards; }
-=======
-        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 20px; }
-        .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .matrix-item img { width: 100%; height: 100%; object-fit: cover; }
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
         
         /* Button Reboot State */
         .nav-controls button.reboot-mode {
@@ -225,6 +208,7 @@
 01000101 01010010 00101110 01101100 01101111
 00110011 00110110 00101110 00111000 00110010
 [ END_STRATA ]</div>
+        
         <div class="spread-container">
             <div class="spine"></div>
 
@@ -655,24 +639,12 @@ DETECTED PYTHON MODULES:
                     <div class="grid-layout">
                         <h2 class="page-header">09 // Forensic Asset Catalog // A</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-<<<<<<< HEAD
                             <div class="yearbook-grid"><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/a_frame_swingset.jpg"></div><div class="yearbook-label">A FRAME SWINGSET</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/brass_trim.jpg"></div><div class="yearbook-label">BRASS TRIM</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/carpet_orange.jpg"></div><div class="yearbook-label">CARPET ORANGE</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/incand_glow.jpg"></div><div class="yearbook-label">INCAND GLOW</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/monster_truck.jpg"></div><div class="yearbook-label">MONSTER TRUCK</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/vinyl_brass_table.jpg"></div><div class="yearbook-label">VINYL BRASS TABLE</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/vinyl_top.jpg"></div><div class="yearbook-label">VINYL TOP</div></div><div class="yearbook-entry"><div class="yearbook-placeholder"><img src="../archive/assets/thumbnails/wood_panel.jpg"></div><div class="yearbook-label">WOOD PANEL</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div></div>
-=======
-                            <div class="matrix-grid">
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/monster_truck.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/carpet_orange.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/brass_trim.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/vinyl_top.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/incand_glow.jpg"></div>
-                                <div class="matrix-item"><img src="../archive/assets/thumbnails/vinyl_brass_table.jpg"></div>
-                            </div>
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
                         </div>
                     </div>
                 </div>
                 <div class="page-side right-page">
                     <div class="grid-layout">
-<<<<<<< HEAD
                         <h2 class="page-header">10 // Forensic Asset Catalog // B</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
                             <div class="yearbook-grid"><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div><div class="yearbook-entry"><div class="yearbook-placeholder">PENDING</div><div class="yearbook-label">{PLACEHOLDER TEXT}</div></div></div>
@@ -710,12 +682,6 @@ DETECTED PYTHON MODULES:
   ]
 }</pre>
                         </div>
-=======
-                        <h2 class="page-header">04 // Node: MM-918 // Narrative</h2>
-                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1; justify-content: flex-start; overflow-y: auto;">
-                            <div class="vignette">The Demarcation: A short chain link fence, maybe 4 feet high. It never had a sense of authority or security; it was merely a demarcation of a boundary to keep a child from walking into the street.</div><div class="vignette">The Playground: A small yard with wide, scratchy blades of green grass. The lawn terminated roughly around the roots of a large tree where the dirt became the primary site of play.</div><div class="vignette">The Winch: A large blue monster truck, a dead RC car used as a static prop. The coolest part was the manual winch at the front, used to pull toy soldiers out of the dirt by the tree.</div><div class="vignette">The Interior Palette: A saturation of 70s and 80s tones—burnt orange, moss green, and deep brown. The living room was dominated by an orange/green/brown shag carpet.</div><div class="vignette">The Kitchen Artifact: In the north window sat a potato propped up by toothpicks in a glass jar, propped up so the roots could reach down into the water.</div><div class="vignette">The Hallway Logic: Three sequential doors on the right side of a narrow wood-paneled hall. First a coat closet, then the bathroom, then a bedroom containing a playpen.</div><div class="vignette">The Perpendicular Tub: A white porcelain bathtub oriented towards the south end of the bathroom, sitting perpendicular to the long axis of the trailer.</div>
-                        </div>
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
                     </div>
                 </div>
             </div>
@@ -723,7 +689,6 @@ DETECTED PYTHON MODULES:
             <div class="spread" id="spread-8">
                 <div class="page-side left-page">
                     <div class="grid-layout">
-<<<<<<< HEAD
                         <h2 class="page-header">13 // Binary Strata</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; justify-content: center; overflow-y: auto;">
                             <pre style="color: #666; font-size: 1.1rem; white-space: pre-wrap;">[ 1988_TRAILER_RECONSTRUCTION_V3 ]
@@ -738,50 +703,19 @@ DETECTED PYTHON MODULES:
 01000101 01010010 00101110 01101100 01101111
 00110011 00110110 00101110 00111000 00110010
 [ END_STRATA ]</pre>
-=======
-                        <h2 class="page-header">05 // Structural Logic // JSON</h2>
-                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                             <pre class="json-block" style="font-size: 0.55rem;">{
-    "node_id": "MM-918",
-    "designation": "Overwritten_Trailer_Park",
-    "geo_lock": {
-        "lat": 34.4035,
-        "lon": -117.9221
-    },
-    "memory_integrity": "35%"
-}</pre>
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
                         </div>
                     </div>
                 </div>
                 <div class="page-side right-page">
                     <div class="grid-layout">
-<<<<<<< HEAD
                         <h2 class="page-header">14 // Rendering Layer</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden;">
                             <img src="../archive/render_output/1988_trailer.png" style="max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;">
-=======
-                        <h2 class="page-header">06 // Forensic Strata // Binary</h2>
-                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <pre class="binary-block">[ 1988_TRAILER_RECONSTRUCTION_V3 ]
-01001110 01001111 01010010 01010100 01001000
-01010111 01001111 01001111 01000100 01010111
-01000010 01010010 01000001 01010011 01010011
-01010110 01001001 01001110 01011001 01001100
-01010000 01001111 01010100 01000001 01010100
-01001111 01010010 01000001 01001110 01000111
-00110001 00111001 00111000 00111000 01011111
-01010100 01010010 01000001 01001001 01001100
-01000101 01010010 00101110 01101100 01101111
-00110011 00110110 00101110 00111000 00110010
-[ END_STRATA ]</pre>
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
                         </div>
                     </div>
                 </div>
             </div>
 
-<<<<<<< HEAD
             <div class="spread" id="spread-9">
                 <div class="page-side left-page">
                     <div class="grid-layout">
@@ -1031,15 +965,6 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
                         <h2 class="page-header">36 // System Status</h2>
                         <div class="vessel vessel-span-12" style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center;">
                             <div style="color: #333; font-size: 0.8rem;">[ PROCESS TERMINATED ]</div>
-=======
-            <div class="spread" id="spread-6">
-                <div class="page-side left-page" style="background-color: #030303;"></div>
-                <div class="page-side right-page">
-                    <div class="grid-layout">
-                        <h2 class="page-header">07 // Visual Output // Rhino Arctic</h2>
-                        <div class="vessel vessel-span-12" style="grid-column: 1 / -1;">
-                            <img src="../archive/render_output/1988_trailer.png" class="bleed-center">
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
                         </div>
                     </div>
                 </div>
@@ -1157,7 +1082,6 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
         }, 5000); // Stop glitching after 5s
 
         let currentSpread = 1;
-<<<<<<< HEAD
         function showSpread(n, suppressGlitch) {
             resetDegradation();
             
@@ -1175,13 +1099,6 @@ Family Archives (1988-1992). Northrup Collection.<br><br></div>
             document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
             document.getElementById(`spread-${n}`).classList.add('active');
             const labels = ["I", "II // SYSTEM", "III // THEORY A", "IV // THEORY B", "V // THEORY C", "VI // CATALOG", "VII // 1988 TRAILER", "VIII // 1988 RENDER", "IX // 1988 WATERCOLORS", "X // 1992 BIRTHDAY", "XI // 1992 RENDER", "XII // 1994 BASIN", "XIII // 1994 RENDER", "XIV // ROSSI", "XV // NEU MUSEUM", "XVI // ZEITZ MOCAA", "XVII // GENBAKU", "XVIII // DO HO SUH", "XIX // REFERENCES"];
-=======
-        const totalSpreads = 6;
-        function showSpread(n) {
-            document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
-            document.getElementById(`spread-${n}`).classList.add('active');
-            const labels = ["I", "II // INDEX", "III // THEORY", "IV // CATALOG", "V // LOGIC", "VI // OUTPUT"];
->>>>>>> 32450c28c1980863b1b657245c46bd594bd9ec3a
             document.getElementById('page-indicator').innerText = labels[n-1];
             currentSpread = n;
         }
