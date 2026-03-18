@@ -28,10 +28,11 @@ def scrape_ot_johnson_info():
     
     extracted_text = []
     
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+
     print("🔎 Fetching specific source: Grokipedia...")
     try:
         url = "https://grokipedia.com/page/o_t_johnson_building"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             text = clean_html(response.text)
@@ -56,7 +57,7 @@ def scrape_ot_johnson_info():
                 "utf8": 1,
                 "srlimit": 3
             }
-            response = requests.get(search_url, params=params)
+            response = requests.get(search_url, params=params, headers=headers)
             data = response.json()
             
             for item in data.get("query", {}).get("search", []):
@@ -73,7 +74,7 @@ def scrape_ot_johnson_info():
                     "titles": page_title,
                     "format": "json"
                 }
-                page_res = requests.get(search_url, params=extract_params).json()
+                page_res = requests.get(search_url, params=extract_params, headers=headers).json()
                 pages = page_res.get("query", {}).get("pages", {})
                 for page_id, page_info in pages.items():
                     if "extract" in page_info:
