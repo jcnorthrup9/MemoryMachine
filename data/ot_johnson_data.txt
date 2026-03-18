@@ -1,0 +1,2057 @@
+O. T. Johnson Building â Grokipedia
+      (function(){
+        var t = localStorage.getItem('theme');
+        if (t === 'light') document.documentElement.classList.remove('dark');
+        else if (t === 'dark') document.documentElement.classList.add('dark');
+        else {
+          // system preference
+          if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        }
+      })();
+    
+   
+    (function(){
+      var t0=Date.now(),active=0,idle=false,last=t0,thr=0;
+      var mob=window.innerWidth<768?1:0;
+      var auth=document.body.getAttribute('data-auth')==='1'?1:0;
+
+      // Referrer classification (bucketed to avoid cardinality explosion)
+      var ref=document.referrer,r='direct';
+      if(ref){try{var h=new URL(ref).hostname;
+        if(/google\./i.test(h))r='google';
+        else if(/bing\./i.test(h))r='bing';
+        else if(/duckduckgo\./i.test(h))r='duckduckgo';
+        else if(/x\.com|twitter\.com/i.test(h))r='x';
+        else if(/reddit\.com/i.test(h))r='reddit';
+        else if(/claude\.ai|anthropic/i.test(h))r='claude';
+        else if(/chatgpt\.com|openai/i.test(h))r='chatgpt';
+        else if(/grokipedia\.com/i.test(h))r='internal';
+        else r='other';
+      }catch(e){r='other';}}
+
+      // Browser language (primary, 2-letter code)
+      var lang=(navigator.language||'').slice(0,2).toLowerCase()||'unknown';
+
+      function tick(){
+        var n=Date.now();
+        if(n-thr<200)return;thr=n;
+        if(!idle)active+=n-last;
+        last=n;idle=false;
+      }
+      document.addEventListener('visibilitychange',function(){
+        if(document.hidden){tick();idle=true;}else{last=Date.now();idle=false;}
+      });
+      ['click','scroll','keydown','touchstart'].forEach(function(e){
+        document.addEventListener(e,tick,{passive:true,capture:true});
+      });
+      addEventListener('pagehide',function(){
+        tick();
+        var p=location.pathname,s=p.indexOf('/page/')===0?p.slice(6):p;
+        var perf=performance.getEntriesByType&&performance.getEntriesByType('navigation');
+        var lt=perf&&perf[0]?perf[0].loadEventEnd/1000:0;
+        // Auto-translate detection: Chrome/Edge add class "translated-*" and change html lang
+        var docLang=document.documentElement.lang||'';
+        var translated=(docLang&&docLang!=='en'&&
+          document.documentElement.className.indexOf('translated')!==-1)?docLang:'';
+        navigator.sendBeacon('/api/analytics',new Blob([JSON.stringify({
+          s:s,p:p,a:Math.round(active/1000),d:Math.round((Date.now()-t0)/1000),
+          l:Math.round(lt*100)/100,u:auth,m:mob,
+          r:r,lang:lang,translated:translated
+        })],{type:'application/json'}));
+      });
+      // Global event tracker for discrete actions
+      window.__ev=function(e,q){
+        navigator.sendBeacon('/api/ev',new Blob([JSON.stringify({e:e,q:q||'',m:mob})],{type:'application/json'}));
+      };
+    })();
+     {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Grokipedia","item":"https://grokipedia.com"},{"@type":"ListItem","position":2,"name":"O. T. Johnson Building","item":"https://grokipedia.com/page/o_t_johnson_building"}]}{"@context":"https://schema.org","@type":"Article","headline":"O. T. Johnson Building","url":"https://grokipedia.com/page/o_t_johnson_building","publisher":{"@type":"Organization","name":"Grokipedia","url":"https://grokipedia.com"},"dateModified":"2026-01-17T03:15:21.000Z"}                  Search âK              Suggest Article Sign in                Sign in                 
+  function toggleTheme() {
+    var html = document.documentElement;
+    var isDark = html.classList.contains('dark');
+    if (isDark) {
+      html.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    } else {
+      html.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    }
+  }
+  document.getElementById('theme-toggle-desktop')?.addEventListener('click', toggleTheme);
+  document.getElementById('theme-toggle-mobile')?.addEventListener('click', toggleTheme);
+
+  // âK shortcut to open search
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      var link = document.getElementById('header-search-link');
+      if (link) link.click();
+      else window.location.href = '/search';
+    }
+  });
+
+  document.getElementById('header-suggest-btn')?.addEventListener('click', function() {
+    if (window.__openContributeModal) window.__openContributeModal();
+    else if (window.__openSuggestArticle) window.__openSuggestArticle();
+  });
+
+  // User menu dropdown
+  var umBtn = document.getElementById('user-menu-btn');
+  var umMenu = document.getElementById('user-menu');
+  var umWrap = document.getElementById('user-menu-wrap');
+  if (umBtn && umMenu) {
+    umBtn.addEventListener('click', function() { umMenu.classList.toggle('hidden'); });
+    document.addEventListener('click', function(e) {
+      if (umWrap && !umWrap.contains(e.target)) umMenu.classList.add('hidden');
+    });
+  }
+      Location and Context     Site Description     Broadway Theater District     History     Construction and Early Use     Mid-20th Century Developments     Late 20th and 21st Century Events     Architecture and Design     Original Romanesque Features     Materials and Construction Techniques     Alterations and Modern Modifications     Historic Significance     Contribution to Downtown Los Angeles     National Register Status     References      
+(function() {
+  var nav = document.getElementById('toc-nav');
+  var items = document.querySelectorAll('.toc-item');
+  if (!items.length || !nav) return;
+
+  var activeId = null;
+  var headerOffset = 96;
+  var isUserScrolling = false;
+  var scrollTimeout = null;
+
+  function setActive(id) {
+    if (id === activeId) return;
+    activeId = id;
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var dot = item.querySelector('.toc-dot');
+      var link = item.querySelector('.toc-link');
+      var isActive = item.dataset.tocId === id;
+      if (dot) dot.style.opacity = isActive ? '1' : '0';
+      if (link) {
+        link.style.opacity = isActive ? '1' : '0.5';
+        link.style.textShadow = isActive ? '0.2px 0 0 currentColor' : 'none';
+      }
+      // Show/hide subsections (depth > 2)
+      var depth = parseInt(item.dataset.tocDepth, 10);
+      if (depth > 2) {
+        var shouldShow = false;
+        // Find parent section
+        var parentIdx = -1;
+        for (var j = i - 1; j >= 0; j--) {
+          if (parseInt(items[j].dataset.tocDepth, 10) <= 2) { parentIdx = j; break; }
+        }
+        if (parentIdx >= 0) {
+          var parentId = items[parentIdx].dataset.tocId;
+          if (activeId === parentId || activeId === item.dataset.tocId) shouldShow = true;
+          // Check siblings in same group
+          if (!shouldShow) {
+            for (var k = parentIdx + 1; k < items.length; k++) {
+              if (parseInt(items[k].dataset.tocDepth, 10) <= 2) break;
+              if (activeId === items[k].dataset.tocId) { shouldShow = true; break; }
+            }
+          }
+        }
+        item.style.display = shouldShow ? '' : 'none';
+      }
+    }
+    // Auto-scroll active item into view
+    var activeItem = document.querySelector('.toc-item[data-toc-id="' + id + '"]');
+    if (activeItem) {
+      var itemTop = activeItem.offsetTop;
+      var itemHeight = activeItem.offsetHeight;
+      var navScrollTop = nav.scrollTop;
+      var navHeight = nav.clientHeight;
+      var isAbove = itemTop < navScrollTop + 80;
+      var isBelow = itemTop + itemHeight > navScrollTop + navHeight - 80;
+      if (isAbove || isBelow) {
+        nav.scrollTo({ top: isBelow ? itemTop + itemHeight - navHeight + 80 : itemTop - 80, behavior: 'smooth' });
+      }
+    }
+  }
+
+  function findActiveHeading() {
+    var headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
+    var threshold = headerOffset + 300;
+    var last = null;
+    for (var i = 0; i < headings.length; i++) {
+      if (headings[i].getBoundingClientRect().top <= threshold) last = headings[i].id;
+    }
+    // Check references section too
+    var refs = document.getElementById('references');
+    if (refs && refs.getBoundingClientRect().top <= threshold) last = 'references';
+    return last || (headings.length ? headings[0].id : null);
+  }
+
+  var throttle = null;
+  window.addEventListener('scroll', function() {
+    if (isUserScrolling) return;
+    if (throttle) return;
+    throttle = setTimeout(function() {
+      throttle = null;
+      var id = findActiveHeading();
+      if (id) setActive(id);
+    }, 100);
+  }, { passive: true });
+
+  // Handle TOC clicks â smooth scroll to heading
+  for (var i = 0; i < items.length; i++) {
+    (function(item) {
+      var link = item.querySelector('.toc-link');
+      if (!link) return;
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var id = item.dataset.tocId;
+        var el = document.getElementById(id);
+        if (!el) return;
+        isUserScrolling = true;
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        var top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({ top: top });
+        history.replaceState(null, '', '#' + id);
+        setActive(id);
+        if ('onscrollend' in window) {
+          window.addEventListener('scrollend', function fn() { isUserScrolling = false; window.removeEventListener('scrollend', fn); }, { once: true });
+        } else {
+          scrollTimeout = setTimeout(function() { isUserScrolling = false; }, 500);
+        }
+      });
+    })(items[i]);
+  }
+
+  // Init: hide all depth > 2 items, set first as active
+  for (var i = 0; i < items.length; i++) {
+    if (parseInt(items[i].dataset.tocDepth, 10) > 2) items[i].style.display = 'none';
+  }
+  // Check hash first
+  var hash = window.location.hash.slice(1);
+  if (hash) { setActive(hash); }
+  else {
+    var id = findActiveHeading();
+    if (id) setActive(id);
+  }
+})();
+     Fact-checked by Grok 2 months ago O. T. Johnson Building                               Ara    Eve    Leo    Sal                  
+1x
+         
+@keyframes tts-wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2.2)}}
+.tts-animating span{animation:tts-wave 1.1s ease-in-out infinite;transform-origin:center}
+.tts-animating span:nth-child(2){animation-delay:70ms}
+.tts-animating span:nth-child(3){animation-delay:140ms}
+.tts-animating span:nth-child(4){animation-delay:210ms}
+.tts-animating span:nth-child(5){animation-delay:280ms}
+.tts-animating span:nth-child(6){animation-delay:350ms}
+.tts-animating span:nth-child(7){animation-delay:420ms}
+.tts-animating span:nth-child(8){animation-delay:490ms}
+.tts-animating span:nth-child(9){animation-delay:560ms}
+.tts-animating span:nth-child(10){animation-delay:630ms}
+ 
+(function(){
+  /* ââ ORIGINAL WORKING TTS PLAYER (unchanged audio pipeline) âââ */
+  var SAMPLE_RATE = 24000;
+  var SPEEDS = [1, 1.25, 1.5, 1.75, 2];
+  var speedIdx = 0;
+
+  var listenBtn = document.getElementById('tts-listen-btn');
+  var player = document.getElementById('tts-player');
+  var playPauseBtn = document.getElementById('tts-playpause');
+  var iconPlay = document.getElementById('tts-icon-play');
+  var iconPause = document.getElementById('tts-icon-pause');
+  var voiceBtn = document.getElementById('tts-voice-btn');
+  var voiceDot = document.getElementById('tts-voice-dot');
+  var voiceMenu = document.getElementById('tts-voice-menu');
+  var speedBtn = document.getElementById('tts-speed');
+  var closeBtn = document.getElementById('tts-close');
+  var bars = document.getElementById('tts-bars');
+  if (!listenBtn || !player) return;
+
+  var slug = listenBtn.getAttribute('data-slug');
+  var voice = 'human_Ara';
+  var audioCtx = null;
+  var nextPlayTime = 0;
+  var sources = [];
+  var abortCtrl = null;
+  var status = 'idle';
+  var streamDone = false;
+  var endTimer = null;
+  var cachedManifest = null;
+  var currentSectionId = null;
+
+  var iconSpinner = document.getElementById('tts-icon-spinner');
+
+  function setStatus(s) {
+    status = s;
+    iconPlay.classList.add('hidden');
+    iconPause.classList.add('hidden');
+    if (iconSpinner) iconSpinner.classList.add('hidden');
+
+    if (s === 'playing') {
+      iconPause.classList.remove('hidden');
+      bars.classList.add('tts-animating'); bars.classList.remove('opacity-40'); bars.classList.add('opacity-80');
+    } else if (s === 'loading') {
+      if (iconSpinner) iconSpinner.classList.remove('hidden');
+      bars.classList.remove('tts-animating'); bars.classList.add('opacity-40');
+    } else if (s === 'paused') {
+      iconPlay.classList.remove('hidden');
+      bars.classList.remove('tts-animating'); bars.classList.add('opacity-40');
+    } else {
+      iconPlay.classList.remove('hidden');
+      bars.classList.remove('tts-animating'); bars.classList.remove('opacity-80'); bars.classList.add('opacity-40');
+    }
+  }
+
+  // ââ Section highlighting ââââââââââââââââââââââââââââââââââââââ
+  function highlightSection(sectionId) {
+    if (sectionId === currentSectionId) return;
+    currentSectionId = sectionId;
+    var article = document.querySelector('article');
+    if (!article) return;
+
+    // Clear previous focus
+    article.querySelectorAll('[data-tts-focus]').forEach(function(el) { el.removeAttribute('data-tts-focus'); });
+
+    if (!sectionId) {
+      article.removeAttribute('data-tts-dimming');
+      return;
+    }
+
+    article.setAttribute('data-tts-dimming', 'true');
+    var heading = document.getElementById(sectionId);
+    if (!heading) return;
+
+    // Focus all tts-blocks from this heading to the next
+    var headings = Array.from(article.querySelectorAll('h1[id],h2[id],h3[id]'));
+    var idx = headings.indexOf(heading);
+    var nextH = idx >= 0 ? headings[idx + 1] : null;
+    article.querySelectorAll('[data-tts-block]').forEach(function(block) {
+      var after = heading === block || Boolean(heading.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING);
+      var before = !nextH || Boolean(block.compareDocumentPosition(nextH) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (after && before) block.setAttribute('data-tts-focus', 'true');
+    });
+
+    // Auto-scroll
+    var rect = heading.getBoundingClientRect();
+    if (rect.top  window.innerHeight - 200) {
+      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function clearHighlight() {
+    currentSectionId = null;
+    var article = document.querySelector('article');
+    if (article) {
+      article.removeAttribute('data-tts-dimming');
+      article.querySelectorAll('[data-tts-focus]').forEach(function(el) { el.removeAttribute('data-tts-focus'); });
+    }
+  }
+
+  // ââ Core audio ââââââââââââââââââââââââââââââââââââââââââââââââ
+  function stopAll() {
+    if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+    if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+    sources.forEach(function(s) { try { s.stop(); } catch(e) {} });
+    sources = [];
+    streamDone = false;
+    clearHighlight();
+    if (audioCtx) { audioCtx.close().catch(function(){}); audioCtx = null; }
+    nextPlayTime = 0;
+    setStatus('idle');
+  }
+
+  function scheduleChunk(pcm) {
+    if (!audioCtx) return;
+    var int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength / 2);
+    var float32 = new Float32Array(int16.length);
+    for (var i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+    var rate = SPEEDS[speedIdx];
+    var buf = audioCtx.createBuffer(1, float32.length, SAMPLE_RATE);
+    buf.copyToChannel(float32, 0);
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    src.connect(audioCtx.destination);
+    var t = Math.max(audioCtx.currentTime + 0.05, nextPlayTime);
+    src.start(t);
+    nextPlayTime = t + (buf.duration / rate);
+    src.onended = function() { sources = sources.filter(function(x) { return x !== src; }); };
+    sources.push(src);
+  }
+
+  function concatU8(a, b) {
+    var c = new Uint8Array(a.length + b.length);
+    c.set(a, 0); c.set(b, a.length);
+    return c;
+  }
+
+  function indexOf(buf, sub, start) {
+    start = start || 0;
+    for (var i = start; i <= buf.length - sub.length; i++) {
+      var ok = true;
+      for (var j = 0; j < sub.length; j++) { if (buf[i+j] !== sub[j]) { ok = false; break; } }
+      if (ok) return i;
+    }
+    return -1;
+  }
+
+  async function parseMultipart(stream, boundary) {
+    var reader = stream.getReader();
+    var bndBytes = new TextEncoder().encode('--' + boundary);
+    var hdrSep = new TextEncoder().encode('\r\n\r\n');
+    var buffer = new Uint8Array(0);
+    var firstAudio = true;
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      if (!result.value || result.value.length === 0) continue;
+      buffer = concatU8(buffer, new Uint8Array(result.value));
+
+      while (true) {
+        var bi = indexOf(buffer, bndBytes);
+        if (bi === -1) break;
+        var be = bi + bndBytes.length;
+        if (buffer.length >= be + 2 && buffer[be] === 45 && buffer[be+1] === 45) { reader.releaseLock(); return; }
+        var ps = be;
+        if (buffer.length >= ps + 2 && buffer[ps] === 13 && buffer[ps+1] === 10) ps += 2;
+        var ni = indexOf(buffer, bndBytes, ps);
+        if (ni === -1) break;
+        var part = buffer.slice(ps, ni);
+        var hi = indexOf(part, hdrSep);
+        if (hi !== -1) {
+          var hdr = new TextDecoder().decode(part.slice(0, hi)).toLowerCase();
+          var bodyStart = hi + hdrSep.length;
+          var bodyEnd = part.length;
+          if (bodyEnd >= 2 && part[bodyEnd-2] === 13 && part[bodyEnd-1] === 10) bodyEnd -= 2;
+          if (hdr.includes('audio/l16') && bodyEnd > bodyStart) {
+            var pcm = part.slice(bodyStart, bodyEnd);
+            var clMatch = hdr.match(/content-length:\s*(\d+)/);
+            if (clMatch) { var cl = parseInt(clMatch[1], 10); if (cl < pcm.length) pcm = pcm.slice(0, cl); }
+            scheduleChunk(pcm);
+            if (firstAudio) { firstAudio = false; setStatus('playing'); }
+          }
+        }
+        buffer = buffer.slice(ni);
+      }
+    }
+    reader.releaseLock();
+  }
+
+  function scheduleEnd() {
+    if (!streamDone || !audioCtx) return;
+    if (endTimer) clearTimeout(endTimer);
+    var remain = Math.max(0, (nextPlayTime - audioCtx.currentTime) * 1000);
+    endTimer = setTimeout(function() {
+      stopAll();
+      player.classList.add('hidden');
+    }, remain);
+  }
+
+  async function startPlayback(startFromSectionId) {
+    stopAll();
+    setStatus('loading');
+    player.classList.remove('hidden');
+    streamDone = false;
+    abortCtrl = new AbortController();
+    var signal = abortCtrl.signal;
+
+    try {
+      // 1. Get manifest (cache it)
+      if (!cachedManifest) {
+        var mRes = await fetch('/api/tts?slug=' + encodeURIComponent(slug), { signal: signal });
+        if (!mRes.ok) throw new Error('Manifest failed');
+        cachedManifest = await mRes.json();
+      }
+      var sections = cachedManifest.sections || [];
+      if (sections.length === 0) throw new Error('No text for TTS');
+
+      // 2. Create AudioContext
+      audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+      await audioCtx.resume();
+      nextPlayTime = audioCtx.currentTime + 0.1;
+
+      // 3. Stream each section/part
+      var skipping = !!startFromSectionId;
+      for (var si = 0; si < sections.length; si++) {
+        var sec = sections[si];
+        if (skipping) {
+          if (sec.id === startFromSectionId) skipping = false;
+          else continue;
+        }
+        // Highlight this section
+        highlightSection(sec.id);
+
+        for (var pi = 0; pi < sec.partCount; pi++) {
+          if (signal.aborted) return;
+          var aRes = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: slug, sectionId: sec.id, partIndex: pi, voice: voice }),
+            signal: signal,
+          });
+          if (!aRes.ok) throw new Error('TTS audio failed');
+          if (!aRes.body) throw new Error('No audio stream');
+          var ct = aRes.headers.get('content-type') || '';
+          var bMatch = ct.match(/boundary=([^;]+)/i);
+          var boundary = bMatch ? bMatch[1].replace(/^"|"$/g, '') : 'frame';
+          await parseMultipart(aRes.body, boundary);
+        }
+      }
+      streamDone = true;
+      scheduleEnd();
+    } catch (e) {
+      if (!signal.aborted) {
+        console.error('[tts]', e);
+        stopAll();
+        player.classList.add('hidden');
+      }
+    }
+  }
+
+  // ââ Speed control âââââââââââââââââââââââââââââââââââââââââââââ
+  if (speedBtn) {
+    speedBtn.addEventListener('click', function() {
+      speedIdx = (speedIdx + 1) % SPEEDS.length;
+      speedBtn.textContent = SPEEDS[speedIdx] === 1 ? '1x' : SPEEDS[speedIdx] + 'x';
+      // New chunks will use the updated speedIdx automatically.
+      // Already-scheduled chunks keep their old rate (no re-schedule
+      // to avoid the complexity that broke TTS before).
+    });
+  }
+
+  // ââ Click-to-jump on dimmed sections ââââââââââââââââââââââââââ
+  document.addEventListener('click', function(e) {
+    if (status !== 'playing' && status !== 'loading') return;
+    var article = document.querySelector('article[data-tts-dimming]');
+    if (!article) return;
+    var block = e.target.closest('[data-tts-block]');
+    if (!block || block.getAttribute('data-tts-focus') === 'true') return;
+    if (e.target.closest('a,button,input,textarea')) return;
+
+    var headings = Array.from(article.querySelectorAll('h1[id],h2[id],h3[id]'));
+    var targetId = null;
+    for (var i = headings.length - 1; i >= 0; i--) {
+      if (headings[i] === block || Boolean(headings[i].compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+        targetId = headings[i].id; break;
+      }
+    }
+    if (!targetId || !cachedManifest) return;
+
+    // Find the manifest section for this DOM id
+    var targetSection = null;
+    for (var j = 0; j < cachedManifest.sections.length; j++) {
+      if (cachedManifest.sections[j].id === targetId) { targetSection = targetId; break; }
+    }
+    if (!targetSection) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    startPlayback(targetSection);
+  }, true);
+
+  // ââ Event handlers ââââââââââââââââââââââââââââââââââââââââââââ
+  listenBtn.addEventListener('click', function() {
+    if (status === 'idle') startPlayback();
+    else if (status === 'playing' || status === 'paused') { player.classList.remove('hidden'); }
+  });
+
+  playPauseBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (status === 'playing') {
+      audioCtx.suspend();
+      setStatus('paused');
+      if (endTimer) { clearTimeout(endTimer); endTimer = null; }
+    } else if (status === 'paused') {
+      audioCtx.resume();
+      setStatus('playing');
+      if (streamDone) scheduleEnd();
+    } else if (status === 'loading') {
+      // Cancel the current load but keep the player visible
+      stopAll();
+      setStatus('idle');
+    } else {
+      startPlayback();
+    }
+  });
+
+  closeBtn.addEventListener('click', function() {
+    stopAll();
+    player.classList.add('hidden');
+  });
+
+  // Voice menu
+  voiceBtn.addEventListener('click', function() { voiceMenu.classList.toggle('hidden'); });
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('tts-voice-wrap').contains(e.target)) voiceMenu.classList.add('hidden');
+  });
+  document.querySelectorAll('.tts-voice-opt').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var v = btn.getAttribute('data-voice');
+      if (v === voice) { voiceMenu.classList.add('hidden'); return; }
+      voice = v;
+      var span = btn.querySelector('span');
+      if (span) voiceDot.className = span.className;
+      voiceMenu.classList.add('hidden');
+      if (status !== 'idle') startPlayback();
+    });
+  });
+
+  // ââ Per-heading listen buttons ââââââââââââââââââââââââââââââââ
+  // Expose startPlayback for heading buttons
+  window.__ttsPlaySection = function(sectionId) {
+    startPlayback(sectionId);
+  };
+})();
+          
+  document.getElementById('copy-link-btn')?.addEventListener('click', function() {
+    var url = window.location.href;
+    var icon = document.getElementById('copy-icon');
+    var check = document.getElementById('copy-check');
+    var _s=location.pathname.indexOf('/page/')===0?location.pathname.slice(6):'';
+    if(window.__ev)window.__ev('share_click',_s);
+    navigator.clipboard.writeText(url).catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+    if (icon && check) {
+      icon.classList.add('hidden');
+      check.classList.remove('hidden');
+      setTimeout(function() {
+        icon.classList.remove('hidden');
+        check.classList.add('hidden');
+      }, 2000);
+    }
+  });
+The O. T. Johnson Building is a historic commercial structure located at 356 S. Broadway in downtown Los Angeles, California, at the corner of West 4th Street. Originally constructed in 1902 as a seven-story office building, it was designed by prominent architect John Parkinson in the Romanesque Revival style, featuring a glazed pressed-brick facade, iron-and-glass ground floor elements, and paired columns at the main entrance. Commissioned by financier and philanthropist Orson Thomas Johnson (1839â1916), the building contributed to the early 20th-century commercial development of the Broadway Theater and Commercial District, one of the most intact historic districts in the United States. It is recognized as a contributing resource to the district, which is listed on the National Register of Historic Places.
+Over the decades, the building underwent significant alterations, including the removal of upper stories, reducing it to its current two-story height, and covering of original details, which led to its exclusion from a 1998 update to the district's historic designation. On February 5, 2007, a major fire gutted the structure and an adjacent building early in the morning, requiring over 160 firefighters to extinguish the blaze in about 90 minutes; the incident exposed long-hidden features such as large arched windows and fluted columns beneath modern cladding. The fire caused substantial damage to first-floor businesses, including uninsured losses estimated at $100,000, and prompted discussions of demolition. Despite plans for demolition, the building was not razed and has remained vacant and in a state of disrepair since the fire, amid the ongoing revitalization of the Broadway corridor. As of 2024, it stands as a damaged remnant of Los Angeles's early architectural heritage within the district's mix of theaters, shops, and preserved early 1900s facades.
+Location and Context
+Site Description
+The O. T. Johnson Building is situated at 356 S. Broadway and 224 W. 4th Street in the historic core of downtown Los Angeles, California.[1] Its geographic coordinates are 34Â°02â²59â³N 118Â°14â²57â³W, placing it at the intersection of major urban thoroughfares in a densely developed area. The building occupies a prominent corner lot at the southeast corner of Broadway and West 4th Street, within the block between Broadway, Spring Street, Third Street, and Fourth Streets, contributing to the grid-like street layout characteristic of early 20th-century Los Angeles planning.[1]
+Directly adjacent to the east is the O. T. Johnson Block at 350 S. Broadway, forming a cohesive commercial grouping along the Broadway corridor.[1] To the north along Broadway, within the same block, is the Million Dollar Theater at 307 S. Broadway, while the south elevation abuts a smaller one-story commercial structure.[1] Nearby landmarks include the Bradbury Building at 304 S. Broadway and the Trustee Building at 340 S. Broadway, enhancing the site's integration into a cluster of historic commercial properties.[1]
+The urban setting positions the building in a highly accessible part of downtown, served by pedestrian-friendly sidewalks along Broadway and 4th Street, with connections to public transit and nearby parking facilities.[1] This location underscores its role within the broader Broadway Theater District, a vibrant hub of entertainment and commerce.[1]
+Broadway Theater District
+The Broadway Theater District in downtown Los Angeles formed during the city's explosive growth period between 1900 and 1910, evolving from a modest commercial strip into a premier entertainment and retail hub by the 1910s and 1920s. This development mirrored Southern California's broader real estate boom, with Broadway serving as a central artery for vaudeville, live theater, and early film screenings that attracted regional audiences and solidified the area's reputation as Los Angeles' cultural epicenter.[2][3]
+At its peak, the district boasted an array of iconic theaters that defined its theatrical legacy. Key venues included the Pantages Theatre, which opened in 1910 as a vaudeville house before transitioning to films; the Morosco Theatre (later renamed the Globe) in 1913, dedicated to dramatic productions; the Rialto Theatre in 1917, a pioneering movie palace; and Loew's State Theater in 1920, known for its grand architecture and blockbuster premieres. These theaters, concentrated along an eight-block stretch of Broadway, hosted performers ranging from touring Broadway acts to local talents, drawing thousands nightly and fostering a lively atmosphere of neon lights and marquees.[3][4][5]
+The district's commercial vibrancy was equally prominent, with major shops and department stores anchoring its retail appeal. Hamburger's Department Store, constructed in 1909 and later rebranded as May Company, emerged as a flagship retailer offering luxury goods and drawing shoppers from across the region. Surrounding these were specialized outlets for jewelry, apparel, and dry goods, creating a dense network of commerce that complemented the entertainment offerings and turned Broadway into a one-stop destination for leisure and consumption.[6][7]
+Economically, the Broadway Theater District was instrumental in boosting downtown Los Angeles' vitality from 1900 to the 1920s, generating substantial revenue through theater admissions, film premieres, and retail sales that spurred further business investments and urban expansion. This influx supported job creation in hospitality and construction, while the district's allure as a glamour spot enhanced the city's overall economic draw, contributing to a surge in population and infrastructure during the era. The O. T. Johnson Building functions as a contributing property within this historic ensemble.[2][3][7]
+History
+Construction and Early Use
+The O. T. Johnson Building was constructed in 1902 as a seven-story office structure at 356 South Broadway in downtown Los Angeles, standing as one of the tallest buildings on the street at the time.[8] Designed by architect John B. Parkinson, a prominent figure in early 20th-century Los Angeles architecture, the building exemplified the commercial ambitions of the era's developers. Orson Thomas Johnson, a local real estate investor, commissioned the project to capitalize on the burgeoning demand for office space amid the city's expansion.[9]
+This construction occurred during a period of rapid growth in downtown Los Angeles around 1900, fueled by the arrival of railroads, oil discoveries, and population influxes that transformed the area from a modest town into a booming metropolis.[10] The building's steel-frame design with brick cladding allowed for its height, supporting multiple floors for professional tenants and contributing to Broadway's emergence as a commercial hub. Initially purposed as an office building, it quickly attracted businesses seeking central locations near the growing theater and retail districts.
+One of the first notable tenants was the Automobile Club of Southern California, which opened its headquarters in the building in 1904, occupying space that underscored the era's rising interest in automotive services.[11] This early occupancy highlighted the structure's role in accommodating new industries during Los Angeles's economic surge, with the club remaining a key presence in its formative years.[12]
+Mid-20th Century Developments
+In 1952, the O. T. Johnson Building was acquired as part of a larger portfolio of downtown Los Angeles properties in a transaction valued at $11 million (equivalent to approximately $130 million in 2024 dollars, adjusted for inflation using the U.S. Bureau of Labor Statistics Consumer Price Index).[13] This purchase reflected ongoing investment in the aging commercial core amid post-World War II economic shifts.
+As the Broadway Theater District transitioned from its theatrical heyday, the building saw changes in tenancy, with spaces repurposed for office and professional uses rather than retail or entertainment functions.[14] These adaptations aligned with broader patterns in downtown Los Angeles, where upper floors of historic structures increasingly housed administrative and service-oriented businesses.
+By the 1950s and 1960s, early indicators of urban declineâsuch as suburban migration, freeway expansion, and the popularity of televisionâdiminished the area's vibrancy, reducing the building's role as a prominent commercial landmark.[15]
+Late 20th and 21st Century Events
+In the early 2000s, the O. T. Johnson Building underwent a complete renovation circa 2005, though specific details of the work remain limited in historical records.[8] By this period, the structure had already been significantly altered, having been reduced from its original seven stories to just two sometime prior to 2007, reflecting broader patterns of adaptive reuse or deterioration in downtown Los Angeles commercial properties.[16]
+The building's modern challenges intensified on February 5, 2007, when a major fire broke out at approximately 5 a.m., engulfing the O. T. Johnson Building at 356â364 S. Broadway and the adjacent O. T. Johnson Block at 350â354 S. Broadway. Owned by Eli Sasson, president of Sassony Commercial Real Estate Development, for about 30 years at the time, the properties featured active retail on the ground floorsâhousing businesses such as bridal shops, shoe stores, and money transfer servicesâwhile the upper levels had long been vacant. The blaze, which required 160 firefighters over 90 minutes to contain, gutted the interiors due to the buildings' pre-1933 construction with soft mortar vulnerable to heat and water damage. During post-fire cleanup, the removal of tattered brown shingle siding exposed long-hidden original Romanesque features, including arched windows and fluted columns, sparking interest in the structures' historic value.[16]
+Sasson immediately deemed the buildings unsafe for occupancy and announced intentions to demolish them, citing structural instability and uncertainty over rebuilding plans. This raised immediate concerns among preservation advocates, as the exposed facades highlighted the buildings' architectural significance within the Broadway Theater District, though their prior alterations had led to their exclusion from a 1998 district update. Adjacent businesses suffered smoke damage, with one retailer estimating $100,000 in losses from ruined inventory without insurance coverage. The fire's cause remained undetermined shortly after the incident.[16]
+As of 2018, the O. T. Johnson Building remained boarded up and vacant, its future use mired in ongoing debates over public safety risksâstemming from the unrepaired fire damage and exposure to the elementsâand competing visions for preservation versus potential redevelopment or removal, with the city attempting to acquire the blighted property but facing opposition from owner Sasson. Ground-floor retail activity had ceased following the fire, leaving the entire structure unoccupied, while ownership under Sasson persisted amid stalled plans. No further public records indicate resolution of these issues as of 2024.[1]
+Architecture and Design
+Original Romanesque Features
+The O. T. Johnson Building, constructed in 1902 and designed by architect John Parkinson, exemplifies early 20th-century Romanesque Revival architecture in Los Angeles' downtown commercial core.[8] This style, adapted for urban office use, emphasized robust forms and restrained ornamentation, drawing from medieval precedents while incorporating modern construction methods like a steel frame clad in brick.[16] The building's original design contributed to the evolving aesthetic of Broadway, blending solidity with subtle elegance to complement the district's emerging theater and retail landscape.
+Key facade elements highlight the Romanesque influence, including paired columns that flanked the main entrance, providing a classical entry motif with vertical emphasis.[16] Fluted columns extended across the facade, adding rhythmic texture and depth to the glazed pressed-brick surface, which offered a durable, subtly reflective finish. Large arched windows dominated the upper stories, with rounded openings framed by heavy brick surrounds that evoked the style's characteristic massiveness and structural honesty.[16] These features created a cohesive elevation, where the interplay of arches and columns fostered a sense of ordered progression upward.
+Originally rising seven stories, the building's scale asserted a commanding yet harmonious presence on South Broadway, anchoring the street's early high-rise development amid lower surrounding structures.[8] Its visual impact lay in the facade's shimmering brickwork under sunlight, which enhanced the thoroughfare's historic vibrancy and underscored the Romanesque Revival's role in defining Los Angeles' commercial identity at the turn of the century.[16]
+Materials and Construction Techniques
+The O. T. Johnson Building was constructed in 1902 as a seven-story brick structure, utilizing a steel skeleton frame that enabled its height while providing structural integrity for commercial use in downtown Los Angeles.[8] The frame was clad with brick interior walls for partitioning and support, contributing to the building's compartmentalized office spaces. The exterior facade featured glazed brick, selected for its weather-resistant qualities and polished appearance that reflected the era's emphasis on durable, low-maintenance commercial aesthetics.[16]
+The ground floor employed iron and glass construction, creating expansive storefronts and entries that maximized visibility and natural light for retail tenants along Broadway.[16] This technique, common in early 20th-century urban commercial design, allowed for flexible commercial layouts while integrating the building into the bustling theater district.
+Innovative for 1902 Los Angeles, the building's skeleton frame and brick masonry represented advanced fire-resistant construction methods, reducing risks in a growing city prone to urban fires and allowing for taller buildings than traditional load-bearing walls permitted.[16] These choices aligned with contemporary engineering practices that prioritized safety and scalability in high-density areas, setting a precedent for subsequent developments in the Broadway corridor.
+Alterations and Modern Modifications
+The O. T. Johnson Building experienced substantial physical alterations in the decades following its 1902 construction, including the demolition of its upper five stories, reducing the structure from its original seven-story height to a two-story remnant. This change dramatically altered the building's scale and prominence within the Broadway Theater District. The original facade, characterized by glazed pressed brick, was further obscured by a covering of tattered brown shingles applied to the upper portions, which hid key Romanesque elements such as large arched windows and fluted columns etched into the surface.[16]
+In February 2007, a major fire engulfed the building and its adjacent neighbor at 350â354 S. Broadway, originating around 5 a.m. and requiring 160 firefighters to contain over 90 minutes. During suppression efforts, crews stripped away the shingle cladding, exposing the underlying brickwork, columns, and other obscured details for the first time in decades and offering a glimpse of the building's historic character. The blaze exploited the structure's pre-1933 construction vulnerabilities, including unreinforced soft mortar, leaving the interior gutted and the exterior heavily damaged.[16]
+Post-fire, the building was deemed unsafe and remained vacant, with owner Eli Sasson applying for demolition permits in 2009 that were denied pending a city-required historic assessment and redevelopment plan. As of 2010, it stood as a gutted shell amid the district's revitalization efforts, with exposed but deteriorated original elements visible on the facade and no active renovation underway; Sasson proposed a multi-story replacement featuring ground-floor retail, though no timeline was established.[17] As of 2024, the building remains a vacant, fire-damaged shell, with repeated demolition requests denied due to its contributing status in the historic district, despite ongoing Broadway corridor revitalization.[18]
+Historic Significance
+Contribution to Downtown Los Angeles
+The O. T. Johnson Building, completed in 1902 at 356 South Broadway, exemplified the early 20th-century commercial boom in Los Angeles by providing multi-story office and retail space during a period of rapid southward expansion of the city's business district.[19] Prior to 1900, Broadway south of Third Street was primarily residential, but structures like the O. T. Johnson Building contributed to shifting the commercial core southward, transforming the thoroughfare into Los Angeles's principal retail and business artery by 1910.[19] This development was fueled by regional growth across southern California in the 1900â1910 decade, with the building's construction alongside contemporaries such as the Trustee Building and O. T. Johnson Building #2 (both 1905) underscoring the surge in investment and urbanization.[19]
+As a prominent seven-story office tower on Broadway, the O. T. Johnson Building attracted professionals, retailers, and investors, bolstering the economic vitality of downtown by integrating office functions with emerging retail and hospitality uses in the surrounding blocks.[19] It supported the influx of businesses during the pre-World War I era, including department stores like Bullock's (1906) and hotels such as the Lankershim (1902), which catered to the growing workforce and visitors drawn to the expanding commercial zone.[19] This concentration of activity not only sustained local trade but also influenced adjacent developments, extending commercial reach southward and fostering a diverse business ecosystem through the 1920s real estate boom.[19]
+Symbolically, the building's height and scale marked it as one of the taller early structures in the area, contributing to the evolution of downtown Los Angeles's skyline by introducing vertical density to Broadway's streetscape.[19] Erected amid a wave of over a dozen significant constructions between 1900 and 1910, it helped redefine the district's profile, laying foundational elements for later taller edifices and symbolizing the city's ambitious growth from a modest town to a burgeoning metropolis.[19]
+National Register Status
+The O. T. Johnson Building, located at 356 S. Broadway in Los Angeles, was originally listed as a contributing property to the Broadway Theater and Commercial District on the National Register of Historic Places (NRHP) in 1979, under NRHP reference number 79000484. The district's nomination, prepared in 1977 and certified in 1978, recognized the building's role in illustrating the early 20th-century commercial and architectural development along Broadway, qualifying under National Register Criteria A (for its association with significant events in commerce and entertainment) and C (for its Romanesque architectural design by John Parkinson). This listing stemmed from surveys including the 1977 State of California Historic Resources Inventory and assessments by the Natural History Museum of Los Angeles County, which documented the building's intact pressed-brick facade and its contribution to the district's historic commercial core.
+In 2002, the building was reclassified from contributing to non-contributing within the district following a boundary increase and reassessment (NRHP reference number 02000330, approved April 12, 2002).[20] The reevaluation determined that significant alterations, including full coverage with metal siding that obscured original features, had compromised its historic integrity to the point where original remnants were unclear and no longer character-defining.[20] As a result, it was reclassified as non-contributing within the expanded district, alongside five other original contributors affected by similar post-1979 changes or demolitions.[20]
+Following a major fire on February 5, 2007, that gutted the structure and removed much of the modern cladding, original architectural details such as large arched windows and fluted columns were exposed.[16] Although initial plans called for demolition, the building was ultimately preserved and renovated as part of the Broadway corridor revitalization efforts in the 2010s. As of 2023, it is recognized as a contributing property to the district, reflecting restored historic integrity.[21] This adjustment maintained the district's overall integrity while reflecting updated preservation standards for architectural and commercial significance in downtown Los Angeles.[20]
+
+References
+https://planning.lacity.gov/StaffRpt/InitialRpts/Item%2005%20CHC-2019-248.pdfhttps://www.nps.gov/places/broadway-theater-and-commercial-district.htmhttps://www.route66ca.org/broadway-theater-and-commercial-district/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_4_of_6.htmlhttps://www.thereallosangelestours.com/broadway-las-historic-theater-district/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_5_of_6.htmlhttps://planning.lacity.gov/Code_Studies/BroadwayTheater/Broadway%20Design%20Guide%20Full%20Draft%20w%20pics%20050809.pdfhttps://pcad.lib.washington.edu/building/11671/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_Page_2.htmlhttps://waterandpower.org/museum/Early_City_Views%20(1900%20-%201925)_Page_1.htmlhttps://news.aaa-calif.com/news/110-years-of-service-an-auto-club-188717https://digitalcollections.lmu.edu/Documents/Detail/headquarters-building-automobile-club-of-southern-california-los-angeles-california/25078https://calisphere.org/item/13c43f643f0e6d134a64a6cc1ce50fec/https://www.historictheatrephotos.com/Theatre/Broadway-Theatre-District-Los-Angeles.aspxhttps://www.latimes.com/archives/la-xpm-1988-08-12-me-247-story.htmlhttps://www.latimes.com/archives/la-xpm-2007-feb-06-me-fire6-story.htmlhttps://www.ladowntownnews.com/news/downtown-s-10-worst-eyesores/article_daa3f4da-c339-5da8-82f6-67c68db5c62b.htmlhttps://www.reddit.com/r/LosAngeles/comments/1g2rr2w/downtown_la_street_artist_sc_mero_marks_the_start/https://npgallery.nps.gov/GetAsset/d41bca98-3f44-45c2-b049-ad3bce5f4c01/https://npgallery.nps.gov/NRHP/GetAsset/24a0e8c9-56de-4e08-ae90-dfcb0a6dc890https://planning.lacity.gov/StaffRpt/InitialRpts/Item%2006%20CHC-2019-244.pdf            Table of Contents             Location and Context     Site Description     Broadway Theater District     History     Construction and Early Use     Mid-20th Century Developments     Late 20th and 21st Century Events     Architecture and Design     Original Romanesque Features     Materials and Construction Techniques     Alterations and Modern Modifications     Historic Significance     Contribution to Downtown Los Angeles     National Register Status     References       
+(function() {
+  var btn = document.getElementById('mobile-toc-btn');
+  var backdrop = document.getElementById('mobile-toc-backdrop');
+  var drawer = document.getElementById('mobile-toc-drawer');
+  var closeBtn = document.getElementById('mobile-toc-close');
+  if (!btn || !backdrop || !drawer || !closeBtn) return;
+
+  var isOpen = false;
+  var headerOffset = 96;
+
+  function open() {
+    isOpen = true;
+    backdrop.classList.remove('hidden');
+    drawer.classList.remove('-translate-x-full');
+    drawer.classList.add('translate-x-0');
+    document.body.style.overflow = 'hidden';
+    syncActiveItem();
+  }
+
+  function close() {
+    isOpen = false;
+    backdrop.classList.add('hidden');
+    drawer.classList.add('-translate-x-full');
+    drawer.classList.remove('translate-x-0');
+    document.body.style.overflow = '';
+  }
+
+  // Sync active heading from page's scroll-spy
+  function syncActiveItem() {
+    var headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
+    var threshold = headerOffset + 300;
+    var last = null;
+    for (var i = 0; i < headings.length; i++) {
+      if (headings[i].getBoundingClientRect().top <= threshold) last = headings[i].id;
+    }
+    var refs = document.getElementById('references');
+    if (refs && refs.getBoundingClientRect().top <= threshold) last = 'references';
+
+    var items = document.querySelectorAll('.mobile-toc-item');
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var dot = item.querySelector('.mobile-toc-dot');
+      var link = item.querySelector('.mobile-toc-link');
+      var isActive = item.dataset.tocId === last;
+      if (dot) dot.style.opacity = isActive ? '1' : '0';
+      if (link) {
+        link.style.opacity = isActive ? '1' : '0.5';
+        link.style.fontWeight = isActive ? '600' : 'normal';
+      }
+    }
+  }
+
+  btn.addEventListener('click', open);
+  backdrop.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
+
+  // Handle TOC link clicks
+  var links = drawer.querySelectorAll('.mobile-toc-link');
+  for (var i = 0; i < links.length; i++) {
+    links[i].addEventListener('click', function(e) {
+      e.preventDefault();
+      var id = this.dataset.tocId;
+      var el = document.getElementById(id);
+      if (!el) return;
+      close();
+      // Small delay for drawer close animation
+      setTimeout(function() {
+        var top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({ top: top });
+        history.replaceState(null, '', '#' + id);
+      }, 50);
+    });
+  }
+
+  // Escape key closes drawer
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && isOpen) close();
+  });
+})();
+     
+(function() {
+  var btn = document.getElementById('scroll-to-top');
+  if (!btn) return;
+
+  // Only show on non-mobile (check width)
+  var SCROLL_THRESHOLD = 300;
+  var visible = false;
+
+  function update() {
+    var isMobile = window.innerWidth < 768;
+    var shouldShow = !isMobile && window.scrollY > SCROLL_THRESHOLD;
+
+    if (shouldShow && !visible) {
+      visible = true;
+      btn.style.display = 'flex';
+      // Force reflow for transition
+      btn.offsetHeight;
+      btn.style.opacity = '1';
+    } else if (!shouldShow && visible) {
+      visible = false;
+      btn.style.opacity = '0';
+      setTimeout(function() {
+        if (!visible) btn.style.display = 'none';
+      }, 200);
+    }
+  }
+
+  btn.addEventListener('click', function() {
+    window.scrollTo({ top: 0 });
+  });
+
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update, { passive: true });
+
+  // Initial state
+  btn.style.display = 'none';
+  btn.style.opacity = '0';
+})();
+   
+(function () {
+  // ââ Config ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  var HOVER_DELAY = 300;   // ms before showing (matches Next.js)
+  var CLOSE_DELAY = 200;   // ms grace period when moving to popover
+  var CACHE_TTL   = 3600000; // 1 hour (matches Next.js staleTime)
+  var MAX_PARA    = 280;     // max chars for first-paragraph excerpt
+
+  // ââ DOM refs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  var popover = document.getElementById('page-popover');
+  var inner   = document.getElementById('page-popover-inner');
+  if (!popover || !inner) return;
+
+  // ââ State âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  var cache      = {};          // slug â { data, ts }
+  var inflight   = {};          // slug â Promise
+  var hoverTimer = null;
+  var closeTimer = null;
+  var activeSlug = null;
+  var activeLinkEl = null;
+
+  // ââ API fetch âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function fetchPreview(slug) {
+    // Return cached if fresh
+    var cached = cache[slug];
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+      return Promise.resolve(cached.data);
+    }
+    // Dedupe in-flight
+    if (inflight[slug]) return inflight[slug];
+
+    var url = '/api/page-preview?slug=' + encodeURIComponent(slug);
+    var p = fetch(url).then(function (res) {
+      if (!res.ok) throw new Error(res.status);
+      return res.json();
+    }).then(function (data) {
+      cache[slug] = { data: data, ts: Date.now() };
+      delete inflight[slug];
+      return data;
+    }).catch(function (err) {
+      delete inflight[slug];
+      return null;
+    });
+
+    inflight[slug] = p;
+    return p;
+  }
+
+  // ââ Text extraction helpers âââââââââââââââââââââââââââââââââââââââââ
+  // These mirror the Next.js extractFirstParagraph + cleanup logic exactly.
+
+  function stripInfobox(content) {
+    return content
+      .replace(/[\s\S]*?/g, '')
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
+  function stripLeadingImage(content) {
+    var cleaned = content.replace(/^\s*!\[[^\]]*\]\([^)]+\)\s*/m, '');
+    return cleaned.replace(/^\s*\*[^*]+\*\s*/m, '');
+  }
+
+  function isListItem(line) {
+    if (/^[*-]\s/.test(line)) return true;
+    if (/^\d+\.\s/.test(line)) return true;
+    return false;
+  }
+
+  function extractFirstParagraph(content) {
+    if (!content) return '';
+    var clean = stripInfobox(content);
+    clean = stripLeadingImage(clean);
+    var lines = clean.split('\n');
+    var para = '';
+    var inPara = false;
+
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      if (!t && !inPara) continue;
+      if (t.indexOf('') === t.length - 3) continue;
+      if (
+        t.charAt(0) === '#' || t.indexOf('![') === 0 || t.charAt(0) === '|' ||
+        t.charAt(0) === '>' || t.indexOf('```') === 0 ||
+        t.indexOf('<grok-render') === 0 || isListItem(t)
+      ) {
+        if (inPara && para) break;
+        continue;
+      }
+      if (!t && inPara) break;
+      if (t) { inPara = true; para += (para ? ' ' : '') + t; }
+    }
+
+    // Clean markdown artefacts
+    para = para
+      .replace(/]*\/>/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\[\]/g, '')
+      .replace(/\(https?:\/\/[^)]+\)/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (para.length > MAX_PARA) para = para.slice(0, MAX_PARA - 3) + '...';
+    return para;
+  }
+
+  // ââ Image extraction ââââââââââââââââââââââââââââââââââââââââââââââââ
+  function extractLeadingImage(content) {
+    if (!content) return null;
+    var withoutInfobox = stripInfobox(content);
+    // Find first H1, take body after it
+    var h1Match = withoutInfobox.match(/^(#\s+.+)$/m);
+    var body = h1Match
+      ? withoutInfobox.slice(withoutInfobox.indexOf(h1Match[1]) + h1Match[1].length).replace(/^\n+/, '')
+      : withoutInfobox;
+    var imgMatch = body.match(/^\s*!\[[^\]]*\]\(([^\s")]+)(?:\s+"[^"]*")?\)/);
+    if (!imgMatch) return null;
+    return getControlledImageUrl(imgMatch[1]);
+  }
+
+  function getControlledImageUrl(src) {
+    if (!src) return null;
+    if (src.indexOf('./_assets_/') === 0 || src.indexOf('._assets_/') === 0) return null;
+    if (src.indexOf('http://') === 0 || src.indexOf('https://') === 0) {
+      try {
+        var u = new URL(src);
+        if (u.hostname === 'assets.grokipedia.com') return src;
+      } catch (e) {}
+      return null;
+    }
+    return null;
+  }
+
+  // ââ Render popover content ââââââââââââââââââââââââââââââââââââââââââ
+  function renderLoading() {
+    return '' +
+      '<div class="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" ' +
+      'style="border-color:hsl(var(--fg-secondary));border-top-color:transparent">';
+  }
+
+  function renderNotFound() {
+    return 'Article not found';
+  }
+
+  function renderPreview(page) {
+    var imageUrl = extractLeadingImage(page.content || '');
+    var paragraph = extractFirstParagraph(page.content || page.description || '');
+    var html = '';
+
+    if (imageUrl) {
+      html += '' +
+        '<img src="' + escapeAttr(imageUrl) + '" alt="' + escapeAttr(page.title || '') +
+        '" class="h-auto max-h-[200px] w-full object-cover" referrerpolicy="no-referrer" ' +
+        'loading="eager" decoding="async" onerror="this.parentElement.style.display=\'none\'" />' +
+        '';
+    }
+
+    html += '';
+    html += '' +
+      escapeHtml(page.title || '') + '';
+    if (paragraph) {
+      html += '' +
+        escapeHtml(paragraph) + '';
+    }
+    html += '';
+    return html;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(//g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  // ââ Positioning âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function positionPopover(linkEl) {
+    var rect = linkEl.getBoundingClientRect();
+    var gap = 8;
+    var pw = 400;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+
+    // Ensure visible for measurement (but don't move off-screen â that
+    // triggers mouseleave on the popover and causes the close race).
+    popover.style.display = 'block';
+    var ph = popover.offsetHeight || 200;
+
+    // Horizontal: prefer left-aligned with link, clamp to viewport
+    var left = rect.left;
+    if (left + pw > vw - 16) left = vw - pw - 16;
+    if (left < 16) left = 16;
+
+    // Vertical: prefer below, flip above if no room
+    var top;
+    if (rect.bottom + gap + ph <= vh) {
+      top = rect.bottom + gap;
+    } else if (rect.top - gap - ph >= 0) {
+      top = rect.top - gap - ph;
+    } else {
+      top = Math.max(16, vh - ph - 16);
+    }
+
+    popover.style.left = left + 'px';
+    popover.style.top  = top + 'px';
+  }
+
+  // ââ Show / Hide âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  function showPopover(slug, linkEl) {
+    // Cancel any pending hide from a previous hover
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+
+    activeSlug = slug;
+    activeLinkEl = linkEl;
+    popover.classList.add('pointer-events-auto');
+    popover.classList.remove('pointer-events-none');
+
+    // Show loading state immediately
+    inner.innerHTML = renderLoading();
+    positionPopover(linkEl);
+    popover.style.opacity = '1';
+
+    fetchPreview(slug).then(function (data) {
+      // Bail if user already moved away
+      if (activeSlug !== slug) return;
+      if (!data || !data.found || !data.page) {
+        inner.innerHTML = renderNotFound();
+      } else {
+        inner.innerHTML = renderPreview(data.page);
+      }
+      // Reposition after content changes height
+      positionPopover(linkEl);
+    });
+  }
+
+  var hideTimer = null;
+
+  function hidePopover() {
+    activeSlug = null;
+    activeLinkEl = null;
+    popover.style.opacity = '0';
+    popover.classList.remove('pointer-events-auto');
+    popover.classList.add('pointer-events-none');
+    // Hide after fade-out transition â but cancel if re-shown
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () {
+      hideTimer = null;
+      if (!activeSlug) popover.style.display = 'none';
+    }, 200);
+  }
+
+  // ââ Slug extraction âââââââââââââââââââââââââââââââââââââââââââââââââ
+  function getSlugFromLink(el) {
+    var href = el.getAttribute('href');
+    if (!href) return null;
+    var match = href.match(/^\/page\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function findPageLink(target) {
+    var el = target;
+    // Walk up at most 5 levels (link might wrap //etc.)
+    for (var i = 0; i < 5 && el && el !== document.body; i++) {
+      if (el.tagName === 'A' && el.getAttribute('href') && el.getAttribute('href').indexOf('/page/') === 0) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  // ââ Event delegation on article âââââââââââââââââââââââââââââââââââââ
+  var article = document.querySelector('article');
+  if (!article) return;
+
+  article.addEventListener('mouseenter', function (e) {
+    var linkEl = findPageLink(e.target);
+    if (!linkEl) return;
+
+    // Ignore if the pointer came from another element inside the same link
+    // (just moving between child elements â not a real entry)
+    if (e.relatedTarget && linkEl.contains(e.relatedTarget)) return;
+
+    var slug = getSlugFromLink(linkEl);
+    if (!slug) return;
+
+    // Cancel any pending close
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+
+    // If already showing this slug, keep it
+    if (activeSlug === slug) return;
+
+    // Start prefetching immediately
+    fetchPreview(slug);
+
+    // Delay showing the popover
+    if (hoverTimer) clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(function () {
+      hoverTimer = null;
+      showPopover(slug, linkEl);
+    }, HOVER_DELAY);
+  }, true);
+
+  article.addEventListener('mouseleave', function (e) {
+    var linkEl = findPageLink(e.target);
+    if (!linkEl) return;
+
+    // Ignore if the pointer moved to another element still inside the same
+    // link â this is just child-to-child movement, not a real leave.
+    if (e.relatedTarget && linkEl.contains(e.relatedTarget)) return;
+
+    scheduleClose();
+  }, true);
+
+  // ââ Popover mouse handling ââââââââââââââââââââââââââââââââââââââââââ
+  popover.addEventListener('mouseenter', function () {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+  });
+
+  popover.addEventListener('mouseleave', function () {
+    scheduleClose();
+  });
+
+  function scheduleClose() {
+    if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(function () {
+      closeTimer = null;
+      hidePopover();
+    }, CLOSE_DELAY);
+  }
+
+  // ââ Touch devices: skip entirely âââââââââââââââââââââââââââââââââââ
+  // On touch devices links just navigate â no popover overhead.
+
+  // ââ Scroll: reposition if visible ââââââââââââââââââââââââââââââââââ
+  var scrollRaf = null;
+  window.addEventListener('scroll', function () {
+    if (!activeSlug || !activeLinkEl) return;
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(function () {
+      scrollRaf = null;
+      if (activeSlug && activeLinkEl) positionPopover(activeLinkEl);
+    });
+  }, { passive: true });
+
+  // ââ Hide on Escape âââââââââââââââââââââââââââââââââââââââââââââââââ
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && activeSlug) hidePopover();
+  });
+})();
+(function(){const slug = "o_t_johnson_building";
+const userId = "";
+const accountUrl = "https://accounts.x.ai";
+
+(function() {
+  'use strict';
+
+  // ââ Constants ââââââââââââââââââââââââââââââââââââââââââââââââââ
+  var MAX_SELECT_LEN = 2500;
+  var isAuthenticated = !!userId;
+
+    // ââ State ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    var tooltip = null;
+    var capturedText = '';
+    var sectionTitle = '';
+    var editStartHeader = '';
+    var editEndHeader = '';
+
+    // ââ Tooltip creation (lazy) ââââââââââââââââââââââââââââââââââââ
+    function ensureTooltip() {
+      if (tooltip) return tooltip;
+      tooltip = document.createElement('div');
+      tooltip.className = 'fixed z-50 -translate-x-1/2 -translate-y-full pointer-events-none opacity-0 transition-opacity duration-150';
+      tooltip.innerHTML =
+        '' +
+          '' +
+            '' +
+            'Copy' +
+          '' +
+          '' +
+          '' +
+            '' +
+            'Ask Grok' +
+          '' +
+          '' +
+          '' +
+            '' +
+            'Suggest edit' +
+          '' +
+        '';
+      document.body.appendChild(tooltip);
+
+      tooltip.querySelector('[data-action="copy"]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigator.clipboard.writeText(capturedText);
+        var btn = this;
+        btn.querySelector('svg').style.display = 'none';
+        var check = document.createElement('span');
+        check.textContent = '\u2713';
+        check.className = 'text-green-500';
+        btn.prepend(check);
+        setTimeout(function() { check.remove(); btn.querySelector('svg').style.display = ''; }, 1200);
+      });
+
+      tooltip.querySelector('[data-action="ask"]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        hideTooltip();
+        if(window.__ev)window.__ev('ask_grok');
+        var query = window.location.href + '\n\n> "' + capturedText + '"';
+        window.open('https://grok.com?q=' + encodeURIComponent(query), '_blank', 'noopener,noreferrer');
+      });
+
+      tooltip.querySelector('[data-action="edit"]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        hideTooltip();
+        if (!isAuthenticated) {
+          // Open sign-in modal for logged-out users
+          var signinBackdrop = document.getElementById('signin-backdrop');
+          var signinModal = document.getElementById('signin-modal');
+          if (signinBackdrop && signinModal) {
+            signinBackdrop.classList.remove('hidden');
+            signinModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+          }
+          return;
+        }
+        if (window.__openContributeModal) {
+          window.__openContributeModal({
+            mode: 'edit',
+            selectedText: capturedText,
+            sectionTitle: sectionTitle,
+            editStartHeader: editStartHeader,
+            editEndHeader: editEndHeader,
+          });
+        }
+      });
+
+      return tooltip;
+    }
+
+    function showTooltip(x, y) {
+      ensureTooltip();
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = y + 'px';
+      tooltip.classList.remove('opacity-0', 'pointer-events-none');
+      tooltip.classList.add('opacity-100');
+    }
+
+    function hideTooltip() {
+      if (!tooltip) return;
+      tooltip.classList.add('opacity-0', 'pointer-events-none');
+      tooltip.classList.remove('opacity-100');
+    }
+
+    // ââ Section header detection âââââââââââââââââââââââââââââââââââ
+    function findSectionHeading(node) {
+      if (!node) return '';
+      var el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      while (el && el.closest('article')) {
+        var tag = el.tagName;
+        if (tag && /^H[1-6]$/.test(tag)) return el.textContent.trim();
+        var sib = el.previousElementSibling;
+        while (sib) {
+          if (/^H[1-6]$/.test(sib.tagName)) return sib.textContent.trim();
+          var inner = sib.querySelectorAll('h1,h2,h3,h4,h5,h6');
+          if (inner.length) return inner[inner.length - 1].textContent.trim();
+          sib = sib.previousElementSibling;
+        }
+        el = el.parentElement;
+      }
+      return '';
+    }
+
+    function findNextHeading(node) {
+      if (!node) return 'endOfPage';
+      var el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      while (el && el.closest('article')) {
+        var sib = el.nextElementSibling;
+        while (sib) {
+          if (/^H[1-6]$/.test(sib.tagName)) return sib.textContent.trim();
+          var inner = sib.querySelector('h1,h2,h3,h4,h5,h6');
+          if (inner) return inner.textContent.trim();
+          sib = sib.nextElementSibling;
+        }
+        el = el.parentElement;
+      }
+      return 'endOfPage';
+    }
+
+    function isExcluded(node) {
+      var el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      while (el) {
+        var tag = el.tagName && el.tagName.toLowerCase();
+        if (tag === 'aside' || tag === 'figure' || tag === 'figcaption') return true;
+        el = el.parentElement;
+      }
+      return false;
+    }
+
+    // ââ Selection handler ââââââââââââââââââââââââââââââââââââââââââ
+    document.addEventListener('mouseup', function() {
+      var sel = window.getSelection();
+      var text = sel && sel.toString().trim();
+      if (!text || text.length === 0 || text.length > MAX_SELECT_LEN) {
+        hideTooltip();
+        return;
+      }
+
+      // Must be inside the article
+      if (!sel.rangeCount) { hideTooltip(); return; }
+      var range = sel.getRangeAt(0);
+      var article = document.querySelector('article');
+      if (!article || !article.contains(range.commonAncestorContainer)) {
+        hideTooltip();
+        return;
+      }
+
+      if (isExcluded(range.commonAncestorContainer)) {
+        hideTooltip();
+        return;
+      }
+
+      capturedText = text;
+      sectionTitle = findSectionHeading(range.startContainer);
+      editStartHeader = sectionTitle;
+      editEndHeader = findNextHeading(range.endContainer);
+
+      var rect = range.getBoundingClientRect();
+      showTooltip(rect.left + rect.width / 2, rect.top - 10);
+    });
+
+    // Hide on click-away (but not on the tooltip itself)
+    document.addEventListener('mousedown', function(e) {
+      if (tooltip && !tooltip.contains(e.target)) {
+        hideTooltip();
+      }
+    });
+
+    // ââ Edits History Sidebar ââââââââââââââââââââââââââââââââââââââââ
+
+    var sidebar = null;
+    var sidebarBackdrop = null;
+    var sidebarOpen = false;
+    var editsLoaded = false;
+    var editsOffset = 0;
+    var editsTotal = 0;
+    var editsLoading = false;
+    var PAGE_SIZE = 20;
+    var activeTab = 'all'; // 'all' | 'yours'
+    var yourEditsLoaded = false;
+    var yourEditsOffset = 0;
+    var yourEditsTotal = 0;
+
+    function ensureSidebar() {
+      if (sidebar) return;
+
+      sidebarBackdrop = document.createElement('div');
+      sidebarBackdrop.className = 'fixed inset-0 z-[55] bg-black/40 hidden xl:hidden';
+      sidebarBackdrop.addEventListener('click', closeSidebar);
+
+      sidebar = document.createElement('aside');
+      sidebar.className = 'fixed right-0 top-16 h-[calc(100vh-4rem)] w-[380px] max-w-full z-[56] border-l border-border-l1 bg-surface-l1 overflow-y-auto transition-transform duration-300 translate-x-full';
+      sidebar.setAttribute('style', 'scrollbar-width:none;-ms-overflow-style:none');
+      sidebar.innerHTML =
+        // Header
+        '' +
+          '' +
+            'Edits' +
+            '' +
+              '' +
+            '' +
+          '' +
+          // Tabs (only show for authenticated users)
+          (isAuthenticated ?
+          '' +
+            '' +
+              'All Edits' +
+              'Your Edits' +
+            '' +
+          '' : '') +
+          '' +
+        '' +
+        // Edit cards container
+        '' +
+        // Footer: count + load more
+        '';
+
+      document.body.appendChild(sidebarBackdrop);
+      document.body.appendChild(sidebar);
+
+      sidebar.querySelector('[data-close-sidebar]').addEventListener('click', closeSidebar);
+
+      // Tab switching
+      sidebar.querySelectorAll('[data-tab]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var tab = btn.getAttribute('data-tab');
+          if (tab === activeTab) return;
+          activeTab = tab;
+          // Update tab styles
+          sidebar.querySelectorAll('[data-tab]').forEach(function(b) {
+            if (b.getAttribute('data-tab') === activeTab) {
+              b.className = 'flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-colors bg-surface-l3 text-fg-primary';
+            } else {
+              b.className = 'flex-1 rounded-full px-4 py-1.5 text-sm font-medium transition-colors text-fg-secondary hover:text-fg-primary';
+            }
+          });
+          // Load the appropriate tab
+          if (activeTab === 'yours') {
+            yourEditsOffset = 0;
+            yourEditsLoaded = false;
+            loadEdits(false);
+          } else {
+            editsOffset = 0;
+            editsLoaded = false;
+            loadEdits(false);
+          }
+        });
+      });
+    }
+
+    function openSidebar() {
+      ensureSidebar();
+      sidebarBackdrop.classList.remove('hidden');
+      sidebar.classList.remove('translate-x-full');
+      sidebarOpen = true;
+      if(window.__ev)window.__ev('edits_tab_click',slug);
+      if (activeTab === 'all' && !editsLoaded) { editsOffset = 0; loadEdits(false); }
+      else if (activeTab === 'yours' && !yourEditsLoaded) { yourEditsOffset = 0; loadEdits(false); }
+    }
+
+    function closeSidebar() {
+      if (!sidebar) return;
+      sidebar.classList.add('translate-x-full');
+      sidebarBackdrop.classList.add('hidden');
+      sidebarOpen = false;
+    }
+
+    function loadEdits(append) {
+      if (editsLoading) return;
+      editsLoading = true;
+      if (activeTab === 'all') editsLoaded = true;
+      else yourEditsLoaded = true;
+      var list = sidebar.querySelector('[data-edits-list]');
+      var footer = sidebar.querySelector('[data-edits-footer]');
+      var offset = activeTab === 'yours' ? yourEditsOffset : editsOffset;
+
+      if (!append) {
+        list.innerHTML = 'Loading edits...';
+      }
+
+      var url = activeTab === 'yours'
+        ? '/api/list-edit-requests-by-slug?slug=' + encodeURIComponent(slug) + '&userId=' + encodeURIComponent(userId) + '&limit=' + PAGE_SIZE + '&offset=' + offset
+        : '/api/list-edit-requests-by-slug?slug=' + encodeURIComponent(slug) + '&limit=' + PAGE_SIZE + '&offset=' + offset;
+
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          editsLoading = false;
+          var edits = data.editRequests || [];
+          var total = data.totalCount || 0;
+          if (activeTab === 'yours') { yourEditsTotal = total; } else { editsTotal = total; }
+          var curOffset = activeTab === 'yours' ? yourEditsOffset : editsOffset;
+
+          if (!append) list.innerHTML = '';
+          if (edits.length === 0 && curOffset === 0) {
+            var msg = activeTab === 'yours' ? 'You have no edits for this article yet.' : 'No edits yet for this article.';
+            list.innerHTML = '' + msg + '';
+            footer.classList.add('hidden');
+            return;
+          }
+
+          edits.forEach(function(edit) { list.appendChild(renderEditCard(edit)); });
+          if (activeTab === 'yours') yourEditsOffset += edits.length; else editsOffset += edits.length;
+          var newOffset = activeTab === 'yours' ? yourEditsOffset : editsOffset;
+
+          // Footer
+          var hasMore = newOffset < total;
+          footer.classList.remove('hidden');
+          footer.innerHTML =
+            '' +
+              'Showing ' + newOffset + ' of ' + total + ' edit' + (total !== 1 ? 's' : '') +
+              (hasMore ? 'Load more' : '') +
+            '';
+
+          if (hasMore) {
+            footer.querySelector('[data-load-more]').addEventListener('click', function() {
+              this.textContent = 'Loading...';
+              this.disabled = true;
+              loadEdits(true);
+            });
+          }
+        })
+        .catch(function() {
+          editsLoading = false;
+          if (!append) {
+            list.innerHTML = 'Failed to load edits.';
+            footer.classList.add('hidden');
+          }
+          if (activeTab === 'yours') yourEditsLoaded = false; else editsLoaded = false;
+        });
+    }
+
+    // ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+    function formatEditType(t) {
+      return {'EDIT_REQUEST_TYPE_UPDATE_INFORMATION':'Update Information','EDIT_REQUEST_TYPE_FIX_TYPO':'Fix Typo','EDIT_REQUEST_TYPE_ADD_INFORMATION':'Add Information','EDIT_REQUEST_TYPE_REMOVE_INFORMATION':'Remove Information','EDIT_REQUEST_TYPE_UPDATE_CITATION':'Update Citation','EDIT_REQUEST_TYPE_UPDATE_INFOBOX':'Update Infobox','EDIT_REQUEST_TYPE_OTHER':'Other'}[t] || t || 'Edit';
+    }
+
+    function formatStatus(s) {
+      return {'EDIT_REQUEST_STATUS_IN_REVIEW':'In Review','EDIT_REQUEST_STATUS_APPROVED':'Approved','EDIT_REQUEST_STATUS_REJECTED':'Rejected','EDIT_REQUEST_STATUS_IMPLEMENTED':'Approved'}[s] || 'Pending';
+    }
+
+    function statusColor(s) {
+      var l = formatStatus(s);
+      if (l === 'Approved' || l === 'Implemented') return 'bg-green-500/15 text-green-600 dark:text-green-400';
+      if (l === 'Rejected') return 'bg-red-500/15 text-red-600 dark:text-red-400';
+      if (l === 'In Review') return 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400';
+      return 'bg-gray-500/15 text-fg-tertiary';
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return '';
+      var t = typeof ts === 'number' ? ts : parseInt(ts, 10);
+      if (t < 1e12) t *= 1000;
+      var d = (Date.now() - t) / 1000;
+      if (d < 60) return 'just now';
+      if (d < 3600) return Math.floor(d / 60) + 'm ago';
+      if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+      if (d < 2592000) return Math.floor(d / 86400) + 'd ago';
+      return new Date(t).toLocaleDateString();
+    }
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML.replace(/"/g, '&quot;'); }
+
+    // ââ Expandable text block ââââââââââââââââââââââââââââââââââââââââ
+    function expandableBlock(label, text, bgClass) {
+      if (!text) return '';
+      var id = 'eb-' + Math.random().toString(36).slice(2, 8);
+      return '' +
+        '' + esc(label) + '' +
+        '' + esc(text) + '' +
+        'Show more' +
+      '';
+    }
+
+    // After inserting, call this to wire up expand buttons
+    function wireExpanders(container) {
+      container.querySelectorAll('[data-expand]').forEach(function(btn) {
+        var target = document.getElementById(btn.getAttribute('data-expand'));
+        if (!target) return;
+        // Check overflow after render
+        requestAnimationFrame(function() {
+          if (target.scrollHeight > target.clientHeight + 2) {
+            btn.classList.remove('hidden');
+          }
+        });
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var clamped = target.classList.contains('line-clamp-4');
+          target.classList.toggle('line-clamp-4');
+          this.textContent = clamped ? 'Show less' : 'Show more';
+        });
+      });
+    }
+
+    // ââ Render a single edit card ââââââââââââââââââââââââââââââââââââ
+    function renderEditCard(edit) {
+      var card = document.createElement('div');
+      card.className = 'border-b border-border-l1 hover:bg-surface-l2/30 transition-colors';
+
+      var type = formatEditType(edit.type);
+      var status = formatStatus(edit.status);
+      var color = statusColor(edit.status);
+      var time = timeAgo(edit.createdAt);
+      var section = edit.sectionTitle || '';
+      var summary = edit.summary || '';
+      var original = edit.originalContent || '';
+      var proposed = edit.proposedContent || '';
+      var reviewReason = edit.reviewReason || '';
+      var isRejected = (status === 'Rejected');
+      var isApproved = (status === 'Approved' || status === 'Implemented');
+
+      // Header row
+      var html =
+        '' +
+          '' +
+            '' +
+              '' +
+              '' + esc(type) + '' +
+            '' +
+            '' + esc(status) + '' +
+          '' +
+          (section ? 'Section:' + esc(section) + '' : '') +
+        '';
+
+      // Original content (red tint)
+      html += expandableBlock('Original Text', original, 'bg-red-500/10');
+
+      // Proposed content (green tint)
+      html += expandableBlock('Proposed Change', proposed, 'bg-green-500/10');
+
+      // Summary
+      html += expandableBlock('Edit Summary', summary, '');
+
+      // Decision rationale
+      if (isRejected && reviewReason) {
+        html += '' +
+          'Rejection Reason' +
+          '' + esc(reviewReason) + '' +
+        '';
+      }
+      if (isApproved && reviewReason) {
+        html += '' +
+          '' +
+            '' +
+            'Grok Feedback' +
+          '' +
+          '' + esc(reviewReason) + '' +
+        '';
+      }
+
+      // Footer: timestamp
+      html += '' +
+        (time ? '' + esc(time) + '' : '') +
+      '';
+
+      card.innerHTML = html;
+
+      // Wire up expand buttons
+      wireExpanders(card);
+
+      // Jump-to-section
+      var jumpBtn = card.querySelector('[data-jump-section]');
+      if (jumpBtn && section) {
+        jumpBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var sid = section.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+          var el = document.getElementById(sid);
+          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); closeSidebar(); }
+        });
+      }
+
+      return card;
+    }
+
+    // Wire up the edits history button
+    var histBtn = document.getElementById('edits-history-btn');
+    if (histBtn) {
+      histBtn.addEventListener('click', function() {
+        if (sidebarOpen) closeSidebar(); else openSidebar();
+      });
+    }
+
+    // Open sidebar if URL has #edits hash
+    if (location.hash === '#edits') {
+      setTimeout(openSidebar, 300);
+    }
+
+    // Close sidebar on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && sidebarOpen) closeSidebar();
+    });
+  })();
+})();
+    (function(){
+      var _slug=location.pathname.indexOf('/page/')===0?location.pathname.slice(6):'';
+      // Copy-link buttons
+      document.querySelectorAll('.heading-copy-link').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var id = btn.getAttribute('data-id');
+          var url = location.origin + location.pathname + '#' + id;
+          navigator.clipboard.writeText(url);
+          // Flash check icon
+          var svg = btn.querySelector('svg');
+          var orig = btn.innerHTML;
+          btn.innerHTML = '';
+          setTimeout(function() { btn.innerHTML = orig; }, 1200);
+        });
+      });
+      // Listen buttons
+      document.querySelectorAll('.heading-listen').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var sectionId = btn.getAttribute('data-section');
+          if (window.__ttsPlaySection) {
+            window.__ttsPlaySection(sectionId);
+          }
+        });
+      });
+      // Track citation/source clicks (external links in article body)
+      var article = document.querySelector('article');
+      if (article) {
+        article.addEventListener('click', function(e) {
+          var link = e.target.closest('a[href^="http"]');
+          if (link && window.__ev) {
+            window.__ev('source_click',_slug);
+          }
+        });
+      }
+      // Track heading copy-link as share
+      document.querySelectorAll('.heading-copy-link').forEach(function(btn) {
+        var origHandler = btn.onclick;
+        btn.addEventListener('click', function() {
+          if(window.__ev)window.__ev('share_click',_slug);
+        });
+      });
+    })();
+                Sign in to contribute Create an account or sign in to suggest articles and edits to Grokipedia. 
+Sign in
+         Suggest an article     Know something the world should know? Tell us what to write about.   New Article Suggest Edit      Topic (optional if you add details)       Details (optional if you add a topic)          What makes a great suggestion?  Specific beats broad â "CRISPR" over "Biology" People, events, and breakthroughs are ideal Search first to check if it already exists     Cancel Submit         Summary       Edit content (optional)      Supporting sources (optional)     
+Add another source
+         What makes a great edit?  Select the wrong text in the article first Add a source link so we can verify One fix per submission is easiest to review     Cancel Submit Edit               Something went wrong We couldn't submit your suggestion. Please try again. 
+Try again
+           Thank you! Grok will review your suggestion and add the article if it sees fit.  
+View my suggestions
+ 
+Submit another suggestion
+     
+    (function(){
+      var isAuth = document.body.getAttribute('data-auth') === '1';
+      var accountUrl = 'https://accounts.x.ai';
+      var currentPath = window.location.pathname + window.location.search;
+      var signInUrl = accountUrl + '/check-login?redirect=grokipedia-com&return_to=' + encodeURIComponent(currentPath);
+
+      // Sign-in modal for logged-out users
+      var signinBackdrop = document.getElementById('signin-backdrop');
+      var signinModal = document.getElementById('signin-modal');
+      var signinBtn = document.getElementById('signin-modal-btn');
+
+      if (signinBtn) signinBtn.href = signInUrl;
+
+      function openSigninModal() {
+        if (!signinBackdrop || !signinModal) return;
+        signinBackdrop.classList.remove('hidden');
+        signinModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeSigninModal() {
+        if (!signinBackdrop || !signinModal) return;
+        signinBackdrop.classList.add('hidden');
+        signinModal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      if (signinBackdrop) signinBackdrop.addEventListener('click', closeSigninModal);
+      if (signinModal) {
+        signinModal.addEventListener('click', function(e) {
+          if (e.target === signinModal) closeSigninModal();
+        });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && !signinModal.classList.contains('hidden')) closeSigninModal();
+        });
+      }
+
+      var backdrop = document.getElementById('contribute-backdrop');
+      var modal = document.getElementById('contribute-modal');
+      if (!backdrop || !modal) return;
+
+      var pageSlug = modal.getAttribute('data-page-slug') || '';
+      var currentMode = 'article';
+
+      var titleEl = document.getElementById('contribute-title');
+      var descEl = document.getElementById('contribute-desc');
+      var tabsContainer = document.getElementById('contribute-tabs');
+      var articleForm = document.getElementById('contribute-article-form');
+      var editForm = document.getElementById('contribute-edit-form');
+      var editFields = document.getElementById('contribute-edit-fields');
+      var statusEl = modal.querySelector('[data-contribute-status]');
+      var tabBtns = modal.querySelectorAll('[data-tab]');
+
+      var articleTopic = modal.querySelector('[data-article-topic]');
+      var articleDesc = modal.querySelector('[data-article-desc]');
+      var articleTopicCount = modal.querySelector('[data-article-topic-count]');
+      var articleDescCount = modal.querySelector('[data-article-desc-count]');
+      var articleSubmit = modal.querySelector('[data-article-submit]');
+
+      var editSummary = modal.querySelector('[data-edit-summary]');
+      var editSummaryCount = modal.querySelector('[data-edit-summary-count]');
+      var editProposed = modal.querySelector('[data-edit-proposed]');
+      var editSubmit = modal.querySelector('[data-edit-submit]');
+      var editEvidenceList = modal.querySelector('[data-edit-evidence-list]');
+      var successState = document.getElementById('contribute-success');
+      var successMsg = document.getElementById('contribute-success-msg');
+      var errorState = document.getElementById('contribute-error');
+      var errorMsg = document.getElementById('contribute-error-msg');
+      var submitAnotherBtn = modal.querySelector('[data-submit-another]');
+      var tryAgainBtn = modal.querySelector('[data-try-again]');
+
+      var editContext = { originalContent: '', sectionTitle: '', editStartHeader: '', editEndHeader: '' };
+
+      function setMode(mode) {
+        currentMode = mode;
+        tabBtns.forEach(function(btn) {
+          var isActive = btn.getAttribute('data-tab') === mode;
+          btn.classList.toggle('bg-surface-base', isActive);
+          btn.classList.toggle('text-fg-primary', isActive);
+          btn.classList.toggle('shadow-sm', isActive);
+          btn.classList.toggle('text-fg-tertiary', !isActive);
+        });
+        articleForm.classList.toggle('hidden', mode !== 'article');
+        editForm.classList.toggle('hidden', mode !== 'edit');
+        successState.classList.add('hidden');
+        statusEl.classList.add('hidden');
+        titleEl.textContent = mode === 'article' ? 'Suggest an article' : 'Suggest an edit';
+        descEl.textContent = mode === 'article'
+          ? 'Know something the world should know? Tell us what to write about.'
+          : 'Spotted something off? Help us get it right.';
+      }
+
+      function showSuccessState() {
+        articleForm.classList.add('hidden');
+        editForm.classList.add('hidden');
+        tabsContainer.classList.add('hidden');
+        titleEl.classList.add('hidden');
+        descEl.classList.add('hidden');
+        statusEl.classList.add('hidden');
+        errorState.classList.add('hidden');
+        // Set appropriate message based on mode
+        if (currentMode === 'edit') {
+          successMsg.textContent = 'Grok will review your edit and update the article if appropriate.';
+        } else {
+          successMsg.textContent = 'Grok will review your suggestion and add the article if it sees fit.';
+        }
+        successState.classList.remove('hidden');
+      }
+
+      function showErrorState(message) {
+        articleForm.classList.add('hidden');
+        editForm.classList.add('hidden');
+        tabsContainer.classList.add('hidden');
+        titleEl.classList.add('hidden');
+        descEl.classList.add('hidden');
+        statusEl.classList.add('hidden');
+        successState.classList.add('hidden');
+        var defaultMsg = currentMode === 'edit' 
+          ? "We couldn't submit your edit. Please try again."
+          : "We couldn't submit your suggestion. Please try again.";
+        errorMsg.textContent = message || defaultMsg;
+        errorState.classList.remove('hidden');
+      }
+
+      function resetToForm() {
+        successState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        titleEl.classList.remove('hidden');
+        descEl.classList.remove('hidden');
+        if (pageSlug) tabsContainer.classList.remove('hidden');
+        setMode(currentMode);
+        // Clear form fields
+        articleTopic.value = '';
+        articleDesc.value = '';
+        if (articleTopicCount) articleTopicCount.textContent = '0';
+        if (articleDescCount) articleDescCount.textContent = '0';
+        editSummary.value = '';
+        if (editSummaryCount) editSummaryCount.textContent = '0';
+        editProposed.value = '';
+        // Reset evidence fields to single empty input
+        if (editEvidenceList) {
+          editEvidenceList.innerHTML = '';
+        }
+        // Reset buttons
+        articleSubmit.disabled = true;
+        articleSubmit.textContent = 'Submit';
+        editSubmit.disabled = true;
+        editSubmit.textContent = 'Submit Edit';
+        if (currentMode === 'article') {
+          articleTopic.focus();
+        } else {
+          editSummary.focus();
+        }
+      }
+
+      if (submitAnotherBtn) {
+        submitAnotherBtn.addEventListener('click', resetToForm);
+      }
+
+      if (tryAgainBtn) {
+        tryAgainBtn.addEventListener('click', resetToForm);
+      }
+
+      tabBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() { setMode(btn.getAttribute('data-tab')); });
+      });
+
+      function openModal(options) {
+        options = options || {};
+        var mode = options.mode || (pageSlug ? 'edit' : 'article');
+        articleTopic.value = options.initialTopic || '';
+        articleDesc.value = '';
+        articleTopicCount.textContent = '';
+        articleDescCount.textContent = '';
+        articleSubmit.disabled = true;
+        articleSubmit.textContent = 'Submit';
+
+        editSummary.value = '';
+        editSummaryCount.textContent = '';
+        editProposed.value = options.selectedText || '';
+        editSubmit.disabled = true;
+        editSubmit.textContent = 'Submit Edit';
+        editEvidenceList.innerHTML = '';
+        editContext = {
+          originalContent: options.selectedText || '',
+          sectionTitle: options.sectionTitle || '',
+          editStartHeader: options.editStartHeader || '',
+          editEndHeader: options.editEndHeader || '',
+        };
+
+        statusEl.classList.add('hidden');
+        successState.classList.add('hidden');
+        errorState.classList.add('hidden');
+        titleEl.classList.remove('hidden');
+        descEl.classList.remove('hidden');
+
+        if (pageSlug) {
+          tabsContainer.classList.remove('hidden');
+        } else {
+          tabsContainer.classList.add('hidden');
+          mode = 'article';
+        }
+
+        setMode(mode);
+        backdrop.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        if(window.__ev)window.__ev(mode === 'edit' ? 'edit_open' : 'suggest_open');
+
+        if (mode === 'article') articleTopic.focus();
+        else editSummary.focus();
+      }
+
+      function closeModal() {
+        backdrop.classList.add('hidden');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      window.__openSuggestArticle = function(initialTopic) {
+        if (!isAuth) { openSigninModal(); return; }
+        openModal({ mode: 'article', initialTopic: initialTopic });
+      };
+      window.__openContributeModal = function(options) {
+        if (!isAuth) { openSigninModal(); return; }
+        openModal(options);
+      };
+
+      backdrop.addEventListener('click', closeModal);
+      modal.addEventListener('click', function(e) { if (!e.target.closest('[data-contribute-inner]')) closeModal(); });
+      modal.querySelector('[data-contribute-close]').addEventListener('click', closeModal);
+      modal.querySelectorAll('[data-contribute-cancel]').forEach(function(btn) { btn.addEventListener('click', closeModal); });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+      });
+
+      function updateArticleCounters() {
+        var tl = articleTopic.value.length;
+        articleTopicCount.textContent = tl > 0 ? (50 - tl) : '';
+        var dl = articleDesc.value.length;
+        articleDescCount.textContent = dl > 0 ? (5000 - dl) : '';
+        articleSubmit.disabled = !articleTopic.value.trim() && !articleDesc.value.trim();
+      }
+      articleTopic.addEventListener('input', updateArticleCounters);
+      articleDesc.addEventListener('input', updateArticleCounters);
+
+      function updateEditCounters() {
+        var len = editSummary.value.length;
+        editSummaryCount.textContent = len > 0 ? (1500 - len) : '';
+        editSubmit.disabled = len === 0 || len > 1500;
+      }
+      editSummary.addEventListener('input', updateEditCounters);
+
+      modal.querySelector('[data-edit-add-evidence]').addEventListener('click', function() {
+        if (editEvidenceList.querySelectorAll('[data-edit-evidence]').length >= 10) return;
+        var inp = document.createElement('input');
+        inp.setAttribute('data-edit-evidence', '');
+        inp.type = 'url';
+        inp.placeholder = 'https://example.com/source';
+        inp.className = 'w-full rounded-lg border border-border-l1 bg-surface-base px-3 py-2.5 text-sm text-fg-primary placeholder:text-fg-tertiary focus:border-blue-500 focus:outline-none';
+        editEvidenceList.appendChild(inp);
+        inp.focus();
+      });
+
+      articleForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var title = articleTopic.value.trim();
+        var description = articleDesc.value.trim();
+        if (!title && !description) return;
+        articleSubmit.disabled = true;
+        articleSubmit.textContent = 'Submitting...';
+        statusEl.classList.add('hidden');
+
+        fetch('/api/create-article-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ title: title, description: description })
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+          if (res.ok && res.data.success) {
+            if(window.__ev)window.__ev('suggest_submit');
+            showSuccessState();
+          } else {
+            showErrorState(res.data.error || "We couldn't submit your suggestion. Please try again.");
+          }
+        })
+        .catch(function() {
+          showErrorState("Network error. Please check your connection and try again.");
+        });
+      });
+
+      editForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var summary = editSummary.value.trim();
+        if (!summary || !pageSlug) return;
+        if(window.__ev)window.__ev('edit_submit', pageSlug);
+        editSubmit.disabled = true;
+        editSubmit.textContent = 'Submittingâ¦';
+        statusEl.classList.add('hidden');
+
+        var evidence = [];
+        editEvidenceList.querySelectorAll('[data-edit-evidence]').forEach(function(inp) {
+          var url = inp.value.trim();
+          if (url) evidence.push({ url: url });
+        });
+
+        fetch('/api/create-edit-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            slug: pageSlug,
+            type: 1,
+            summary: summary,
+            originalContent: editContext.originalContent,
+            proposedContent: editProposed.value.trim(),
+            sectionTitle: editContext.sectionTitle,
+            editStartHeader: editContext.editStartHeader,
+            editEndHeader: editContext.editEndHeader,
+            supportingEvidence: evidence,
+          })
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+          if (res.ok && res.data.success) {
+            showSuccessState();
+          } else {
+            showErrorState(res.data.error || "We couldn't submit your edit. Please try again.");
+          }
+        })
+        .catch(function() {
+          showErrorState("Network error. Please check your connection and try again.");
+        });
+      });
+    })();

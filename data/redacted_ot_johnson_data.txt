@@ -1,0 +1,303 @@
+[BUILDING NAME] Building â Grokipedia
+
+if (t === 'light') document.documentElement.classList.remove('dark');
+
+if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+
+var mob=window.innerWidth<768?1:0;
+
+window.__ev=function(e,q){
+
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Grokipedia","item":"https://grokipedia.com"},{"@type":"ListItem","position":2,"name":"[BUILDING NAME] Building","item":"https://grokipedia.com/page/o_t_johnson_building"}]}{"@context":"https://schema.org","@type":"Article","headline":"[BUILDING NAME] Building","url":"https://grokipedia.com/page/o_t_johnson_building","publisher":{"@type":"Organization","name":"Grokipedia","url":"https://grokipedia.com"},"dateModified":"2026-01-17T03:15:21.000Z"}                  Search âK              Suggest Article Sign in                Sign in
+
+localStorage.setItem('theme', 'light');
+
+document.getElementById('theme-toggle-desktop')?.addEventListener('click', toggleTheme);
+
+else window.location.href = '/search';
+
+if (window.__openContributeModal) window.__openContributeModal();
+
+else if (window.__openSuggestArticle) window.__openSuggestArticle();
+
+Location and Context     Site Description     Broadway Theater District     History     Construction and Early Use     Mid-20th Century Developments     Late 20th and 21st Century Events     Architecture and Design     Original Romanesque Features     Materials and Construction Techniques     Alterations and Modern Modifications     Historic Significance     Contribution to Downtown Los Angeles     National Register Status     References
+
+window.addEventListener('scroll', function() {
+
+var top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+
+window.scrollTo({ top: top });
+
+history.replaceState(null, '', '#' + id);
+
+if ('onscrollend' in window) {
+
+window.addEventListener('scrollend', function fn() { isUserScrolling = false; window.removeEventListener('scrollend', fn); }, { once: true });
+
+var hash = window.location.hash.slice(1);
+
+Fact-checked by Grok 2 months ago [BUILDING NAME] Building                               Ara    Eve    Leo    Sal
+
+/* ââ ORIGINAL WORKING TTS PLAYER (unchanged audio pipeline) âââ */
+
+// ââ Section highlighting ââââââââââââââââââââââââââââââââââââââ
+
+function highlightSection(sectionId) {
+
+if (rect.top  window.innerHeight - 200) {
+
+function clearHighlight() {
+
+clearHighlight();
+
+audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+
+// Highlight this section
+
+highlightSection(sec.id);
+
+window.__ttsPlaySection = function(sectionId) {
+
+var url = window.location.href;
+
+if(window.__ev)window.__ev('share_click',_s);
+
+The [BUILDING NAME] Building is a historic commercial structure located at 356 S.
+
+Originally constructed in 1902 as a seven-story office building, it was designed by prominent architect John Parkinson in the Romanesque Revival style, featuring a glazed pressed-brick facade, iron-and-glass ground floor elements, and paired columns at the main entrance.
+
+Commissioned by financier and philanthropist Orson Thomas Johnson (1839â1916), the building contributed to the early 20th-century commercial development of the Broadway Theater and Commercial District, one of the most intact historic districts in the United States.
+
+It is recognized as a contributing resource to the district, which is listed on the National Register of Historic Places.
+
+Over the decades, the building underwent significant alterations, including the removal of upper stories, reducing it to its current two-story height, and covering of original details, which led to its exclusion from a 1998 update to the district's historic designation.
+
+On February 5, 2007, a major fire gutted the structure and an adjacent building early in the morning, requiring over 160 firefighters to extinguish the blaze in about 90 minutes; the incident exposed long-hidden features such as large arched windows and fluted columns beneath modern cladding.
+
+The fire caused substantial damage to first-floor businesses, including uninsured losses estimated at $100,000, and prompted discussions of demolition.
+
+Despite plans for demolition, the building was not razed and has remained vacant and in a state of disrepair since the fire, amid the ongoing revitalization of the Broadway corridor.
+
+As of 2024, it stands as a damaged remnant of Los Angeles's early architectural heritage within the district's mix of theaters, shops, and preserved early 1900s facades.
+
+The [BUILDING NAME] Building is situated at 356 S.
+
+4th Street in the historic core of downtown Los Angeles, California.[1] Its geographic coordinates are 34Â°02â²59â³N 118Â°14â²57â³W, placing it at the intersection of major urban thoroughfares in a densely developed area.
+
+The building occupies a prominent corner lot at the southeast corner of Broadway and West 4th Street, within the block between Broadway, Spring Street, Third Street, and Fourth Streets, contributing to the grid-like street layout characteristic of early 20th-century Los Angeles planning.[1]
+
+Directly adjacent to the east is the [BUILDING NAME] Block at 350 S.
+
+Broadway, forming a cohesive commercial grouping along the Broadway corridor.[1] To the north along Broadway, within the same block, is the Million Dollar Theater at 307 S.
+
+Broadway, while the south elevation abuts a smaller one-story commercial structure.[1] Nearby landmarks include the Bradbury Building at 304 S.
+
+Broadway and the Trustee Building at 340 S.
+
+Broadway, enhancing the site's integration into a cluster of historic commercial properties.[1]
+
+The urban setting positions the building in a highly accessible part of downtown, served by pedestrian-friendly sidewalks along Broadway and 4th Street, with connections to public transit and nearby parking facilities.[1] This location underscores its role within the broader Broadway Theater District, a vibrant hub of entertainment and commerce.[1]
+
+Key venues included the Pantages Theatre, which opened in 1910 as a vaudeville house before transitioning to films; the Morosco Theatre (later renamed the Globe) in 1913, dedicated to dramatic productions; the Rialto Theatre in 1917, a pioneering movie palace; and Loew's State Theater in 1920, known for its grand architecture and blockbuster premieres.
+
+These theaters, concentrated along an eight-block stretch of Broadway, hosted performers ranging from touring Broadway acts to local talents, drawing thousands nightly and fostering a lively atmosphere of neon lights and marquees.[3][4][5]
+
+Economically, the Broadway Theater District was instrumental in boosting downtown Los Angeles' vitality from 1900 to the 1920s, generating substantial revenue through theater admissions, film premieres, and retail sales that spurred further business investments and urban expansion.
+
+This influx supported job creation in hospitality and construction, while the district's allure as a glamour spot enhanced the city's overall economic draw, contributing to a surge in population and infrastructure during the era.
+
+The [BUILDING NAME] Building functions as a contributing property within this historic ensemble.[2][3][7]
+
+The [BUILDING NAME] Building was constructed in 1902 as a seven-story office structure at 356 South Broadway in downtown Los Angeles, standing as one of the tallest buildings on the street at the time.[8] Designed by architect John B.
+
+Parkinson, a prominent figure in early 20th-century Los Angeles architecture, the building exemplified the commercial ambitions of the era's developers.
+
+Orson Thomas Johnson, a local real estate investor, commissioned the project to capitalize on the burgeoning demand for office space amid the city's expansion.[9]
+
+This construction occurred during a period of rapid growth in downtown Los Angeles around 1900, fueled by the arrival of railroads, oil discoveries, and population influxes that transformed the area from a modest town into a booming metropolis.[10] The building's steel-frame design with brick cladding allowed for its height, supporting multiple floors for professional tenants and contributing to Broadway's emergence as a commercial hub.
+
+Initially purposed as an office building, it quickly attracted businesses seeking central locations near the growing theater and retail districts.
+
+One of the first notable tenants was the Automobile Club of Southern California, which opened its headquarters in the building in 1904, occupying space that underscored the era's rising interest in automotive services.[11] This early occupancy highlighted the structure's role in accommodating new industries during Los Angeles's economic surge, with the club remaining a key presence in its formative years.[12]
+
+Mid-20th Century Developments
+
+In 1952, the [BUILDING NAME] Building was acquired as part of a larger portfolio of downtown Los Angeles properties in a transaction valued at $11 million (equivalent to approximately $130 million in 2024 dollars, adjusted for inflation using the U.S.
+
+As the Broadway Theater District transitioned from its theatrical heyday, the building saw changes in tenancy, with spaces repurposed for office and professional uses rather than retail or entertainment functions.[14] These adaptations aligned with broader patterns in downtown Los Angeles, where upper floors of historic structures increasingly housed administrative and service-oriented businesses.
+
+By the 1950s and 1960s, early indicators of urban declineâsuch as suburban migration, freeway expansion, and the popularity of televisionâdiminished the area's vibrancy, reducing the building's role as a prominent commercial landmark.[15]
+
+Late 20th and 21st Century Events
+
+In the early 2000s, the [BUILDING NAME] Building underwent a complete renovation circa 2005, though specific details of the work remain limited in historical records.[8] By this period, the structure had already been significantly altered, having been reduced from its original seven stories to just two sometime prior to 2007, reflecting broader patterns of adaptive reuse or deterioration in downtown Los Angeles commercial properties.[16]
+
+The building's modern challenges intensified on February 5, 2007, when a major fire broke out at approximately 5 a.m., engulfing the [BUILDING NAME] Building at 356â364 S.
+
+Broadway and the adjacent [BUILDING NAME] Block at 350â354 S.
+
+Owned by Eli Sasson, president of Sassony Commercial Real Estate Development, for about 30 years at the time, the properties featured active retail on the ground floorsâhousing businesses such as bridal shops, shoe stores, and money transfer servicesâwhile the upper levels had long been vacant.
+
+The blaze, which required 160 firefighters over 90 minutes to contain, gutted the interiors due to the buildings' pre-1933 construction with soft mortar vulnerable to heat and water damage.
+
+During post-fire cleanup, the removal of tattered brown shingle siding exposed long-hidden original Romanesque features, including arched windows and fluted columns, sparking interest in the structures' historic value.[16]
+
+Sasson immediately deemed the buildings unsafe for occupancy and announced intentions to demolish them, citing structural instability and uncertainty over rebuilding plans.
+
+This raised immediate concerns among preservation advocates, as the exposed facades highlighted the buildings' architectural significance within the Broadway Theater District, though their prior alterations had led to their exclusion from a 1998 district update.
+
+Adjacent businesses suffered smoke damage, with one retailer estimating $100,000 in losses from ruined inventory without insurance coverage.
+
+As of 2018, the [BUILDING NAME] Building remained boarded up and vacant, its future use mired in ongoing debates over public safety risksâstemming from the unrepaired fire damage and exposure to the elementsâand competing visions for preservation versus potential redevelopment or removal, with the city attempting to acquire the blighted property but facing opposition from owner Sasson.
+
+Ground-floor retail activity had ceased following the fire, leaving the entire structure unoccupied, while ownership under Sasson persisted amid stalled plans.
+
+Architecture and Design
+
+Original Romanesque Features
+
+The [BUILDING NAME] Building, constructed in 1902 and designed by architect John Parkinson, exemplifies early 20th-century Romanesque Revival architecture in Los Angeles' downtown commercial core.[8] This style, adapted for urban office use, emphasized robust forms and restrained ornamentation, drawing from medieval precedents while incorporating modern construction methods like a steel frame clad in brick.[16] The building's original design contributed to the evolving aesthetic of Broadway, blending solidity with subtle elegance to complement the district's emerging theater and retail landscape.
+
+Key facade elements highlight the Romanesque influence, including paired columns that flanked the main entrance, providing a classical entry motif with vertical emphasis.[16] Fluted columns extended across the facade, adding rhythmic texture and depth to the glazed pressed-brick surface, which offered a durable, subtly reflective finish.
+
+Large arched windows dominated the upper stories, with rounded openings framed by heavy brick surrounds that evoked the style's characteristic massiveness and structural honesty.[16] These features created a cohesive elevation, where the interplay of arches and columns fostered a sense of ordered progression upward.
+
+Originally rising seven stories, the building's scale asserted a commanding yet harmonious presence on South Broadway, anchoring the street's early high-rise development amid lower surrounding structures.[8] Its visual impact lay in the facade's shimmering brickwork under sunlight, which enhanced the thoroughfare's historic vibrancy and underscored the Romanesque Revival's role in defining Los Angeles' commercial identity at the turn of the century.[16]
+
+The [BUILDING NAME] Building was constructed in 1902 as a seven-story brick structure, utilizing a steel skeleton frame that enabled its height while providing structural integrity for commercial use in downtown Los Angeles.[8] The frame was clad with brick interior walls for partitioning and support, contributing to the building's compartmentalized office spaces.
+
+The exterior facade featured glazed brick, selected for its weather-resistant qualities and polished appearance that reflected the era's emphasis on durable, low-maintenance commercial aesthetics.[16]
+
+The ground floor employed iron and glass construction, creating expansive storefronts and entries that maximized visibility and natural light for retail tenants along Broadway.[16] This technique, common in early 20th-century urban commercial design, allowed for flexible commercial layouts while integrating the building into the bustling theater district.
+
+Innovative for 1902 Los Angeles, the building's skeleton frame and brick masonry represented advanced fire-resistant construction methods, reducing risks in a growing city prone to urban fires and allowing for taller buildings than traditional load-bearing walls permitted.[16] These choices aligned with contemporary engineering practices that prioritized safety and scalability in high-density areas, setting a precedent for subsequent developments in the Broadway corridor.
+
+Alterations and Modern Modifications
+
+The [BUILDING NAME] Building experienced substantial physical alterations in the decades following its 1902 construction, including the demolition of its upper five stories, reducing the structure from its original seven-story height to a two-story remnant.
+
+This change dramatically altered the building's scale and prominence within the Broadway Theater District.
+
+The original facade, characterized by glazed pressed brick, was further obscured by a covering of tattered brown shingles applied to the upper portions, which hid key Romanesque elements such as large arched windows and fluted columns etched into the surface.[16]
+
+In February 2007, a major fire engulfed the building and its adjacent neighbor at 350â354 S.
+
+During suppression efforts, crews stripped away the shingle cladding, exposing the underlying brickwork, columns, and other obscured details for the first time in decades and offering a glimpse of the building's historic character.
+
+The blaze exploited the structure's pre-1933 construction vulnerabilities, including unreinforced soft mortar, leaving the interior gutted and the exterior heavily damaged.[16]
+
+Post-fire, the building was deemed unsafe and remained vacant, with owner Eli Sasson applying for demolition permits in 2009 that were denied pending a city-required historic assessment and redevelopment plan.
+
+As of 2010, it stood as a gutted shell amid the district's revitalization efforts, with exposed but deteriorated original elements visible on the facade and no active renovation underway; Sasson proposed a multi-story replacement featuring ground-floor retail, though no timeline was established.[17] As of 2024, the building remains a vacant, fire-damaged shell, with repeated demolition requests denied due to its contributing status in the historic district, despite ongoing Broadway corridor revitalization.[18]
+
+Historic Significance
+
+The [BUILDING NAME] Building, completed in 1902 at 356 South Broadway, exemplified the early 20th-century commercial boom in Los Angeles by providing multi-story office and retail space during a period of rapid southward expansion of the city's business district.[19] Prior to 1900, Broadway south of Third Street was primarily residential, but structures like the [BUILDING NAME] Building contributed to shifting the commercial core southward, transforming the thoroughfare into Los Angeles's principal retail and business artery by 1910.[19] This development was fueled by regional growth across southern California in the 1900â1910 decade, with the building's construction alongside contemporaries such as the Trustee Building and [BUILDING NAME] Building #2 (both 1905) underscoring the surge in investment and urbanization.[19]
+
+As a prominent seven-story office tower on Broadway, the [BUILDING NAME] Building attracted professionals, retailers, and investors, bolstering the economic vitality of downtown by integrating office functions with emerging retail and hospitality uses in the surrounding blocks.[19] It supported the influx of businesses during the pre-World War I era, including department stores like Bullock's (1906) and hotels such as the Lankershim (1902), which catered to the growing workforce and visitors drawn to the expanding commercial zone.[19] This concentration of activity not only sustained local trade but also influenced adjacent developments, extending commercial reach southward and fostering a diverse business ecosystem through the 1920s real estate boom.[19]
+
+Symbolically, the building's height and scale marked it as one of the taller early structures in the area, contributing to the evolution of downtown Los Angeles's skyline by introducing vertical density to Broadway's streetscape.[19] Erected amid a wave of over a dozen significant constructions between 1900 and 1910, it helped redefine the district's profile, laying foundational elements for later taller edifices and symbolizing the city's ambitious growth from a modest town to a burgeoning metropolis.[19]
+
+The [BUILDING NAME] Building, located at 356 S.
+
+Broadway in Los Angeles, was originally listed as a contributing property to the Broadway Theater and Commercial District on the National Register of Historic Places (NRHP) in 1979, under NRHP reference number 79000484.
+
+The district's nomination, prepared in 1977 and certified in 1978, recognized the building's role in illustrating the early 20th-century commercial and architectural development along Broadway, qualifying under National Register Criteria A (for its association with significant events in commerce and entertainment) and C (for its Romanesque architectural design by John Parkinson).
+
+This listing stemmed from surveys including the 1977 State of California Historic Resources Inventory and assessments by the Natural History Museum of Los Angeles County, which documented the building's intact pressed-brick facade and its contribution to the district's historic commercial core.
+
+In 2002, the building was reclassified from contributing to non-contributing within the district following a boundary increase and reassessment (NRHP reference number 02000330, approved April 12, 2002).[20] The reevaluation determined that significant alterations, including full coverage with metal siding that obscured original features, had compromised its historic integrity to the point where original remnants were unclear and no longer character-defining.[20] As a result, it was reclassified as non-contributing within the expanded district, alongside five other original contributors affected by similar post-1979 changes or demolitions.[20]
+
+Following a major fire on February 5, 2007, that gutted the structure and removed much of the modern cladding, original architectural details such as large arched windows and fluted columns were exposed.[16] Although initial plans called for demolition, the building was ultimately preserved and renovated as part of the Broadway corridor revitalization efforts in the 2010s.
+
+As of 2023, it is recognized as a contributing property to the district, reflecting restored historic integrity.[21] This adjustment maintained the district's overall integrity while reflecting updated preservation standards for architectural and commercial significance in downtown Los Angeles.[20]
+
+https://planning.lacity.gov/StaffRpt/InitialRpts/Item%2005%20CHC-2019-248.pdfhttps://www.nps.gov/places/broadway-theater-and-commercial-district.htmhttps://www.route66ca.org/broadway-theater-and-commercial-district/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_4_of_6.htmlhttps://www.thereallosangelestours.com/broadway-las-historic-theater-district/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_5_of_6.htmlhttps://planning.lacity.gov/Code_Studies/BroadwayTheater/Broadway%20Design%20Guide%20Full%20Draft%20w%20pics%20050809.pdfhttps://pcad.lib.washington.edu/building/11671/https://waterandpower.org/museum/Early_LA_Buildings%20(1900%20-%201925)_Page_2.htmlhttps://waterandpower.org/museum/Early_City_Views%20(1900%20-%201925)_Page_1.htmlhttps://news.aaa-calif.com/news/110-years-of-service-an-auto-club-188717https://digitalcollections.lmu.edu/Documents/Detail/headquarters-building-automobile-club-of-southern-california-los-angeles-california/25078https://calisphere.org/item/13c43f643f0e6d134a64a6cc1ce50fec/https://www.historictheatrephotos.com/Theatre/Broadway-Theatre-District-Los-Angeles.aspxhttps://www.latimes.com/archives/la-xpm-1988-08-12-me-247-story.htmlhttps://www.latimes.com/archives/la-xpm-2007-feb-06-me-fire6-story.htmlhttps://www.ladowntownnews.com/news/downtown-s-10-worst-eyesores/article_daa3f4da-c339-5da8-82f6-67c68db5c62b.htmlhttps://www.reddit.com/r/LosAngeles/comments/1g2rr2w/downtown_la_street_artist_sc_mero_marks_the_start/https://npgallery.nps.gov/GetAsset/d41bca98-3f44-45c2-b049-ad3bce5f4c01/https://npgallery.nps.gov/NRHP/GetAsset/24a0e8c9-56de-4e08-ae90-dfcb0a6dc890https://planning.lacity.gov/StaffRpt/InitialRpts/Item%2006%20CHC-2019-244.pdf            Table of Contents             Location and Context     Site Description     Broadway Theater District     History     Construction and Early Use     Mid-20th Century Developments     Late 20th and 21st Century Events     Architecture and Design     Original Romanesque Features     Materials and Construction Techniques     Alterations and Modern Modifications     Historic Significance     Contribution to Downtown Los Angeles     National Register Status     References
+
+var isMobile = window.innerWidth < 768;
+
+var shouldShow = !isMobile && window.scrollY > SCROLL_THRESHOLD;
+
+window.scrollTo({ top: 0 });
+
+window.addEventListener('scroll', update, { passive: true });
+
+window.addEventListener('resize', update, { passive: true });
+
+var inflight   = {};          // slug â Promise
+
+// Dedupe in-flight
+
+if (inflight[slug]) return inflight[slug];
+
+delete inflight[slug];
+
+inflight[slug] = p;
+
+var vw = window.innerWidth;
+
+var vh = window.innerHeight;
+
+window.addEventListener('scroll', function () {
+
+(function(){const slug = "o_t_johnson_building";
+
+if(window.__ev)window.__ev('ask_grok');
+
+var query = window.location.href + '\n\n> "' + capturedText + '"';
+
+window.open('https://grok.com?q=' + encodeURIComponent(query), '_blank', 'noopener,noreferrer');
+
+if (window.__openContributeModal) {
+
+window.__openContributeModal({
+
+var sel = window.getSelection();
+
+// ââ Edits History Sidebar ââââââââââââââââââââââââââââââââââââââââ
+
+if(window.__ev)window.__ev('edits_tab_click',slug);
+
+if (d < 3600) return Math.floor(d / 60) + 'm ago';
+
+if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+
+if (d < 2592000) return Math.floor(d / 86400) + 'd ago';
+
+var original = edit.originalContent || '';
+
+// Original content (red tint)
+
+html += expandableBlock('Original Text', original, 'bg-red-500/10');
+
+// Wire up the edits history button
+
+var histBtn = document.getElementById('edits-history-btn');
+
+if (window.__ttsPlaySection) {
+
+window.__ttsPlaySection(sectionId);
+
+if (link && window.__ev) {
+
+window.__ev('source_click',_slug);
+
+if(window.__ev)window.__ev('share_click',_slug);
+
+var currentPath = window.location.pathname + window.location.search;
+
+var editContext = { originalContent: '', sectionTitle: '', editStartHeader: '', editEndHeader: '' };
+
+originalContent: options.selectedText || '',
+
+if(window.__ev)window.__ev(mode === 'edit' ?
+
+window.__openSuggestArticle = function(initialTopic) {
+
+window.__openContributeModal = function(options) {
+
+if(window.__ev)window.__ev('suggest_submit');
+
+if(window.__ev)window.__ev('edit_submit', pageSlug);
+
+originalContent: editContext.originalContent,

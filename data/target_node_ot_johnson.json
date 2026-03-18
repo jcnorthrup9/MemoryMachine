@@ -1,0 +1,116 @@
+{
+  "node_id": "OT_JOHNSON_BLDG",
+  "iteration": "DTLA_RECONSTRUCTION_V2",
+  "geo_lock": {
+    "lat": 34.0496,
+    "lon": -118.2491
+  },
+  "dimensions": {
+    "unit": "feet",
+    "length": 100,
+    "width": 80,
+    "height": 85
+  },
+  "narrative_fragments": [
+    "As of 2018, the [BUILDING NAME] Building remained boarded up and vacant, its future use mired in ongoing debates over public safety risks\u00e2\u0080\u0094stemming from the unrepaired fire damage and exposure to the elements\u00e2\u0080\u0094and competing visions for preservation versus potential redevelopment or removal, with the city attempting to acquire the blighted property but facing opposition from owner Sasson.",
+    "var editContext = { originalContent: '', sectionTitle: '', editStartHeader: '', editEndHeader: '' };",
+    "function highlightSection(sectionId) {",
+    "if (d < 3600) return Math.floor(d / 60) + 'm ago';"
+  ],
+  "chromatic_palette": [
+    {
+      "material": "glazed_brick",
+      "hex": "#b22222"
+    },
+    {
+      "material": "iron_columns",
+      "hex": "#323232"
+    },
+    {
+      "material": "marble_lobby",
+      "hex": "#f5f5f5"
+    }
+  ],
+  "spatial_logic": [
+    {
+      "element": "Office",
+      "instances": 10,
+      "dimensions": {
+        "x": 20.0,
+        "y": 20.0,
+        "z": 10.0
+      },
+      "layer": "01_INTERIOR"
+    },
+    {
+      "element": "Corridor",
+      "instances": 5,
+      "dimensions": {
+        "x": 10.0,
+        "y": 50.0,
+        "z": 10.0
+      },
+      "layer": "01_INTERIOR"
+    },
+    {
+      "element": "Desk",
+      "instances": 1,
+      "dimensions": {
+        "x": 5.0,
+        "y": 3.0,
+        "z": 3.0
+      },
+      "layer": "03_FIXTURES"
+    },
+    {
+      "element": "Window",
+      "instances": 58,
+      "dimensions": {
+        "x": 4.0,
+        "y": 1.0,
+        "z": 8.0
+      },
+      "layer": "04_ENCLOSURE"
+    },
+    {
+      "element": "Facade",
+      "instances": 1,
+      "dimensions": {
+        "x": 120.0,
+        "y": 2.4,
+        "z": 85.0
+      },
+      "layer": "04_ENCLOSURE"
+    },
+    {
+      "element": "Brick",
+      "instances": 1,
+      "dimensions": {
+        "x": 126.0,
+        "y": 2.52,
+        "z": 85.0
+      },
+      "layer": "05_FINISHES"
+    },
+    {
+      "element": "Iron",
+      "instances": 2,
+      "dimensions": {
+        "x": 2.0,
+        "y": 2.0,
+        "z": 15.0
+      },
+      "layer": "04_ENCLOSURE"
+    },
+    {
+      "element": "Wall",
+      "instances": 2,
+      "dimensions": {
+        "x": 2.0,
+        "y": 20.0,
+        "z": 10.0
+      },
+      "layer": "04_ENCLOSURE"
+    }
+  ]
+}
