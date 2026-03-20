@@ -74,18 +74,18 @@ figma.ui.onmessage = async (msg) => {
         const mainTitleNode = createTextWrap(slide.title, 42, accentYellow, 800, true);
         frame.appendChild(mainTitleNode);
         mainTitleNode.x = 80;
-        mainTitleNode.y = 80;
+        mainTitleNode.y = 60;
 
         // --- LEFT PAGE GRID ---
         const leftTitle = createTextWrap(slide.left_title, 20, textDim, 800, true);
         frame.appendChild(leftTitle);
         leftTitle.x = 80;
-        leftTitle.y = mainTitleNode.y + mainTitleNode.height + 20;
+        leftTitle.y = mainTitleNode.y + mainTitleNode.height + 15;
 
         let gridX = 80;
-        let gridY = leftTitle.y + leftTitle.height + 30;
-        const boxSize = 250;
-        const gap = 25;
+        let gridY = leftTitle.y + leftTitle.height + 20;
+        const boxSize = 220;
+        const gap = 20;
 
         for (let i = 0; i < 9; i++) {
           if (!slide.left_grid[i]) continue;
@@ -132,7 +132,7 @@ figma.ui.onmessage = async (msg) => {
         const rightTitle = createTextWrap(slide.right_title, 20, textDim, 800, true);
         frame.appendChild(rightTitle);
         rightTitle.x = 1040;
-        rightTitle.y = mainTitleNode.y + mainTitleNode.height + 20;
+        rightTitle.y = mainTitleNode.y + mainTitleNode.height + 15;
 
         gridX = 1040;
         for (let i = 0; i < 9; i++) {

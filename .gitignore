@@ -18,6 +18,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Ignore environment variables (API Keys)
+.env
+
 # --- Keep These (Safety Check) ---
 !data/*.csv
 !data/*.json

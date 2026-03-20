@@ -55,7 +55,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
         .nav-controls button:hover { background: #111; border-color: #666; color: #fff; }
 
-        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; }
+        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
         .grid-box { aspect-ratio: 1; border: 1px solid #333; background: #080808; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .grid-box.dashed { border: 1px dashed #444; }
         .grid-box img { width: 100%; height: 100%; object-fit: cover; }
@@ -144,36 +144,31 @@ def build_payload():
                 padded.append({"label": "[ PENDING // NO DATA ]", "image": None})
         return padded
 
-    bottega_left = [
-        {"label": "AI RENDER // EXTERIOR", "image_path": "archive/render_output/bottega_ai_exterior.jpg"},
-        {"label": "AI RENDER // INTERIOR", "image_path": "archive/render_output/bottega_ai_interior.jpg"}
-    ]
-    bottega_right = [
-        {"label": "ARCHIVE // FACADE", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_1.jpg"},
-        {"label": "ARCHIVE // INTERIOR", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_2.jpg"},
-        {"label": "ARCHIVE // MACARONS", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_3.jpg"},
-        {"label": "ARCHIVE // OVEN", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
-    ]
+    def get_image_items(relative_folder, label_prefix):
+        full_path = os.path.join(BASE_DIR, *relative_folder.split('/'))
+        items = []
+        if os.path.exists(full_path):
+            valid_exts = {'.jpg', '.jpeg', '.png', '.tif'}
+            files = sorted([f for f in os.listdir(full_path) if os.path.splitext(f)[1].lower() in valid_exts])
+            for idx, f in enumerate(files):
+                rel_path = f"{relative_folder}/{f}"
+                items.append({"label": f"{label_prefix} {idx+1:02d}", "image_path": rel_path})
+        return items
+
+    def split_items(items):
+        return items[:9], items[9:18]
+
+    precedents_items = get_image_items("archive/precedents", "PRECEDENT")
+    precedents_left, precedents_right = split_items(precedents_items)
+
+    bl_ext_items = get_image_items("archive/render_output/bottegaLouieExterior", "BL EXT")
+    bl_ext_left, bl_ext_right = split_items(bl_ext_items)
     
-    ot_left = [
-        {"label": "RHINO SYSTEM // ISO", "image_path": "archive/render_output/ot_johnson_rhino_iso.jpg"},
-        {"label": "AI RENDER // DETAILS", "image_path": "archive/render_output/ot_johnson_ai_render.jpg"}
-    ]
-    ot_right = [
-        {"label": "ARCHIVE // FACADE", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_1.jpg"},
-        {"label": "ARCHIVE // CORNER", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_2.jpg"},
-        {"label": "ARCHIVE // ERA", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_3.jpg"},
-        {"label": "ARCHIVE // INTERIOR", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_4.jpg"}
-    ]
-    
-    precedents_left = [
-        {"label": "ALDO ROSSI // ARTIFACT", "image_path": "archive/precedents/aldo_rossi.jpg"},
-        {"label": "DO HO SUH // GHOST", "image_path": "archive/precedents/dohosuh1.jpg"}
-    ]
-    precedents_right = [
-        {"label": "NEUES MUSEUM // STRATA", "image_path": "archive/precedents/neues_museum.jpg"},
-        {"label": "ZEITZ MOCAA // VOID", "image_path": "archive/precedents/zeitz_mocaa.jpg"}
-    ]
+    bl_int_items = get_image_items("archive/render_output/bottegaLouieInterior", "BL INT")
+    bl_int_left, bl_int_right = split_items(bl_int_items)
+
+    ot_ext_items = get_image_items("archive/render_output/OTjohnsonExterior", "OT EXT")
+    ot_ext_left, ot_ext_right = split_items(ot_ext_items)
 
     bottega_summary = get_ai_summary('bottega_louie_reviews.txt', 'Bottega Louie')
     ot_summary = get_ai_summary('ot_johnson_data.txt', 'O.T. Johnson Building')
@@ -206,24 +201,32 @@ def build_payload():
             },
             {
                 "type": "grid_slide",
-                "title": "04 // BOTTEGA LOUIE: ARTIFACTS",
-                "left_title": "AI GENERATED HALLUCINATIONS",
-                "right_title": "ACTUAL PHOTOGRAPHIC ARTIFACTS",
-                "left_grid": make_grid(bottega_left),
-                "right_grid": make_grid(bottega_right)
+                "title": "04 // BOTTEGA LOUIE: EXTERIOR",
+                "left_title": "GENERATED EXTERIOR I",
+                "right_title": "GENERATED EXTERIOR II",
+                "left_grid": make_grid(bl_ext_left),
+                "right_grid": make_grid(bl_ext_right)
+            },
+            {
+                "type": "grid_slide",
+                "title": "05 // BOTTEGA LOUIE: INTERIOR",
+                "left_title": "GENERATED INTERIOR I",
+                "right_title": "GENERATED INTERIOR II",
+                "left_grid": make_grid(bl_int_left),
+                "right_grid": make_grid(bl_int_right)
             },
             {
                 "type": "text_slide",
-                "title": "05 // O.T. JOHNSON: SYNTHESIS",
+                "title": "06 // O.T. JOHNSON: SYNTHESIS",
                 "body": ot_summary
             },
             {
                 "type": "grid_slide",
-                "title": "06 // O.T. JOHNSON: ARTIFACTS",
-                "left_title": "SYSTEM GENERATED MASSING",
-                "right_title": "HISTORICAL ARCHIVES",
-                "left_grid": make_grid(ot_left),
-                "right_grid": make_grid(ot_right)
+                "title": "07 // O.T. JOHNSON: EXTERIOR",
+                "left_title": "GENERATED EXTERIOR I",
+                "right_title": "GENERATED EXTERIOR II",
+                "left_grid": make_grid(ot_ext_left),
+                "right_grid": make_grid(ot_ext_right)
             }
         ]
     }
@@ -284,14 +287,14 @@ def compile_deck():
                 right_boxes += f'<div class="{css}">{img_tag}<div class="grid-label">{item["label"]}</div></div>'
 
             slides_html += f'''
-                <div class="page-side left-page" style="padding-top: 40px; padding-bottom: 40px;">
+                <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
                     <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
-                    <h2 class="page-header" style="margin-bottom: 15px;">{slide["left_title"]}</h2>
+                    <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["left_title"]}</h2>
                     <div class="grid-3x3">{left_boxes}</div>
                 </div>
-                <div class="page-side right-page" style="padding-top: 40px; padding-bottom: 40px;">
+                <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
                     <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
-                    <h2 class="page-header" style="margin-bottom: 15px;">{slide["right_title"]}</h2>
+                    <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
                     <div class="grid-3x3">{right_boxes}</div>
                 </div>
             '''
