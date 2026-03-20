@@ -23,3 +23,19 @@ Thumbs.db
 !data/*.json
 !logic/*.py
 !*.html
+!archive/render_output/*
+
+# --- Explicitly Protect Precedent & Render Files ---
+!*bottega_louie*
+!*ot_johnson*
+!*bottegaLouie*
+!*BottegaLouie*
+!*OTjohnson*
+!*OTJohnson*
+!precedents/
+!render_outputs/
+
+# --- Explicitly Protect All Render Image Formats ---
+!*.png
+!*.jpg
+!*.jpeg

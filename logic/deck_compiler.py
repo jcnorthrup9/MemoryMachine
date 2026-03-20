@@ -1,9 +1,23 @@
 import os
 import json
+import base64
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE_DIR, '.env'))
+except ImportError:
+    print("⚠️ WARNING: python-dotenv is not installed. Please run: pip install python-dotenv")
+
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 OUTPUT_FILE = os.path.join(BASE_DIR, 'html', 'presentation_deck.html')
+FIGMA_OUTPUT = os.path.join(DATA_DIR, 'figma_payload.json')
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -29,12 +43,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .left-page { padding-right: 100px; } 
         .right-page { padding-left: 100px; } 
 
-        h1.zine-title { font-size: 2.5rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px;}
-        h2.page-header { color: #888; font-size: 1rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px;}
+        h1.zine-title { font-size: 2.5rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px; word-wrap: break-word;}
+        h2.page-header { color: #888; font-size: 1rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; word-wrap: break-word;}
         
-        .vignette { border-left: 2px solid var(--accent-glow); padding-left: 20px; margin-bottom: 20px; font-size: 1rem; color: #ccc; line-height: 1.5; background: rgba(255,255,255,0.02); padding: 15px 15px 15px 20px;}
-        
-        pre.markdown-block { background: #0a0a0a; border: 1px solid #222; padding: 20px; color: #88ff88; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; overflow-x: hidden; }
+        .text-wrap { white-space: pre-wrap; font-size: 1.15rem; line-height: 1.8; color: #ccc; text-align: justify; word-wrap: break-word; padding-right: 20px;}
         
         .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
         .spread.active { display: flex; }
@@ -43,120 +55,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
         .nav-controls button:hover { background: #111; border-color: #666; color: #fff; }
 
-        .image-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
-        .image-card { display: flex; flex-direction: column; background: #080808; border: 1px solid #222; padding: 10px; }
-        .image-card img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid #111; }
-        .image-label { text-align: center; font-size: 0.75rem; color: #888; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .full-img { width: 100%; height: auto; border: 1px solid #333; max-height: 60vh; object-fit: contain; }
+        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; }
+        .grid-box { aspect-ratio: 1; border: 1px solid #333; background: #080808; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .grid-box.dashed { border: 1px dashed #444; }
+        .grid-box img { width: 100%; height: 100%; object-fit: cover; }
+        .grid-label { position: absolute; bottom: 5px; width: 90%; text-align: center; font-size: 0.65rem; color: #ddd; background: rgba(0,0,0,0.8); padding: 4px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px;}
     </style>
 </head>
 <body>
     <div class="zine-viewer">
         <div class="spread-container">
             <div class="spine"></div>
-
-            <!-- SPREAD 1: PRECEDENTS -->
-            <div class="spread active" id="spread-1">
-                <div class="page-side left-page">
-                    <h1 class="zine-title">01 // Architectural Memory Precedents</h1>
-                    <div class="vignette"><strong>Aldo Rossi:</strong> Architecture as a permanent artifact that survives its original function, holding the collective memory of the city.</div>
-                    <div class="vignette"><strong>Do Ho Suh:</strong> Spatial memory rendered as translucent fabric. Architecture as a ghostly, transportable shell of personal history.</div>
-                    <div class="vignette"><strong>Neues Museum & Zeitz MOCAA:</strong> The palimpsest. Carving into the old to reveal the strata of history rather than overwriting it entirely.</div>
-                </div>
-                <div class="page-side right-page">
-                    <h2 class="page-header">Visual Reference Matrix</h2>
-                    <div class="image-grid">
-                        <div class="image-card"><img src="../archive/precedents/aldo_rossi.jpg"><div class="image-label">Aldo Rossi // Urban Artifact</div></div>
-                        <div class="image-card"><img src="../archive/precedents/dohosuh1.jpg"><div class="image-label">Do Ho Suh // Ghost Architecture</div></div>
-                        <div class="image-card"><img src="../archive/precedents/neues_museum.jpg"><div class="image-label">Neues Museum // Historic Strata</div></div>
-                        <div class="image-card"><img src="../archive/precedents/zeitz_mocaa.jpg"><div class="image-label">Zeitz MOCAA // Subtractive Void</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SPREAD 2: BOTTEGA DATA -->
-            <div class="spread" id="spread-2">
-                <div class="page-side left-page">
-                    <h1 class="zine-title">02 // Node: Bottega Louie</h1>
-                    <h2 class="page-header">Data Extraction // Crowdsourced Memory</h2>
-                    <div class="vignette">"Its high ceilings, beautiful white walls, and fresh flour decorations are luxurious and old world gorgeous. Even the cacophony of voices that echo off the large ceilings add to the luxurious, Italian glow."</div>
-                    <div class="vignette">"The place is huge, but feels stark with the white walls. They call it minimalist, I guess. It IS very loud due to the wall-to-wall marble."</div>
-                    <div class="vignette">"A beautiful pastries section right when you walk in with all the artful creation in the glass display. The open kitchen adds to the vibe, letting you watch the action."</div>
-                </div>
-                <div class="page-side right-page">
-                    <h2 class="page-header">Generated Markdown Logic</h2>
-                    <pre class="markdown-block">{{BOTTEGA_MARKDOWN}}</pre>
-                </div>
-            </div>
-
-            <!-- SPREAD 3: BOTTEGA VISUALS -->
-            <div class="spread" id="spread-3">
-                <div class="page-side left-page">
-                    <h1 class="zine-title">03 // Bottega Louie Synthesis</h1>
-                    <h2 class="page-header">AI Generated Hallucinations</h2>
-                    <!-- Placeholder paths for your AI renders -->
-                    <div class="image-card" style="margin-bottom: 20px;">
-                        <img class="full-img" src="../archive/render_output/bottega_ai_exterior.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'">
-                        <div class="image-label">AI Render // Exterior Proxy</div>
-                    </div>
-                    <div class="image-card">
-                        <img class="full-img" src="../archive/render_output/bottega_ai_interior.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'">
-                        <div class="image-label">AI Render // Interior Proxy</div>
-                    </div>
-                </div>
-                <div class="page-side right-page">
-                    <h2 class="page-header">Actual Photographic Artifacts</h2>
-                    <div class="image-grid">
-                        <div class="image-card"><img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_1.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Facade</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_2.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Interior</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_3.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Macarons</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Pizza Oven</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SPREAD 4: OT JOHNSON DATA -->
-            <div class="spread" id="spread-4">
-                <div class="page-side left-page">
-                    <h1 class="zine-title">04 // Node: O.T. Johnson</h1>
-                    <h2 class="page-header">Data Extraction // Historic Archives</h2>
-                    <div class="vignette">"Constructed in 1902, the seven-story Romanesque Revival building sits prominently at the intersection of 4th and Broadway."</div>
-                    <div class="vignette">"The exterior facade is constructed of rich, dark red glazed brick with intricate contrasting stone spandrels, wrapping heavily around the corner."</div>
-                    <div class="vignette">"The top floor features distinctive stepped Romanesque brick arches over the windows, capped by a heavy, ornate stone wrap-around cornice."</div>
-                </div>
-                <div class="page-side right-page">
-                    <h2 class="page-header">Generated Markdown Logic</h2>
-                    <pre class="markdown-block">{{OT_JOHNSON_MARKDOWN}}</pre>
-                </div>
-            </div>
-
-            <!-- SPREAD 5: OT JOHNSON VISUALS -->
-            <div class="spread" id="spread-5">
-                <div class="page-side left-page">
-                    <h1 class="zine-title">05 // O.T. Johnson Synthesis</h1>
-                    <h2 class="page-header">AI Generated / Rhino Massing</h2>
-                    <!-- Placeholder paths for your renders -->
-                    <div class="image-card" style="margin-bottom: 20px;">
-                        <img class="full-img" src="../archive/render_output/ot_johnson_rhino_iso.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'">
-                        <div class="image-label">Rhino System // Isometric Massing</div>
-                    </div>
-                    <div class="image-card">
-                        <img class="full-img" src="../archive/render_output/ot_johnson_ai_render.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'">
-                        <div class="image-label">AI Render // Romanesque Details</div>
-                    </div>
-                </div>
-                <div class="page-side right-page">
-                    <h2 class="page-header">Actual Photographic Artifacts</h2>
-                    <div class="image-grid">
-                        <div class="image-card"><img src="../archive/reference_images/ot_johnson/ot_johnson_ref_1.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Facade Detail</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/ot_johnson/ot_johnson_ref_2.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Street Corner</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/ot_johnson/ot_johnson_ref_3.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Historical Era</div></div>
-                        <div class="image-card"><img src="../archive/reference_images/ot_johnson/ot_johnson_ref_4.jpg" onerror="this.src='../archive/assets/thumbnails/placeholder.jpg'"><div class="image-label">Archive // Interior Remnant</div></div>
-                    </div>
-                </div>
-            </div>
-
+            {{SLIDES_HTML}}
         </div>
 
         <footer class="zine-footer">
@@ -170,10 +80,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <script>
         let currentSpread = 1;
-        const totalSpreads = 5;
+        const totalSpreads = {{TOTAL_SPREADS}};
         function showSpread(n) {
             document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
-            document.getElementById(`spread-${n}`).classList.add('active');
+            const target = document.getElementById(`spread-${n}`);
+            if (target) target.classList.add('active');
             document.getElementById('page-indicator').innerText = `SLIDE ${n} of ${totalSpreads}`;
             currentSpread = n;
         }
@@ -183,54 +94,217 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (e.key === 'ArrowRight') nextSpread();
             if (e.key === 'ArrowLeft') prevSpread();
         });
+        document.getElementById('page-indicator').innerText = `SLIDE 1 of ${totalSpreads}`;
     </script>
 </body>
 </html>"""
 
-def get_json_as_markdown(filename):
+def get_ai_summary(filename, topic):
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path):
-        return f"### Missing Data\nCould not locate `{filename}` in the archives."
-    
+        return f"[ DATA MISSING FOR {topic} ]"
+        
+    with open(path, 'r', encoding='utf-8') as f:
+        text = f.read()[:15000] # Safe limit to avoid token overload
+        
+    if not genai:
+        return "[ GOOGLE-GENERATIVEAI NOT INSTALLED ]\nPlease run: pip install google-generativeai"
+        
+    api_key = os.environ.get("GEMINI_API_KEY") 
+    if not api_key:
+        return f"[ GEMINI API KEY MISSING ]\nPlease set the GEMINI_API_KEY environment variable or add it to a .env file."
+        
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        md = f"### NODE: {data.get('node_id', 'UNKNOWN')}\n"
-        md += f"**Geo-Lock:** {data.get('geo_lock', {}).get('lat')}, {data.get('geo_lock', {}).get('lon')}\n"
-        md += "---\n"
-        md += "### Extracted Materials\n"
-        for color in data.get('chromatic_palette', []):
-            md += f"- **{color['material'].replace('_', ' ').title()}** (Hex: {color['hex']})\n"
-            
-        md += "---\n"
-        md += "### Spatial Massing Elements\n"
-        elements = data.get('spatial_logic', [])
-        # Just show the top 8 elements to keep the slide clean
-        for el in elements[:8]:
-            md += f"- **{el['element']}**: {el['instances']} instance(s) [Layer: {el['layer']}]\n"
-            
-        if len(elements) > 8:
-            md += f"- *...and {len(elements) - 8} more elements extracted.*\n"
-            
-        return md
+        print(f"🧠 Asking Gemini to synthesize data for {topic}...")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        prompt = f"You are an architectural theorist. Summarize the following spatial and historical data about {topic} into 2 short, punchy paragraphs suitable for a presentation slide. Focus on atmosphere, memory, and architecture. Do not use markdown formatting like asterisks or bolding, just plain text.\n\nDATA:\n{text}"
+        response = model.generate_content(prompt)
+        return response.text.strip()
     except Exception as e:
-        return f"Error parsing JSON: {str(e)}"
+        return f"[ API ERROR: {e} ]"
+
+def build_payload():
+    """Generates the content payload used by both HTML and Figma."""
+    def make_grid(items):
+        padded = []
+        for i in range(9):
+            if i < len(items):
+                item = items[i]
+                img_path = os.path.join(BASE_DIR, *item['image_path'].split('/'))
+                base64_data = None
+                if os.path.exists(img_path):
+                    print(f"   [+] Loaded Image: {item['image_path']}")
+                    with open(img_path, "rb") as img_file:
+                        base64_data = base64.b64encode(img_file.read()).decode('utf-8')
+                else:
+                    print(f"   [-] Image Missing: {img_path}")
+                padded.append({"label": item['label'], "image": base64_data})
+            else:
+                padded.append({"label": "[ PENDING // NO DATA ]", "image": None})
+        return padded
+
+    bottega_left = [
+        {"label": "AI RENDER // EXTERIOR", "image_path": "archive/render_output/bottega_ai_exterior.jpg"},
+        {"label": "AI RENDER // INTERIOR", "image_path": "archive/render_output/bottega_ai_interior.jpg"}
+    ]
+    bottega_right = [
+        {"label": "ARCHIVE // FACADE", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_1.jpg"},
+        {"label": "ARCHIVE // INTERIOR", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_2.jpg"},
+        {"label": "ARCHIVE // MACARONS", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_3.jpg"},
+        {"label": "ARCHIVE // OVEN", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
+    ]
+    
+    ot_left = [
+        {"label": "RHINO SYSTEM // ISO", "image_path": "archive/render_output/ot_johnson_rhino_iso.jpg"},
+        {"label": "AI RENDER // DETAILS", "image_path": "archive/render_output/ot_johnson_ai_render.jpg"}
+    ]
+    ot_right = [
+        {"label": "ARCHIVE // FACADE", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_1.jpg"},
+        {"label": "ARCHIVE // CORNER", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_2.jpg"},
+        {"label": "ARCHIVE // ERA", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_3.jpg"},
+        {"label": "ARCHIVE // INTERIOR", "image_path": "archive/reference_images/ot_johnson/ot_johnson_ref_4.jpg"}
+    ]
+    
+    precedents_left = [
+        {"label": "ALDO ROSSI // ARTIFACT", "image_path": "archive/precedents/aldo_rossi.jpg"},
+        {"label": "DO HO SUH // GHOST", "image_path": "archive/precedents/dohosuh1.jpg"}
+    ]
+    precedents_right = [
+        {"label": "NEUES MUSEUM // STRATA", "image_path": "archive/precedents/neues_museum.jpg"},
+        {"label": "ZEITZ MOCAA // VOID", "image_path": "archive/precedents/zeitz_mocaa.jpg"}
+    ]
+
+    bottega_summary = get_ai_summary('bottega_louie_reviews.txt', 'Bottega Louie')
+    ot_summary = get_ai_summary('ot_johnson_data.txt', 'O.T. Johnson Building')
+
+    payload = {
+        "deck_title": "Memory Machine // Presentation Deck",
+        "slides": [
+            {
+                "type": "title_slide",
+                "title": "THE MACHINE THAT FORGETS",
+                "subtitle": "Collective Memory & Architectural Hallucination"
+            },
+            {
+                "type": "text_slide",
+                "title": "01 // COLLECTIVE MEMORY",
+                "body": "Memory is not a static archive, but an unstable process of encoding, retrieval, and decay; it shifts, collapses, and rewrites itself constantly. In the last decade or so, 'artificial intelligence' has been exposed as a reflection of how memory operates, and within this operation are its inherent biases, fractures, and capacity for curiosity and invention.\n\nArchitecture contains memory. Spaces contain memories, old walls are torn down, types of architectural witness marks are left, with tooling marks and bits of material leftovers. Many of these are hidden below the surface, covered by fresh gypsum and spackle, left to only be discovered by the next entity that tears down these walls.\n\nThese collisions of old and new produce moments of dissonance, where architectural time collapses into a single frame."
+            },
+            {
+                "type": "grid_slide",
+                "title": "02 // PRECEDENTS",
+                "left_title": "ANALOGOUS ARCHITECTURE",
+                "right_title": "PALIMPSEST & ERASURE",
+                "left_grid": make_grid(precedents_left),
+                "right_grid": make_grid(precedents_right)
+            },
+            {
+                "type": "text_slide",
+                "title": "03 // BOTTEGA LOUIE: SYNTHESIS",
+                "body": bottega_summary
+            },
+            {
+                "type": "grid_slide",
+                "title": "04 // BOTTEGA LOUIE: ARTIFACTS",
+                "left_title": "AI GENERATED HALLUCINATIONS",
+                "right_title": "ACTUAL PHOTOGRAPHIC ARTIFACTS",
+                "left_grid": make_grid(bottega_left),
+                "right_grid": make_grid(bottega_right)
+            },
+            {
+                "type": "text_slide",
+                "title": "05 // O.T. JOHNSON: SYNTHESIS",
+                "body": ot_summary
+            },
+            {
+                "type": "grid_slide",
+                "title": "06 // O.T. JOHNSON: ARTIFACTS",
+                "left_title": "SYSTEM GENERATED MASSING",
+                "right_title": "HISTORICAL ARCHIVES",
+                "left_grid": make_grid(ot_left),
+                "right_grid": make_grid(ot_right)
+            }
+        ]
+    }
+    return payload
 
 def compile_deck():
     print("\n--- Compiling Presentation Deck ---")
     
-    bottega_md = get_json_as_markdown('target_node.json')
-    ot_johnson_md = get_json_as_markdown('target_node_ot_johnson.json')
+    payload = build_payload()
     
-    html = HTML_TEMPLATE.replace('{{BOTTEGA_MARKDOWN}}', bottega_md)
-    html = html.replace('{{OT_JOHNSON_MARKDOWN}}', ot_johnson_md)
+    # 1. Export JSON for Figma
+    os.makedirs(os.path.dirname(FIGMA_OUTPUT), exist_ok=True)
+    with open(FIGMA_OUTPUT, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=2)
+    print(f"✅ FIGMA PAYLOAD GENERATED: {FIGMA_OUTPUT}")
     
+    # 2. Build HTML dynamically to perfectly match the Figma slides
+    slides_html = ""
+    for idx, slide in enumerate(payload["slides"]):
+        active = "active" if idx == 0 else ""
+        slides_html += f'<div class="spread {active}" id="spread-{idx+1}">\n'
+        
+        if slide["type"] == "title_slide":
+            slides_html += f'''
+                <div class="page-side left-page" style="justify-content: center;">
+                    <h1 class="zine-title" style="font-size: 3.5rem;">{slide["title"]}</h1>
+                    <h2 class="page-header" style="font-size: 1.2rem; border: none;">{slide["subtitle"]}</h2>
+                </div>
+                <div class="page-side right-page"></div>
+            '''
+        elif slide["type"] == "text_slide":
+            slides_html += f'''
+                <div class="page-side left-page">
+                    <h1 class="zine-title" style="font-size: 2.2rem;">{slide["title"]}</h1>
+                    <div class="text-wrap">{slide["body"]}</div>
+                </div>
+                <div class="page-side right-page"></div>
+            '''
+        elif slide["type"] == "grid_slide":
+            left_boxes = ""
+            for item in slide["left_grid"]:
+                if item.get("image"):
+                    img_tag = f'<img src="data:image/jpeg;base64,{item["image"]}">'
+                    css = "grid-box"
+                else:
+                    img_tag = ""
+                    css = "grid-box dashed"
+                left_boxes += f'<div class="{css}">{img_tag}<div class="grid-label">{item["label"]}</div></div>'
+            
+            right_boxes = ""
+            for item in slide["right_grid"]:
+                if item.get("image"):
+                    img_tag = f'<img src="data:image/jpeg;base64,{item["image"]}">'
+                    css = "grid-box"
+                else:
+                    img_tag = ""
+                    css = "grid-box dashed"
+                right_boxes += f'<div class="{css}">{img_tag}<div class="grid-label">{item["label"]}</div></div>'
+
+            slides_html += f'''
+                <div class="page-side left-page" style="padding-top: 40px; padding-bottom: 40px;">
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h2 class="page-header" style="margin-bottom: 15px;">{slide["left_title"]}</h2>
+                    <div class="grid-3x3">{left_boxes}</div>
+                </div>
+                <div class="page-side right-page" style="padding-top: 40px; padding-bottom: 40px;">
+                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
+                    <h2 class="page-header" style="margin-bottom: 15px;">{slide["right_title"]}</h2>
+                    <div class="grid-3x3">{right_boxes}</div>
+                </div>
+            '''
+        slides_html += '</div>\n'
+
+    html = HTML_TEMPLATE.replace('{{SLIDES_HTML}}', slides_html)
+    html = html.replace('{{TOTAL_SPREADS}}', str(len(payload["slides"])))
+
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
         
-    print(f"✅ DECK COMPILED SUCCESSFULLY: {OUTPUT_FILE}\n")
+    print(f"✅ HTML DECK COMPILED SUCCESSFULLY: {OUTPUT_FILE}\n")
 
 if __name__ == "__main__":
     compile_deck()

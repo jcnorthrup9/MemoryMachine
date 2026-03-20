@@ -1,0 +1,28 @@
+<style>
+  body { font-family: sans-serif; background: #222; color: #fff; padding: 20px; text-align: center; }
+  h3 { color: #fff4ca; }
+  input[type="file"] { margin-top: 20px; color: #fff; }
+</style>
+
+<h3>Memory Machine // Deck Builder</h3>
+<p>Select your <b>figma_payload.json</b> file to generate the deck.</p>
+<input type="file" id="fileInput" accept=".json" />
+
+<script>
+  document.getElementById('fileInput').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        // Send the JSON data to the Figma Canvas (code.ts)
+        parent.postMessage({ pluginMessage: { type: 'generate-deck', payload: json } }, '*');
+      } catch (err) {
+        alert("Error parsing JSON file! Make sure it is valid JSON.");
+      }
+    };
+    reader.readAsText(file);
+  });
+</script>
