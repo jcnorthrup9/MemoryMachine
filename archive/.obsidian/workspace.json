@@ -1,0 +1,196 @@
+{
+  "main": {
+    "id": "2649d3a14fed9ab2",
+    "type": "split",
+    "children": [
+      {
+        "id": "abfb3b4ca1d8ce60",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "586c445f66eba12e",
+            "type": "leaf",
+            "state": {
+              "type": "image",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg"
+              },
+              "icon": "lucide-image",
+              "title": "aldo_rossi"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "53279aa81b986afa",
+    "type": "split",
+    "children": [
+      {
+        "id": "92a317c3717a0b49",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0b2560aefeee0a69",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "51aad26e2bf3822c",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "6bb247e21956e0ad",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "2a47349bc3edc939",
+    "type": "split",
+    "children": [
+      {
+        "id": "3a5096e89e121167",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ee8daeff42296aa5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for aldo_rossi"
+            }
+          },
+          {
+            "id": "e41511489d58395a",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from aldo_rossi"
+            }
+          },
+          {
+            "id": "405146b182e10eab",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "5573709dd8fbb82b",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "1be8af8cd94525c7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of aldo_rossi"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "586c445f66eba12e",
+  "lastOpenFiles": [
+    "precedents/zeitz_mocaa2.jpg",
+    "precedents/zeitz_mocaa.jpg",
+    "precedents/TheGenbakuDome2.jpg",
+    "precedents/TheGenbakuDome.jpg",
+    "precedents/neues_museum2.jpg",
+    "precedents/neues_museum.jpg",
+    "precedents/dohosuh2.jpg",
+    "precedents/dohosuh1.jpg",
+    "precedents/aldo_rossi.jpg"
+  ]
+}
