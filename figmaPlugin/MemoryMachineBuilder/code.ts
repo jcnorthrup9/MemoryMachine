@@ -74,7 +74,7 @@ figma.ui.onmessage = async (msg) => {
         const mainTitleNode = createTextWrap(slide.title, 42, accentYellow, 800, true);
         frame.appendChild(mainTitleNode);
         mainTitleNode.x = 80;
-        mainTitleNode.y = 60;
+        mainTitleNode.y = 40;
 
         // --- LEFT PAGE GRID ---
         const leftTitle = createTextWrap(slide.left_title, 20, textDim, 800, true);
@@ -84,8 +84,8 @@ figma.ui.onmessage = async (msg) => {
 
         let gridX = 80;
         let gridY = leftTitle.y + leftTitle.height + 20;
-        const boxSize = 220;
-        const gap = 20;
+        const boxSize = 210;
+        const gap = 15;
 
         for (let i = 0; i < 9; i++) {
           if (!slide.left_grid[i]) continue;
@@ -108,7 +108,7 @@ figma.ui.onmessage = async (msg) => {
             try {
               const imageBytes = figma.base64Decode(item.image);
               const figmaImage = figma.createImage(imageBytes);
-              rect.fills = [{ type: 'IMAGE', scaleMode: 'CROP', imageHash: figmaImage.hash }];
+              rect.fills = [{ type: 'IMAGE', scaleMode: 'FIT', imageHash: figmaImage.hash }];
               rect.strokes = [{ type: 'SOLID', color: borderDim }];
               rect.strokeWeight = 1;
             } catch (e) {
@@ -155,7 +155,7 @@ figma.ui.onmessage = async (msg) => {
             try {
               const imageBytes = figma.base64Decode(item.image);
               const figmaImage = figma.createImage(imageBytes);
-              rect.fills = [{ type: 'IMAGE', scaleMode: 'CROP', imageHash: figmaImage.hash }];
+              rect.fills = [{ type: 'IMAGE', scaleMode: 'FIT', imageHash: figmaImage.hash }];
               rect.strokes = [{ type: 'SOLID', color: borderDim }];
               rect.strokeWeight = 1;
             } catch (e) {
@@ -173,6 +173,51 @@ figma.ui.onmessage = async (msg) => {
           label.y = boxY + boxSize + 10;
           label.textAlignHorizontal = "CENTER";
         }
+      }
+      else if (slide.type === 'workflow_slide') {
+        const titleNode = createTextWrap(slide.title, 48, accentYellow, 1600, true);
+        frame.appendChild(titleNode);
+        titleNode.x = 80;
+        titleNode.y = 80;
+
+        const startY = titleNode.y + titleNode.height + 80;
+        let currentX = 80;
+        
+        slide.steps.forEach((step: any, index: number) => {
+          const box = figma.createRectangle();
+          frame.appendChild(box);
+          box.resize(300, 200);
+          box.x = currentX;
+          box.y = startY;
+          box.fills = [{ type: 'SOLID', color: {r: 0.05, g: 0.05, b: 0.05} }];
+          box.strokes = [{ type: 'SOLID', color: borderDim }];
+          box.strokeWeight = 2;
+
+          const stepTitle = createTextWrap(step.title, 20, accentYellow, 260, true);
+          frame.appendChild(stepTitle);
+          stepTitle.x = currentX + 20;
+          stepTitle.y = startY + 20;
+
+          const stepDesc = createTextWrap(step.desc, 16, textLight, 260, false);
+          frame.appendChild(stepDesc);
+          stepDesc.x = currentX + 20;
+          stepDesc.y = stepTitle.y + stepTitle.height + 15;
+
+          currentX += 300;
+
+          if (index < slide.steps.length - 1) {
+            const arrow = figma.createLine();
+            frame.appendChild(arrow);
+            arrow.x = currentX + 10;
+            arrow.y = startY + 100;
+            arrow.resize(40, 0);
+            arrow.strokes = [{ type: 'SOLID', color: textDim }];
+            arrow.strokeWeight = 2;
+            arrow.strokeCap = "ARROW_LINES";
+            
+            currentX += 60;
+          }
+        });
       }
 
       generatedNodes.push(frame);

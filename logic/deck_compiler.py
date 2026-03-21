@@ -118,7 +118,7 @@ def get_ai_summary(filename, topic):
         print(f"🧠 Asking Gemini to synthesize data for {topic}...")
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"You are an architectural theorist. Summarize the following spatial and historical data about {topic} into 2 short, punchy paragraphs suitable for a presentation slide. Focus on atmosphere, memory, and architecture. Do not use markdown formatting like asterisks or bolding, just plain text.\n\nDATA:\n{text}"
+        prompt = f"You are an architectural theorist. Extract the key spatial parameters, atmospheric qualities, and historical data about {topic} from the provided text. Present this as a concise, structured list of 'Parsed Data' (bullet points, short phrases) suitable for a presentation slide. Do not write a paragraph blurb. Use plain text formatting with dashes for bullets, no markdown asterisks or bolding.\n\nDATA:\n{text}"
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
@@ -172,6 +172,7 @@ def build_payload():
 
     bottega_summary = get_ai_summary('bottega_louie_reviews.txt', 'Bottega Louie')
     ot_summary = get_ai_summary('ot_johnson_data.txt', 'O.T. Johnson Building')
+    nakagin_summary = get_ai_summary('nakagin_parsed_data.md', 'Nakagin Capsule Tower')
 
     payload = {
         "deck_title": "Memory Machine // Presentation Deck",
@@ -182,13 +183,24 @@ def build_payload():
                 "subtitle": "Collective Memory & Architectural Hallucination"
             },
             {
+                "type": "workflow_slide",
+                "title": "01 // THE MACHINE WORKFLOW",
+                "steps": [
+                    {"title": "DATA HARVEST", "desc": "Scraping historical archives, visitor reviews, and spatial coordinates."},
+                    {"title": "SPATIAL PARSING", "desc": "Extracting hard dimensional limits and atmospheric memory fragments."},
+                    {"title": "GENERATION", "desc": "Procedurally rebuilding the structural massing via scripts."},
+                    {"title": "HALLUCINATION", "desc": "Applying memory decay and material inference via AI visual workflows."},
+                    {"title": "SYNTHESIS", "desc": "Compiling the forensic architectural dossier."}
+                ]
+            },
+            {
                 "type": "text_slide",
-                "title": "01 // COLLECTIVE MEMORY",
+                "title": "02 // COLLECTIVE MEMORY",
                 "body": "Memory is not a static archive, but an unstable process of encoding, retrieval, and decay; it shifts, collapses, and rewrites itself constantly. In the last decade or so, 'artificial intelligence' has been exposed as a reflection of how memory operates, and within this operation are its inherent biases, fractures, and capacity for curiosity and invention.\n\nArchitecture contains memory. Spaces contain memories, old walls are torn down, types of architectural witness marks are left, with tooling marks and bits of material leftovers. Many of these are hidden below the surface, covered by fresh gypsum and spackle, left to only be discovered by the next entity that tears down these walls.\n\nThese collisions of old and new produce moments of dissonance, where architectural time collapses into a single frame."
             },
             {
                 "type": "grid_slide",
-                "title": "02 // PRECEDENTS",
+                "title": "03 // PRECEDENTS",
                 "left_title": "ANALOGOUS ARCHITECTURE",
                 "right_title": "PALIMPSEST & ERASURE",
                 "left_grid": make_grid(precedents_left),
@@ -196,12 +208,12 @@ def build_payload():
             },
             {
                 "type": "text_slide",
-                "title": "03 // BOTTEGA LOUIE: SYNTHESIS",
+                "title": "04 // BOTTEGA LOUIE: PARSED DATA",
                 "body": bottega_summary
             },
             {
                 "type": "grid_slide",
-                "title": "04 // BOTTEGA LOUIE: EXTERIOR",
+                "title": "05 // BOTTEGA LOUIE: EXTERIOR",
                 "left_title": "GENERATED EXTERIOR I",
                 "right_title": "GENERATED EXTERIOR II",
                 "left_grid": make_grid(bl_ext_left),
@@ -209,7 +221,7 @@ def build_payload():
             },
             {
                 "type": "grid_slide",
-                "title": "05 // BOTTEGA LOUIE: INTERIOR",
+                "title": "06 // BOTTEGA LOUIE: INTERIOR",
                 "left_title": "GENERATED INTERIOR I",
                 "right_title": "GENERATED INTERIOR II",
                 "left_grid": make_grid(bl_int_left),
@@ -217,16 +229,21 @@ def build_payload():
             },
             {
                 "type": "text_slide",
-                "title": "06 // O.T. JOHNSON: SYNTHESIS",
+                "title": "07 // O.T. JOHNSON: PARSED DATA",
                 "body": ot_summary
             },
             {
                 "type": "grid_slide",
-                "title": "07 // O.T. JOHNSON: EXTERIOR",
+                "title": "08 // O.T. JOHNSON: EXTERIOR",
                 "left_title": "GENERATED EXTERIOR I",
                 "right_title": "GENERATED EXTERIOR II",
                 "left_grid": make_grid(ot_ext_left),
                 "right_grid": make_grid(ot_ext_right)
+            },
+            {
+                "type": "text_slide",
+                "title": "09 // NAKAGIN CAPSULE TOWER: PARSED DATA",
+                "body": nakagin_summary
             }
         ]
     }
@@ -264,6 +281,26 @@ def compile_deck():
                     <div class="text-wrap">{slide["body"]}</div>
                 </div>
                 <div class="page-side right-page"></div>
+            '''
+        elif slide["type"] == "workflow_slide":
+            steps_html = ""
+            for i, step in enumerate(slide["steps"]):
+                arrow = '<div style="display: flex; align-items: center; justify-content: center; padding: 0 15px; color: #666; font-size: 2rem;">&rarr;</div>' if i < len(slide["steps"]) - 1 else ''
+                steps_html += f'''
+                    <div style="flex: 1; border: 1px solid #333; background: #0a0a0a; padding: 20px; display: flex; flex-direction: column;">
+                        <h3 style="color: var(--accent-glow); margin-top: 0; font-size: 1rem; border-bottom: 1px solid #222; padding-bottom: 10px;">{step['title']}</h3>
+                        <p style="color: #aaa; font-size: 0.9rem; line-height: 1.4; margin: 0;">{step['desc']}</p>
+                    </div>
+                    {arrow}
+                '''
+            slides_html += f'''
+                <div class="page-side left-page" style="width: 100%; padding-right: 60px;">
+                    <h1 class="zine-title" style="font-size: 2.2rem;">{slide["title"]}</h1>
+                    <div style="display: flex; flex-direction: row; margin-top: 40px; align-items: stretch; height: 250px;">
+                        {steps_html}
+                    </div>
+                </div>
+                <div class="page-side right-page" style="display:none;"></div>
             '''
         elif slide["type"] == "grid_slide":
             left_boxes = ""

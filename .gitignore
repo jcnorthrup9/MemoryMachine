@@ -42,3 +42,7 @@ Thumbs.db
 !*.png
 !*.jpg
 !*.jpeg
+
+# --- Ignore large generated output files ---
+html/presentation_deck.html
+data/figma_payload.json

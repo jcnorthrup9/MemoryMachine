@@ -1,52 +1,52 @@
-# Memory Machine // Palimpsest
+# Memory Machine // Forensic Palimpsest
 
-**The Machine That Forgets**
+**The Machine That Forgets:** Memory is not a static archive, but an unstable process of encoding, retrieval, and decay. Architecture contains memory through spatial witness marks and remnants. This system explores how machine learning models, human memory, and architectural palimpsests mistake noise for meaning.
 
-A computational design project exploring the intersection of human memory decay (dementia), artificial intelligence (LoRAs/Hallucinations), and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling the forensic findings into a digital zine.
+## ⚙️ The Pipeline Workflow
 
-## Project Structure
+1. **DATA HARVEST:** Scraping historical archives, visitor reviews, and spatial coordinates.
+2. **SPATIAL PARSING:** Extracting hard dimensional limits and atmospheric memory fragments from unstructured text.
+3. **GENERATION:** Procedurally rebuilding the structural massing and architectural artifacts via Rhino Python scripts.
+4. **HALLUCINATION:** Applying memory decay and material inference via AI visual workflows (ComfyUI / Flux).
+5. **SYNTHESIS:** Compiling the forensic architectural dossier into a dynamic Figma presentation and digital Zine.
 
-### `logic/`
-The core computational engine.
-*   **`zine_compiler.py`**: Aggregates text data, system logic, and asset references to generate the interactive HTML zine (`digitalPalimpsest.html`).
-*   **`generate_trailer_88.py`**: A Rhino Python script that procedurally builds the "1988 Trailer" site. It generates the 100x100 grid, the glitched trailer mesh, and narrative anomalies based on lore.
-*   **`scraper_auto.py`**: Automated tool using DuckDuckGo to hunt for vintage textures (e.g., "burnt orange carpet") and assets based on the asset manifest.
-*   **`import_assets.py`**: Utility for importing, scaling, and placing `.obj` assets into the Rhino environment based on sensory data.
+---
 
-### `data/`
-The memory substrate.
-*   Contains raw narrative logs (`1988_trailer_raw.txt`), parsed vignettes, thesis abstracts, and JSON logic definitions.
+## 📂 System Scripts & Logic
 
-### `html/`
-The visualization layer.
-*   **`digitalPalimpsest.html`**: The interactive, glitch-aesthetic viewer that presents the project as a forensic dossier.
+### 1. Data Collection & Harvesting
+*   `scrapfly-scrapers/yelp-scraper/yelp.py` & `scraper.py`: Extracts raw, qualitative public memory (visitor reviews) from review sites, bypassing bot-protections.
+*   `bottega_louie_image_scraper.py` / `ot_johnson_image_scraper.py`: Queries search engines to automatically download reference images and photographic artifacts into the `archive/` directory.
+*   `ot_johnson_text_scraper.py`: Mines Wikipedia and architectural databases for historical text and hard spatial data.
 
-### `archive/`
-*   Stores scraped thumbnails and rendered outputs from Rhino.
+### 2. Spatial Parsing & Extraction
+*   `spatial_extractor.py` & `ot_johnson_extractor.py`: Scans the raw review data for architectural keywords (e.g., *marble, vaults, pink, dimensions*) and isolates spatial descriptors.
+*   `spatial_mapper.py` & `ot_johnson_mapper.py`: Converts the extracted text keywords into hard coordinate parameters (X, Y, Z dimensions and RGB colors) and exports them as CSV blueprints (`bottega_massing.csv`, `ot_johnson_massing.csv`).
+*   `deduplicate_reviews.py`: Cleans up the scraped datasets to ensure clean AI ingestion.
 
-## Usage
+### 3. Procedural Generation (Rhino)
+*   `rhino_bottega.py` & `rhino_ot_johnson.py`: Reads the CSV blueprints and automatically generates layered 3D bounding boxes, proxies, and materials inside Rhinoceros 3D.
+*   `nakagin_generator.py`: A specialized parametric script that rebuilds the Nakagin Capsule Tower's core and staggers its 140 modular capsules based on historical dimensions.
+*   `rhino_bridge.py`: An automated bridge that imports externally modeled 3D assets (`.obj` files) and snaps them to the generated spatial grid.
 
-### 1. Compiling the Zine
-To regenerate the digital viewer after modifying text files in `data/`:
-```bash
-python logic/zine_compiler.py
-```
-This will update `html/digitalPalimpsest.html`.
+### 4. Synthesis & Presentation
+*   `deck_compiler.py`: The brain of the presentation. It feeds the parsed text into the **Google Gemini API** to generate "Theorist" summaries. It then sweeps the local archive for generated images, Base64-encodes them, and outputs a massive `figma_payload.json` file.
+*   `zine_compiler.py`: Compiles the generated text, logic, and imagery into a standalone, interactive digital HTML Zine (`digitalPalimpsest.html`) featuring CSS-driven digital decay and glitching.
 
-### 2. Rhino Reconstruction
-The procedural generation scripts are designed for **Rhino 8**.
-1.  Open Rhino 8.
-2.  Open the Python Editor (`EditPythonScript` or `ScriptEditor`).
-3.  Run `logic/generate_trailer_88.py` to generate the environment foundation and trailer geometry.
+### 5. Utilities
+*   `auto_caption.py`: Uses local AI vision models (Salesforce BLIP) to auto-generate text captions for downloaded reference images.
+*   `export_jpgs.py` & `export_pdf.py`: Uses Playwright to automatically take high-res screenshots of the HTML zine and convert the layout into a printable PDF.
 
-### 3. Asset Harvesting
-To populate the texture library:
-```bash
-python logic/scraper_auto.py
-```
-*Dependencies: `duckduckgo_search`, `requests`*
+---
 
-## Concept
-> "Memory is not a static archive, but an unstable process of encoding, retrieval, and decay."
+## 🎨 Figma Integration
 
-The project treats memory as a dataset subject to "bit rot" and "hallucination." The reconstruction is not meant to be perfect; it intentionally includes artifacts, glitches, and gaps, mirroring the failure modes of both biological memory (dementia) and synthetic memory (AI hallucination).
+Located in `figmaPlugin/MemoryMachineBuilder/code.ts`.
+
+The custom Figma plugin reads the `figma_payload.json` generated by the Python compiler. When executed inside Figma, it automatically:
+1. Draws the slide frames and sets up typography/colors.
+2. Renders the AI-generated text summaries.
+3. Decodes the Base64 renders and automatically crops/fits them into precise 9-square grid matrices.
+4. Generates visual architectural diagrams (e.g., the Pipeline Workflow slide) using native Figma nodes.
+
+*Run `npm run build` in the plugin folder whenever modifying `code.ts`.*
