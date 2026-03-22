@@ -1,0 +1,34 @@
+{
+  "public_space_assets": [
+    {
+      "name": "Kinetic_Mast",
+      "origin": "Schouwburgplein",
+      "sentiment_score": 0.85,
+      "spatial_type": "Vertical_Kinetic",
+      "parameters": {"height_range": [12, 20], "footprint_radius": 1.5, "rotation": true},
+      "tags": ["lighting", "industrial", "interactive"]
+    },
+    {
+      "name": "Wadable_Membrane",
+      "origin": "Grand Park",
+      "sentiment_score": 0.92,
+      "spatial_type": "Surface_Water",
+      "parameters": {"depth": 0.1, "edge_type": "tapered", "area_min": 50},
+      "tags": ["cooling", "play", "reflective"]
+    },
+    {
+      "name": "Art_Wall_Rail",
+      "origin": "Tanner Springs",
+      "sentiment_score": 0.78,
+      "spatial_type": "Boundary_Ecological",
+      "parameters": {"element_spacing": 0.2, "vertical_variation": 0.5},
+      "tags": ["memory", "reclaimed", "texture"]
+    }
+  ],
+  "site_data": {
+    "name": "Pershing Square",
+    "bounds": {"x": 110, "y": 150},
+    "subterranean_depth": -12.0,
+    "constraints": ["parking_ramps", "elevator_cores", "heat_island"]
+  }
+}

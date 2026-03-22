@@ -1,0 +1,11 @@
+# Ignore virtual environments
+.venv/
+venv/
+env/
+
+# Ignore Node.js modules
+node_modules/
+
+# Ignore git history and API keys
+.git/
+.env

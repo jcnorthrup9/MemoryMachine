@@ -222,6 +222,13 @@ async def request_reviews_api(url: str, start_index: int, business_id: str, sess
                 log.info("Re-warming up new session to bypass block...")
                 try:
                     await SCRAPFLY.async_scrape(ScrapeConfig(url=url, **BASE_CONFIG, render_js=True, session=session_state[0]))
+                    await SCRAPFLY.async_scrape(ScrapeConfig(
+                        url=url, 
+                        **BASE_CONFIG, 
+                        render_js=True, 
+                        wait_for_selector="meta[name='yelp-biz-id']",
+                        session=session_state[0]
+                    ))
                 except Exception:
                     pass
             
@@ -266,6 +273,13 @@ async def scrape_reviews(url: str, max_reviews: int = None, business_id: str = N
         log.info("Warming up session to bypass anti-bot protections...")
         try:
             await SCRAPFLY.async_scrape(ScrapeConfig(url=url, **BASE_CONFIG, render_js=True, session=session_state[0]))
+            await SCRAPFLY.async_scrape(ScrapeConfig(
+                url=url, 
+                **BASE_CONFIG, 
+                render_js=True, 
+                wait_for_selector="meta[name='yelp-biz-id']",
+                session=session_state[0]
+            ))
         except Exception:
             pass
 
