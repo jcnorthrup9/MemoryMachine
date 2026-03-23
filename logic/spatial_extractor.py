@@ -1,14 +1,15 @@
 import os
 import re
 import json
+import argparse
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
-def extract_spatial_info():
-    txt_path = os.path.join(DATA_DIR, 'bottega_louie_reviews.txt')
-    json_path = os.path.join(DATA_DIR, 'anonymized_bottega_louie_reviews.json')
-    output_path = os.path.join(DATA_DIR, 'redacted_spatial_data.txt')
+def extract_spatial_info(target_slug, target_name):
+    txt_path = os.path.join(DATA_DIR, f'{target_slug}_reviews.txt')
+    json_path = os.path.join(DATA_DIR, f'{target_slug}_data.json')
+    output_path = os.path.join(DATA_DIR, f'{target_slug}_spatial_data.txt')
     
     content = ""
     
@@ -50,7 +51,7 @@ def extract_spatial_info():
         print("❌ Error: No content extracted from files.")
         return
         
-    redacted_content = re.sub(r'(?i)bottega louie\'s|bottega louie|bottega louis|botegga louie|bottega', '[BUSINESS NAME]', content)
+    redacted_content = re.sub(rf'(?i){re.escape(target_name)}', '[TARGET NAME]', content)
     
     sentences = re.split(r'(?<=[.!?]) +|\n+', redacted_content)
     
@@ -60,7 +61,9 @@ def extract_spatial_info():
         'exterior', 'space', 'architecture', 'aesthetic', 'layout', 'display',
         'counter', 'bar', 'seating', 'window', 'spacious', 'airy', 'building',
         'oven', 'patisserie', 'macaron', 'pink', 'vaulted', 'wood-fired', 'flower', 'brick',
-        'green', 'beam', 'door', 'garden', 'minimalist'
+        'green', 'beam', 'door', 'garden', 'minimalist',
+        'tree', 'path', 'grass', 'water', 'bridge', 'canopy', 'pavilion', 'landscape',
+        'nature', 'river', 'park', 'forest', 'plaza', 'trail', 'concrete', 'steel'
     ]
     
     extracted_sentences = []
@@ -80,4 +83,9 @@ def extract_spatial_info():
     print(f"✅ Saved recreation data to: {output_path}")
 
 if __name__ == "__main__":
-    extract_spatial_info()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True, help="Target name")
+    parser.add_argument("--slug", required=True, help="Target slug")
+    args = parser.parse_args()
+    
+    extract_spatial_info(args.slug, args.target)

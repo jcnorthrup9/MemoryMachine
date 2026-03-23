@@ -1,0 +1,35 @@
+[
+    {
+        "name": "Pershing Square Purple Campanile",
+        "sentiment_score": 0.9,
+        "raw_text": "Name: Pershing Square Purple Campanile\nThe tall purple tower acts as a focal point, casting long shadows across the concrete. I remember sitting under it during a hot summer day."
+    },
+    {
+        "name": "Bottega Louie Marble Floor",
+        "sentiment_score": 0.9,
+        "raw_text": "Name: Bottega Louie Marble Floor\nThe sound of heels clicking on the white marble floor echoes through the high ceilings. It feels expansive but overwhelming."
+    },
+    {
+        "name": "O.T. Johnson Lobby",
+        "sentiment_score": 0.9,
+        "raw_text": "Name: O.T. Johnson Lobby\nA grand entrance with marble and cast iron columns. The light filters in through the front windows perfectly."
+    },
+    {
+        "name": "Zaryadye Park",
+        "sentiment_score": 0.85,
+        "raw_text": "Scraped data for Zaryadye Park. Awaiting spatial reconstruction.",
+        "node_id": "ZARYADYE_PARK"
+    },
+    {
+        "name": "queens gardens/bridge",
+        "sentiment_score": 0.85,
+        "raw_text": "Scraped data for queens gardens/bridge. Awaiting spatial reconstruction.",
+        "node_id": "QUEENS_GARDENS_BRIDGE"
+    },
+    {
+        "name": "Zaryadye Park",
+        "sentiment_score": 0.85,
+        "raw_text": "Scraped data for Zaryadye Park. Awaiting spatial reconstruction.",
+        "node_id": "ZARYADYE_PARK"
+    }
+]

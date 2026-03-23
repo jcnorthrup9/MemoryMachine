@@ -1,12 +1,13 @@
 import os
 import csv
+import argparse
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
-def generate_architectural_massing_data():
-    input_path = os.path.join(DATA_DIR, 'redacted_spatial_data.txt')
-    output_path = os.path.join(DATA_DIR, 'bottega_massing.csv')
+def generate_architectural_massing_data(target_slug):
+    input_path = os.path.join(DATA_DIR, f'{target_slug}_spatial_data.txt')
+    output_path = os.path.join(DATA_DIR, f'{target_slug}_massing.csv')
 
     if not os.path.exists(input_path):
         print(f"❌ Error: Could not find {input_path}")
@@ -36,7 +37,14 @@ def generate_architectural_massing_data():
         'wall': {'dims': [2, 20, 20], 'layer': '04_ENCLOSURE', 'type': 'plural', 'color': [255, 255, 255]}, # White walls
         'gold': {'dims': [1, 1, 1], 'layer': '05_FINISHES', 'type': 'plural', 'color': [212, 175, 55]}, # Gold
         'door': {'dims': [4, 1, 10], 'layer': '04_ENCLOSURE', 'type': 'plural', 'color': [139, 69, 19]},
-        'beam': {'dims': [1, 50, 1], 'layer': '04_ENCLOSURE', 'type': 'plural', 'color': [200, 200, 200]}
+        'beam': {'dims': [1, 50, 1], 'layer': '04_ENCLOSURE', 'type': 'plural', 'color': [200, 200, 200]},
+        'tree': {'dims': [5, 5, 20], 'layer': '02_LANDSCAPE', 'type': 'plural', 'color': [34, 139, 34]},
+        'path': {'dims': [100, 10, 1], 'layer': '02_LANDSCAPE', 'type': 'singular', 'color': [169, 169, 169]},
+        'grass': {'dims': [50, 50, 1], 'layer': '02_LANDSCAPE', 'type': 'singular', 'color': [124, 252, 0]},
+        'water': {'dims': [40, 40, 2], 'layer': '02_LANDSCAPE', 'type': 'singular', 'color': [64, 164, 223]},
+        'bridge': {'dims': [30, 10, 5], 'layer': '02_LANDSCAPE', 'type': 'singular', 'color': [139, 69, 19]},
+        'canopy': {'dims': [20, 20, 1], 'layer': '04_ENCLOSURE', 'type': 'plural', 'color': [200, 220, 200]},
+        'pavilion': {'dims': [30, 30, 15], 'layer': '01_INTERIOR', 'type': 'plural', 'color': [240, 240, 240]}
     }
 
     found_elements = []
@@ -70,4 +78,8 @@ def generate_architectural_massing_data():
     print(f"✅ Saved blueprint to: {output_path}")
 
 if __name__ == "__main__":
-    generate_architectural_massing_data()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--slug", required=True, help="Target slug")
+    args = parser.parse_args()
+    
+    generate_architectural_massing_data(args.slug)

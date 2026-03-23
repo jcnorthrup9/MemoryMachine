@@ -1,0 +1,4 @@
+Element,Instances,DimX,DimY,DimZ,Layer,ColorR,ColorG,ColorB
+Tree,8,5.0,5.0,20,02_LANDSCAPE,34,139,34
+Grass,1,51.0,51.0,1,02_LANDSCAPE,124,252,0
+Bridge,1,43.8,14.6,5,02_LANDSCAPE,139,69,19
