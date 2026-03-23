@@ -18,19 +18,55 @@ def reconstruct_pershing_square_base():
     rs.AddLayer("00_SITE::RAMPS", (100, 100, 100))
     rs.AddLayer("00_SITE::LANDSCAPE", (34, 139, 34))
     rs.AddLayer("00_SITE::WATER", (0, 150, 255))
+    rs.AddLayer("00_SITE::SIDEWALK", (180, 180, 180))
+    rs.AddLayer("00_SITE::STREET", (50, 50, 50))
+    rs.AddLayer("00_SITE::STREET_TEXT", (255, 255, 255))
     rs.AddLayer("06_LABELS", (255, 255, 255))
     
+    # 0a. Surrounding Sidewalk Context (15ft wide)
+    sw_w = rs.AddBox([[-15, -15, -1], [0, -15, -1], [0, 565, -1], [-15, 565, -1], [-15, -15, 0], [0, -15, 0], [0, 565, 0], [-15, 565, 0]])
+    sw_e = rs.AddBox([[330, -15, -1], [345, -15, -1], [345, 565, -1], [330, 565, -1], [330, -15, 0], [345, -15, 0], [345, 565, 0], [330, 565, 0]])
+    sw_s = rs.AddBox([[0, -15, -1], [330, -15, -1], [330, 0, -1], [0, 0, -1], [0, -15, 0], [330, -15, 0], [330, 0, 0], [0, 0, 0]])
+    sw_n = rs.AddBox([[0, 550, -1], [330, 550, -1], [330, 565, -1], [0, 565, -1], [0, 550, 0], [330, 550, 0], [330, 565, 0], [0, 565, 0]])
+    rs.ObjectLayer([sw_w, sw_e, sw_s, sw_n], "00_SITE::SIDEWALK")
+
+    # 0b. Surrounding Streets (40ft wide)
+    st_w = rs.AddBox([[-55, -55, -2], [-15, -55, -2], [-15, 605, -2], [-55, 605, -2], [-55, -55, -1], [-15, -55, -1], [-15, 605, -1], [-55, 605, -1]])
+    st_e = rs.AddBox([[345, -55, -2], [385, -55, -2], [385, 605, -2], [345, 605, -2], [345, -55, -1], [385, -55, -1], [385, 605, -1], [345, 605, -1]])
+    st_s = rs.AddBox([[-15, -55, -2], [345, -55, -2], [345, -15, -2], [-15, -15, -2], [-15, -55, -1], [345, -55, -1], [345, -15, -1], [-15, -15, -1]])
+    st_n = rs.AddBox([[-15, 565, -2], [345, 565, -2], [345, 605, -2], [-15, 605, -2], [-15, 565, -1], [345, 565, -1], [345, 605, -1], [-15, 605, -1]])
+    rs.ObjectLayer([st_w, st_e, st_s, st_n], "00_SITE::STREET")
+
+    # 0c. Painted Street Names (Flat on the asphalt)
+    # West 6th St (South boundary)
+    plane_s = rs.MovePlane(rs.WorldXYPlane(), [100, -40, 0])
+    text_s = rs.AddText("W 6th St", plane_s, 1)
+    
+    # West 5th St (North boundary)
+    plane_n = rs.MovePlane(rs.WorldXYPlane(), [100, 575, 0])
+    text_n = rs.AddText("W 5th St", plane_n, 1)
+    
+    # South Olive St (West boundary) - Rotated 90 degrees
+    plane_w = rs.RotatePlane(rs.MovePlane(rs.WorldXYPlane(), [-40, 200, 0]), 90, [0,0,1])
+    text_w = rs.AddText("S Olive St", plane_w, 1)
+    
+    # South Hill St (East boundary) - Rotated 90 degrees
+    plane_e = rs.RotatePlane(rs.MovePlane(rs.WorldXYPlane(), [375, 200, 0]), 90, [0,0,1])
+    text_e = rs.AddText("S Hill St", plane_e, 1)
+    
+    rs.ObjectLayer([text_s, text_n, text_w, text_e], "00_SITE::STREET_TEXT")
+
     # 1. Base plaza bounding (approx 330ft x 550ft block)
-    plaza = rs.AddBox([[0,0,0], [330,0,0], [330,550,0], [0,550,0], [0,0,-10], [330,0,-10], [330,550,-10], [0,550,-10]])
+    plaza = rs.AddBox([[0,0,-10], [330,0,-10], [330,550,-10], [0,550,-10], [0,0,0], [330,0,0], [330,550,0], [0,550,0]])
     
     # 1b. The 3-Story Underground Parking Garage
-    garage = rs.AddBox([[10, 10, -10], [320, 10, -10], [320, 540, -10], [10, 540, -10], [10, 10, -45], [320, 10, -45], [320, 540, -45], [10, 540, -45]])
+    garage = rs.AddBox([[10, 10, -45], [320, 10, -45], [320, 540, -45], [10, 540, -45], [10, 10, -10], [320, 10, -10], [320, 540, -10], [10, 540, -10]])
     rs.ObjectLayer(garage, "00_SITE::SUBTERRANEAN_GARAGE")
     
     # 1c. The Entrance Ramps (Olive St & Hill St)
-    ramp_west = rs.AddBox([[0, 150, 0], [25, 150, 0], [25, 300, 0], [0, 300, 0], [0, 150, -15], [25, 150, -15], [25, 300, -15], [0, 300, -15]])
+    ramp_west = rs.AddBox([[0, 150, -15], [25, 150, -15], [25, 300, -15], [0, 300, -15], [0, 150, 0], [25, 150, 0], [25, 300, 0], [0, 300, 0]])
     rs.ObjectLayer(ramp_west, "00_SITE::RAMPS")
-    ramp_east = rs.AddBox([[305, 250, 0], [330, 250, 0], [330, 400, 0], [305, 400, 0], [305, 250, -15], [330, 250, -15], [330, 400, -15], [305, 400, -15]])
+    ramp_east = rs.AddBox([[305, 250, -15], [330, 250, -15], [330, 400, -15], [305, 400, -15], [305, 250, 0], [330, 250, 0], [330, 400, 0], [305, 400, 0]])
     rs.ObjectLayer(ramp_east, "00_SITE::RAMPS")
     
     # Carve the ramps out of the main plaza using Boolean Difference
