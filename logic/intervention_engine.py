@@ -3,18 +3,26 @@ import json
 import os
 import random
 import math
+import sys
 
 try:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     DATA_DIR = os.path.join(BASE_DIR, 'data')
+    LOGIC_DIR = os.path.join(BASE_DIR, 'logic')
     MODEL_DIR = os.path.join(BASE_DIR, 'archive', 'assets', 'models')
     JSON_FILE = os.path.join(DATA_DIR, 'memory_manifest.json')
 except NameError:
     # Fallback to the exact path on your machine
     BASE_DIR = r"c:\Users\john\MemoryMachine"
     DATA_DIR = os.path.join(BASE_DIR, 'data')
+    LOGIC_DIR = os.path.join(BASE_DIR, 'logic')
     MODEL_DIR = os.path.join(BASE_DIR, 'archive', 'assets', 'models')
     JSON_FILE = os.path.join(DATA_DIR, 'memory_manifest.json')
+
+if LOGIC_DIR not in sys.path:
+    sys.path.append(LOGIC_DIR)
+
+import site_reconstruction
 
 # If the file wasn't found automatically, prompt the user to locate it
 if not JSON_FILE or not os.path.exists(JSON_FILE):
@@ -32,11 +40,16 @@ def run_intervention_app():
         print("No assets found in the manifest.")
         return
 
+    print("\n========================================")
+    print("1. LOADING PERSHING SQUARE BASE SITE...")
+    site_reconstruction.reconstruct_pershing_square_base()
+
     rs.AddLayer("01_INTERVENTION_ASSETS", (0, 255, 128))
-    rs.AddLayer("02_INTERVENTION_LABELS", (255, 255, 255))
+    rs.AddLayer("06_LABELS", (255, 255, 255))
     rs.EnableRedraw(False)
 
-    print("Auto-deploying {} memory assets to the site...".format(len(asset_data)))
+    print("========================================")
+    print("2. DEPLOYING {} MEMORY ASSETS TO SITE...".format(len(asset_data)))
 
     # Auto-Deploy all assets across the site
     for asset in asset_data:
@@ -147,10 +160,19 @@ def run_intervention_app():
                 rs.SetUserText(g, "Memory_Data", raw_text)
         
         dot = rs.AddTextDot(selected, [pt[0], pt[1], pt[2] + height + 2])
-        rs.ObjectLayer(dot, "02_INTERVENTION_LABELS")
+        rs.ObjectLayer(dot, "06_LABELS")
         
     rs.EnableRedraw(True)
     print("✅ Auto-deployment complete!")
+
+    # Take an automatic high-res screenshot of the final masterplan
+    archive_dir = os.path.join(BASE_DIR, 'archive', 'render_output')
+    if not os.path.exists(archive_dir):
+        os.makedirs(archive_dir)
+    capture_path = os.path.join(archive_dir, 'intervention_masterplan_capture.png')
+    
+    rs.Command('_-ViewCaptureToFile "{}" _Width=1920 _Height=1080 _TransparentBackground=_No _Enter'.format(capture_path))
+    print("📸 Saved final masterplan capture to: {}".format(capture_path))
 
 if __name__ == "__main__":
     run_intervention_app()
