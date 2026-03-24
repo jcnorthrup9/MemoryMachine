@@ -37,16 +37,6 @@ figma.ui.onmessage = async (msg) => {
       frame.x = xOffset;
       frame.fills = [{ type: 'SOLID', color: bgDark }];
       
-      // Draw Spine Divider down the exact middle
-      const spine = figma.createLine();
-      spine.x = 960;
-      spine.y = 0;
-      spine.resize(1080, 0);
-      spine.rotation = 90;
-      spine.strokes = [{ type: 'SOLID', color: borderDim }];
-      spine.strokeWeight = 2;
-      frame.appendChild(spine);
-
       if (slide.type === 'title_slide') {
         const titleNode = createTextWrap(slide.title, 64, accentYellow, 800, true);
         frame.appendChild(titleNode);
@@ -57,6 +47,19 @@ figma.ui.onmessage = async (msg) => {
         frame.appendChild(subNode);
         subNode.x = 80;
         subNode.y = titleNode.y + titleNode.height + 20;
+
+        if (slide.hero_image && slide.hero_image.image) {
+          const rect = figma.createRectangle();
+          frame.appendChild(rect);
+          rect.resize(960, 1080);
+          rect.x = 960;
+          rect.y = 0;
+          try {
+            const imageBytes = figma.base64Decode(slide.hero_image.image);
+            const figmaImage = figma.createImage(imageBytes);
+            rect.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: figmaImage.hash }];
+          } catch (e) { console.log("Error loading hero image", e); }
+        }
       } 
       else if (slide.type === 'text_slide') {
         const titleNode = createTextWrap(slide.title, 48, accentYellow, 800, true);
@@ -68,6 +71,57 @@ figma.ui.onmessage = async (msg) => {
         frame.appendChild(bodyNode);
         bodyNode.x = 80;
         bodyNode.y = titleNode.y + titleNode.height + 40;
+      }
+      else if (slide.type === 'text_and_image_slide') {
+        const titleNode = createTextWrap(slide.title, 48, accentYellow, 800, true);
+        frame.appendChild(titleNode);
+        titleNode.x = 80;
+        titleNode.y = 80;
+
+        const bodyNode = createTextWrap(slide.body, 22, textLight, 800);
+        frame.appendChild(bodyNode);
+        bodyNode.x = 80;
+        bodyNode.y = titleNode.y + titleNode.height + 40;
+
+        const rightTitle = createTextWrap(slide.right_title, 20, textDim, 800, true);
+        frame.appendChild(rightTitle);
+        rightTitle.x = 1040;
+        rightTitle.y = titleNode.y + titleNode.height + 15;
+
+        let currentY = rightTitle.y + rightTitle.height + 20;
+        if (slide.right_grid) {
+          for (const item of slide.right_grid) {
+            if (!item) continue;
+            const rect = figma.createRectangle();
+            frame.appendChild(rect);
+            rect.resize(800, 400);
+            rect.x = 1040;
+            rect.y = currentY;
+            rect.fills = [{ type: 'SOLID', color: {r: 0.03, g: 0.03, b: 0.03} }];
+
+            if (item.image) {
+              try {
+                const imageBytes = figma.base64Decode(item.image);
+                const figmaImage = figma.createImage(imageBytes);
+                rect.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: figmaImage.hash }];
+                rect.strokes = [{ type: 'SOLID', color: borderDim }];
+                rect.strokeWeight = 1;
+              } catch (e) { console.log("Error loading image", e); }
+            } else {
+              rect.strokes = [{ type: 'SOLID', color: borderDim }];
+              rect.strokeWeight = 1;
+              rect.dashPattern = [5, 5];
+            }
+
+            const label = createTextWrap(item.label, 12, textDim, 800);
+            frame.appendChild(label);
+            label.x = 1040;
+            label.y = currentY + 400 + 10;
+            label.textAlignHorizontal = "CENTER";
+
+            currentY += 400 + 40;
+          }
+        }
       }
       else if (slide.type === 'grid_slide') {
         // Main Title (Left Page)
@@ -84,21 +138,20 @@ figma.ui.onmessage = async (msg) => {
 
         let gridX = 80;
         let gridY = leftTitle.y + leftTitle.height + 20;
-        const boxSize = 210;
-        const gap = 15;
+        const boxWidth = 800;
+        const boxHeight = 400;
+        const gap = 40;
 
-        for (let i = 0; i < 9; i++) {
-          if (!slide.left_grid[i]) continue;
+        for (let i = 0; i < (slide.left_grid ? slide.left_grid.length : 0); i++) {
           const item = slide.left_grid[i];
-          const col = i % 3;
-          const row = Math.floor(i / 3);
+          if (!item) continue;
           
-          const boxX = gridX + (col * (boxSize + gap)); 
-          const boxY = gridY + (row * (boxSize + gap));
+          const boxX = gridX; 
+          const boxY = gridY + (i * (boxHeight + gap));
 
           const rect = figma.createRectangle();
           frame.appendChild(rect);
-          rect.resize(boxSize, boxSize);
+          rect.resize(boxWidth, boxHeight);
           rect.x = boxX;
           rect.y = boxY;
           rect.fills = [{ type: 'SOLID', color: {r: 0.03, g: 0.03, b: 0.03} }];
@@ -108,7 +161,7 @@ figma.ui.onmessage = async (msg) => {
             try {
               const imageBytes = figma.base64Decode(item.image);
               const figmaImage = figma.createImage(imageBytes);
-              rect.fills = [{ type: 'IMAGE', scaleMode: 'FIT', imageHash: figmaImage.hash }];
+              rect.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: figmaImage.hash }];
               rect.strokes = [{ type: 'SOLID', color: borderDim }];
               rect.strokeWeight = 1;
             } catch (e) {
@@ -121,10 +174,10 @@ figma.ui.onmessage = async (msg) => {
             rect.dashPattern = [5, 5];
           }
 
-          const label = createTextWrap(item.label, 12, textDim, boxSize);
+          const label = createTextWrap(item.label, 12, textDim, boxWidth);
           frame.appendChild(label);
           label.x = boxX;
-          label.y = boxY + boxSize + 10;
+          label.y = boxY + boxHeight + 10;
           label.textAlignHorizontal = "CENTER";
         }
 
@@ -135,18 +188,16 @@ figma.ui.onmessage = async (msg) => {
         rightTitle.y = mainTitleNode.y + mainTitleNode.height + 15;
 
         gridX = 1040;
-        for (let i = 0; i < 9; i++) {
-          if (!slide.right_grid[i]) continue;
+        for (let i = 0; i < (slide.right_grid ? slide.right_grid.length : 0); i++) {
           const item = slide.right_grid[i];
-          const col = i % 3;
-          const row = Math.floor(i / 3);
+          if (!item) continue;
           
-          const boxX = gridX + (col * (boxSize + gap));
-          const boxY = gridY + (row * (boxSize + gap));
+          const boxX = gridX;
+          const boxY = gridY + (i * (boxHeight + gap));
 
           const rect = figma.createRectangle();
           frame.appendChild(rect);
-          rect.resize(boxSize, boxSize);
+          rect.resize(boxWidth, boxHeight);
           rect.x = boxX;
           rect.y = boxY;
           rect.fills = [{ type: 'SOLID', color: {r: 0.03, g: 0.03, b: 0.03} }];
@@ -155,7 +206,7 @@ figma.ui.onmessage = async (msg) => {
             try {
               const imageBytes = figma.base64Decode(item.image);
               const figmaImage = figma.createImage(imageBytes);
-              rect.fills = [{ type: 'IMAGE', scaleMode: 'FIT', imageHash: figmaImage.hash }];
+              rect.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: figmaImage.hash }];
               rect.strokes = [{ type: 'SOLID', color: borderDim }];
               rect.strokeWeight = 1;
             } catch (e) {
@@ -167,10 +218,10 @@ figma.ui.onmessage = async (msg) => {
             rect.dashPattern = [5, 5];
           }
 
-          const label = createTextWrap(item.label, 12, textDim, boxSize);
+          const label = createTextWrap(item.label, 12, textDim, boxWidth);
           frame.appendChild(label);
           label.x = boxX;
-          label.y = boxY + boxSize + 10;
+          label.y = boxY + boxHeight + 10;
           label.textAlignHorizontal = "CENTER";
         }
       }
