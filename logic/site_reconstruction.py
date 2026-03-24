@@ -1,6 +1,6 @@
-import rhinoscriptsyntax as rs
 import os
 import csv
+import rhinoscriptsyntax as rs
 
 try:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
