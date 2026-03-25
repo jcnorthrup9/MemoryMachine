@@ -19,14 +19,18 @@ figma.ui.onmessage = async (msg) => {
     const borderDim = { r: 34/255, g: 34/255, b: 34/255 }; // #222
 
     // Helper: Force text wrap within boundaries
-    function createTextWrap(text: string, size: number, color: RGB, width: number, isBold: boolean = false) {
+    function createTextWrap(text: string, size: number, color: RGB, width: number, isBold: boolean = false, noWrap: boolean = false) {
       const node = figma.createText();
       node.fontName = { family: "Roboto Mono", style: isBold ? "Bold" : "Regular" };
       node.fontSize = size;
       node.fills = [{ type: 'SOLID', color }];
-      node.textAutoResize = "HEIGHT";
-      node.resize(width, 100); 
-      node.characters = text;
+      if (noWrap) {
+        node.textAutoResize = "WIDTH_AND_HEIGHT";
+      } else {
+        node.textAutoResize = "HEIGHT";
+        node.resize(width, 100); 
+      }
+      node.characters = text || " ";
       return node;
     }
 
@@ -38,15 +42,22 @@ figma.ui.onmessage = async (msg) => {
       frame.fills = [{ type: 'SOLID', color: bgDark }];
       
       if (slide.type === 'title_slide') {
-        const titleNode = createTextWrap(slide.title, 64, accentYellow, 800, true);
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
         frame.appendChild(titleNode);
         titleNode.x = 80;
-        titleNode.y = 450;
+        titleNode.y = 40;
 
         const subNode = createTextWrap(slide.subtitle, 24, textDim, 800);
         frame.appendChild(subNode);
         subNode.x = 80;
         subNode.y = titleNode.y + titleNode.height + 20;
+
+        if (slide.body) {
+          const bodyNode = createTextWrap(slide.body, 16, textLight, 800);
+          frame.appendChild(bodyNode);
+          bodyNode.x = 80;
+          bodyNode.y = 250;
+        }
 
         if (slide.hero_image && slide.hero_image.image) {
           const rect = figma.createRectangle();
@@ -62,33 +73,63 @@ figma.ui.onmessage = async (msg) => {
         }
       } 
       else if (slide.type === 'text_slide') {
-        const titleNode = createTextWrap(slide.title, 48, accentYellow, 800, true);
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
         frame.appendChild(titleNode);
         titleNode.x = 80;
-        titleNode.y = 80;
+        titleNode.y = 40;
 
-        const bodyNode = createTextWrap(slide.body, 22, textLight, 800);
+        const bodyNode = createTextWrap(slide.body, 16, textLight, 800);
         frame.appendChild(bodyNode);
         bodyNode.x = 80;
-        bodyNode.y = titleNode.y + titleNode.height + 40;
+        bodyNode.y = 250;
       }
-      else if (slide.type === 'text_and_image_slide') {
-        const titleNode = createTextWrap(slide.title, 48, accentYellow, 800, true);
+      else if (slide.type === 'text_and_mermaid_slide') {
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
         frame.appendChild(titleNode);
         titleNode.x = 80;
-        titleNode.y = 80;
+        titleNode.y = 40;
 
-        const bodyNode = createTextWrap(slide.body, 22, textLight, 800);
+        const bodyNode = createTextWrap(slide.body || " ", 16, textLight, 800);
         frame.appendChild(bodyNode);
         bodyNode.x = 80;
-        bodyNode.y = titleNode.y + titleNode.height + 40;
+        bodyNode.y = 250;
 
         const rightTitle = createTextWrap(slide.right_title, 20, textDim, 800, true);
         frame.appendChild(rightTitle);
         rightTitle.x = 1040;
         rightTitle.y = titleNode.y + titleNode.height + 15;
 
-        let currentY = rightTitle.y + rightTitle.height + 20;
+        const rect = figma.createRectangle();
+        frame.appendChild(rect);
+        rect.resize(800, 800);
+        rect.x = 1040;
+        rect.y = 250;
+        rect.fills = [{ type: 'SOLID', color: {r: 0.03, g: 0.03, b: 0.03} }];
+        rect.strokes = [{ type: 'SOLID', color: borderDim }];
+        rect.strokeWeight = 1;
+
+        const codeNode = createTextWrap(slide.mermaid_code, 12, {r: 0.5, g: 1.0, b: 0.5}, 760);
+        frame.appendChild(codeNode);
+        codeNode.x = 1060;
+        codeNode.y = rect.y + 20;
+      }
+      else if (slide.type === 'text_and_image_slide') {
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
+        frame.appendChild(titleNode);
+        titleNode.x = 80;
+        titleNode.y = 40;
+
+        const bodyNode = createTextWrap(slide.body, 16, textLight, 800);
+        frame.appendChild(bodyNode);
+        bodyNode.x = 80;
+        bodyNode.y = 250;
+
+        const rightTitle = createTextWrap(slide.right_title, 20, textDim, 800, true);
+        frame.appendChild(rightTitle);
+        rightTitle.x = 1040;
+        rightTitle.y = titleNode.y + titleNode.height + 15;
+
+        let currentY = 250;
         if (slide.right_grid) {
           for (const item of slide.right_grid) {
             if (!item) continue;
@@ -113,19 +154,54 @@ figma.ui.onmessage = async (msg) => {
               rect.dashPattern = [5, 5];
             }
 
-            const label = createTextWrap(item.label, 12, textDim, 800);
-            frame.appendChild(label);
-            label.x = 1040;
-            label.y = currentY + 400 + 10;
-            label.textAlignHorizontal = "CENTER";
-
             currentY += 400 + 40;
           }
         }
       }
+      else if (slide.type === 'dual_text_slide') {
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
+        frame.appendChild(titleNode);
+        titleNode.x = 80;
+        titleNode.y = 40;
+
+        const leftTitle = createTextWrap(slide.left_title, 20, textDim, 800, true);
+        frame.appendChild(leftTitle);
+        leftTitle.x = 80;
+        leftTitle.y = titleNode.y + titleNode.height + 15;
+
+        const leftBody = createTextWrap(slide.left_body, 16, textLight, 800);
+        frame.appendChild(leftBody);
+        leftBody.x = 80;
+        leftBody.y = 250;
+
+        const rightTitle = createTextWrap(slide.right_title, 20, textDim, 800, true);
+        frame.appendChild(rightTitle);
+        rightTitle.x = 1040;
+        rightTitle.y = titleNode.y + titleNode.height + 15;
+
+        const rightBody = createTextWrap(slide.right_body, 16, { r: 0, g: 1, b: 102/255 }, 800);
+        frame.appendChild(rightBody);
+        rightBody.x = 1040;
+        rightBody.y = rightTitle.y + rightTitle.height + 20;
+
+        if (slide.right_image && slide.right_image.image) {
+          const rect = figma.createRectangle();
+          frame.appendChild(rect);
+          rect.resize(800, 600);
+          rect.x = 1040;
+          rect.y = 250;
+          try {
+            const imageBytes = figma.base64Decode(slide.right_image.image);
+            const figmaImage = figma.createImage(imageBytes);
+            rect.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: figmaImage.hash }];
+            rect.strokes = [{ type: 'SOLID', color: borderDim }];
+            rect.strokeWeight = 1;
+          } catch (e) { console.log("Error loading image", e); }
+        }
+      }
       else if (slide.type === 'grid_slide') {
         // Main Title (Left Page)
-        const mainTitleNode = createTextWrap(slide.title, 42, accentYellow, 800, true);
+        const mainTitleNode = createTextWrap(slide.title, 42, accentYellow, 800, true, true);
         frame.appendChild(mainTitleNode);
         mainTitleNode.x = 80;
         mainTitleNode.y = 40;
@@ -137,7 +213,7 @@ figma.ui.onmessage = async (msg) => {
         leftTitle.y = mainTitleNode.y + mainTitleNode.height + 15;
 
         let gridX = 80;
-        let gridY = leftTitle.y + leftTitle.height + 20;
+        let gridY = 250;
         const boxWidth = 800;
         const boxHeight = 400;
         const gap = 40;
@@ -174,11 +250,6 @@ figma.ui.onmessage = async (msg) => {
             rect.dashPattern = [5, 5];
           }
 
-          const label = createTextWrap(item.label, 12, textDim, boxWidth);
-          frame.appendChild(label);
-          label.x = boxX;
-          label.y = boxY + boxHeight + 10;
-          label.textAlignHorizontal = "CENTER";
         }
 
         // --- RIGHT PAGE GRID ---
@@ -218,20 +289,24 @@ figma.ui.onmessage = async (msg) => {
             rect.dashPattern = [5, 5];
           }
 
-          const label = createTextWrap(item.label, 12, textDim, boxWidth);
-          frame.appendChild(label);
-          label.x = boxX;
-          label.y = boxY + boxHeight + 10;
-          label.textAlignHorizontal = "CENTER";
         }
       }
       else if (slide.type === 'workflow_slide') {
-        const titleNode = createTextWrap(slide.title, 48, accentYellow, 1600, true);
+        const titleNode = createTextWrap(slide.title, 42, accentYellow, 1600, true, true);
         frame.appendChild(titleNode);
         titleNode.x = 80;
-        titleNode.y = 80;
+        titleNode.y = 40;
 
-        const startY = titleNode.y + titleNode.height + 80;
+        let startY = 350;
+
+        if (slide.body) {
+          const bodyNode = createTextWrap(slide.body, 16, { r: 0, g: 1, b: 102/255 }, 1600);
+          frame.appendChild(bodyNode);
+          bodyNode.x = 80;
+          bodyNode.y = startY;
+          startY = bodyNode.y + bodyNode.height + 40;
+        }
+
         let currentX = 80;
         
         slide.steps.forEach((step: any, index: number) => {
@@ -269,6 +344,13 @@ figma.ui.onmessage = async (msg) => {
             currentX += 60;
           }
         });
+
+        if (slide.bottom_body) {
+          const bottomBodyNode = createTextWrap(slide.bottom_body, 16, textLight, 1600);
+          frame.appendChild(bottomBodyNode);
+          bottomBodyNode.x = 80;
+          bottomBodyNode.y = startY + 200 + 40;
+        }
       }
 
       generatedNodes.push(frame);

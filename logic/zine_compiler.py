@@ -58,17 +58,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; align-content: start; }
         .matrix-item { background: #080808; border: 1px solid #111; position: relative; display: flex; flex-direction: column; }
         .matrix-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: center; display: block; }
-        .matrix-label { padding: 8px; font-size: 0.6rem; color: #888; text-transform: uppercase; text-align: center; border-top: 1px solid #111; letter-spacing: 1px; }
 
         .single-image-view { width: 100%; height: 100%; display: flex; flex-direction: column; border: 1px solid #111; background: #080808; }
         .single-image-view img { flex-grow: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
-        .single-image-view .matrix-label { border-top: 1px solid #111; padding: 10px; font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
 
         .yearbook-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
         .yearbook-entry { display: flex; flex-direction: column; align-items: center; }
         .yearbook-placeholder { width: 100%; aspect-ratio: 1; background: #0a0a0a; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; color: #444; font-size: 0.6rem; overflow: hidden; }
         .yearbook-placeholder img { width: 100%; height: 100%; object-fit: cover; }
-        .yearbook-label { margin-top: 5px; font-size: 0.55rem; color: #666; text-transform: uppercase; text-align: center; letter-spacing: 1px; }
 
         @keyframes fade-in-image {
             from { opacity: 0; transform: scale(0.98); }
@@ -840,7 +837,7 @@ def compile_zine():
         yearbook_data.append(("{PLACEHOLDER TEXT}", "PENDING"))
 
     def make_yearbook_grid(items):
-        return '<div class="yearbook-grid">' + "".join([f'<div class="yearbook-entry"><div class="yearbook-placeholder">{content}</div><div class="yearbook-label">{name}</div></div>' for name, content in items]) + '</div>'
+        return '<div class="yearbook-grid">' + "".join([f'<div class="yearbook-entry"><div class="yearbook-placeholder">{content}</div></div>' for name, content in items]) + '</div>'
 
     yb_1 = make_yearbook_grid(yearbook_data[:16])
     yb_2 = make_yearbook_grid(yearbook_data[16:32])
@@ -879,8 +876,7 @@ def compile_zine():
         
         items_html = []
         for f in file_list:
-            name = os.path.splitext(f)[0]
-            items_html.append(f'<img src="../archive/precedents/{f}"><div class="matrix-label">{name}</div>')
+                    items_html.append(f'<img src="../archive/precedents/{f}">')
             
         if len(file_list) == 1:
             return f'<div class="single-image-view">{items_html[0]}</div>'

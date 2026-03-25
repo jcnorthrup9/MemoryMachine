@@ -1,0 +1,5 @@
+A computational design project exploring the intersection of human memory decay, artificial intelligence, and procedural architecture.
+
+Post-midterm development introduces the Autonomous Spatial Harvester—a custom-built web-scraping and computer vision pipeline that extracts qualitative human sentiment and quantitative spatial data directly from the internet. This framework was tested through three forensic case studies: the sensory interior of Bottega Louie, the structural facade of the O.T. Johnson Building, and the parametric decay of the Nakagin Capsule Tower.
+
+These automated extraction techniques are now being deployed onto Pershing Square, an ultimate urban palimpsest, to generate a hallucinated masterplan born entirely from synthesized public memory and digital erasure.
