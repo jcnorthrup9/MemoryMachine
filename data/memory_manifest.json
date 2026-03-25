@@ -31,5 +31,11 @@
         "sentiment_score": 0.85,
         "raw_text": "Scraped data for Zaryadye Park. Awaiting spatial reconstruction.",
         "node_id": "ZARYADYE_PARK"
+    },
+    {
+        "name": "exit()",
+        "sentiment_score": 0.85,
+        "raw_text": "Scraped data for exit(). Awaiting spatial reconstruction.",
+        "node_id": "EXIT"
     }
 ]
