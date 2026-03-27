@@ -90,13 +90,14 @@ def generate_all_precedents():
     rs.DeleteObjects(rs.AllObjects())
     spacing = 60
     
-    create_kinetic_mast(rs.AddPoint(0, spacing * 0, 0))
-    create_wadable_pool(rs.AddPoint(spacing * 1, 0, 0))
-    create_art_wall(rs.AddPoint(spacing * 2, 0, 0))
-    create_supertree(rs.AddPoint(spacing * 3, 0, 0))
-    create_graphic_plaza(rs.AddPoint(spacing * 4, 0, 0))
+    create_kinetic_mast([0, spacing * 0, 0])
+    create_wadable_pool([spacing * 1, 0, 0])
+    create_art_wall([spacing * 2, 0, 0])
+    create_supertree([spacing * 3, 0, 0])
+    create_graphic_plaza([spacing * 4, 0, 0])
     
     rs.ZoomExtents()
+    rs.EnableRedraw(True)
     print("--- Precedent Generation Complete ---")
 
 if __name__ == "__main__":
@@ -123,6 +124,7 @@ if __name__ == "__main__":
                 rs_app.RunScript(cmd, 1)
             else:
                 rhino.RunScript(cmd, 1)
-            print("Command sent to Rhino.")
+            print("✅ Command sent to Rhino.")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"❌ Error: {e}")
+            print("Ensure Rhino is running and 'pip install pywin32' is executed in this venv.")

@@ -233,12 +233,12 @@ def build_payload():
     bl_int_items = get_image_items("archive/render_output/bottegaLouieInterior", "GEN INT")
     
     bl_left = [
-        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_10.jpg"},
-        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
+        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/8368f423-3a98-456b-bfa9-b661efd009ac.jpg"},
+        {"label": "ACTUAL 02", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
     ]
-    bl_right = bl_int_items[:2] if len(bl_int_items) >= 2 else [
-        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}, 
-        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"}
+    bl_right = bl_int_items[:2][::-1] if len(bl_int_items) >= 2 else [
+        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"},
+        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}
     ]
 
     nakagin_ext_items = get_image_items("archive/render_output/nakaginExterior", "NAKAGIN EXT")
@@ -403,7 +403,7 @@ def build_payload():
         "The site’s continuous overwriting of physical form perfectly embodies the unstable, shifting nature of both human and machine memory."
     )
 
-    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling the forensic findings into both a digital palimpsest and a physical space.")
+    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling a digital palimpsest.")
 
     payload = {
         "deck_title": "Memory Machine // Digital Palimpsest",
