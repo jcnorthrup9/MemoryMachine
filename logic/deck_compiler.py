@@ -231,15 +231,14 @@ def build_payload():
     # Bottega Louie Comparison Setup
     bl_ext_items = get_image_items("archive/render_output/bottegaLouieExterior", "GEN EXT")
     bl_int_items = get_image_items("archive/render_output/bottegaLouieInterior", "GEN INT")
-    bl_actual_items = get_image_items("archive/reference_images/BottegaLouie", "ACTUAL")
     
     bl_left = [
-        {"label": "ACTUAL 02", "image_path": "archive/reference_images/BottegaLouie/InteriorPano.jpg"},
-        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
+        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/8368f423-3a98-456b-bfa9-b661efd009ac.jpg"},
+        {"label": "ACTUAL 02", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
     ]
-    bl_right = [
-        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}, 
-        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"}
+    bl_right = bl_int_items[:2][::-1] if len(bl_int_items) >= 2 else [
+        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"},
+        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}
     ]
 
     nakagin_ext_items = get_image_items("archive/render_output/nakaginExterior", "NAKAGIN EXT")
@@ -404,7 +403,7 @@ def build_payload():
         "The site’s continuous overwriting of physical form perfectly embodies the unstable, shifting nature of both human and machine memory."
     )
 
-    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and procedural architecture.")
+    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling a digital palimpsest.")
 
     payload = {
         "deck_title": "Memory Machine // Digital Palimpsest",
@@ -428,14 +427,11 @@ def build_payload():
                 ]
             },
             {
-                "type": "text_and_image_slide",
+                "type": "text_and_mermaid_slide",
                 "title": "02 // SYSTEM PIPELINE",
                 "body": pipeline_body,
                 "right_title": "WORKFLOW DIAGRAM",
-                "stack_margin": "0px",
-                "right_grid": make_grid([
-                    {"label": "MERMAID CHART", "image_path": "archive/diagrams/memoryMachineMermaid.png", "object_fit": "contain"}
-                ], count=1)
+                "mermaid_code": mermaid_chart
             },
             {
                 "type": "text_and_image_slide",
@@ -504,7 +500,7 @@ def build_payload():
                 "body": pershing_summary,
                 "right_title": "",
                 "right_grid": make_grid([
-                    {"label": "HERO IMAGE", "image_path": "archive/reference_images/PershingSquare/pershing_square_hero_resized.jpg"}
+                    {"label": "HERO IMAGE", "image_path": "archive/reference_images/PershingSquare/pershing_square_hero_resized.webp"}
                 ], count=1)
             },
             {
@@ -636,11 +632,12 @@ def compile_deck():
             '''
         elif slide["type"] == "dual_text_slide":
             right_img_html = ""
-            text_flex = "1"
+            text_container_style = "margin-top: 115px; flex: 1; overflow: hidden; display: flex; align-items: flex-start;"
+            
             if slide.get("right_image") and slide["right_image"].get("image"):
                 img_data = slide["right_image"]
-                right_img_html = f'<div class="img-stack" style="margin-top: 0px;"><div class="img-box"><img src="data:{img_data["mime_type"]};base64,{img_data["image"]}" style="width: 100%; height: 100%; object-fit: cover;"></div></div>'
-                text_flex = "0 0 auto"
+                right_img_html = f'<div class="img-stack" style="margin-top: 20px;"><div class="img-box"><img src="data:{img_data["mime_type"]};base64,{img_data["image"]}" style="width: 100%; height: 100%; object-fit: cover;"></div></div>'
+                text_container_style = "margin-top: 115px; height: 150px; flex-shrink: 0; overflow: hidden; display: flex; align-items: flex-start;"
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
@@ -651,8 +648,8 @@ def compile_deck():
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
                     <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
-                    <div style="height: 115px; overflow: hidden; display: flex; align-items: flex-start;">
-                        <div class="text-wrap" style="font-family: monospace; color: #00ff66; overflow: hidden; flex: {text_flex}; word-break: break-all;">{slide["right_body"]}</div>
+                    <div style="{text_container_style}">
+                        <div class="text-wrap" style="font-family: monospace; color: #00ff66; overflow: hidden; flex: 1; word-break: break-all; white-space: pre-wrap;">{slide["right_body"]}</div>
                     </div>
                     {right_img_html}
                 </div>

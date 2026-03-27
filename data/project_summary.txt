@@ -1,1 +1,1 @@
-A computational design project exploring the intersection of human memory decay, artificial intelligence, and procedural architecture.
+A computational design project exploring the intersection of human memory decay, artificial intelligence, and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling a digital palimpsest. It is the in this translation where gaps in memory and translational glitches begin to produce new architectural elements.
