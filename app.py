@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import uvicorn, subprocess, sys, os, json, re, math
 from datetime import datetime
@@ -43,7 +42,6 @@ if AI_ENABLED:
         AI_ENABLED = False
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 class MemoryPrompt(BaseModel):
     prompt: str
@@ -52,37 +50,132 @@ class HarvestRequest(BaseModel):
     target: str
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root():
     """Serves the main landing page with the Three.js canvas."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
 # Real-world location + source metadata for each ingested dataset
 SOURCE_INFO = {
-    "Bottega Louie Reviews": {
-        "full_name":   "Bottega Louie",
-        "location":    "700 S Grand Ave, Downtown Los Angeles, CA",
-        "source_type": "Yelp Reviews",
-        "notes":       "Grand Beaux-Arts patisserie and restaurant; celebrated for its marble floors, soaring atrium, acoustic liveliness, and dense social energy.",
-    },
-    "Nakagin Capsule Tower Data": {
-        "full_name":   "Nakagin Capsule Tower",
-        "location":    "8-16 Ginza, Chuo City, Tokyo, Japan (demolished 2022)",
-        "source_type": "TripAdvisor Reviews",
-        "notes":       "Kisho Kurokawa's 1972 Metabolism landmark; 140 prefabricated capsule units stacked around two concrete cores. Iconic for its compressed domesticity and material decay.",
-    },
-    "Pershing Square Reviews": {
+    "Pershing Square": {
         "full_name":   "Pershing Square",
         "location":    "532 S Olive St, Downtown Los Angeles, CA",
         "source_type": "Google Maps Reviews",
-        "notes":       "Five-acre public plaza in the heart of DTLA. Subject of this project — currently being demolished and redesigned for the third time in three decades.",
+        "notes":       "Five-acre public plaza in the heart of DTLA. Subject of this project — currently being redesigned for the third time in three decades.",
+        "logic":       "target_site",
     },
-    "O.T. Johnson Building Data": {
-        "full_name":   "O.T. Johnson Building",
-        "location":    "112 W 5th St, Downtown Los Angeles, CA",
-        "source_type": "Historical Archive",
-        "notes":       "1923 commercial loft building in the Broadway Historic District. Known for its cast iron columns, terrazzo floors, and preserved lobby atmosphere.",
+    "Schouwburgplein": {
+        "full_name":   "Schouwburgplein",
+        "location":    "Rotterdam, Netherlands",
+        "source_type": "Spatial Observations",
+        "notes":       "Vast elevated hard plaza defined by four 35m hydraulic lighting masts operable by the public. Epoxy-coated steel deck, no conventional furniture.",
+        "logic":       "vertical_actuated",
+    },
+    "Grand Park LA": {
+        "full_name":   "Grand Park",
+        "location":    "200 N Grand Ave, Downtown Los Angeles, CA",
+        "source_type": "Spatial Observations",
+        "notes":       "Four-block civic park with a signature bright pink rubber splash pad membrane. Cooling social focal point in a hot urban climate.",
+        "logic":       "surface_membrane",
+    },
+    "Tanner Springs Park": {
+        "full_name":   "Tanner Springs Park",
+        "location":    "NW 10th Ave & NW Marshall St, Portland, OR",
+        "source_type": "Spatial Observations",
+        "notes":       "Naturalistic stormwater wetland park bounded by 368 reclaimed railway tracks set vertically, with fused glass inlays. Strong acoustic baffle effect.",
+        "logic":       "boundary_texture",
+    },
+    "Gardens by the Bay": {
+        "full_name":   "Gardens by the Bay — Supertree Grove",
+        "location":    "18 Marina Gardens Dr, Singapore",
+        "source_type": "Spatial Observations",
+        "notes":       "18 vertical gardens 25-50m tall; concrete and steel armatures supporting living plant canopies that shade, collect rainwater, and vent the greenhouses below.",
+        "logic":       "infrastructure_vent",
+    },
+    "Superkilen": {
+        "full_name":   "Superkilen",
+        "location":    "Norrebro, Copenhagen, Denmark",
+        "source_type": "Spatial Observations",
+        "notes":       "750m linear park in three color-coded zones; the Red Square features undulating black-and-white stripe patterns on modeled topography. Global furniture collection.",
+        "logic":       "ground_pattern",
+    },
+    "Paley Park": {
+        "full_name":   "Paley Park",
+        "location":    "3 E 53rd St, New York, NY",
+        "source_type": "Spatial Observations",
+        "notes":       "42x100ft vest-pocket park with a 20ft full-width water wall generating ~75dB white noise that masks Midtown Manhattan traffic. Movable chairs, honey locust canopy.",
+        "logic":       "acoustic_wall",
+    },
+    "Klyde Warren Park": {
+        "full_name":   "Klyde Warren Park",
+        "location":    "2012 Woodall Rodgers Fwy, Dallas, TX",
+        "source_type": "Spatial Observations",
+        "notes":       "5.2-acre deck park over a freeway in a hot continental climate. Shade trees, splash pad, food truck row, dog park — programmatic activation as primary strategy.",
+        "logic":       "deck_program",
+    },
+    "Millennium Park": {
+        "full_name":   "Millennium Park",
+        "location":    "201 E Randolph St, Chicago, IL",
+        "source_type": "Spatial Observations",
+        "notes":       "24.5-acre park over a rail yard. Crown Fountain: twin 50ft towers projecting faces that periodically jet water into a shallow black granite plaza. Cloud Gate reflects city at multiple scales.",
+        "logic":       "interactive_surface",
+    },
+    "Parc de la Villette": {
+        "full_name":   "Parc de la Villette",
+        "location":    "211 Av. Jean Jaures, Paris, France",
+        "source_type": "Spatial Observations",
+        "notes":       "55ha park by Tschumi; 26 red steel follies on a 120m grid provide wayfinding and distributed program across a landscape of lines, surfaces, and thematic gardens.",
+        "logic":       "folly_grid",
+    },
+    "Zaryadye Park": {
+        "full_name":   "Zaryadye Park",
+        "location":    "Varvarka St, Moscow, Russia",
+        "source_type": "Spatial Observations",
+        "notes":       "35-acre park adjacent to Red Square compressing four Russian biomes — tundra, steppe, forest, wetland. Floating cantilevered bridge over the Moscow River.",
+        "logic":       "landscape_hybrid",
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# Pershing Square static site context — loaded from Rhino-derived geometry JSON.
+# Generated by logic/site_to_threejs.py (run standalone to regenerate).
+# 1 Three.js unit = 5 real metres = 16.4042 ft
+# Origin = centre of the park block. X=E(+)/W(-), Y=Up, Z=S(+)/N(-)
+# ---------------------------------------------------------------------------
+_B = "#111116"   # close buildings
+_T = "#0d0d12"   # background towers
+
+# Surrounding building / skyline context kept here (not in Rhino model)
+_DTLA_CONTEXT = [
+    # ── Surrounding buildings — immediate context ──────────────────────────
+    {"type": "box", "args": [9,  8, 14], "position": [-19, 4.0,  -6], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [9,  6, 10], "position": [-19, 3.0,  +8], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [7, 12, 10], "position": [+18, 6.0,  -7], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [6, 17,  8], "position": [+18, 8.5,  +8], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [14, 6,  8], "position": [ -3, 3.0, -22], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [ 7, 5,  6], "position": [+9,  2.5, -21], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [14, 9, 10], "position": [ -4, 4.5, +23], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [ 8, 6,  8], "position": [ +9, 3.0, +24], "color": _B, "opacity": 0.85},
+    # ── Background towers — DTLA skyline ──────────────────────────────────
+    {"type": "box", "args": [5, 40, 5], "position": [-36, 20, -22], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [5, 22, 5], "position": [-28, 11, -10], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [5, 30, 5], "position": [-26, 15, +20], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 18, 4], "position": [+27, 9,  +20], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 14, 4], "position": [+32, 7,  -15], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 16, 4], "position": [-14, 8,  -28], "color": _T, "opacity": 0.65},
+]
+
+# Load park geometry from Rhino-derived JSON; fall back to empty list if missing.
+_SITE_JSON = os.path.join(BASE_DIR, 'data', 'pershing_site_context.json')
+try:
+    with open(_SITE_JSON) as _f:
+        _park_geo = json.load(_f).get("geometries", [])
+    print(f"[OK] Loaded {len(_park_geo)} park geometry descriptors from {_SITE_JSON}")
+except Exception as _e:
+    print(f"[WARN] Could not load park geometry JSON ({_e}). Run logic/site_to_threejs.py to generate it.")
+    _park_geo = []
+
+PERSHING_SQUARE_CONTEXT = _park_geo + _DTLA_CONTEXT
 
 
 MATERIAL_COLORS = {
@@ -250,6 +343,64 @@ def generate_mermaid_diagram(prompt, matches, spatial_params):
     
     return "\n".join(lines)
 
+DIAGRAMS_DIR = os.path.join(BASE_DIR, 'archive', 'diagrams')
+
+def _source_to_diagram_key(source_name: str) -> str:
+    """'Parc de la Villette' → 'parc_de_la_villette'"""
+    return re.sub(r'[^a-z0-9]+', '_', source_name.lower()).strip('_')
+
+def load_spatial_blueprints(matches: list) -> dict:
+    """
+    For each ChromaDB match, look for archive/diagrams/{site}_diagram.json.
+    Returns {source_name: blueprint_dict} for every file that exists.
+    """
+    blueprints = {}
+    seen = set()
+    for m in matches:
+        src = m['metadata'].get('source', '')
+        if not src or src in seen:
+            continue
+        seen.add(src)
+        key  = _source_to_diagram_key(src)
+        path = os.path.join(DIAGRAMS_DIR, f"{key}_diagram.json")
+        if os.path.exists(path):
+            try:
+                with open(path, encoding='utf-8') as f:
+                    blueprints[src] = json.load(f)
+                print(f"      -> Blueprint loaded: {os.path.basename(path)}")
+            except Exception as e:
+                print(f"      -> Blueprint load failed ({path}): {e}")
+    return blueprints
+
+def format_blueprints_for_prompt(blueprints: dict) -> str:
+    """Serialise loaded blueprints into a compact prompt section."""
+    if not blueprints:
+        return ""
+    parts = []
+    for src, bp in blueprints.items():
+        zones = bp.get("zones", [])
+        paths = bp.get("paths", [])
+        rels  = bp.get("relationships", [])
+        logic = bp.get("design_logic", "")
+        zone_lines = "; ".join(f'{z["id"]}={z["label"]}' for z in zones[:8])
+        path_lines = "; ".join(f'{p["id"]}={p["label"]}({p["type"]})' for p in paths[:6])
+        rel_lines  = "\n  ".join(f'- {r}' for r in rels[:6])
+        parts.append(
+            f"BLUEPRINT: {src}\n"
+            f"  Design Logic: {logic[:300]}\n"
+            f"  Zones: {zone_lines}\n"
+            f"  Paths: {path_lines}\n"
+            f"  Relationships:\n  {rel_lines}"
+        )
+    return "\n\n".join(parts)
+
+
+@app.get("/api/site-context")
+async def get_site_context():
+    """Returns the static Pershing Square site geometry for the Three.js base layer."""
+    return {"geometries": PERSHING_SQUARE_CONTEXT}
+
+
 @app.post("/api/generate")
 async def generate_memory_node(payload: MemoryPrompt):
     """
@@ -273,23 +424,40 @@ async def generate_memory_node(payload: MemoryPrompt):
 
     # 2. AI Synthesis
     print("[2/3] Synthesizing spatial parameters and narrative with Gemini...")
-    context_excerpts = "\n\n".join([f"Source: {m['metadata'].get('source', 'Unknown')}\nFragment: \"...{m['document']}...\"" for m in matches])
-    
+    context_excerpts = "\n\n".join([
+        f"Source: {m['metadata'].get('source', 'Unknown')}\nFragment: \"...{m['document']}...\""
+        for m in matches
+    ])
+
+    # Load any spatial blueprint JSONs that correspond to matched sources
+    blueprints     = load_spatial_blueprints(matches)
+    blueprint_text = format_blueprints_for_prompt(blueprints)
+    blueprint_section = (
+        f"\n\n[ RETRIEVED SPATIAL BLUEPRINTS ]\n"
+        f"The following diagram analyses were extracted from precedent site drawings.\n"
+        f"Use the zones, paths, and relationships to ground the spatial_parameters output —\n"
+        f"the generated geometry should inherit and reinterpret this spatial DNA.\n\n"
+        f"{blueprint_text}"
+    ) if blueprint_text else ""
+
     system_prompt = (
         'You are an expert architect for the "Memory Machine" project. Your task is to translate a user\'s qualitative desire into a concrete architectural intervention for Pershing Square, Los Angeles. '
-        'You will be given a user prompt and several "memory fragments" from a database. '
-        'Synthesize this information into a single, valid JSON object with NO additional text or markdown. The JSON object must have three top-level keys: "name", "narrative", and "spatial_parameters".\n\n'
+        'You will be given a user prompt, "memory fragments" from a review database, and (when available) spatial blueprint data extracted from precedent diagrams. '
+        'Synthesize all of this into a single, valid JSON object with NO additional text or markdown. The JSON object must have three top-level keys: "name", "narrative", and "spatial_parameters".\n\n'
         f'USER PROMPT:\n"{prompt}"\n\n'
-        f'RETRIEVED MEMORY FRAGMENTS:\n{context_excerpts}\n\n'
+        f'RETRIEVED MEMORY FRAGMENTS:\n{context_excerpts}'
+        f'{blueprint_section}\n\n'
         'INSTRUCTIONS:\n'
         '1.  **name**: Create a poetic name for the intervention (e.g., "Canopy of Whispers").\n'
-        '2.  **narrative**: Write a short (2-paragraph) architectural narrative describing the space, its "witness marks" from the memory fragments, and how it collides with Pershing Square.\n'
+        '2.  **narrative**: Write a short (2-paragraph) architectural narrative describing the space, its "witness marks" from the memory fragments, and how it collides with Pershing Square.'
+        + (' Reference at least one specific zone, path, or relationship from the spatial blueprints to show the design logic is grounded in the precedent DNA.' if blueprint_text else '') + '\n'
         '3.  **spatial_parameters**: Generate precise parameters for a 3D model. This object MUST contain:\n'
         '    - "geometry_type": (string) Choose one: "pavilion_with_water", "shade_canopy", "water_garden", "acoustic_screen", "memory_tower", "landscape_mound", "amphitheater".\n'
         '    - "footprint_m": (object) with "width" and "depth" keys.\n'
         '    - "height_m": (float) The overall height in meters.\n'
         '    - "materials": (list of strings) e.g., ["concrete", "water", "steel", "glass", "wood", "vegetation", "stone"].\n'
-        '    - **Specific parameters based on geometry_type (add 2-3 relevant keys):**\n'
+        + ('    - "blueprint_sources": (list of strings) Name the precedent sites whose spatial DNA most influenced this design.\n' if blueprint_text else '')
+        + '    - **Specific parameters based on geometry_type (add 2-3 relevant keys):**\n'
         '        - If "shade_canopy": "canopy_shape" (string, e.g., "flat_grid", "curved_fabric", "perforated_mesh"), "column_count" (integer), "shade_percentage" (float 0.0-1.0).\n'
         '        - If "water_garden": "pool_depth_m" (float), "water_feature_type" (string, e.g., "shallow_wading_pool", "bubbler_fountain", "trickling_stream"), "seating_elements" (list of strings, e.g., ["integrated_benches", "loose_stones"]).\n'
         '        - If "pavilion_with_water": "roof_type" (string, e.g., "flat", "pitched", "domed"), "wall_material" (string, e.g., "glass", "wood_slats", "perforated_metal"), "water_body_shape" (string, e.g., "rectangular", "organic", "circular").\n'
@@ -298,7 +466,11 @@ async def generate_memory_node(payload: MemoryPrompt):
         '        - If "landscape_mound": "slope_angle_degrees" (float, 0-90), "vegetation_type" (string, e.g., "grass", "succulents", "wildflowers"), "path_material" (string, e.g., "gravel", "paving_stones", "dirt").\n'
         '        - If "amphitheater": "tiers" (integer, number of seating levels), "seating_material" (string), "stage_width_m" (float), "orientation" (string, e.g., "circular", "fan_shaped", "rectangular").\n'
         'Choose "amphitheater" whenever the memory fragments reference tiered seating, stepped plazas, auditoriums, bowl-shaped spaces, or performance venues.\n\n'
-        'Respond with ONLY the raw JSON object.'
+        + ('When spatial blueprints are provided, let the zones and relationships guide the geometry_type choice and footprint. '
+           'For example: a blueprint with a strong linear promenade and distributed attractors suggests "acoustic_screen" or multiple "shade_canopy" elements; '
+           'a blueprint with a central anchor building and radiating paths suggests "pavilion_with_water" or "amphitheater".\n\n'
+           if blueprint_text else '')
+        + 'Respond with ONLY the raw JSON object.'
     )
     
     try:
@@ -341,12 +513,13 @@ async def generate_memory_node(payload: MemoryPrompt):
         })
 
     return {
-        "status":    "success",
-        "name":      name,
-        "narrative": narrative,
-        "sources":   sources,
-        "geometries": geometries,
-        "diagram":   diagram,
+        "status":       "success",
+        "name":         name,
+        "narrative":    narrative,
+        "sources":      sources,
+        "geometries":   geometries,
+        "site_context": PERSHING_SQUARE_CONTEXT,
+        "diagram":      diagram,
     }
 
 @app.post("/api/harvest")

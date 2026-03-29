@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Machine — Precedent Scrapbook</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --paper:   #f4f0e6;
+  --paper2:  #ede8d8;
+  --ink:     #2a2318;
+  --ink2:    #4a3f30;
+  --faint:   #9a8f80;
+  --red:     #8b1a1a;
+  --stamp:   rgba(139,26,26,0.18);
+  --rule:    rgba(42,35,24,0.12);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: #cbc4b4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23bbb5a4'/%3E%3Ccircle cx='1' cy='1' r='0.7' fill='%23c4bdb0' opacity='0.5'/%3E%3C/svg%3E");
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  color: var(--ink);
+  padding: 2rem 1rem 4rem;
+}
+
+/* ── Cover header ── */
+.cover {
+  max-width: 900px;
+  margin: 0 auto 3rem;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 2.5rem 3rem;
+  position: relative;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.25);
+}
+.cover::before {
+  content: '';
+  position: absolute; inset: 6px;
+  border: 1px dashed var(--faint);
+  pointer-events: none;
+}
+.cover-label {
+  font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 0.4rem;
+}
+.cover-title {
+  font-family: 'Special Elite', cursive;
+  font-size: 2.4rem; line-height: 1.1;
+  letter-spacing: 0.04em; color: var(--ink);
+}
+.cover-subtitle {
+  margin-top: 0.6rem; font-size: 0.85rem; color: var(--ink2);
+  border-top: 1px solid var(--rule); padding-top: 0.5rem; margin-top: 0.8rem;
+}
+.cover-meta {
+  display: flex; gap: 2rem; flex-wrap: wrap;
+  margin-top: 1rem; font-size: 0.72rem; color: var(--faint);
+  letter-spacing: 0.1em;
+}
+.stamp-classified {
+  position: absolute; top: 1.8rem; right: 2rem;
+  font-family: 'Special Elite', cursive;
+  font-size: 1.1rem; color: var(--red);
+  border: 2px solid var(--red); padding: 0.2rem 0.6rem;
+  transform: rotate(-4deg); opacity: 0.6;
+  letter-spacing: 0.12em;
+}
+
+/* ── Dossier card ── */
+.dossier-grid {
+  max-width: 900px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr; gap: 3rem;
+}
+
+.card {
+  background: var(--paper);
+  border: 1.5px solid var(--ink2);
+  padding: 0;
+  box-shadow: 3px 5px 0 rgba(0,0,0,0.20);
+  position: relative;
+  page-break-inside: avoid;
+}
+.card::after {
+  content: '';
+  position: absolute; inset: 5px;
+  border: 1px dotted var(--rule);
+  pointer-events: none;
+}
+
+.card-header {
+  background: var(--paper2);
+  border-bottom: 1.5px solid var(--ink2);
+  padding: 1rem 1.4rem 0.8rem;
+  display: flex; align-items: baseline; gap: 1rem;
+}
+.card-number {
+  font-size: 0.65rem; color: var(--faint);
+  letter-spacing: 0.25em; white-space: nowrap;
+}
+.card-name {
+  font-family: 'Special Elite', cursive;
+  font-size: 1.45rem; color: var(--ink);
+  line-height: 1.1;
+}
+.card-location {
+  font-size: 0.72rem; color: var(--faint);
+  letter-spacing: 0.08em; margin-left: auto; white-space: nowrap;
+}
+
+.card-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0;
+}
+
+/* ── Polaroid image ── */
+.polaroid-wrap {
+  padding: 1.2rem 0.8rem 0.8rem 1.2rem;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.5rem;
+}
+.polaroid {
+  background: #fff;
+  padding: 6px 6px 28px;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.28);
+  width: 160px;
+}
+.polaroid img {
+  display: block; width: 148px; height: 110px;
+  object-fit: cover; filter: sepia(0.18) contrast(1.05);
+}
+.polaroid-missing {
+  width: 148px; height: 110px;
+  background: #ccc8bc;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; color: #888; text-align: center;
+  letter-spacing: 0.06em; line-height: 1.4;
+}
+.polaroid-caption {
+  font-size: 0.6rem; color: var(--faint); text-align: center;
+  letter-spacing: 0.05em; margin-top: 2px;
+  font-style: italic;
+}
+
+.card-tag {
+  display: inline-block;
+  font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase;
+  background: var(--ink); color: var(--paper);
+  padding: 0.15rem 0.45rem; margin-top: 0.4rem;
+}
+
+/* ── Text columns ── */
+.card-text {
+  padding: 1.2rem 1.4rem 1.2rem 0.8rem;
+  border-left: 1.5px solid var(--rule);
+}
+
+.section-label {
+  font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--faint); border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.2rem; margin-bottom: 0.5rem;
+}
+
+.wiki-blurb {
+  font-size: 0.8rem; line-height: 1.65;
+  color: var(--ink2); margin-bottom: 1.1rem;
+}
+.wiki-blurb em { font-style: italic; }
+
+.reviews-list {
+  list-style: none; padding: 0;
+}
+.reviews-list li {
+  font-size: 0.76rem; line-height: 1.55;
+  color: var(--ink); padding: 0.3rem 0 0.3rem 1.1rem;
+  border-bottom: 1px dotted var(--rule);
+  position: relative;
+}
+.reviews-list li::before {
+  content: '›'; position: absolute; left: 0;
+  color: var(--faint);
+}
+.reviews-list li:last-child { border-bottom: none; }
+
+/* ── No-data fallback ── */
+.no-data {
+  font-size: 0.75rem; color: var(--faint); font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* ── Footer ── */
+.footer {
+  max-width: 900px; margin: 3rem auto 0;
+  text-align: center; font-size: 0.65rem;
+  color: var(--faint); letter-spacing: 0.1em;
+  border-top: 1px solid var(--rule); padding-top: 1rem;
+}
+
+.toc { margin-top: 1rem; }
+.toc-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.3rem 1.5rem; padding: 0; }
+.toc-list li a {
+  font-size: 0.72rem; color: var(--ink2); text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.toc-list li a:hover { text-decoration: underline; color: var(--red); }
+.toc-num { color: var(--faint); margin-right: 0.2rem; }
+</style>
+</head>
+<body>
+
+  <div class="cover">
+    <div class="stamp-classified">DOSSIER</div>
+    <div class="cover-label">Memory Machine · Pershing Square DTLA · Precedent Research</div>
+    <div class="cover-title">Outdoor Public Space<br>Precedent Scrapbook</div>
+    <div class="cover-subtitle">
+      Ten curated case studies selected for spatial, material, acoustic, and programmatic
+      relevance to the redesign of Pershing Square, Downtown Los Angeles.
+    </div>
+    <div class="cover-meta">
+      <span>COMPILED: 28 Mar 2026</span>
+      <span>CORPUS: 10 SITES</span>
+      <span>SOURCE: Wikipedia · DuckDuckGo · Gemini Synthesis</span>
+      <span>PROJECT: MEMORY MACHINE v2</span>
+    </div>
+    <div class="toc"><ul class='toc-list'><li><a href="#schouwburgplein"><span class="toc-num">01.</span> Schouwburgplein</a></li><li><a href="#grand_park_la"><span class="toc-num">02.</span> Grand Park Los Angeles</a></li><li><a href="#tanner_springs"><span class="toc-num">03.</span> Tanner Springs Park</a></li><li><a href="#gardens_by_the_bay"><span class="toc-num">04.</span> Gardens by the Bay Supertree Grove</a></li><li><a href="#superkilen"><span class="toc-num">05.</span> Superkilen Copenhagen</a></li><li><a href="#paley_park"><span class="toc-num">06.</span> Paley Park New York</a></li><li><a href="#klyde_warren_park"><span class="toc-num">07.</span> Klyde Warren Park Dallas</a></li><li><a href="#millennium_park"><span class="toc-num">08.</span> Millennium Park Chicago</a></li><li><a href="#parc_de_la_villette"><span class="toc-num">09.</span> Parc de la Villette Paris</a></li><li><a href="#zaryadye_park"><span class="toc-num">10.</span> Zaryadye Park Moscow</a></li></ul></div>
+  </div>
+
+  <div class="dossier-grid">
+    
+  <article class="card" id="schouwburgplein">
+    <div class="card-header">
+      <span class="card-number">CASE-01 / REF-SCHOUWBURGPL</span>
+      <span class="card-name">Schouwburgplein</span>
+      <span class="card-location">Rotterdam</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(-2.1deg)">
+          <img src="../assets/precedents/schouwburgplein_satellite.jpg" alt="Satellite view of Schouwburgplein" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">schouwburgplein</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb"><em>No archival record found.</em></p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>West8is an urban planning andlandscapearchitecture firm founded by Adriaan Geuze and Paul van Beek</li><li>inRotterdam, Netherlands in 1987.</li><li>It is known for its contemporary designs and innovative solutions</li><li>to urban planning problems[1] using lighting, metal structures, and color.</li><li>PublicsquareSchouwburgpleinRotterdam(NL).The square is designed as an interactivepublicspace,</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="grand_park_la">
+    <div class="card-header">
+      <span class="card-number">CASE-02 / REF-GRAND_PARK_L</span>
+      <span class="card-name">Grand Park Los Angeles</span>
+      <span class="card-location">downtown</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(1.4deg)">
+          <img src="../assets/precedents/grand_park_la_satellite.jpg" alt="Satellite view of Grand Park Los Angeles" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">grand park la</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Gloria Molina Grand Park, commonly known as Grand Park, is a 12-acre (4.9 ha) park located in the civic center of Los Angeles, California. First developed in 1966 as the 'Civic Center Mall' with plazas, fountains and a Court of Flags, it is now a part of the larger redevelopment known as the Grand Avenue Project, with its first phase having opened in July 2012. Grand Park is…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>The design of Grand Park has no smaller aim than to express the multicultural diversity of Los</li><li>Angeles through landscape design and architecture.</li><li>The12-acre Grand Park is in the heart of the Los Angels Civic Center district.</li><li>landscape architects at Rios Clementi Hale Studios designed ...</li><li>Nov 9, 2014·Grand Park, Los Angeles, CA.</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="tanner_springs">
+    <div class="card-header">
+      <span class="card-number">CASE-03 / REF-TANNER_SPRIN</span>
+      <span class="card-name">Tanner Springs Park</span>
+      <span class="card-location">Oregon</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(-0.8deg)">
+          <img src="../assets/precedents/tanner_springs_satellite.jpg" alt="Satellite view of Tanner Springs Park" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">tanner springs</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Tanner Springs Park is a pocket park in Portland, Oregon's Pearl District. It is the second of a series of three parks in the area including The Fields Park and Jamison Square that were laid out in the 2001 plan for River District Renewal. A fourth park was also planned but has not been built.</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>August 7, 2025 -During storms, the leaf-shaped ...</li><li>using UV light.The park is planted with tall</li><li>native grasses, and includes Oregon oak, red alder and bigleaf maple trees, salvaged in the region</li><li>and planted as mature trees....</li><li>May 26, 2023 -An intense community participation and a stakeholder steering group means that this</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="gardens_by_the_bay">
+    <div class="card-header">
+      <span class="card-number">CASE-04 / REF-GARDENS_BY_T</span>
+      <span class="card-name">Gardens by the Bay Supertree Grove</span>
+      <span class="card-location">Singapore</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(2.3deg)">
+          <img src="../assets/precedents/gardens_by_the_bay_satellite.jpg" alt="Satellite view of Gardens by the Bay Supertree Grove" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">gardens by the bay</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">The Gardens by the Bay (GBTB) is an urban park spanning 105 hectares (260 acres) in the Central Region of Singapore, adjacent to the Marina Reservoir. The park consists of three waterfront gardens: Bay South Garden in Marina South, Bay East Garden with the Founders' Memorial in Marina East and Bay Central Garden in the Downtown Core and Kallang. The largest of the gardens is…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>TheGardensbytheBayis an urban park spanning 105 hectares in the Central Region ofSingapore, adjacent</li><li>The park consists of three waterfront gardens: Bay South Garden in Marina</li><li>Free Explore the breathtakingSupertreeGroveatGardensbytheBayinSingapore, a futuristic iconic</li><li>SupertreeGroveatGardensbytheBay,Singapore.</li><li>Design: Grant Associates with Wilkinson</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="superkilen">
+    <div class="card-header">
+      <span class="card-number">CASE-05 / REF-SUPERKILEN</span>
+      <span class="card-name">Superkilen Copenhagen</span>
+      <span class="card-location">Norrebro</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(-1.6deg)">
+          <img src="../assets/precedents/superkilen_satellite.jpg" alt="Satellite view of Superkilen Copenhagen" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">superkilen</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Superkilen is a public park in the Nørrebro district of Copenhagen, Denmark. The park is designed to bring immigrants and locals together, promoting tolerance and unity in one of Denmark's most ethnically-diverse and socially-challenged communities. Not only is the park a meeting place for local residents, it is a tourist attraction for Copenhagen. Designed by the arts group…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>Public spaces ,Copenhagen,BIG,Topotek1,Landscaping, a+t 38 Strategy and Tactics in Public Space ,</li><li>The architects worked alongsidelandscapearchitectsTopotek1and artists Superflex on thedesignof</li><li>theSuperkilenpark, which stretches 750 metres ...</li><li>Superkilenmasterplan designed byBIG+Topotek1+ Superflex has a great start to 2013 receiving a 2013</li><li>AIA NATIONAL HONOR AWARD and a citation as ...</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="paley_park">
+    <div class="card-header">
+      <span class="card-number">CASE-06 / REF-PALEY_PARK</span>
+      <span class="card-name">Paley Park New York</span>
+      <span class="card-location">York</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(0.9deg)">
+          <img src="../assets/precedents/paley_park_satellite.jpg" alt="Satellite view of Paley Park New York" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">paley park</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Paley Park is a pocket park located at 3 East 53rd Street between Madison and Fifth Avenues in Midtown Manhattan, New York City, on the former site of the Stork Club. Designed by the landscape architectural firm of Zion Breen Richardson Associates, it opened May 23, 1967. Paley Park is often cited as one of the finest urban spaces in the United States.</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>December 14, 2025 -Measuring 4,200 square feet (390 m2), the park contains airy trees, lightweight</li><li>furniture and simple spatial organization.A 20-foot (6.1 m) high waterfall, with a capacity of 1,800</li><li>US gallons (6,800 L) per minute, spans the rear boundary of ...</li><li>A plaque near the entrance reads: ...</li><li>it is given.A 20-foot waterfall is set against the back wall</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="klyde_warren_park">
+    <div class="card-header">
+      <span class="card-number">CASE-07 / REF-KLYDE_WARREN</span>
+      <span class="card-name">Klyde Warren Park Dallas</span>
+      <span class="card-location">Texas</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(-2.5deg)">
+          <img src="../assets/precedents/klyde_warren_satellite.jpg" alt="Satellite view of Klyde Warren Park Dallas" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">klyde warren park</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Klyde Warren Park is a 5.4-acre (2.2 ha) public park in Downtown Dallas, Texas. The park is over the Woodall Rodgers Freeway, and opened in 2012. It is named for Klyde Warren, the young son of billionaire Kelcy Warren who donated $10 million to the development of the park.
+The urban park is open to the public, but is operated by the private Woodall Rodgers Park Foundation.…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>Klyde WarrenParkis a 5.4-acre (2.2 ha) publicparkin DowntownDallas,Texas.</li><li>Theparkis over the Woodall</li><li>RodgersFreeway, and opened in 2012.</li><li>It is named for Klyde Warren, the young son of billionaire Kelcy</li><li>Warren who donated $10 million to the development of thepark.</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="millennium_park">
+    <div class="card-header">
+      <span class="card-number">CASE-08 / REF-MILLENNIUM_P</span>
+      <span class="card-name">Millennium Park Chicago</span>
+      <span class="card-location">Chicago</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(1.1deg)">
+          <img src="../assets/precedents/millennium_park_satellite.jpg" alt="Satellite view of Millennium Park Chicago" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">millennium park</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Millennium Park is a public park in the Loop community area of Chicago, Illinois, United States, operated by the Chicago Department of Cultural Affairs. The park, opened in July 2004, is a prominent civic center near the city's Lake Michigan shoreline that covers a 24.5-acre (9.9 ha) section of northwestern Grant Park. Featuring a variety of public art, outdoor spaces and…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>"Unfinished, but engaging, public art—'Cloud Gate' and Crown Fountain intrigue".</li><li>Distinctive art pieces include: The Pritzker Pavilion, by world-renowned architect Frank Gehry.Cloud</li><li>Gate, created by Indian-born British artist Anish Kapoor and nicknamed"The Bean" by Chicagoans.</li><li>TheCrown Fountain, by Spanish artist Jaume Plensa.Millennium Parkcelebrates many</li><li>qualitiesChicagoresidents love about their city.</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="parc_de_la_villette">
+    <div class="card-header">
+      <span class="card-number">CASE-09 / REF-PARC_DE_LA_V</span>
+      <span class="card-name">Parc de la Villette Paris</span>
+      <span class="card-location">Paris</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(-1.3deg)">
+          <img src="../assets/precedents/parc_de_la_villette_satellite.jpg" alt="Satellite view of Parc de la Villette Paris" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">parc de la villette</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">The Parc de la Villette (French pronunciation: [paʁk də la vilɛt]) is the third-largest park in Paris,  55.5 hectares (137 acres) in area, located at the northeastern edge of the city in the 19th arrondissement. The park houses one of the largest concentrations of cultural venues in Paris, including the Cité des Sciences et de l'Industrie (City of Science and Industry,…</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>An award-winning project noted for</li><li>its architecture and new strategy of urban organization, La ...</li><li>Jan 9, 2011·Rather he envisioned Parc de la Villette as a place of culture where natural and</li><li>artificial are forced together into a state of constant ...</li><li>May 5, 2022·Tschumi won an international competition in 1983 to design the 55-hectare Parc de la</li></ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="card" id="zaryadye_park">
+    <div class="card-header">
+      <span class="card-number">CASE-10 / REF-ZARYADYE_PAR</span>
+      <span class="card-name">Zaryadye Park Moscow</span>
+      <span class="card-location">Moscow</span>
+    </div>
+    <div class="card-body">
+      <div class="polaroid-wrap">
+        <div class="polaroid" style="transform: rotate(2.0deg)">
+          <img src="../assets/precedents/zaryadye_park_satellite.jpg" alt="Satellite view of Zaryadye Park Moscow" loading="lazy">
+        </div>
+        <div class="polaroid-caption">aerial / satellite view</div>
+        <span class="card-tag">zaryadye park</span>
+      </div>
+      <div class="card-text">
+        <div class="section-label">Historical Description</div>
+        <p class="wiki-blurb">Zaryadye Park (Russian: Парк Зарядье) is a landscape urban park located adjacent to Red Square in Moscow, Russia, on the site of the former Zaryadye district. The park was inaugurated on 9 September 2017 by Russian president Vladimir Putin and Moscow Mayor Sergey Sobyanin.
+Time magazine included Zaryadye Park on its 2018 list of the “World's Greatest Places”.</p>
+        
+        <div class="section-label">Field Observations / Key Reviews</div>
+        <ul class="reviews-list"><li>ZaryadyeParkis alandscapeurban park located adjacent toRedSquareinMoscow,Russia, on the site of the</li><li>The park was inaugurated on 9 September 2017 byRussianpresident Vladimir</li><li>Putin andMoscowMayor Sergey Sobyanin.</li><li>ZaryadyePark,Moscow’s first new park in half a century, sits on a culturally charged site surrounded</li><li>by the Kremlin, Saint Basil’s Cathedral,RedSquare, a row of Eastern Orthodox churches, and the</li></ul>
+      </div>
+    </div>
+  </article>
+  </div>
+
+  <div class="footer">
+    MEMORY MACHINE — AUTOMATED PRECEDENT DOSSIER — 28 Mar 2026 — FOR DESIGN RESEARCH PURPOSES ONLY
+  </div>
+
+</body>
+</html>

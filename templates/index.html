@@ -360,8 +360,27 @@
 
   // ── Three.js setup ────────────────────────────────────────────────────────
   let threeRenderer = null, threeScene = null, threeCamera = null, threeAnimId = null;
+  let cachedSiteContext = null;
 
-  function initThree(geometries) {
+  function buildMesh(geo, mat, wireMat) {
+    let geom;
+    if      (geo.type === 'box')      geom = new THREE.BoxGeometry(...geo.args);
+    else if (geo.type === 'cylinder') geom = new THREE.CylinderGeometry(...geo.args, 32);
+    else if (geo.type === 'sphere')   geom = new THREE.SphereGeometry(geo.args[0], 16, 16);
+    else return;
+    const mesh = new THREE.Mesh(geom, mat);
+    if (geo.position) mesh.position.set(...geo.position);
+    if (geo.rotation) mesh.rotation.set(...geo.rotation);
+    threeScene.add(mesh);
+    if (wireMat) {
+      const wire = new THREE.Mesh(geom, wireMat);
+      if (geo.position) wire.position.set(...geo.position);
+      if (geo.rotation) wire.rotation.set(...geo.rotation);
+      threeScene.add(wire);
+    }
+  }
+
+  function initThree(geometries, siteContext) {
     const canvas = document.getElementById('three-canvas');
     document.getElementById('canvas-placeholder').style.display = 'none';
     canvas.style.display = 'block';
@@ -377,12 +396,13 @@
     threeScene    = new THREE.Scene();
     threeScene.background = new THREE.Color(0x050505);
     threeCamera   = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
-    threeCamera.position.set(30, 25, 40);
+    threeCamera.position.set(40, 32, 55);
     threeCamera.lookAt(0, 0, 0);
 
     threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     threeRenderer.setSize(w, h);
     threeRenderer.setPixelRatio(window.devicePixelRatio);
+    threeRenderer.sortObjects = true;
 
     // Lighting
     threeScene.add(new THREE.AmbientLight(0x404040, 2));
@@ -390,34 +410,34 @@
     dir.position.set(20, 40, 20);
     threeScene.add(dir);
 
-    // Grid
-    const grid = new THREE.GridHelper(80, 20, 0x1a1a1a, 0x1a1a1a);
-    threeScene.add(grid);
+    // ── Site context layer (ghost / dark) ──────────────────────────────────
+    const ctx = siteContext || cachedSiteContext || [];
+    ctx.forEach(geo => {
+      const opacity = geo.opacity !== undefined ? geo.opacity : 0.9;
+      const mat = new THREE.MeshStandardMaterial({
+        color:       new THREE.Color(geo.color || '#111111'),
+        roughness:   0.9,
+        metalness:   0.05,
+        transparent: opacity < 1.0,
+        opacity:     opacity,
+        depthWrite:  opacity >= 0.99,
+      });
+      buildMesh(geo, mat, null);
+    });
 
-    // Geometry
-    const wireMat = new THREE.MeshBasicMaterial({ color: 0xfff4ca, wireframe: true, opacity: 0.12, transparent: true });
+    // ── Intervention geometry layer (full colour + wireframe overlay) ──────
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0xfff4ca, wireframe: true, opacity: 0.18, transparent: true
+    });
     geometries.forEach(geo => {
-      let geom;
-      if (geo.type === 'box') {
-        geom = new THREE.BoxGeometry(...geo.args);
-      } else if (geo.type === 'cylinder') {
-        geom = new THREE.CylinderGeometry(...geo.args, 32);
-      } else if (geo.type === 'sphere') {
-        geom = new THREE.SphereGeometry(geo.args[0], 16, 16);
-      } else {
-        return;
-      }
-      const mat  = new THREE.MeshStandardMaterial({ color: new THREE.Color(geo.color || '#888888'), roughness: 0.75, metalness: 0.1 });
-      const mesh = new THREE.Mesh(geom, mat);
-      const wire = new THREE.Mesh(geom, wireMat);
-      if (geo.position) { mesh.position.set(...geo.position); wire.position.set(...geo.position); }
-      if (geo.rotation) { mesh.rotation.set(...geo.rotation); wire.rotation.set(...geo.rotation); }
-      threeScene.add(mesh);
-      threeScene.add(wire);
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(geo.color || '#888888'), roughness: 0.75, metalness: 0.1
+      });
+      buildMesh(geo, mat, wireMat);
     });
 
     // Orbit (manual drag)
-    let isDragging = false, prevX = 0, prevY = 0, spherical = { theta: 0.6, phi: 0.6, r: 60 };
+    let isDragging = false, prevX = 0, prevY = 0, spherical = { theta: 0.6, phi: 0.6, r: 80 };
     canvas.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
     window.addEventListener('mouseup',   ()  => { isDragging = false; });
     window.addEventListener('mousemove', e  => {
@@ -512,8 +532,9 @@
           `).join('');
         }
 
+        if (data.site_context) cachedSiteContext = data.site_context;
         if (data.geometries && data.geometries.length > 0) {
-          initThree(data.geometries);
+          initThree(data.geometries, data.site_context);
         }
         if (data.diagram) {
           await renderDiagram(data.diagram);
@@ -532,6 +553,21 @@
   document.getElementById('prompt-input').addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate();
   });
+
+  // Load site context immediately on page open — show Pershing Square before any generation
+  (async () => {
+    try {
+      const res  = await fetch('/api/site-context');
+      const data = await res.json();
+      if (data.geometries && data.geometries.length > 0) {
+        cachedSiteContext = data.geometries;
+        initThree([], data.geometries);
+        setStatus('Site loaded — Pershing Square, DTLA', 'success');
+      }
+    } catch (e) {
+      // server not ready yet, silently skip
+    }
+  })();
 </script>
 </body>
 </html>

@@ -47,3 +47,192 @@ Olivia H.
 San Francisco, CA
 May 20, 2023
 An architectural time capsule of 1990s Los Angeles, but practically dysfunctional for community gathering. I appreciate the attempt at art, but it's just not functional. Divided by low walls and fragmented elevation changes, it's impossible to host a proper picnic.
+
+--- WIKIPEDIA + GEMINI SYNTHESIS ---
+
+Nestled within the dense urban fabric of Downtown Los Angeles, Pershing Square occupies a singular, block-square footprint, a contained world at the convergence of Fifth, Sixth, Hill, and Olive Streets. Its location, once a camp for early settlers, suggests a historical connection to movement and transient populations, a dynamic that has long defined its social character. Today, the square's hard edges and urban setting mean it exists in constant dialogue with the ceaseless hum of city traffic and the echoing canyons of surrounding buildings, an auditory backdrop that has shifted dramatically through its many transformations.
+
+The earliest iterations of the square evoke a distinctly different sensory experience. Imagine the soft gurgle of the Arroyo de Los Reyes, a natural waterway that once threaded through the site, augmented by the purposeful flow of Zanja Madre canals nearby. These early water features would have contributed a cooling auditory presence, a stark contrast to the later urban din. Early plantings, like "small native Monterey cypress trees, fruit trees, and flowering shrubs," suggest a more intimate scale, offering dappled shade and a palette of natural textures and scents – the rough bark of cypress, the delicate petals of flowers, the potential sweetness of ripening fruit. This period offered a true "shady oasis," promising relief from the harsh Californian sun and a more acoustically dampened environment, a quiet counterpoint to the developing pueblo.
+
+As the square evolved through the late 19th and early 20th centuries, its character as a verdant escape intensified. The description of "sub-tropically lush" plantings paints a picture of dense foliage, creating deep shadows and an enveloping green canopy. This abundance would have provided significant thermal comfort, lowering ambient temperatures and perhaps even creating microclimates of humidity within its bounds. The acoustic experience would have been one of muffled city sounds, the rustle of leaves, and the murmur of conversation, particularly as it gained a reputation as a "cruising location," implying a need for semi-private, verdant enclaves where social dynamics could unfold with a degree of discretion. The presence of a bandstand pavilion for concerts and orators further suggests a space designed for projected sound, yet softened by the surrounding vegetation.
+
+A radical, almost violent, shift occurred in 1952 when the entire park was "demolished and excavated" to make way for an underground parking garage. This act irrevocably altered the square's sensory profile. The lush subtropical growth was replaced by a "broad expanse of lawn" over a "thin layer of soil" atop "concrete." The material texture changed from organic and yielding to hard, reflective, and ungiving. Thermally, this likely created a significant heat island effect, particularly in the unforgiving Los Angeles sun, as concrete absorbed and radiated heat. Acoustically, the wide-open space and hard surfaces would have amplified city noise, stripping away the former acoustic privacy and turning the park into a more exposed, less welcoming environment. The entry and exit ramps, cutting it off from surrounding sidewalks, added a physical and psychological barrier, disrupting pedestrian flow and suggesting a space designed more for cars than people.
+
+Even the addition of twin reflecting pool water features in 1954, though intended to honor a benefactor and provide visual calm, could only partially soften the harshness of the post-1952 park. While the presence of water offers a potential for soothing visual reflections and the subtle sound of rippling surfaces, these pools were likely islands in a sea of hardscape. The park's subsequent description as "neglected for safe uses" and a "serious eyesore" before the 1984 Olympics speaks volumes about its failing social performance and unwelcoming atmosphere, where thermal discomfort and auditory exposure contributed to its decline.
+
+The 1992 redesign by Ricardo Legorreta and Laurie Olin represented another dramatic reinterpretation, albeit one that embraced a modernist, geometric aesthetic. The most striking element is the "10-story purple bell tower," a vertical landmark that anchors the square visually and, potentially, acoustically, if its bells are rung. The prevalence of "pavement covered almost the entire block" with "copses of trees placed in raised planters" suggests a continuation of the hard, urban texture, albeit with bold, abstract forms. The acoustic environment would remain largely reflective, with the hard surfaces bouncing sound, though perhaps the fountains offer localized sound masking.
+
+The Legorreta/Olin design emphasizes a deliberate, almost monumental scale. The "walkway representing an earthquake fault line" introduces a conceptual, textural journey across the plaza, likely etched into the pavement or composed of contrasting materials, inviting a tactile engagement underfoot. Fountains, while present, are distinct from the naturalistic water features of earlier eras, likely designed for visual impact and the rhythmic sound of spouting or cascading water, rather than the organic flow of a stream. Perimeter seating offers specific points for respite and observation, though the sparse "copses of trees" suggest limited expansive shade, making the square potentially challenging in direct sunlight, especially for longer durations. The concert stage further designates the space for programmed events, suggesting periods of amplified sound and focused attention.
+
+In the 21st century, the square continues its role as an active urban stage, performing differently throughout the year. The "temporary Ice rink in the winter" transforms its thermal and acoustic qualities dramatically, introducing the crisp cold of ice, the sharp scraping of skates, and the excited chatter of users, all under the soft glow of winter lights. Conversely, the "DTLA Proud Festival and live concert performances in the summer" fill the space with vibrant energy, amplified music, and the collective warmth and sound of crowds. This duality highlights its capacity to adapt to seasonal programmatic needs, shifting from a hard urban plaza to a festive hub, albeit one often reliant on temporary installations to animate its concrete expanse.
+
+Looking ahead to the announced renovations, a clear intention emerges to rectify some of the experiential shortcomings of the existing design. The "new glass elevators to the underground parking garage" speak to an emphasis on improved, perhaps more visually appealing, access. Crucially, "removing the garage ramps and improving access to the plaza, removing pavement walls and installing shade trees" directly addresses the very issues of physical isolation, hard material dominance, and lack of thermal comfort that have plagued the square for decades. The promise of "shade trees" points towards a return to a more hospitable, greener environment, hinting at a future iteration that may finally balance its monumental scale with the intimate, sensory relief of its earliest days, reintroducing natural textures, dappled light, and a softer acoustic profile to this complex urban arena.
+
+--- DUCKDUCKGO + WIKIPEDIA HARVEST ---
+Site: Pershing Square
+Harvested: 2026-03-28 17:40 UTC
+========================================================================
+
+[WIKIPEDIA]
+
+Pershing Square is a small public park in Downtown Los Angeles, California, one square block in size, bounded by 5th Street to the north, 6th to the south, Hill to the east, and Olive to the west. Originally dedicated in 1866 by Mayor Cristóbal Aguilar as La Plaza Abaja, the square has had numerous names over the years until it was finally dedicated in honor of General John J. Pershing in 1918.
+
+[DUCKDUCKGO SEARCH RESULTS]
+
+Search: ""Pershing Square" Los Angeles park landscape design history"
+
+  [Pershing Square (Los Angeles) - Wikipedia]
+  Pershing Squareis a small publicparkin DowntownLosAngeles, California, one square block in size,
+  bounded by 5th Street to the north, 6th to the south, Hill to the east, and Olive to the west.
+  Source: https://en.wikipedia.org/wiki/Pershing_Square_(Los_Angeles)
+
+  [Pershing Square - LA Conservancy]
+  Thedesignincludes a number of works of public art that allude to the city'shistory, such as groves
+  of orange trees, a stylized earthquake fault, and a fountain inspired by the aqueducts that bring
+  water toLosAngeles.
+  Source: https://www.laconservancy.org/learn/historic-places/pershing-square/
+
+  [Reinventing Pershing Square: A Legacy of Urban Transformation]
+  A Historic JourneyPershing Square, the oldestparkinLosAngeles, has witnessed numerous
+  transformations throughout its richhistory. Originating from a Spanish land grant in 1781,
+  theparkevolved from an informal campground to a bustling urban oasis. Over the years, it has
+  reflected the dynamic shifts in urban development and societal trends, embodying the spirit of the
+  city's evolution ...
+  Source: https://archsnaps.com/urban-design/reinventing-pershing-square-a-legacy-of-urban-transformation/
+
+  [PDFPershing Square: A History of Plans, Designers, and Publics]
+  AbstractPershing Square, located in the heart of downtownLosAngeles, has transformed several times
+  over its 150-yearhistory. Itsdesigniterations throughout time have mirrored the city's own
+  transformations, growth, and community's self-image. I retrace thehistoryof civic attempts to
+  renovatePershing Square, starting from the 1910s through to the present. By examining the events ...
+  Source: https://escholarship.org/content/qt25j1r1pj/qt25j1r1pj.pdf
+
+  [Pershing Square | TCLF]
+  Established as La Plaza Abaja in 1866 and known as CentralParkafter 1890, this five-acre public
+  square in Bunker Hill was renamed for General John Joseph Pershing in 1918. It was originally
+  designed as a formal garden by architects Parkinson and Bergstrom in 1911, planted with tropical
+  trees and shrubs and featuring balustrades and orthogonal walks leading to a central, three-tiered
+  fountain ...
+  Source: https://www.tclf.org/landscapes/pershing-square
+
+  [Pershing Square Over the Years/Pershing Square por el paso de los años]
+  Pershing Squarehas and continues to have an important role in thehistoryofLosAngeles. In fact, what
+  is today known asPershing Squarewas, in fact, La Plaza Abaja, the 6th StreetPark, and even known as
+  CentralPark. In 1918, the downtownparkwas renamedPershing Square.Pershing Squarecontinues to play an
+  important role in thehistoryof the people ofLosAngeles. The pictures ...
+  Source: https://www.lapl.org/collections-resources/blogs/lapl/pershing-square-over-yearspershing-square-por-el-paso-de-los-anos
+
+  [From Plaza Abaja to Pershing Square: L.A.'s Oldest Park Through the ...]
+  Livestock continued to graze on the land, and teamsters violated warning signs by driving their
+  wagons through the public square. Residents complained about the square's shabby condition, and in
+  1870 the city renamed itLosAngelesParkand authorized a committee of wealthy landowners to convert
+  the square into parkland.
+  Source: https://www.pbssocal.org/shows/lost-la/from-plaza-abaja-to-pershing-square-l-a-s-oldest-park-through-the-decades
+
+  [Pershing Square in DTLA: Legorreta + Legorreta and Laurie Olin's Design]
+  In 1993, renowned architecture firm Legorreta + Legorreta, in collaboration withlandscapearchitect
+  Laurie Olin Architects, completed the final renovation ofPershing Squarein the heart of
+  DowntownLosAngeles. The five-acre publicparkhas a richhistorydating back to 1781 and now sits atop a
+  large underground parking garage.
+  Source: https://archeyes.com/pershing-square-in-dtla-legorreta-legorreta-laurie-olin/
+
+Search: ""Pershing Square" DTLA public space redesign architecture"
+
+  [PershingSquareredesigninches forward in Downtown... | Archinect]
+  French landscape practice Agence Ter, working in collaboration with Los Angeles-based firms SALT
+  LandscapeArchitects, Deborah Murphy UrbanDesign+ Planning, Rachel AllenArchitecture, among others,
+  won the 2016 internationaldesigncompetition toredesignPershingSquare...
+  Source: https://archinect.com/news/article/150260411/pershing-square-redesign-inches-forward-in-downtown-los-angeles
+
+  [PershingSquare— SALT LandscapeArchitects]
+  PERSHINGSQUAREWorking alongside French urbanists Agence Ter, SALT is to be part of the winning team
+  toredesignPershingSquare. As the eyes of Angelinos...
+  Source: https://www.salt-la.com/Pershing-Square
+
+  [What in the Hell is Going On WithPershingSquare?]
+  DTLA’s one-block wonder,PershingSquare, has seen a lot of life, a lot of transformation, and now a
+  lot of drama in its years of existence. With origins dating all the way back to 1866, it only makes
+  sense thatPershingSquarehas literally seen it all.
+  Source: https://dtlaweekly.com/what-in-the-hell-is-going-on-with-pershing-square/
+
+  [PershingSquareCultural Center]
+  PershingSquareCultural Center. Introduction This project was created by Michael Yip and overseen by
+  studio instructor and coordinator Sona Gevorkyan for Cal Poly Pomona's Spring First YearDesignStudio
+  in 2022.
+  Source: https://sites.google.com/view/msydesignelement/architecture/projects/pershing-square-cultural-center
+
+  [Four Finalists forPershingSquareRedesignUnveiled]
+  Fourdesignteams have been selected in thePershingSquareRenewDesignCompetition, with the winner
+  replacing the little-used, much-hatedpublicspacein Downtown Los Angelesdesignedin the 1990s by
+  Ricardo Legorreta and Laurie Olin.
+  Source: https://www.world-architects.com/es/architecture-news/headlines/four-finalists-for-pershing-square-redesign-unveiled
+
+  [PershingSquareinDTLA: Legorreta + Legorreta and Laurie...]
+  PershingSquareinDTLATechnical Information.Architects: Legorreta + Legorreta.Topics:PublicSpace,
+  Color inArchitecture. Area: 20,000 m2. Budget: $14.5-million. Project Year: 1993.
+  Source: https://archeyes.com/pershing-square-in-dtla-legorreta-legorreta-laurie-olin/
+
+  [Agence Ter and Team winsPershingSquareRenew toredesign...]
+  Newarchitectureanddesigncompetitions: AR House awards, Brooklyn NOW!,ArchitectureGraduation Projects
+  Award, and Beautifying Transportation Infrastructure Challenge. Jeanne Gang to receive the 2026
+  Thomas Jefferson Foundation Medal inArchitecture.
+  Source: https://bustler.net/news/4877/agence-ter-and-team-wins-pershing-square-renew-to-redesign-dtla-s-oldest-public-park
+
+  [PershingSquareRedesign| Urbanize LA]
+  PershingSquareRedesign. Completed Last updated 1/25/2026. Project Uses.First phase
+  ofPershingSquarerevamp completed inDTLA. The park has a more open appearance facing Olive Street.
+  Source: https://la.urbanize.city/project/pershing-square-redesign
+
+Search: ""Pershing Square" Los Angeles visitor review experience"
+
+  [Pershing Square (2026) - All You MUST Know Before You Go (with Reviews)]
+  Pershing Square during New Year captures the spirit of renewal and community, making it a worthwhile
+  stop for anyone exploring downtown Los Angeles during the holiday season.Highly recommended for a
+  relaxed and authentic city experience. ... This ...
+  Source: https://www.tripadvisor.com/Attraction_Review-g32655-d560876-Reviews-Pershing_Square-Los_Angeles_California.html
+
+  [Pershing Square Tours - Book Now | Expedia]
+  Park for a fee at lots near Pershing Square. L.A. Civic Center and Union Station are the closest
+  stations, with an easy walk to the nearby attractions. Price found within the past 48 hours. Click
+  for updated prices. ... Nearby shopping center and restaurants are very convenient. ... Rooms were
+  very clean and well kept, staff was great. ... Nice room for the price. Price has gone up recently
+  making it not my next choice. ... You can learn about the history of Los Angeles with a stop at
+  Oviatt Building.
+  Source: https://www.expedia.com/Pershing-Square-Downtown-Los-Angeles.d553248621586074502.Vacation-Attraction
+
+  [PERSHING SQUARE - Updated March 2026 - 1165 Photos & 217 Reviews - 532 S Olive St, Los Angeles, California - Parks - Phone Number - Yelp]
+  July 28, 2025 -Los Angeles, CA 90189 · Downtown · Get directions · Good for kids · Garage parking,
+  Street parking, Private lot parking · Dogs allowed · Bike parking · Established in 1918. Dedicated
+  for use by Mayor Aguilar in 1866, this park land was named "La Plaza Abaja." During World War I, the
+  Square was often the scene for militia receptions and provided a forum for public speakers. On
+  November 8, 1918, the park was formally named Pershing Square in honor of the World War I general.
+  Source: https://www.yelp.com/biz/pershing-square-los-angeles
+
+  [Pershing Square, Los Angeles, CA - Reviews, Ratings, Tips and Why You Should Go – Wanderlog]
+  The large amount of concrete pavers makes the experience not as enjoyable as temperatures feel
+  significantly hotter. Due to this, I quickly walked through and didn't spend much time as I wanted.
+  Source: https://wanderlog.com/place/details/123611/pershing-square
+
+  [PERSHING SQUARE STATION - Updated February 2026 - 91 Photos & 45 Reviews - 500 S Hill St, Los Angeles, California - Metro Stations - Phone Number - Yelp]
+  December 17, 2025 -“Pershing Square Station is a multi-access metro station in the heart of Downtown
+  LA.” in 7 reviews · “This review is for the Metro Green, Blue, and Purple lines.” in 2 reviews · “It
+  is a hop and a skip from the Skid Row...” in 2 reviews · Suggest an edit · 500 S Hill St · Los
+  Angeles, CA 90017 ·
+  Source: https://www.yelp.com/biz/pershing-square-station-los-angeles
+
+  [Pershing Square: A Green Retreat in Downtown Los Angeles | World of Illusions]
+  Additionally, its proximity to ... pulse. Visitors to Pershing Squareoften remark on the contrast
+  between the bustling city noise just beyond its borders and the calm within....
+  Source: https://www.laillusions.com/blog/pershing-square-a-green-retreat-in-downtown-los-angeles
+
+  [Fear of Space: Pershing Square, Not-so-public Parks, and the Fight over Public Places | Los Angeles Review of Books]
+  August 6, 2012 -Anyone who has spent any time in Downtown Los Angeles knows Pershing Square. It’s
+  that hot, unattractive expanse of cement occupied solely, on most days, by members of Downtown’s
+  homeless community. As a worker in a Downtown law firm while I was in graduate school, the water
+  cooler talk in reference to Pershing Square was limited to its capacity as an underground parking
+  garage.
+  Source: https://lareviewofbooks.org/article/fear-of-space-pershing-square-not-so-public-parks-and-the-fight-over-public-places/
+
+  [Pershing Square reviews, photos - Downtown - Los Angeles - GayCities Los Angeles]
+  Multi-use Downtown space. Reviews, photos and a map of Pershing Square in Downtown in Los Angeles
+  Source: https://losangeles.gaycities.com/arts/302164-pershing-square

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe logic/site_to_threejs.py)",
+      "Bash(.venv/Scripts/python.exe -c \"import duckduckgo_search; print\\(duckduckgo_search.__version__\\)\")",
+      "Bash(.venv/Scripts/pip install:*)"
+    ]
+  }
+}

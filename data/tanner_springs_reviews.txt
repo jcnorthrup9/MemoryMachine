@@ -1,0 +1,203 @@
+Tanner Springs Park, Portland — Spatial Observations & Visitor Reviews
+
+Tanner Springs is a hidden park in the Pearl District, carved into a block between residential towers, and it operates on a completely different register from most urban parks. It is not a park you see and enter — it is a park you discover. The approach is through a gap between buildings; the park reveals itself slowly as you descend toward the water.
+
+The defining element is the art wall: 368 reclaimed railway tracks set vertically into the earth to form a textured, weaving boundary wall along the eastern edge. The tracks are rough, oxidized, industrial — set close enough together that they read as a continuous mass from a distance, but as you approach the individual rail profiles become legible. Between some of the tracks, fused glass panels glow amber and blue in afternoon light. The combination of rusted steel and translucent glass creates a material conversation between industrial history and ecological present.
+
+The railway track wall is approximately 40 feet long and maybe 8 feet high. It is not a fence — it has no structural role as enclosure. It is purely spatial and representational: a fragment of Portland's industrial past materialized as park boundary. Standing close to it, you run your hands across the corrugated profile of the rail heads. The metal is warm in afternoon sun. The textures are extraordinarily varied — some tracks have moss growing in the recesses, others have lichen, others are bare oxidized steel.
+
+The water at Tanner Springs is not decorative. The park is engineered to filter stormwater through a naturalistic wetland system. The water level changes with rainfall. During dry periods the marsh grasses dominate and the water retreats to a shallow channel. After rain, the park fills and the relationship between the emergent vegetation and the water surface shifts the whole spatial character. The smell of the park changes too — wet soil, vegetation, organic material. It is the closest thing to a wild edge environment in central Portland.
+
+The frog population is real and audible. On spring evenings the park fills with frog song in a way that is startling in an urban context. The acoustic character of Tanner Springs is consistently surprising — the vegetation absorbs traffic noise from the surrounding streets, and the frogs and birdsong fill the resulting quiet. It is genuinely biodiverse in a way that feels unmanaged, though the ecology is carefully engineered.
+
+Seating at Tanner Springs is minimal and informal. A few flat stones, some log elements near the water. The park does not encourage extended occupation in the traditional sense — there are no lawns for blankets, no tables, no formal gathering space. It is a passage space, a decompression zone, a place to slow down for fifteen minutes. The residential towers surrounding it use it as an extended living room.
+
+The material palette is deliberately narrow: steel, glass, stone, water, native grasses. No color except the fused glass panels and the seasonal shift of the vegetation. In autumn the grasses turn bronze and the park achieves a monochrome warmth — steel, rust, amber glass, dry grass — that is genuinely beautiful.
+
+What Tanner Springs does acoustically is worth studying carefully. The steel rail wall at the eastern boundary acts as a sound baffle. Standing on the park side of the wall, traffic noise from NW 10th Avenue is significantly reduced. The vegetation further absorbs. The result is an acoustic enclave in a busy district — the urban noise floor drops by what feels like 10-12 decibels simply by virtue of the material boundary and vegetation mass. This acoustic privacy is as much a design achievement as the visual identity.
+
+The park works differently at different scales. From the apartments above, it reads as a green patch in the gray Pearl District grid. At street level, approaching through the gap between buildings, it appears as a dark slot, a mystery. Inside, it is intimate and slightly wild. Scale is compressed: the park is small but the vegetation height and the vertical railway tracks create a sense of enclosure that makes it feel larger.
+
+
+--- WIKIPEDIA + GEMINI SYNTHESIS ---
+
+Tanner Springs Park emerges as a subtle, verdant incision within the dense urban fabric of Portland's Pearl District, offering a deliberate counterpoint to the more overtly social and bustling Jamison Square a few blocks south. Its designation as a "pocket park" belies a nuanced spatial ambition: to re-evoke a lost natural landscape, a former wetland, in an intensely man-made environment. The journey here, often via the connecting ipê boardwalk from neighboring parks, initiates a shift in experience, leading the visitor from the wide-open plazas and active play areas to a comparatively introspective, quiet realm. It is a space designed not for grand gestures, but for a delicate negotiation between the city's pulse and a cultivated natural serenity.
+
+Upon entering, the immediate sensory impact is one of modulated sound and texture. The omnipresent urban hum recedes, replaced by the gentle murmur of running water, a carefully calibrated acoustic backdrop that functions less as a dominant feature and more as an ambient layer of white noise, subtly masking the city. The primary circulation path, itself an "Uncle Wiggly" meander as one critic observed, guides the visitor through a landscape rich in material contrasts. Underfoot, the wooden boardwalk transitions to softer, permeable surfaces, while the eye is drawn to the juxtaposition of organic forms – the reedy native grasses swaying – against the stark, recovered industrial archaeology that frames the space.
+
+The waterscape, meticulously crafted by Herbert Dreiseitl, serves as the park's kinetic and sensory heart, even if the original vision of resurfacing Tanner Creek was unrealized. These are not merely decorative pools, but a dynamic system of gently running streams, ponds, and collection points. During a sunny afternoon, the water’s surface shimmers, reflecting fragments of the surrounding architecture and sky, while its continuous flow provides a cooling effect, a subtle drop in temperature palpable on a warm day. The acoustic texture of the water, intentionally perfected to a rush and gurgle, creates an auditory cocoon, an aural membrane between the park's interior and the city beyond, inviting a slower pace and contemplative pause.
+
+Along the park's eastern edge, the Artwall stands as a powerful testament to the site's industrial past, a vertical palimpsest of recovered rail tracks. This material choice introduces a coarse, rough texture – cold, rusted metal standing sentinel – which, for some, evokes a "nasty and scary" presence. Yet, interspersed among these stark, salvaged relics are 99 translucent blue pieces of glass, painted with scenes of indigenous animals. These glass inserts catch and refract the light, their smooth, cool surfaces offering a visual and tactile counterpoint to the raw steel. As the sun traverses the sky, these panels would glow with an ethereal quality, casting faint blue hues and dappled patterns onto the ground, transforming the wall from a mere barrier into a dynamic canvas that shifts with the day's light.
+
+The plantings further reinforce the naturalistic, "weedy urban wetland" aesthetic. Tall native grasses, Oregon oaks, red alders, and bigleaf maples, many salvaged and replanted as mature specimens, introduce a rich tapestry of green. The canopy of these trees provides crucial shade, particularly as the day progresses, creating cooler microclimates beneath their boughs where one can escape the intensity of the urban sun. Their rustling leaves add another layer to the park's acoustic profile, a soft, natural murmur distinct from the water's flow. This dense vegetation, intended also as pollinator habitat, allows for a palpable sense of immersion, a moment of forgotten wilderness within the city grid.
+
+Socially, Tanner Springs Park cultivates a distinct atmosphere. Unlike its more boisterous counterparts, it actively discourages high-energy activities, even explicitly prohibiting pets, thus preserving its delicate ecosystem and intended tranquility. This deliberate design choice fosters a space for quiet contemplation, meditation, or a moment of respite – a "beautiful little oasis" as some describe it. Visitors often engage in solitary activities, or small, hushed gatherings, respecting the pervasive sense of calm. The observed presence of wildlife, from osprey to mallards, further reinforces its role as a sanctuary, not just for humans, but for urban nature, encouraging a slowed pace of observation and appreciation.
+
+The park’s scale feels intimate, almost deliberately confined, yet its design aims to maximize a sense of natural expansive enclosure. The "stair-step grass seats," though criticized for their proportions, offer a series of informal, yielding surfaces for repose, inviting visitors to sit amongst the grasses rather than on formal benches. This vertical layering contributes to the park's sense of spatial depth, preventing it from feeling like a flat, two-dimensional pocket. The interplay between these soft, permeable levels and the rigid verticality of the Artwall defines the park's contained but complex interiority, carefully balancing human scale with the implied grandeur of a reclaimed ecosystem.
+
+The performance of the space undoubtedly shifts throughout the day, each hour revealing new sensory dimensions. In the early morning, the air might hold a damp coolness, the sound of the streams more pronounced in the pre-rush hour quiet, and the blue glass of the Artwall still muted before the sun catches it. Midday sun filters through the tree canopies, dappling pathways and creating dynamic patterns of light and shadow, highlighting the vibrant greens of the grasses and perhaps sparking reflections off the water. As evening approaches, the filtered light softens the industrial edges of the rail tracks, and the water features might become the dominant acoustic experience, while the blue glass panels might begin to glow subtly against the darkening metal, transforming into abstract urban jewels.
+
+Indeed, the park functions as a living diorama of sustainable urban design, with its thoughtful water management systems and rich natural features providing an exemplary model for ecological integration within high-density environments. This commitment to "boutique ecology," while perhaps drawing some "snippy" remarks, is fundamental to its identity. It attempts to bridge the historical memory of the lost Tanner Creek with a contemporary expression of urban wilderness. The park’s inherent tension between its industrial past and its naturalistic present creates a complex narrative, one that resonates deeply for those seeking an "engaging respite" amidst the city's relentless dynamism.
+
+Ultimately, Tanner Springs Park is more than a simple green space; it is a carefully orchestrated sequence of sensory experiences, a tranquil refuge that asks visitors to slow down, observe, and listen. From the feel of the ipê boardwalk underfoot to the gentle rush of water, the changing light on the blue glass, and the shade cast by mature trees, it provides a rich, multi-layered encounter. Despite its modest scale, it successfully negotiates the demands of urban life with the restorative power of nature, offering a powerful argument for the integration of qualitative, experiential design into even the smallest public parcels. It performs as a quiet urban lung, breathing a sense of calm into the heart of the Pearl District, a testament to thoughtful, ecologically sensitive place-making.
+
+--- DUCKDUCKGO + WIKIPEDIA HARVEST ---
+Site: Tanner Springs Park
+Harvested: 2026-03-28 17:41 UTC
+========================================================================
+
+[WIKIPEDIA]
+
+Tanner Springs Park is a pocket park in Portland, Oregon's Pearl District. It is the second of a series of three parks in the area including The Fields Park and Jamison Square that were laid out in the 2001 plan for River District Renewal. A fourth park was also planned but has not been built.
+
+[DUCKDUCKGO SEARCH RESULTS]
+
+Search: ""Tanner Springs" Portland Oregon wetland park landscape design"
+
+  [Tanner Springs Park - Wikipedia]
+  August 7, 2025 -During storms, the leaf-shaped ... using UV light.The park is planted with tall
+  native grasses, and includes Oregon oak, red alder and bigleaf maple trees, salvaged in the region
+  and planted as mature trees....
+  Source: https://en.wikipedia.org/wiki/Tanner_Springs_Park
+
+  [Tanner Springs by Henning Larsen – Landscape Architecture Platform | Landezine]
+  May 26, 2023 -An intense community participation and a stakeholder steering group means that this
+  park is the realisation of the dreams and hopes of local people. ... Partner in Charge: Henning
+  Larsen Project Landscape Architect: Gerhard Hauber Project Engineer: Stefan Brückmann Project Team:
+  Hendrik Porst, Jessica Read, Andreas Bockemühl Location: Portland, Oregon, USA Client: City of
+  Portland Partner: GreenWorks PC Area: 0.4 ha / 1 acre Completion: 2010 Photos and text: Dreiseitl
+  Awards: ULI Open Space Award finalist 2012, ASLA Oregon Honor Award 2007
+  Source: https://landezine.com/tanner-springs-park-by-henning-larsen/
+
+  [Tanner Springs Park — GreenWorks]
+  GreenWorks collaborated with Atelier Dreiseitl of Germany todesignTanner SpringsPark, an urban park
+  inPortland’s Pearl District. Envisioned as an urban park with awetlandfocus, the park serves the
+  developing surrounding neighborhood as well as visitors to the area.
+  Source: https://greenworkspc.com/all-projects-1/tanner-springs-park
+
+  [Tanner Springs Park - DREISEITLconsulting]
+  Little springs bubble up at the top of a large open grassy meadow, trickling down to awetlandpond,
+  sunken 1.8 meters below street level. More than 300 citizens were involved in three public events
+  where art, imaginative brainstorming and planning workshops informed and inspired thedesignprocess.
+  Source: https://www.dreiseitlconsulting.com/tanner-springs-park
+
+  [Tanner Springs Park, Portland, Oregon, US - Urban Green-blue ...]
+  Thepark’sdesigndraws inspiration from the area’s original natural state, before it became an
+  industrial site and marshalling yard. Itswetlandcharacter was restored in an urban setting by
+  including water features, reintroducing groundwater and planting suitable vegetation.
+  Source: https://urbangreenbluegrids.com/projects/tanner-springs-park-portland-oregon-us/
+
+  [Tanner Springs Park — Portland Parks Foundation]
+  Tanner SpringsParkwasdesignedin 2003 by Atelier Dreiseitl (Germany), Green Works, P.C.
+  (Portland),PortlandParks & Recreation,PortlandDevelopment Commission, and a project steering
+  committee of public and private stakeholders.
+  Source: https://www.portlandpf.org/tanner-springs-park
+
+  [Tanner Springs Park - CMS Collaborative]
+  Partwetland, part art installation, this urbanparkreflects the history of the old Tanner Creek. A
+  man-made spring was fine-tuned, both visually and audibly, to create an interplay between the
+  cascading water, surrounding stones, native grasses and trees.
+  Source: https://cms-collaborative.com/project/tanner-springs-park/
+
+  [Tanner Springs Wetland Park • Future Landscapes]
+  Tanner SpringsWetlandParkis a naturalized public park that peels back the layers of urban
+  development to uncover the natural infrastructure of thelandscapebeneath. This
+  workingwetlandattracts birds, showcases native species and helps to handle urban runoff inPortland’s
+  Pearl District.
+  Source: https://futurelandscapes.ca/tanner-springs-wetland-park
+
+Search: ""Tanner Springs Park" Pearl District review experience"
+
+  [Tanner Springs Park (2026) - All You MUST Know Before ... - Tripadvisor]
+  Rating4.2(14)Tanner Springs Park is a nice little spot in the Pearl District of NW Portland. There
+  isn't any play equipment, but there are benches and tables. The day we ...
+  Source: https://www.tripadvisor.com/Attraction_Review-g52024-d6881862-Reviews-Tanner_Springs_Park-Portland_Oregon.html
+
+  [TANNER SPRINGS PARK - NW 10th Ave & Marshall St, Portland, Oregon]
+  Rating4.6(56)Tanner Springs Park provides a nice oasis that allows you to relax and gather your
+  thoughts. It was one of my favorite stops in the Pearl District when my day ...
+  Source: https://www.yelp.com/biz/tanner-springs-park-portland
+
+  [Tanner Springs Park: A square block of serenity - Portland - Reddit]
+  Jun 19, 2024·The best thing- place, view, event-to experience in Portland. What is ... r/Portland -
+  Tanner Springs Park in the Pearl District. 442. 20 ...Missing:review| Show results with:review
+  Source: https://www.reddit.com/r/Portland/comments/1djdk6c/tanner_springs_park_a_square_block_of_serenity/
+
+  [Tanner Springs Park | Portland.gov]
+  Tanner Springs Park is a beautiful green space in Portland's Pearl District. The park features
+  native plants, a lovely pond, and an interesting art piece ...
+  Source: https://www.portland.gov/parks/tanner-springs-park
+
+  [Tanner Springs Park in Portland, United States - reviews,open hours ...]
+  Tanner Springs Park is a jewel of a park. No dogs allowed and it is about as pure an experience of
+  what was there in nature (except for the bluegrass part ...
+  Source: https://wanderboat.ai/attractions/united-states/portland/tanner-springs-park/yiQIHDpwRJKNSdImBkLeqQ
+
+  [Tanner Springs Park in Portland, Oregon - Ask AI | mindtrip]
+  Clean and Well-Maintained: Tanner Springs Park is known for its cleanliness and meticulous upkeep,
+  ensuring a pristine and enjoyable experience for visitors.
+  Source: https://mindtrip.ai/attraction/portland-oregon/tanner-springs-park/at-H7UL8FuW
+
+  [Rain Garden Review – Cycle Portland]
+  I especially like the Tanner Springs Park in the Pearl District, my new favorite park, because now I
+  know how rain gardens function and I'm able to explore them ...
+  Source: https://portlandbicycletours.com/2010/05/14/rain-garden-review/
+
+  [Size Doesn't Matter—Really! - The Nature of Cities]
+  May 29, 2013·Great blue herons, too, visit Tanner Springs Park, attracted by koi. Great Blue Herons
+  also frequent the nearby Chinese Garden in old town ...Missing:review| Show results with:review
+  Source: https://www.thenatureofcities.com/TNOC/2013/05/29/size-doesnt-matter-really/
+
+Search: "Tanner Springs Portland stormwater park railway tracks art"
+
+  [Tanner Springs by Henning Larsen - Landezine]
+  Stormwaterrunoff from theparkblock is fed into a natural water feature with aspringand natural
+  cleansing system. The `ArtWall´ recycles historic railtracks, oscillating in and out and inlaid with
+  fused glass pieces hand-painted with nature images by Herbert Dreiseitl.
+  Source: https://landezine.com/tanner-springs-park-by-henning-larsen/
+
+  [Tanner Springs Park - Portland.gov]
+  TannerSpringsParkis a beautiful green space inPortland'sPearl District. Theparkfeatures native
+  plants, a lovely pond, and an interestingartpiece made from old railroadtracks, giving visitors a
+  peaceful break from the surrounding tall building and busy streets.
+  Source: https://www.portland.gov/parks/tanner-springs-park
+
+  [Tanner Springs Park - DREISEITLconsulting]
+  TannerSpringsParkOnce a wetland and industrial area,Portland'sPearl District has become a vibrant
+  neighborhood over the past 30 years. As development continues into the old rail yards, a newparkis
+  being created to introduce green space to the landscape.
+  Source: https://www.dreiseitlconsulting.com/tanner-springs-park
+
+  [Tanner Springs Park, Portland, USA / Ramboll Studio Dreiseitl]
+  Stormwaterrunoff from theparkblock is fed into a natural water feature with aspringand natural
+  cleansing system. The `ArtWall´ recycles historic railtracks, oscillating in and out and inlaid with
+  fused glass pieces hand-painted with nature images by Herbert Dreiseitl.
+  Source: https://www.gooood.cn/Tanner-Springs-Park-Atelier-D.htm
+
+  [Tanner Springs Park by Atelier Dreiseitl - o25.gr]
+  Stormwaterrunoff from theparkblock is fed into a natural water feature with aspringand natural
+  cleansing system. The `ArtWall´ recycles historic railtracks, oscillating in and out and inlaid with
+  fused glass pieces hand-painted with nature images by Herbert Dreiseitl.
+  Source: https://o25.gr/tanner-springs-park-by-atelier-dreiseitl/
+
+  [Tanner Springs Park — GreenWorks]
+  GreenWorks collaborated with Atelier Dreiseitl of Germany to designTannerSpringsPark, an
+  urbanparkinPortland'sPearl District. Envisioned as an urbanparkwith a wetland focus, theparkserves
+  the developing surrounding neighborhood as well as visitors to the area. The sustainable design
+  features innovative uses of water andstormwater, creating a refuge for people and wildlife in the
+  ...
+  Source: https://greenworkspc.com/all-projects-1/tanner-springs-park
+
+  [Tanner Springs Park - A Lesson in History and Sustainability]
+  Also, anartinstallation at the east end of theparkconsists of a wavering wall of vertical
+  railtracks, interspersed with blue stained glass panels displaying images of insects - a merging of
+  man-made and natural references. The railtracksare relics of 19th centuryPortland. A "spring"
+  emerges from the ground in the prairie zone.
+  Source: https://landperspectives.com/2011/07/01/tanner-springs-park-a-lesson-in-history-and-sustainability/
+
+  [Tanner Springs Park, Portland, Oregon, US - Urban Green-blue Grids]
+  The pond is situated at the lowest point of the slope, approximately 1.80 metres below street level.
+  The pond is bordered by a 60-metre-long artwork, theArtWall, made from old rails found in the area.
+  The rails are interspersed with fused glass showing images of dragonflies, spiders and amphibious
+  creatures from the former wetland.
+  Source: https://urbangreenbluegrids.com/projects/tanner-springs-park-portland-oregon-us/
