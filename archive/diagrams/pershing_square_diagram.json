@@ -1,0 +1,182 @@
+{
+  "site": "Pershing Square",
+  "zones": [
+    {
+      "id": "Z1",
+      "label": "Geometric Feature Plaza",
+      "character": "Structured, designed hardscape feature, potentially an art installation or contemplative space.",
+      "box": [
+        308,
+        312,
+        441,
+        406
+      ]
+    },
+    {
+      "id": "Z2",
+      "label": "Circular Feature Plaza",
+      "character": "Focal point, paved gathering area, likely with a central fountain or art element.",
+      "box": [
+        529,
+        271,
+        603,
+        333
+      ]
+    },
+    {
+      "id": "Z3",
+      "label": "Linear Water Feature",
+      "character": "Sound and visual interest, a cooling element, defining a linear edge to the circular plaza.",
+      "box": [
+        529,
+        333,
+        573,
+        448
+      ]
+    },
+    {
+      "id": "Z4",
+      "label": "Minor Node (South)",
+      "character": "Small accent area, potentially a seating cluster, small art piece, or kiosk.",
+      "box": [
+        544,
+        468,
+        566,
+        489
+      ]
+    },
+    {
+      "id": "Z5",
+      "label": "Minor Node (North)",
+      "character": "Small accent area, potentially a seating cluster, small art piece, or kiosk, near the geometric feature.",
+      "box": [
+        382,
+        417,
+        404,
+        437
+      ]
+    },
+    {
+      "id": "Z6",
+      "label": "Pocket Green Space",
+      "character": "Soft element, natural ground cover, providing visual contrast and passive recreation space.",
+      "box": [
+        353,
+        437,
+        411,
+        479
+      ]
+    },
+    {
+      "id": "Z7",
+      "label": "Main Plaza Hardscape",
+      "character": "Large, flexible open space for circulation, large gatherings, and events, connecting all internal features.",
+      "box": [
+        397,
+        197,
+        970,
+        614
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "P1",
+      "label": "Perimeter Streets",
+      "type": "edge",
+      "connects": [],
+      "box": [
+        0,
+        0,
+        1000,
+        1000
+      ]
+    },
+    {
+      "id": "P2",
+      "label": "NW Pedestrian Entry",
+      "type": "primary",
+      "connects": [
+        "Z7"
+      ],
+      "box": [
+        279,
+        479,
+        338,
+        531
+      ]
+    },
+    {
+      "id": "P3",
+      "label": "SW Pedestrian Entry",
+      "type": "primary",
+      "connects": [
+        "Z7"
+      ],
+      "box": [
+        603,
+        208,
+        647,
+        260
+      ]
+    },
+    {
+      "id": "P4",
+      "label": "South Feature Access",
+      "type": "secondary",
+      "connects": [
+        "Z2",
+        "Z7"
+      ],
+      "box": [
+        573,
+        322,
+        588,
+        354
+      ]
+    },
+    {
+      "id": "P5",
+      "label": "North Feature Access",
+      "type": "secondary",
+      "connects": [
+        "Z1",
+        "Z5",
+        "Z7"
+      ],
+      "box": [
+        397,
+        417,
+        411,
+        458
+      ]
+    }
+  ],
+  "relationships": [
+    "The Main Plaza Hardscape (Z7) serves as the primary circulation and communal gathering space, linking all distinct internal zones.",
+    "Perimeter Streets (P1) form the urban boundary, defining the context and containing the public square within a city block.",
+    "NW Pedestrian Entry (P2) and SW Pedestrian Entry (P3) are critical thresholds, drawing pedestrians from the surrounding street network into the Main Plaza Hardscape (Z7).",
+    "The Geometric Feature Plaza (Z1) and Circular Feature Plaza (Z2) function as major programmatic anchors, creating distinct focal points at opposing ends of the Main Plaza Hardscape (Z7).",
+    "The Linear Water Feature (Z3) integrates directly with the Circular Feature Plaza (Z2), suggesting a sensory experience that extends the plaza's programmatic reach.",
+    "The Pocket Green Space (Z6) provides a softer, organic counterpoint adjacent to the structured Geometric Feature Plaza (Z1), offering visual and tactile variety.",
+    "Minor Nodes (Z4, Z5) punctuate the Main Plaza Hardscape (Z7), providing smaller-scale moments for pause or intimate gathering, accessible via secondary paths.",
+    "The overall site boundary clearly delineates the park from the vehicular Perimeter Streets (P1), creating a defined public realm."
+  ],
+  "material_notes": [
+    "The 'Geometric Feature Plaza' and 'Circular Feature Plaza' are depicted with a fine stippling (::::::), suggesting a hard, possibly textured paving material like stone, concrete, or decorative tile.",
+    "The 'Pocket Green Space' is indicated with parallel lines (||||), representing softscape such as lawn, groundcover, or planted beds.",
+    "The 'Linear Water Feature' is represented by wavy dashed lines, inferring a body of water, possibly a shallow pool or a flowing channel.",
+    "Pedestrian pathways (---) are visually distinct from the implied main plaza surface, suggesting either a different paving material (e.g., asphalt, compacted gravel) or a visual marking on a uniform hardscape.",
+    "The dominant unhatched 'Main Plaza Hardscape' implies a large expanse of paved surface, likely concrete or a similar durable material to support varied public activities."
+  ],
+  "program_notes": [
+    "The large 'Main Plaza Hardscape' (Z7) suggests a flexible venue for public events, markets, large gatherings, and everyday social interaction.",
+    "The 'Geometric Feature Plaza' (Z1) and 'Circular Feature Plaza' (Z2) are main attractors, likely accommodating public art installations, performance stages, or significant civic monuments.",
+    "The 'Linear Water Feature' (Z3) likely offers opportunities for passive recreation, sensory engagement (sound, cooling), and aesthetic appreciation.",
+    "'Minor Nodes' (Z4, Z5) provide smaller, more intimate zones for individual contemplation, small group seating, or kiosks.",
+    "The 'Pocket Green Space' (Z6) offers a space for relaxation, informal play, or quiet repose amidst the urban hardscape.",
+    "The 'Pedestrian Entries' (P2, P3) indicate a clear emphasis on pedestrian flow and access, linking the park to the surrounding urban fabric."
+  ],
+  "scale_notes": "The park occupies a full city block, indicating a significant urban scale designed to serve a broad public. The 'Main Attractors' (Z1, Z2) are substantial elements, large enough to be prominent landmarks or gathering spaces within this urban context, suggesting a monumental yet accessible scale. Conversely, the 'Minor Nodes' (Z4, Z5) and 'Pocket Green Space' (Z6) offer more intimate, human-scaled experiences, providing areas for individual or small-group use within the larger public realm.",
+  "design_logic": "The design logic for Pershing Square appears to center on creating a highly programmed and geometrically defined public plaza within a traditional city block. It uses a large, flexible 'Main Plaza Hardscape' as the primary organizing element, punctuated by distinct 'Main Attractors' (a geometric and a circular feature) that serve as focal points and programmatic anchors. Circulation is clearly defined by 'Perimeter Streets' and strategically placed 'Pedestrian Entries', with internal paths guiding movement towards the features. The inclusion of a 'Linear Water Feature' and a 'Pocket Green Space' introduces sensory variety and soft elements to contrast with the dominant hardscape, aiming to balance monumental urban presence with diverse user experiences through structured flexibility and distinct spatial programming."
+}

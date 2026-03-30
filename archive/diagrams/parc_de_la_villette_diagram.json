@@ -3,152 +3,368 @@
   "zones": [
     {
       "id": "Z1",
-      "label": "Western Lawn",
-      "character": "An expansive open green space primarily for passive recreation and unstructured activities."
+      "label": "North-West Green Patch",
+      "character": "Irregularly shaped green space for passive recreation, defined by organic edges.",
+      "box": [
+        100,
+        50,
+        480,
+        500
+      ]
     },
     {
       "id": "Z2",
-      "label": "Eastern Garden Area",
-      "character": "A textured green space, possibly with varied planting, traversed by a linear water feature."
+      "label": "Central Green Expanse",
+      "character": "Large, undulating primary green space, the main lawn area of the park, traversed by pathways.",
+      "box": [
+        370,
+        0,
+        780,
+        550
+      ]
     },
     {
       "id": "Z3",
-      "label": "Western Hub",
-      "character": "A main attractor positioned within the Western Lawn, likely a significant building or focal point."
+      "label": "East Green Pocket",
+      "character": "Smaller, contained green area, offering a more intimate natural setting.",
+      "box": [
+        450,
+        400,
+        600,
+        600
+      ]
     },
     {
       "id": "Z4",
-      "label": "Central Pavilion",
-      "character": "A prominent rectangular building or major structure acting as a central node between the two main green spaces."
+      "label": "Canal de l'Ourcq / Major Water Feature",
+      "character": "A prominent diagonal linear water body (likely a canal) that acts as a major organizing spine and a barrier/threshold.",
+      "box": [
+        150,
+        150,
+        750,
+        750
+      ]
     },
     {
       "id": "Z5",
-      "label": "Eastern Activity Cluster",
-      "character": "A grouping of main attractors along the park's eastern edge, suggesting concentrated points of interest or distinct functions."
+      "label": "Main Attractor (North)",
+      "character": "A primary architectural folly or pavilion, a significant focal point and programmatic node.",
+      "box": [
+        170,
+        360,
+        240,
+        430
+      ]
     },
     {
       "id": "Z6",
-      "label": "Northwest Niche",
-      "character": "A minor attractor providing a smaller, potentially more intimate or contemplative moment within the Western Lawn."
+      "label": "Minor Attractor (West-Central)",
+      "character": "A smaller architectural folly or pavilion, providing a point of interest within the green space.",
+      "box": [
+        400,
+        100,
+        460,
+        160
+      ]
     },
     {
       "id": "Z7",
-      "label": "Central Feature",
-      "character": "A minor attractor located near the Central Pavilion, possibly an art installation or a small gathering spot."
+      "label": "Minor Attractor (East-Central)",
+      "character": "A smaller architectural folly or pavilion, serving as a landmark near intersecting paths.",
+      "box": [
+        400,
+        500,
+        460,
+        560
+      ]
     },
     {
       "id": "Z8",
-      "label": "Linear Water Body",
-      "character": "A prominent water feature that weaves through the Eastern Garden Area, offering a serene or dynamic element."
+      "label": "Minor Attractor (South-West)",
+      "character": "A smaller architectural folly or pavilion, located near a major green expanse and pedestrian path.",
+      "box": [
+        650,
+        300,
+        710,
+        360
+      ]
     },
     {
       "id": "Z9",
-      "label": "Street Edge Interface",
-      "character": "The transitional zone where the park meets the surrounding urban streets, defining its external boundary."
+      "label": "Minor Attractor (South-East)",
+      "character": "A smaller architectural folly or pavilion, situated within a green space and close to a perimeter street.",
+      "box": [
+        600,
+        600,
+        660,
+        660
+      ]
+    },
+    {
+      "id": "Z10",
+      "label": "Minor Attractor (Far East)",
+      "character": "An isolated smaller architectural folly or pavilion, potentially marking an edge or distant view.",
+      "box": [
+        440,
+        700,
+        500,
+        760
+      ]
+    },
+    {
+      "id": "Z11",
+      "label": "Minor Attractor (NW Canal Edge)",
+      "character": "A smaller architectural folly or pavilion, located strategically at the edge of the canal, potentially marking a crossing point.",
+      "box": [
+        230,
+        240,
+        290,
+        300
+      ]
+    },
+    {
+      "id": "Z12",
+      "label": "Minor Attractor (NE Canal Edge)",
+      "character": "A smaller architectural folly or pavilion, marking a point along the diagonal canal.",
+      "box": [
+        150,
+        500,
+        210,
+        560
+      ]
+    },
+    {
+      "id": "Z13",
+      "label": "Minor Attractor (SE Canal Edge)",
+      "character": "A smaller architectural folly or pavilion, situated near the lower end of the diagonal canal.",
+      "box": [
+        480,
+        650,
+        540,
+        710
+      ]
+    },
+    {
+      "id": "Z14",
+      "label": "Minor Attractor (Central Green Pocket)",
+      "character": "A smaller architectural folly or pavilion, nestled within a relatively enclosed green area, providing a more secluded destination.",
+      "box": [
+        300,
+        380,
+        360,
+        440
+      ]
+    },
+    {
+      "id": "Z15",
+      "label": "Central Node / Plaza",
+      "character": "An unprogrammed hardscaped area where multiple pedestrian pathways converge, likely a gathering or circulation hub.",
+      "box": [
+        350,
+        250,
+        450,
+        350
+      ]
     }
   ],
   "paths": [
     {
       "id": "P1",
-      "label": "Southern Boulevard",
-      "type": "primary",
+      "label": "Major Street (North-East Perimeter)",
+      "type": "street",
       "connects": [
-        "Z9"
+        "park_edge"
+      ],
+      "box": [
+        50,
+        400,
+        150,
+        750
       ]
     },
     {
       "id": "P2",
-      "label": "Eastern Street",
-      "type": "primary",
+      "label": "Major Street (East Perimeter)",
+      "type": "street",
       "connects": [
-        "Z9",
-        "Z5"
+        "park_edge"
+      ],
+      "box": [
+        150,
+        750,
+        700,
+        850
       ]
     },
     {
       "id": "P3",
-      "label": "Grand Promenade",
-      "type": "primary",
+      "label": "Major Street (South Perimeter)",
+      "type": "street",
       "connects": [
-        "Z1",
-        "Z2",
-        "Z3",
-        "Z4",
-        "Z6",
-        "Z7",
-        "P1"
+        "park_edge"
+      ],
+      "box": [
+        700,
+        0,
+        800,
+        750
       ]
     },
     {
       "id": "P4",
-      "label": "Western Meander",
+      "label": "Pedestrian Path (North-West Green)",
       "type": "secondary",
       "connects": [
         "Z1",
-        "Z3",
-        "Z6",
-        "P3"
+        "Z11"
+      ],
+      "box": [
+        200,
+        50,
+        450,
+        400
       ]
     },
     {
       "id": "P5",
-      "label": "Eastern Waterfront Walk",
+      "label": "Pedestrian Path (Central Curved)",
       "type": "secondary",
       "connects": [
         "Z2",
-        "Z8",
-        "Z5",
-        "P3"
+        "Z6",
+        "Z15"
+      ],
+      "box": [
+        350,
+        150,
+        600,
+        300
       ]
     },
     {
       "id": "P6",
-      "label": "Pavilion Link",
+      "label": "Pedestrian Path (Central Linear)",
       "type": "secondary",
       "connects": [
-        "Z3",
-        "Z4"
+        "Z2",
+        "Z8",
+        "Z15"
+      ],
+      "box": [
+        450,
+        200,
+        700,
+        350
       ]
     },
     {
       "id": "P7",
-      "label": "Park Boundary Path",
+      "label": "Pedestrian Path (East-Central Winding)",
       "type": "secondary",
+      "connects": [
+        "Z2",
+        "Z3",
+        "Z7",
+        "Z14"
+      ],
+      "box": [
+        350,
+        350,
+        600,
+        550
+      ]
+    },
+    {
+      "id": "P8",
+      "label": "Pedestrian Path (South-East Winding)",
+      "type": "secondary",
+      "connects": [
+        "Z2",
+        "Z9"
+      ],
+      "box": [
+        550,
+        450,
+        700,
+        650
+      ]
+    },
+    {
+      "id": "P9",
+      "label": "Pedestrian Path (Diagonal Crossing)",
+      "type": "primary",
       "connects": [
         "Z1",
         "Z2",
+        "Z4",
+        "Z11",
+        "Z15"
+      ],
+      "box": [
+        250,
+        200,
+        500,
+        450
+      ]
+    },
+    {
+      "id": "P10",
+      "label": "Pedestrian Path (North-East Connection)",
+      "type": "secondary",
+      "connects": [
+        "Z1",
+        "Z5",
+        "park_edge"
+      ],
+      "box": [
+        0,
+        400,
+        200,
+        600
+      ]
+    },
+    {
+      "id": "P11",
+      "label": "Pedestrian Path (South-East Connection)",
+      "type": "secondary",
+      "connects": [
+        "Z2",
         "Z9",
-        "P3"
+        "park_edge"
+      ],
+      "box": [
+        600,
+        500,
+        800,
+        700
       ]
     }
   ],
   "relationships": [
-    "The Grand Promenade (P3) acts as a strong diagonal axis, linking major attractors (Z3, Z4) and traversing the entire site.",
-    "The Central Pavilion (Z4) is a pivotal element, bridging the Western Lawn (Z1) and Eastern Garden (Z2) and intersecting the Grand Promenade (P3).",
-    "The Linear Water Body (Z8) carves a distinct path through the Eastern Garden (Z2), influencing the alignment of the Eastern Waterfront Walk (P5).",
-    "Main Attractors (Z3, Z4, Z5) are strategically positioned at key intersections or significant edges, serving as activity generators and navigational landmarks.",
-    "Minor Attractors (Z6, Z7) offer smaller-scale points of interest, providing opportunities for respite or focused interaction within larger green spaces.",
-    "The rectilinear form of the Central Pavilion (Z4) provides a stark contrast to the organic shapes of the green spaces (Z1, Z2) and the curvilinear paths (P4, P5).",
-    "The Eastern Activity Cluster (Z5) is concentrated along the Eastern Street (P2), suggesting a more active and urban-facing edge of the park.",
-    "Pedestrian pathways (P3, P4, P5) form a hierarchical network, offering both direct routes and meandering experiences through the landscape.",
-    "The park's boundary is defined by both soft green edges and hard street interfaces (Z9), creating varied thresholds for entry and interaction with the city."
+    "The Canal (Z4) bisects the park diagonally, acting as a powerful linear organizer and separating large green zones.",
+    "A systematic grid of attractors (Z5-Z14) is overlaid across the site, providing distinct programmatic nodes that punctuate the landscape.",
+    "Organic pedestrian pathways (P4-P11) weave through the green spaces (Z1, Z2, Z3), creating meandering circulation routes that contrast with linear elements.",
+    "Major streets (P1, P2, P3) define the overall perimeter, establishing clear boundaries and primary access points to the park.",
+    "Several minor attractors (Z11, Z12, Z13) are strategically located along the edges of the Canal (Z4), likely marking crossings or focal points for views.",
+    "The Central Node/Plaza (Z15) acts as a crucial interstitial space where multiple pedestrian paths converge, serving as a primary internal circulation hub.",
+    "The Main Attractor (Z5) is situated at the confluence of a large green space (Z1) and a perimeter path, suggesting it's a key destination or entry point.",
+    "The design creates a dynamic tension between the rigid geometry of the canal, streets, and attractor grid, and the fluid, organic forms of the green spaces and pedestrian routes."
   ],
   "material_notes": [
-    "Predominantly soft ground cover indicated by 'Green Space' (e.g., lawns, planted beds).",
-    "Hard-surfaced pedestrian pathways inferred (e.g., gravel, pavers, asphalt) for circulation.",
-    "Hard-surfaced vehicular streets implied (e.g., asphalt, concrete) at the park perimeter.",
-    "Water as a primary surface element for the 'Linear Water Body'.",
-    "Main and Minor Attractors likely comprise various hard materials (e.g., concrete, stone, metal, glass) for buildings or sculptural elements."
+    "Extensive soft landscape surfaces for green spaces, implying grass, meadows, and tree plantings.",
+    "Hard-paved surfaces for major streets, indicating asphalt or concrete for vehicular circulation.",
+    "Paved or gravel surfaces for pedestrian pathways, suggesting durable, permeable, or semi-permeable materials.",
+    "Water as a dominant visual and potentially recreational material for the Canal (Z4).",
+    "Attractors (Z5-Z14) likely represent built structures, implying a range of architectural materials (e.g., steel, concrete, glass, wood) for follies/pavilions."
   ],
   "program_notes": [
-    "Large-scale public gatherings and passive recreation (lounging, picnicking) in the Western Lawn (Z1).",
-    "Strolling, walking, and contemplative activities along the varied pedestrian pathways (P3, P4, P5).",
-    "Cultural events, exhibitions, or educational activities potentially housed within the Central Pavilion (Z4) and other Main Attractors.",
-    "Social interaction and congregation at the Main and Minor Attractors (Z3, Z5, Z6, Z7).",
-    "Enjoyment of water features for visual amenity or specific water-related activities (Z8).",
-    "Active recreation or play in designated areas (inferred within green spaces near attractors).",
-    "Vehicular access and drop-off points along the perimeter streets (P1, P2)."
+    "Passive recreation and relaxation in large green spaces (Z1, Z2, Z3).",
+    "Active circulation, promenading, and jogging along pedestrian pathways (P4-P11).",
+    "Vehicular access and perimeter circulation provided by the surrounding streets (P1, P2, P3).",
+    "Specific programmed activities (e.g., art installations, cafes, playgrounds, exhibition spaces) at the various attractors (Z5-Z14).",
+    "Potential for water-based activities like boating or visual enjoyment along the Canal (Z4).",
+    "Gathering and event spaces at larger plaza areas (Z15) and central points within green zones."
   ],
-  "scale_notes": "The presence of major streets, a prominent diagonal promenade, and several 'Main Attractors' suggests a large-scale urban park designed to accommodate significant pedestrian flow and substantial architectural interventions. The scale allows for both grand, monumental gestures like the Central Pavilion and expansive lawns, alongside more intimate, human-scaled experiences provided by minor attractors and meandering paths.",
-  "design_logic": "The dominant design logic of Parc de la Villette appears to be a formal grid or diagonal axis overlaid onto a more organic, curvilinear landscape. The Grand Promenade serves as the primary organizing element, cutting diagonally across the site and linking key programmatic attractors. This strong linear gesture is softened and enriched by expansive green spaces, a sinuous water feature, and a network of secondary paths that encourage exploration and provide diverse spatial experiences. The strategic placement of both main and minor attractors creates a layered system of destinations, balancing efficient circulation with opportunities for leisure, culture, and social interaction within a dynamic urban context."
+  "scale_notes": "The site exhibits a monumental scale appropriate for a large urban park, characterized by expansive green areas and grand linear elements like the Canal and perimeter streets. Within this large framework, the distributed grid of 'attractors' introduces a contrasting human scale, providing numerous identifiable points of interest and breaking down the overall vastness into more manageable and experientially diverse zones. The proportions suggest a design that can accommodate both large public events and intimate individual experiences.",
+  "design_logic": "The dominant design logic of Parc de la Villette is a rigorous superimposition of distinct, often contrasting, organizational systems. A strong diagonal axis, represented by the canal (Z4), and the orthogonal perimeter streets establish a primary, rational framework. Intersecting this, a precise grid of architectural 'attractors' (follies) is strategically placed, serving as programmatic markers and spatial anchors. Juxtaposed against these geometric systems are the free-form, organic shapes of the green spaces and the curvilinear network of pedestrian paths, which invite more leisurely, exploratory movement. This layered approach creates a complex and dynamic landscape, allowing for both clear legibility and serendipitous discovery, embodying a deconstructivist approach to park design."
 }
