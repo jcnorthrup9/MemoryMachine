@@ -1,44 +1,37 @@
-# Weekly Progress Update // Memory Machine
+# 🧠 Memory Machine // Development Sprint Log
+**Date:** March 30, 2026
+**Focus:** Rhino MCP Integration, Spatial Data Expansion, and AI Vision Calibration
 
-## 1. Case Study Research Integration
-Over the past week, extensive qualitative and quantitative data was harvested, parsed, and integrated into the generative pipeline for our three primary case studies. Each explores a different facet of human memory decay, structural palimpsest, and atmospheric hallucination:
+## 1. Rhino MCP & Local Environment Setup
+- Successfully migrated the pipeline to new hardware.
+- Initialized the **Claude Rhino MCP**, establishing a live websocket bridge to the active `.3dm` document.
+- **Validation:** Proved read/write capabilities by having Claude autonomously query the document for unknown `?` text objects, report their coordinates, and overwrite them with actual site names using injected `rhinoscriptsyntax`.
+- *Resolved:* Diagnosed and fixed runaway annotation line weights caused by the `printDisplay` viewport scale toggle.
 
-*   **Bottega Louie (Los Angeles):** 
-    *   **Focus:** Sensory excess and acoustic reverberation.
-    *   **Data Harvested:** Parsed hundreds of visitor reviews extracting atmospheric qualities (high vaulted ceilings, noise, vibrant displays) alongside structural massing data. 
-    *   **Goal:** Testing the translation of qualitative, atmospheric memories into rigid, quantitative architectural geometry.
-*   **O.T. Johnson Building (Los Angeles):**
-    *   **Focus:** Architectural dissonance and the physical palimpsest.
-    *   **Data Harvested:** Historical and architectural records detailing its 1902 Romanesque Revival origins, subsequent alterations, and the 2007 fire that exposed its long-hidden architectural "witness marks."
-    *   **Goal:** Exploring how architecture never fully erases its past, but rather hides it beneath new interventions.
-*   **Nakagin Capsule Tower (Tokyo):**
-    *   **Focus:** Algorithmic modularity and urban entropy.
-    *   **Data Harvested:** Structural logic parameters (140 capsules, 2.5x4.0x2.5m constraints) and qualitative reviews describing the retro-futuristic decay.
-    *   **Goal:** Utilizing its strict Metabolism design as a direct mirror to computational architecture and procedural generation.
+## 2. Precedent Corpus Expansion & Calibration
+- Refactored `satellite_scraper.py` into a flexible CLI utility to allow targeted image harvesting.
+- Expanded the core precedent dataset to 15 sites, removing poor-visibility sites and adding highly diagrammatic spaces (*Piazza del Campo, The High Line, Federation Square, Pioneer Courthouse Square*).
+- Mapped exact GPS coordinates (lat/lon) into the `SOURCE_INFO` registry in `app.py` to anchor all future generative geometry to real-world math.
 
-## 2. Pershing Square: The Cross-Pollination Strategy
-The conceptual direction for our final masterplan site, **Pershing Square**, has evolved. Recognized as the ultimate urban palimpsest due to its constant cycle of demolition and redesign, the site is now being used as a testbed for architectural cross-pollination.
+## 3. The Autonomous Orchestrator (Experiments in Generative Drafting)
+- Developed `autonomous_diagram_orchestrator.py` to bypass LLM geometric hallucination.
+- **OpenStreetMap (OSM) Integration:** The script queries the Overpass API for real-world building footprints around precedent sites and translates them into local Cartesian coordinates (meters).
+- **Image Scaling:** Added functionality to import satellite screenshots as Rhino `PictureFrame` underlays, scaling them perfectly to the OSM geometry using Web Mercator projection formulas.
+- **The 4x5 Masterplan:** Calibrated the generated Python scripts to accept `offset_x` and `offset_y` parameters, allowing the MCP to place sites neatly into a 800-unit spaced grid.
 
-*   **The Problem:** Review data harvested for Pershing Square highlights a dysfunctional public space—criticized for its fortress-like concrete walls, lack of shade, confusing elevation changes, and overall disconnect from the surrounding pedestrian flow.
-*   **The New Direction:** The Memory Machine pipeline will attempt to **cross-pollinate Pershing Square with spatial parameters and atmospheric qualities extracted from successful, highly-enjoyed public spaces**. 
-*   **Current Site Data Extraction:** 
-    *   Successfully executed OpenCV contour analysis on satellite imagery to map the exact X/Y coordinates of existing trees.
-    *   Harvested OpenStreetMap (OSM) GIS data to procedurally generate the surrounding urban context in Rhino.
-    *   Compiled a memory manifest highlighting the spatial failures that the new cross-pollinated interventions will need to overwrite or negotiate with.
+## 4. The Strategic Pivot: AI as Architectural Analyst
+- *Observation:* While the MCP can draw math, it is "blind" to the viewport. Generative drafting from scratch proved brittle and misaligned with the project's core visual language.
+- *Pivot:* Shifted the AI's role from "Draftsman" to "Analyst". The machine's primary directive is now to read and interpret human-authored architectural diagrams to extract "Spatial DNA."
 
-## 3. Generative Pipeline & Presentation Updates
-In order to properly document and visualize these new findings, the system's output mechanisms were heavily upgraded:
+## 5. Upgrading the Diagram Agent (`diagram_agent.py`)
+- Upgraded the agent to utilize the new `google-genai` SDK and the Gemini 2.5 Flash model.
+- **Visual Ground-Truthing:** Added a `Pillow` (PIL) annotation function. When Gemini parses a diagram, it now returns 0-1000 normalized bounding box coordinates for every Zone and Path it identifies. The Python script then physically draws red and blue boxes onto the image and saves a `_annotated.jpg` copy.
+- **Successful Benchmark:** Tested the agent on unfinished, manual diagrams of *Parc de la Villette* and *Pershing Square*. 
+  - The agent successfully read custom hatch patterns (differentiating water vs. grass) and line weights via the legend.
+  - It correctly deduced urban context, such as Pershing Square's relationship to the diagonal DTLA street grid.
+  - It output highly structured, 3D-ready JSON containing programmatic zones, path connections, and spatial relationships.
 
-*   **Dynamic Deck Compiler (`deck_compiler.py`):** Added new slide typologies (`dual_text_slide`, `workflow_slide`, and `text_and_mermaid_slide`) to better display the juxtaposition of qualitative "hallucinations" alongside hard quantitative binary/CSV data.
-*   **Live Systems Mapping:** Replaced static workflow images with live `Mermaid.js` diagrams that render directly in the HTML presentation.
-*   **Figma Integration:** Completely rewrote the TypeScript logic for the Figma plugin (`code.ts`) so that it perfectly mirrors the new dynamic HTML layouts, including auto-scaling image grids and justified typography.
-*   **AI Engine Migration:** Upgraded the AI summarization logic to use the new `google-genai` SDK, ensuring the system remains stable as we begin asking Gemini to hallucinate cross-pollinated spatial parameters.
-
-## Daily Log: March 25, 2026
-### Code Changes & System Upgrades
-* **Merge Conflict Resolution:** Cleanly resolved Git branching conflicts in `deck_compiler.py`, prioritizing new dynamic slide layouts (`dual_text_slide`, `workflow_slide`) while restoring missing image compilation logic.
-* **Gemini SDK Migration:** Upgraded `deck_compiler.py` from the deprecated `google-generativeai` library to the officially supported `google-genai` package for stable architectural summarization.
-* **Live Render Integrations:** Implemented the `webbrowser` module to auto-launch the compiled HTML presentation, and swapped the static system pipeline image for a live, dark-themed Mermaid.js diagram.
-* **Figma Plugin Overhaul:** Rewrote the TypeScript engine (`code.ts`) to perfectly mimic HTML/CSS flexbox properties, dynamic image scaling, `1.4` line-heights, and justified typography.
-* **Data Pipeline Fixes:** Repathed Bottega Louie references to specific `.jpg` assets, integrated the new `pershing_square_hero_resized.webp` image, and corrected layout clipping issues for quantitative text.
-* **Obsidian Bridge:** Built `obsidian_logger.py` to seamlessly append these markdown logs directly into the local Obsidian Vault.
+## ⏭️ Next Steps
+1. **Manual Diagramming:** Complete the stylized, manual Rhino diagrams for the remaining precedent sites on the 4x5 masterplan grid.
+2. **Batch Analysis:** Run the perfected `diagram_agent.py` across all exported PNGs to populate the `archive/diagrams/` folder with their respective JSON blueprints.
+3. **Intervention Engine:** Link the extracted "Spatial DNA" JSONs to the semantic search prompt so that generated 3D interventions inherit the specific geometries and logic of their matched precedents.
