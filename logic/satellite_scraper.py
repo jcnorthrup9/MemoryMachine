@@ -1,13 +1,14 @@
 import os
 import time
 from playwright.sync_api import sync_playwright
+import argparse
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-OUTPUT_IMAGE = os.path.join(DATA_DIR, 'pershing_satellite.jpg')
 
-def capture_satellite_map(lat=34.0483, lon=-118.2525, zoom=19.5):
-    print(f"🛰️  Initiating satellite capture at {lat}, {lon}...")
+def capture_satellite_map(lat, lon, zoom, output_path):
+    """Captures a clean satellite image from Google Maps for the given coordinates."""
+    print(f"🛰️  Initiating satellite capture at {lat}, {lon} for {os.path.basename(output_path)}...")
     
     # Google Maps URL forced to Satellite view (!3m1!1e3)
     url = f"https://www.google.com/maps/@{lat},{lon},{zoom}z/data=!3m1!1e3"
@@ -34,11 +35,26 @@ def capture_satellite_map(lat=34.0483, lon=-118.2525, zoom=19.5):
         """)
         time.sleep(1) # Give the DOM a second to hide everything
         
-        os.makedirs(DATA_DIR, exist_ok=True)
-        page.screenshot(path=OUTPUT_IMAGE, type="jpeg", quality=100)
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+        page.screenshot(path=output_path, type="jpeg", quality=95)
         
         browser.close()
-        print(f"✅ Clean satellite image captured successfully: {OUTPUT_IMAGE}")
+        print(f"✅ Clean satellite image captured successfully: {output_path}")
 
 if __name__ == "__main__":
-    capture_satellite_map()
+    parser = argparse.ArgumentParser(description="Capture a satellite map from Google Maps.")
+    parser.add_argument("--lat", type=float, default=34.0483, help="Latitude for the map center.")
+    parser.add_argument("--lon", type=float, default=-118.2525, help="Longitude for the map center.")
+    parser.add_argument("--zoom", type=float, default=19.5, help="Zoom level for the map.")
+    parser.add_argument("--output", default=os.path.join(DATA_DIR, 'pershing_satellite.jpg'),
+                        help="Full path for the output JPG image.")
+    
+    args = parser.parse_args()
+    
+    capture_satellite_map(
+        lat=args.lat,
+        lon=args.lon,
+        zoom=args.zoom,
+        output_path=args.output
+    )

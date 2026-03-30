@@ -1,0 +1,7 @@
+prompt generation
+
+    prompt_body = (
+        "Interior architectural render shot of a spacious, luxurious patisserie and Italian restaurant located in Downtown Los Angeles (DTLA). "
+        "High vaulted ceilings, bright white walls, white marble floors, and golden accents. To the right, a long glass display case "
+        "filled with colorful macarons. To the left, a stylish cocktail bar. In the back, an open kitchen with a red brick wood-fired pizza oven. "
+        "Elegant dining tables, fresh pink flower arrangements, large glass windows, airy atmosphere, cinematic lighting, photorealistic."

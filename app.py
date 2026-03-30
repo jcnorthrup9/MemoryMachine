@@ -62,6 +62,7 @@ SOURCE_INFO = {
         "source_type": "Google Maps Reviews",
         "notes":       "Five-acre public plaza in the heart of DTLA. Subject of this project — currently being redesigned for the third time in three decades.",
         "logic":       "target_site",
+        "coordinates": {"lat": 34.0483, "lon": -118.2525}
     },
     "Schouwburgplein": {
         "full_name":   "Schouwburgplein",
@@ -69,6 +70,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "Vast elevated hard plaza defined by four 35m hydraulic lighting masts operable by the public. Epoxy-coated steel deck, no conventional furniture.",
         "logic":       "vertical_actuated",
+        "coordinates": {"lat": 51.9226, "lon": 4.4726}
     },
     "Grand Park LA": {
         "full_name":   "Grand Park",
@@ -76,6 +78,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "Four-block civic park with a signature bright pink rubber splash pad membrane. Cooling social focal point in a hot urban climate.",
         "logic":       "surface_membrane",
+        "coordinates": {"lat": 34.0563, "lon": -118.2462}
     },
     "Tanner Springs Park": {
         "full_name":   "Tanner Springs Park",
@@ -83,6 +86,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "Naturalistic stormwater wetland park bounded by 368 reclaimed railway tracks set vertically, with fused glass inlays. Strong acoustic baffle effect.",
         "logic":       "boundary_texture",
+        "coordinates": {"lat": 45.5258, "lon": -122.6841}
     },
     "Gardens by the Bay": {
         "full_name":   "Gardens by the Bay — Supertree Grove",
@@ -90,6 +94,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "18 vertical gardens 25-50m tall; concrete and steel armatures supporting living plant canopies that shade, collect rainwater, and vent the greenhouses below.",
         "logic":       "infrastructure_vent",
+        "coordinates": {"lat": 1.2816, "lon": 103.8636}
     },
     "Superkilen": {
         "full_name":   "Superkilen",
@@ -97,6 +102,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "750m linear park in three color-coded zones; the Red Square features undulating black-and-white stripe patterns on modeled topography. Global furniture collection.",
         "logic":       "ground_pattern",
+        "coordinates": {"lat": 55.6964, "lon": 12.5476}
     },
     "Paley Park": {
         "full_name":   "Paley Park",
@@ -104,6 +110,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "42x100ft vest-pocket park with a 20ft full-width water wall generating ~75dB white noise that masks Midtown Manhattan traffic. Movable chairs, honey locust canopy.",
         "logic":       "acoustic_wall",
+        "coordinates": {"lat": 40.7601, "lon": -73.9714}
     },
     "Klyde Warren Park": {
         "full_name":   "Klyde Warren Park",
@@ -111,6 +118,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "5.2-acre deck park over a freeway in a hot continental climate. Shade trees, splash pad, food truck row, dog park — programmatic activation as primary strategy.",
         "logic":       "deck_program",
+        "coordinates": {"lat": 32.7893, "lon": -96.8021}
     },
     "Millennium Park": {
         "full_name":   "Millennium Park",
@@ -118,6 +126,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "24.5-acre park over a rail yard. Crown Fountain: twin 50ft towers projecting faces that periodically jet water into a shallow black granite plaza. Cloud Gate reflects city at multiple scales.",
         "logic":       "interactive_surface",
+        "coordinates": {"lat": 41.8826, "lon": -87.6226}
     },
     "Parc de la Villette": {
         "full_name":   "Parc de la Villette",
@@ -125,6 +134,7 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "55ha park by Tschumi; 26 red steel follies on a 120m grid provide wayfinding and distributed program across a landscape of lines, surfaces, and thematic gardens.",
         "logic":       "folly_grid",
+        "coordinates": {"lat": 48.8937, "lon": 2.3931}
     },
     "Zaryadye Park": {
         "full_name":   "Zaryadye Park",
@@ -132,6 +142,39 @@ SOURCE_INFO = {
         "source_type": "Spatial Observations",
         "notes":       "35-acre park adjacent to Red Square compressing four Russian biomes — tundra, steppe, forest, wetland. Floating cantilevered bridge over the Moscow River.",
         "logic":       "landscape_hybrid",
+        "coordinates": {"lat": 55.7510, "lon": 37.6262}
+    },
+    "Piazza del Campo": {
+        "full_name":   "Piazza del Campo",
+        "location":    "Siena, Italy",
+        "source_type": "Spatial Observations",
+        "notes":       "Medieval public square known for its shell shape and sloping brick paving divided into nine segments.",
+        "logic":       "radial_sloped_plaza",
+        "coordinates": {"lat": 43.3183, "lon": 11.3315}
+    },
+    "The High Line": {
+        "full_name":   "The High Line",
+        "location":    "New York, NY",
+        "source_type": "Spatial Observations",
+        "notes":       "Elevated linear park built on a historic freight rail line. Combines hardscape paths with wild, naturalistic planting.",
+        "logic":       "linear_infrastructure",
+        "coordinates": {"lat": 40.7475, "lon": -74.0048}
+    },
+    "Federation Square": {
+        "full_name":   "Federation Square",
+        "location":    "Melbourne, Australia",
+        "source_type": "Spatial Observations",
+        "notes":       "Modern civic plaza with complex deconstructivist geometry, intricate paving, and mixed cultural programming.",
+        "logic":       "fractal_plaza",
+        "coordinates": {"lat": -37.8179, "lon": 144.9690}
+    },
+    "Pioneer Courthouse Square": {
+        "full_name":   "Pioneer Courthouse Square",
+        "location":    "Portland, OR",
+        "source_type": "Spatial Observations",
+        "notes":       "Terraced urban amphitheater known as 'Portland's living room' featuring brick paving and steps.",
+        "logic":       "terraced_amphitheater",
+        "coordinates": {"lat": 45.5191, "lon": -122.6793}
     },
 }
 

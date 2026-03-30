@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "rhinoceros3d": {
+      "command": "uvx",
+      "args": ["rhinomcp", "--port", "1999"]
+    }
+  }
+}

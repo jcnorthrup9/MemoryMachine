@@ -68,7 +68,7 @@ SITES = [
         "id":       "superkilen",
         "name":     "Superkilen",
         "location": "Copenhagen, Denmark",
-        "lat": 55.6978,  "lon": 12.5524,   "zoom": 17.5,
+        "lat": 55.6964,  "lon": 12.5476,   "zoom": 16.5,
         "tripadvisor_slug": "Attraction_Review-g189541-d4332801",
         "reviews_file": "superkilen_reviews.txt",
     },
@@ -112,7 +112,42 @@ SITES = [
         "tripadvisor_slug": "Attraction_Review-g298484-d12659840",
         "reviews_file": "zaryadye_park_reviews.txt",
     },
+    {
+        "id":       "piazza_del_campo",
+        "name":     "Piazza del Campo",
+        "location": "Siena, Italy",
+        "lat": 43.3183,  "lon": 11.3315,   "zoom": 18.0,
+        "tripadvisor_slug": "Attraction_Review-g187902-d195175",
+        "reviews_file": "piazza_del_campo_reviews.txt",
+    },
+    {
+        "id":       "the_high_line",
+        "name":     "The High Line",
+        "location": "New York, NY",
+        "lat": 40.7475,  "lon": -74.0048,  "zoom": 18.0,
+        "tripadvisor_slug": "Attraction_Review-g60763-d1487011",
+        "reviews_file": "the_high_line_reviews.txt",
+    },
+    {
+        "id":       "federation_square",
+        "name":     "Federation Square",
+        "location": "Melbourne, Australia",
+        "lat": -37.8179, "lon": 144.9690,  "zoom": 18.5,
+        "tripadvisor_slug": "Attraction_Review-g255100-d257256",
+        "reviews_file": "federation_square_reviews.txt",
+    },
+    {
+        "id":       "pioneer_courthouse_square",
+        "name":     "Pioneer Courthouse Square",
+        "location": "Portland, OR",
+        "lat": 45.5191,  "lon": -122.6793, "zoom": 19.0,
+        "tripadvisor_slug": "Attraction_Review-g52024-d126779",
+        "reviews_file": "pioneer_courthouse_square_reviews.txt",
+    },
 ]
+
+# Active test scope — first 8 sites (Pershing Square → Klyde Warren Park)
+ACTIVE_SITES = SITES[:8]
 
 # ---------------------------------------------------------------------------
 # 1. Satellite capture
@@ -204,6 +239,10 @@ WIKIPEDIA_TITLES = {
     "millennium_park":      "Millennium Park",
     "parc_de_la_villette":  "Parc de la Villette",
     "zaryadye_park":        "Zaryadye Park",
+    "piazza_del_campo":           "Piazza del Campo",
+    "the_high_line":              "High Line",
+    "federation_square":          "Federation Square",
+    "pioneer_courthouse_square":  "Pioneer Courthouse Square",
 }
 
 
