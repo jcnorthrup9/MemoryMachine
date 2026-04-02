@@ -1,0 +1,1006 @@
+{
+  "site": "Parc de la Villette",
+  "orientation_analysis": "The site's primary layout is a complex interplay of orthogonal and rotated grids. The main body of the park, including the large green spaces and the distribution of attractors, appears rotated relative to the dominant external vehicular street grid (the three parallel thick lines). This external grid runs roughly from top-right to bottom-left at approximately a 45-degree angle. The site's western boundary and the large diagonal street also contribute to this rotated external context. Internally, a strong orthogonal grid of 'points' (attractors/follies) is discernible, but this internal grid is itself rotated relative to the site's overall boundaries and the adjacent streets, creating deliberate tension and multiple axes of organization.",
+  "zones": [
+    {
+      "id": "A",
+      "label": "Green Space 1 (Central)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Large, irregular, central park area, primary open space.",
+      "bounding_polygon": [
+        [
+          325,
+          280
+        ],
+        [
+          600,
+          280
+        ],
+        [
+          600,
+          710
+        ],
+        [
+          325,
+          710
+        ]
+      ]
+    },
+    {
+      "id": "B",
+      "label": "Green Space 2 (North-East)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Smaller, irregular green area, adjacent to a water feature and attractors.",
+      "bounding_polygon": [
+        [
+          420,
+          150
+        ],
+        [
+          600,
+          150
+        ],
+        [
+          600,
+          260
+        ],
+        [
+          420,
+          260
+        ]
+      ]
+    },
+    {
+      "id": "C",
+      "label": "Green Space 3 (West)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Elongated, thin green strip along the western edge, bordering a street.",
+      "bounding_polygon": [
+        [
+          65,
+          200
+        ],
+        [
+          240,
+          200
+        ],
+        [
+          240,
+          800
+        ],
+        [
+          65,
+          800
+        ]
+      ]
+    },
+    {
+      "id": "D",
+      "label": "Green Space 4 (South-West)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Small, fragmented green area at the bottom-left of the main park.",
+      "bounding_polygon": [
+        [
+          190,
+          770
+        ],
+        [
+          300,
+          770
+        ],
+        [
+          300,
+          830
+        ],
+        [
+          190,
+          830
+        ]
+      ]
+    },
+    {
+      "id": "E",
+      "label": "Green Space 5 (North-West)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Small, triangular green patch, isolated by a water feature and paths.",
+      "bounding_polygon": [
+        [
+          310,
+          150
+        ],
+        [
+          410,
+          150
+        ],
+        [
+          410,
+          210
+        ],
+        [
+          310,
+          210
+        ]
+      ]
+    },
+    {
+      "id": "F",
+      "label": "Green Space 6 (South-East)",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Small, rectangular green area, bordered by a water feature and streets.",
+      "bounding_polygon": [
+        [
+          650,
+          680
+        ],
+        [
+          720,
+          680
+        ],
+        [
+          720,
+          740
+        ],
+        [
+          650,
+          740
+        ]
+      ]
+    },
+    {
+      "id": "G",
+      "label": "Main Attractor (North-Central)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, likely a folly or programmatic node.",
+      "bounding_polygon": [
+        [
+          325,
+          225
+        ],
+        [
+          365,
+          225
+        ],
+        [
+          365,
+          265
+        ],
+        [
+          325,
+          265
+        ]
+      ]
+    },
+    {
+      "id": "H",
+      "label": "Main Attractor (Mid-West)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, marking a key intersection of paths.",
+      "bounding_polygon": [
+        [
+          315,
+          450
+        ],
+        [
+          365,
+          450
+        ],
+        [
+          365,
+          500
+        ],
+        [
+          315,
+          500
+        ]
+      ]
+    },
+    {
+      "id": "I",
+      "label": "Main Attractor (South-West)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, anchoring the southwest corner of the main green space.",
+      "bounding_polygon": [
+        [
+          315,
+          660
+        ],
+        [
+          365,
+          660
+        ],
+        [
+          365,
+          710
+        ],
+        [
+          315,
+          710
+        ]
+      ]
+    },
+    {
+      "id": "J",
+      "label": "Main Attractor (South-East)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, at the eastern edge of the main green space, near a water feature.",
+      "bounding_polygon": [
+        [
+          610,
+          580
+        ],
+        [
+          660,
+          580
+        ],
+        [
+          660,
+          630
+        ],
+        [
+          610,
+          630
+        ]
+      ]
+    },
+    {
+      "id": "K",
+      "label": "Main Attractor (Far East)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Isolated circular attractor, outside the main park, possibly an entry point.",
+      "bounding_polygon": [
+        [
+          740,
+          360
+        ],
+        [
+          790,
+          360
+        ],
+        [
+          790,
+          410
+        ],
+        [
+          740,
+          410
+        ]
+      ]
+    },
+    {
+      "id": "L",
+      "label": "Main Attractor (North-East)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, situated within Green Space 2.",
+      "bounding_polygon": [
+        [
+          510,
+          160
+        ],
+        [
+          560,
+          160
+        ],
+        [
+          560,
+          210
+        ],
+        [
+          510,
+          210
+        ]
+      ]
+    },
+    {
+      "id": "M",
+      "label": "Main Attractor (Mid-East)",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Circular focal point, partially obscured by streets, acting as an edge element.",
+      "bounding_polygon": [
+        [
+          660,
+          430
+        ],
+        [
+          710,
+          430
+        ],
+        [
+          710,
+          480
+        ],
+        [
+          660,
+          480
+        ]
+      ]
+    },
+    {
+      "id": "N",
+      "label": "Minor Attractor (North)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller, empty circular node, connected to paths.",
+      "bounding_polygon": [
+        [
+          415,
+          205
+        ],
+        [
+          445,
+          205
+        ],
+        [
+          445,
+          235
+        ],
+        [
+          415,
+          235
+        ]
+      ]
+    },
+    {
+      "id": "O",
+      "label": "Minor Attractor (Mid-West, North of H)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller, empty circular node, peripheral to Main Attractor H.",
+      "bounding_polygon": [
+        [
+          285,
+          410
+        ],
+        [
+          315,
+          410
+        ],
+        [
+          315,
+          440
+        ],
+        [
+          285,
+          440
+        ]
+      ]
+    },
+    {
+      "id": "P",
+      "label": "Minor Attractor (Mid-West, South of H)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller, empty circular node, peripheral to Main Attractor H.",
+      "bounding_polygon": [
+        [
+          285,
+          505
+        ],
+        [
+          315,
+          505
+        ],
+        [
+          315,
+          535
+        ],
+        [
+          285,
+          535
+        ]
+      ]
+    },
+    {
+      "id": "Q",
+      "label": "Minor Attractor (Far South-East)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Isolated smaller empty circle, far from the main park mass.",
+      "bounding_polygon": [
+        [
+          830,
+          810
+        ],
+        [
+          870,
+          810
+        ],
+        [
+          870,
+          850
+        ],
+        [
+          830,
+          850
+        ]
+      ]
+    },
+    {
+      "id": "R",
+      "label": "Minor Attractor (Mid-South)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller empty circle, near Main Attractor J.",
+      "bounding_polygon": [
+        [
+          665,
+          760
+        ],
+        [
+          695,
+          760
+        ],
+        [
+          695,
+          790
+        ],
+        [
+          665,
+          790
+        ]
+      ]
+    },
+    {
+      "id": "S",
+      "label": "Minor Attractor (North-East, near streets)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller empty circle, at the edge of the site near the main vehicular streets.",
+      "bounding_polygon": [
+        [
+          600,
+          180
+        ],
+        [
+          630,
+          180
+        ],
+        [
+          630,
+          210
+        ],
+        [
+          600,
+          210
+        ]
+      ]
+    },
+    {
+      "id": "T",
+      "label": "Minor Attractor (South-Central)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller empty circle, at the southern edge of the main green space.",
+      "bounding_polygon": [
+        [
+          480,
+          700
+        ],
+        [
+          510,
+          700
+        ],
+        [
+          510,
+          730
+        ],
+        [
+          480,
+          730
+        ]
+      ]
+    },
+    {
+      "id": "U",
+      "label": "Minor Attractor (North-West)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller empty circle, at the northwest edge of the park.",
+      "bounding_polygon": [
+        [
+          280,
+          310
+        ],
+        [
+          310,
+          310
+        ],
+        [
+          310,
+          340
+        ],
+        [
+          280,
+          340
+        ]
+      ]
+    },
+    {
+      "id": "V",
+      "label": "Minor Attractor (South-West, below I)",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Smaller empty circle, acting as an anchor point for paths below Main Attractor I.",
+      "bounding_polygon": [
+        [
+          280,
+          720
+        ],
+        [
+          310,
+          720
+        ],
+        [
+          310,
+          750
+        ],
+        [
+          280,
+          750
+        ]
+      ]
+    },
+    {
+      "id": "W",
+      "label": "Water Feature (Main Canal)",
+      "type": "Water Feature",
+      "system": "surfaces",
+      "character": "Prominent linear water body, dividing the site and connecting to other features.",
+      "bounding_polygon": [
+        [
+          300,
+          360
+        ],
+        [
+          720,
+          360
+        ],
+        [
+          720,
+          400
+        ],
+        [
+          300,
+          400
+        ]
+      ]
+    },
+    {
+      "id": "X",
+      "label": "Water Feature (North Branch)",
+      "type": "Water Feature",
+      "system": "surfaces",
+      "character": "Branching linear water body, extending north from the main canal.",
+      "bounding_polygon": [
+        [
+          390,
+          200
+        ],
+        [
+          410,
+          200
+        ],
+        [
+          410,
+          360
+        ],
+        [
+          390,
+          360
+        ]
+      ]
+    },
+    {
+      "id": "Y",
+      "label": "Water Feature (South Branch)",
+      "type": "Water Feature",
+      "system": "surfaces",
+      "character": "Branching linear water body, extending south-east from the main canal.",
+      "bounding_polygon": [
+        [
+          630,
+          400
+        ],
+        [
+          670,
+          400
+        ],
+        [
+          670,
+          720
+        ],
+        [
+          630,
+          720
+        ]
+      ]
+    },
+    {
+      "id": "Z",
+      "label": "Unique Element (Square Folly)",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A distinct square-shaped element, contrasting with the circular attractors, possibly a specific building or art piece.",
+      "bounding_polygon": [
+        [
+          570,
+          415
+        ],
+        [
+          600,
+          415
+        ],
+        [
+          600,
+          445
+        ],
+        [
+          570,
+          445
+        ]
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "P1",
+      "label": "Street (Diagonal West)",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          0,
+          900
+        ],
+        [
+          280,
+          0
+        ],
+        [
+          320,
+          0
+        ],
+        [
+          40,
+          900
+        ]
+      ]
+    },
+    {
+      "id": "P2",
+      "label": "Street (Main Artery, 3-lane)",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          680,
+          0
+        ],
+        [
+          900,
+          1000
+        ],
+        [
+          930,
+          1000
+        ],
+        [
+          710,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "P3",
+      "label": "Street (Diagonal South-East)",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          650,
+          600
+        ],
+        [
+          1000,
+          950
+        ],
+        [
+          1000,
+          980
+        ],
+        [
+          680,
+          630
+        ]
+      ]
+    },
+    {
+      "id": "P4",
+      "label": "Pedestrian Pathway (Main Central Loop)",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "G",
+        "N",
+        "L",
+        "J",
+        "T",
+        "I",
+        "V",
+        "H",
+        "O",
+        "P",
+        "U"
+      ],
+      "character": "Winding path system connecting multiple attractors within the main green spaces.",
+      "bounding_polygon": [
+        [
+          280,
+          200
+        ],
+        [
+          660,
+          200
+        ],
+        [
+          660,
+          750
+        ],
+        [
+          280,
+          750
+        ]
+      ]
+    },
+    {
+      "id": "P5",
+      "label": "Pedestrian Pathway (West Entrance)",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "C",
+        "H",
+        "O"
+      ],
+      "character": "Path connecting the western green space to the main park's circulation.",
+      "bounding_polygon": [
+        [
+          230,
+          410
+        ],
+        [
+          300,
+          410
+        ],
+        [
+          300,
+          500
+        ],
+        [
+          230,
+          500
+        ]
+      ]
+    },
+    {
+      "id": "P6",
+      "label": "Pedestrian Pathway (South-West Link)",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "C",
+        "I",
+        "V",
+        "D"
+      ],
+      "character": "Path linking the southwest green space and attractors.",
+      "bounding_polygon": [
+        [
+          240,
+          680
+        ],
+        [
+          310,
+          680
+        ],
+        [
+          310,
+          760
+        ],
+        [
+          240,
+          760
+        ]
+      ]
+    },
+    {
+      "id": "P7",
+      "label": "Pedestrian Pathway (North-West Link)",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "C",
+        "U",
+        "G"
+      ],
+      "character": "Path connecting the northwest area to the northern main attractor.",
+      "bounding_polygon": [
+        [
+          240,
+          290
+        ],
+        [
+          320,
+          290
+        ],
+        [
+          320,
+          340
+        ],
+        [
+          240,
+          340
+        ]
+      ]
+    },
+    {
+      "id": "P8",
+      "label": "Pedestrian Pathway (East-West Connection)",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "J",
+        "A",
+        "W"
+      ],
+      "character": "Path crossing the main green space, bridging over the water feature.",
+      "bounding_polygon": [
+        [
+          500,
+          540
+        ],
+        [
+          620,
+          540
+        ],
+        [
+          620,
+          570
+        ],
+        [
+          500,
+          570
+        ]
+      ]
+    },
+    {
+      "id": "P9",
+      "label": "Site Boundary (West)",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          70,
+          200
+        ],
+        [
+          240,
+          200
+        ],
+        [
+          240,
+          800
+        ],
+        [
+          70,
+          800
+        ]
+      ]
+    },
+    {
+      "id": "P10",
+      "label": "Site Boundary (North)",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          250,
+          130
+        ],
+        [
+          600,
+          130
+        ],
+        [
+          600,
+          150
+        ],
+        [
+          250,
+          150
+        ]
+      ]
+    },
+    {
+      "id": "P11",
+      "label": "Site Boundary (South)",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          280,
+          820
+        ],
+        [
+          500,
+          820
+        ],
+        [
+          500,
+          840
+        ],
+        [
+          280,
+          840
+        ]
+      ]
+    },
+    {
+      "id": "P12",
+      "label": "Site Boundary (East, near K)",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          780,
+          300
+        ],
+        [
+          830,
+          300
+        ],
+        [
+          830,
+          480
+        ],
+        [
+          780,
+          480
+        ]
+      ]
+    }
+  ],
+  "erasure_targets": [],
+  "relationships": [
+    "The 'points' system of Main and Minor Attractors is strategically distributed across the 'surfaces' system of Green Space, acting as a network of focal nodes within the park's expansive landscape.",
+    "The 'lines' system of Pedestrian Pathways forms a non-hierarchical, meandering network that connects the majority of the Main and Minor Attractors, facilitating exploration rather than direct, efficient movement.",
+    "The 'surfaces' system of Water Features (W, X, Y) acts as both a dividing element, fragmenting the Green Spaces, and a unifying thread, creating a linear spine through the park.",
+    "The external 'lines' system of Vehicular Streets (P1, P2, P3) imposes a strong, often oblique, grid on the site, creating clear edges and contrast with the more organic internal circulation.",
+    "The internal 'points' system of attractors, despite its overall rotation, exhibits an underlying orthogonal arrangement, suggesting a deliberate grid overlaid onto a less structured landscape.",
+    "The Main Attractors (G, H, I, J, L, M) often anchor intersections of pedestrian pathways or mark significant points along the water features, enhancing their role as wayfinding elements.",
+    "Minor Attractors (N, O, P, R, S, T, U, V) tend to be peripheral or secondary nodes, often extending the influence of Main Attractors or marking smaller pockets of activity.",
+    "The 'surfaces' system of Green Spaces (A, B, C, D, E, F) is interrupted and shaped by the 'surfaces' system of Water Features and the 'lines' system of Pedestrian Pathways, creating varied open and programmed areas.",
+    "The 'Unique Element' (Z) stands in stark contrast to the circular attractors, hinting at a specific architectural or sculptural intervention that breaks the pattern of the 'points' system.",
+    "The 'lines' system of Site Boundaries (P9, P10, P11, P12) is influenced by both the adjacent street grids and the internal park design, resulting in an irregular perimeter that reflects external forces and internal spatial strategies."
+  ],
+  "design_logic": "The dominant spatial logic of Parc de la Villette is one of superimposition and programmatic layering, as articulated by Bernard Tschumi. It juxtaposes multiple, independent systems – an orthogonal grid of 'points' (follies/attractors), a curvilinear network of 'lines' (pedestrian pathways), and a system of 'surfaces' (green spaces and water features). This creates a dynamic, non-hierarchical landscape designed for exploration and event, rather than simple passive recreation. The internal grid of attractors is intentionally rotated against the strong, external vehicular street grids and the site's overall boundaries, generating spatial tension and multiple orientations. The water features further divide and define these surfaces, while the pedestrian paths weave through, connecting the discrete programmatic nodes and inviting a non-linear experience of the park."
+}

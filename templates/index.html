@@ -92,6 +92,23 @@
   }
   #generate-btn:hover { opacity: 0.85; }
   #generate-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #bake-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.7rem;
+    background: none;
+    color: var(--green);
+    border: 1px solid var(--green);
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    display: none;
+  }
+  #bake-btn:hover { background: rgba(0,255,136,0.08); }
+  #bake-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* ── Status Bar ── */
   #status-bar {
@@ -290,6 +307,7 @@
       <label>Describe the qualitative spatial experience you want</label>
       <textarea id="prompt-input" placeholder="e.g. I want a space with lots of shade, shallow wading pools, and water features that create a pleasant acoustic hum."></textarea>
       <button id="generate-btn" onclick="generate()">Generate Intervention</button>
+      <button id="bake-btn" onclick="bakeToRhino()" disabled>&#9670; Bake to Rhino</button>
     </div>
 
     <div id="status-bar">
@@ -361,6 +379,7 @@
   // ── Three.js setup ────────────────────────────────────────────────────────
   let threeRenderer = null, threeScene = null, threeCamera = null, threeAnimId = null;
   let cachedSiteContext = null;
+  let lastGeneration = null;   // stores the most recent API response for baking
 
   function buildMesh(geo, mat, wireMat) {
     let geom;
@@ -539,6 +558,13 @@
         if (data.diagram) {
           await renderDiagram(data.diagram);
         }
+
+        // Reveal Bake button and cache generation for it
+        lastGeneration = data;
+        const bakeBtn = document.getElementById('bake-btn');
+        bakeBtn.style.display = 'block';
+        bakeBtn.disabled = false;
+        bakeBtn.textContent = '\u25C6 Bake to Rhino';
       }
     } catch (err) {
       setStatus('Connection error — is the server running?', 'error');
@@ -546,6 +572,38 @@
       document.getElementById('narrative-text').textContent = err.message;
     } finally {
       document.getElementById('generate-btn').disabled = false;
+    }
+  }
+
+  // ── Bake to Rhino ─────────────────────────────────────────────────────────
+  async function bakeToRhino() {
+    if (!lastGeneration || !lastGeneration.geometries) return;
+    const btn = document.getElementById('bake-btn');
+    btn.disabled = true;
+    btn.textContent = '\u25C6 Baking...';
+    setStatus('Sending geometry to Rhino...', 'running');
+    try {
+      const res = await fetch('/api/bake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:       lastGeneration.name       || 'Unnamed Intervention',
+          geometries: lastGeneration.geometries || [],
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setStatus('Bake complete — geometry sent to MEM_GENERATED layer.', 'success');
+        btn.textContent = '\u25C6 Baked to Rhino';
+      } else {
+        setStatus('Bake failed: ' + (data.message || 'Unknown error'), 'error');
+        btn.disabled = false;
+        btn.textContent = '\u25C6 Bake to Rhino';
+      }
+    } catch (err) {
+      setStatus('Bake error — is the server running?', 'error');
+      btn.disabled = false;
+      btn.textContent = '\u25C6 Bake to Rhino';
     }
   }
 

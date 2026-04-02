@@ -1,0 +1,22 @@
+{
+  "_comment": "Layer names match the PrecedentDiagrams.3dm master layer system exactly.",
+  "_comment2": "rhino_units_per_meter: 3.28084 = feet, 1.0 = meters, 1000.0 = millimeters.",
+
+  "rhino_units_per_meter": 3.28084,
+
+  "layers": {
+    "plaza":             "BOUNDARY",
+    "vegetation":        "GREEN SPACE",
+    "paths":             "PEDESTRIAN PATH",
+    "streets":           "STREET",
+    "buildings":         "BUILDINGS",
+    "water":             "WATER FEATURES",
+    "shade":             "SHADE",
+    "major_attractors":  "MAJOR ATTRACTORS",
+    "minor_attractors":  "MINOR ATTRACTORS",
+    "infrastructure":    "INFRASTRUCTURE CON",
+    "unique_elements":   "UNIQUE ELEMENTS",
+    "street_furniture":  "STREET FURNITURE",
+    "reference_images":  "referenceImages"
+  }
+}

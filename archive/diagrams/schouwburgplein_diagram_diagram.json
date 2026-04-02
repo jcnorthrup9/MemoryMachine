@@ -1,0 +1,633 @@
+{
+  "site": "Schouwburgplein",
+  "orientation_analysis": "The site's main boundary and internal programmatic elements are rectilinear and oriented along a primary axis that is rotated approximately 30-40 degrees counter-clockwise relative to the horizontal. The surrounding vehicular street grid is irregular, with streets intersecting at non-orthogonal angles, further emphasizing the distinct, rotated order of the internal site plan.",
+  "zones": [
+    {
+      "id": "Z1",
+      "label": "Central Green Strip",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "A long, rectilinear area of green space, providing a central leisure and visual amenity.",
+      "bounding_polygon": [
+        [
+          331,
+          330
+        ],
+        [
+          550,
+          330
+        ],
+        [
+          550,
+          856
+        ],
+        [
+          331,
+          856
+        ]
+      ]
+    },
+    {
+      "id": "Z2",
+      "label": "West Plaza",
+      "type": "Hardscape Plaza",
+      "system": "surfaces",
+      "character": "An L-shaped hardscape area to the west of the green strip, likely for public gathering and circulation.",
+      "bounding_polygon": [
+        [
+          161,
+          482
+        ],
+        [
+          327,
+          482
+        ],
+        [
+          327,
+          862
+        ],
+        [
+          161,
+          862
+        ]
+      ]
+    },
+    {
+      "id": "Z3",
+      "label": "East Tree Promenade",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "An elongated strip of shaded green space on the eastern side, possibly a tree-lined promenade or buffer.",
+      "bounding_polygon": [
+        [
+          567,
+          244
+        ],
+        [
+          654,
+          244
+        ],
+        [
+          654,
+          856
+        ],
+        [
+          567,
+          856
+        ]
+      ]
+    },
+    {
+      "id": "Z4a",
+      "label": "Minor Attractor 1",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located near the west plaza.",
+      "bounding_polygon": [
+        [
+          153,
+          422
+        ],
+        [
+          179,
+          422
+        ],
+        [
+          179,
+          458
+        ],
+        [
+          153,
+          458
+        ]
+      ]
+    },
+    {
+      "id": "Z4b",
+      "label": "Minor Attractor 2",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located between the west plaza and central green.",
+      "bounding_polygon": [
+        [
+          249,
+          348
+        ],
+        [
+          274,
+          348
+        ],
+        [
+          274,
+          385
+        ],
+        [
+          249,
+          385
+        ]
+      ]
+    },
+    {
+      "id": "Z4c",
+      "label": "Minor Attractor 3",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located at the northern edge of the site.",
+      "bounding_polygon": [
+        [
+          606,
+          201
+        ],
+        [
+          632,
+          201
+        ],
+        [
+          632,
+          238
+        ],
+        [
+          606,
+          238
+        ]
+      ]
+    },
+    {
+      "id": "Z4d",
+      "label": "Minor Attractor 4",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located outside the primary site boundary.",
+      "bounding_polygon": [
+        [
+          702,
+          348
+        ],
+        [
+          728,
+          348
+        ],
+        [
+          728,
+          385
+        ],
+        [
+          702,
+          385
+        ]
+      ]
+    },
+    {
+      "id": "Z4e",
+      "label": "Minor Attractor 5",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located outside the primary site boundary.",
+      "bounding_polygon": [
+        [
+          685,
+          592
+        ],
+        [
+          711,
+          592
+        ],
+        [
+          711,
+          629
+        ],
+        [
+          685,
+          629
+        ]
+      ]
+    },
+    {
+      "id": "Z4f",
+      "label": "Minor Attractor 6",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located at the southeastern edge of the site.",
+      "bounding_polygon": [
+        [
+          641,
+          837
+        ],
+        [
+          667,
+          837
+        ],
+        [
+          667,
+          874
+        ],
+        [
+          641,
+          874
+        ]
+      ]
+    },
+    {
+      "id": "Z4g",
+      "label": "Minor Attractor 7",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located at the southern edge of the site.",
+      "bounding_polygon": [
+        [
+          510,
+          959
+        ],
+        [
+          536,
+          959
+        ],
+        [
+          536,
+          996
+        ],
+        [
+          510,
+          996
+        ]
+      ]
+    },
+    {
+      "id": "Z4h",
+      "label": "Minor Attractor 8",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "A small point of interest, possibly a sculpture, seating area, or distinct tree, located at the southwestern edge of the site.",
+      "bounding_polygon": [
+        [
+          161,
+          959
+        ],
+        [
+          187,
+          959
+        ],
+        [
+          187,
+          996
+        ],
+        [
+          161,
+          996
+        ]
+      ]
+    },
+    {
+      "id": "Z5a",
+      "label": "Main Attractor 1",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "A significant focal point or programmed element, drawing attention, located at the eastern side of the site.",
+      "bounding_polygon": [
+        [
+          597,
+          470
+        ],
+        [
+          623,
+          470
+        ],
+        [
+          623,
+          507
+        ],
+        [
+          597,
+          507
+        ]
+      ]
+    },
+    {
+      "id": "Z6a",
+      "label": "Unique Element 1",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A distinct small-scale architectural or landscape feature within the central green space.",
+      "bounding_polygon": [
+        [
+          514,
+          415
+        ],
+        [
+          532,
+          415
+        ],
+        [
+          532,
+          440
+        ],
+        [
+          514,
+          440
+        ]
+      ]
+    },
+    {
+      "id": "Z6b",
+      "label": "Unique Element 2",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A distinct small-scale architectural or landscape feature within the central green space.",
+      "bounding_polygon": [
+        [
+          514,
+          550
+        ],
+        [
+          532,
+          550
+        ],
+        [
+          532,
+          575
+        ],
+        [
+          514,
+          575
+        ]
+      ]
+    },
+    {
+      "id": "Z6c",
+      "label": "Unique Element 3",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A distinct small-scale architectural or landscape feature within the central green space.",
+      "bounding_polygon": [
+        [
+          514,
+          684
+        ],
+        [
+          532,
+          684
+        ],
+        [
+          532,
+          709
+        ],
+        [
+          514,
+          709
+        ]
+      ]
+    },
+    {
+      "id": "Z6d",
+      "label": "Unique Element 4",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A distinct small-scale architectural or landscape feature within the central green space.",
+      "bounding_polygon": [
+        [
+          514,
+          818
+        ],
+        [
+          532,
+          818
+        ],
+        [
+          532,
+          843
+        ],
+        [
+          514,
+          843
+        ]
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "P1a",
+      "label": "North Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          131,
+          183
+        ],
+        [
+          654,
+          183
+        ],
+        [
+          654,
+          208
+        ],
+        [
+          131,
+          208
+        ]
+      ]
+    },
+    {
+      "id": "P1b",
+      "label": "Southwest Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          0,
+          843
+        ],
+        [
+          357,
+          843
+        ],
+        [
+          357,
+          1000
+        ],
+        [
+          0,
+          1000
+        ]
+      ]
+    },
+    {
+      "id": "P1c",
+      "label": "Southeast Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          383,
+          355
+        ],
+        [
+          794,
+          355
+        ],
+        [
+          794,
+          1000
+        ],
+        [
+          383,
+          1000
+        ]
+      ]
+    },
+    {
+      "id": "P2",
+      "label": "Site Boundary",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          148,
+          244
+        ],
+        [
+          654,
+          244
+        ],
+        [
+          654,
+          905
+        ],
+        [
+          148,
+          905
+        ]
+      ]
+    },
+    {
+      "id": "P3a",
+      "label": "West Pedestrian Pathway",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z2"
+      ],
+      "bounding_polygon": [
+        [
+          324,
+          330
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          330,
+          856
+        ],
+        [
+          324,
+          856
+        ]
+      ]
+    },
+    {
+      "id": "P3b",
+      "label": "East Pedestrian Pathway",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z3"
+      ],
+      "bounding_polygon": [
+        [
+          547,
+          330
+        ],
+        [
+          552,
+          330
+        ],
+        [
+          552,
+          856
+        ],
+        [
+          547,
+          856
+        ]
+      ]
+    },
+    {
+      "id": "P3c",
+      "label": "Southwest Entrance Path",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z2",
+        "P1b"
+      ],
+      "bounding_polygon": [
+        [
+          261,
+          843
+        ],
+        [
+          314,
+          843
+        ],
+        [
+          314,
+          966
+        ],
+        [
+          261,
+          966
+        ]
+      ]
+    },
+    {
+      "id": "P3d",
+      "label": "South Central Pedestrian Link",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "P3c"
+      ],
+      "bounding_polygon": [
+        [
+          381,
+          850
+        ],
+        [
+          386,
+          850
+        ],
+        [
+          386,
+          922
+        ],
+        [
+          381,
+          922
+        ]
+      ]
+    }
+  ],
+  "erasure_targets": [],
+  "relationships": [
+    "The linear 'surfaces' system of the Central Green Strip (Z1) and West Plaza (Z2) forms the programmatic spine of the site, establishing distinct functional zones.",
+    "The 'lines' system of pedestrian pathways (P3a, P3b) runs parallel to the Central Green Strip (Z1), defining its edges and guiding primary circulation through the site's core.",
+    "The 'points' system of Minor and Main Attractors is distributed both within and outside the main programmatic surfaces, creating a porous boundary and inviting exploration beyond defined areas.",
+    "The Site Boundary (P2), a 'lines' system element, encloses the internal spatial organization, creating a distinct, rotated micro-urban block within the larger irregular street grid.",
+    "Vehicular Streets (P1a, P1b, P1c) of the 'lines' system form a loosely defined perimeter, influencing accessibility and framing the site at a contrasting angle to its internal geometry.",
+    "Unique Elements (Z6a-d) within the Central Green Strip (Z1) punctuate the linear green space, suggesting specific points of activity or interest along the main axis.",
+    "The East Tree Promenade (Z3) acts as a vegetated buffer and visual element, integrating shade and greenery along the eastern flank of the site and filtering views to external areas.",
+    "Pedestrian pathways (P3c, P3d) provide direct connections from the irregular external street network into the heart of the site, mediating between the urban context and the site's internal order.",
+    "Minor Attractors (Z4a-h) positioned at the periphery of and beyond the site boundary extend the visual and experiential influence of the design into the broader urban fabric."
+  ],
+  "design_logic": "The design of Schouwburgplein articulates a clear internal order through a dominant 'surfaces' system of rectilinear green spaces and hardscape plazas. This programmatic core, defined by a distinct 'Site Boundary', is set at an intentional rotation against the irregular 'lines' system of surrounding vehicular streets, creating a deliberate tension between internal coherence and external context. A network of 'lines' system pedestrian pathways reinforces this internal structure, guiding movement and establishing clear circulation routes. Overlaid on this structural framework is a 'points' system of Main and Minor Attractors, strategically dispersed to invite informal exploration, provide focal points, and extend the site's experiential qualities beyond its immediate confines, hinting at a broader urban integration."
+}

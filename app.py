@@ -49,6 +49,10 @@ class MemoryPrompt(BaseModel):
 class HarvestRequest(BaseModel):
     target: str
 
+class BakeRequest(BaseModel):
+    name: str = "Unnamed Intervention"
+    geometries: list
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """Serves the main landing page with the Three.js canvas."""
@@ -353,8 +357,99 @@ def build_geometries(spatial_params):
                 box(seat_w * 0.92, tier_h, seat_w * 0.92,
                     px=px, py=i * tier_h + tier_h / 2, pz=pz, color=primary)
 
+    elif geo_type == "supertree":
+        # Gardens by the Bay supertree: tapering trunk + crown disc + hanging fronds
+        trunk_r_base = max(0.4, radius * 0.25)
+        trunk_r_top  = max(0.15, radius * 0.08)
+        trunk_h      = height * 0.80
+        crown_r      = radius
+        crown_h      = height * 0.12
+
+        # Trunk — tapered as stacked cylinders
+        taper_steps = 6
+        for i in range(taper_steps):
+            frac   = i / taper_steps
+            seg_r  = trunk_r_base + frac * (trunk_r_top - trunk_r_base)
+            seg_h  = trunk_h / taper_steps
+            cyl(seg_r, seg_h, py=i * seg_h + seg_h / 2, color=primary)
+
+        # Crown disc (living canopy)
+        cyl(crown_r, crown_h, py=trunk_h + crown_h / 2, color=green_col)
+
+        # Radial frond spokes hanging from crown edge
+        spoke_count = 10
+        frond_l = crown_r * 0.55
+        frond_r = max(0.05, crown_r * 0.04)
+        for i in range(spoke_count):
+            a   = i * (2 * math.pi / spoke_count)
+            sx  = (crown_r * 0.72) * math.sin(a)
+            sz  = (crown_r * 0.72) * math.cos(a)
+            cyl(frond_r, frond_l,
+                px=sx, py=trunk_h - frond_l * 0.5, pz=sz, color=green_col)
+
+        # Skybridge walkway at crown level (flat horizontal ring approximated by 16 boxes)
+        bridge_r = crown_r * 0.6
+        bridge_w = crown_r * 0.08
+        seg = 16
+        for i in range(seg):
+            a  = i * (2 * math.pi / seg)
+            bx = bridge_r * math.sin(a)
+            bz = bridge_r * math.cos(a)
+            box(bridge_w, bridge_w * 0.5, bridge_w,
+                px=bx, py=trunk_h, pz=bz, color="#404038")
+
+    elif geo_type == "kinetic_mast":
+        # Schouwburgplein hydraulic lighting mast: tall pole + rotating boom + lamp head
+        mast_r      = max(0.12, radius * 0.10)
+        mast_h      = height
+        boom_l      = radius * 1.4
+        boom_r      = max(0.06, mast_r * 0.5)
+        lamp_r      = max(0.18, radius * 0.22)
+        lamp_h      = height * 0.10
+        base_r      = radius * 0.35
+        base_h      = height * 0.04
+        pivot_h     = mast_h * 0.92   # where the boom pivots
+
+        # Ground base plate
+        cyl(base_r, base_h, color="#303030")
+
+        # Vertical mast
+        cyl(mast_r, mast_h, py=base_h + mast_h / 2, color=primary)
+
+        # Counter-weight box below pivot
+        cw_l = boom_l * 0.28
+        box(cw_l * 0.4, cw_l * 0.4, cw_l * 0.4,
+            px=-boom_l * 0.14, py=pivot_h - cw_l * 0.2, pz=0, color="#505050")
+
+        # Horizontal boom arm extending from mast pivot
+        box(boom_l, boom_r * 2, boom_r * 2,
+            px=boom_l / 2, py=pivot_h, pz=0, color=primary)
+
+        # Lamp head at tip of boom
+        cyl(lamp_r, lamp_h,
+            px=boom_l, py=pivot_h - lamp_h / 2, pz=0, color="#d0b840")
+
+        # Second mast offset for cluster effect (halved size)
+        if radius > 1.5:
+            cyl(mast_r * 0.7, mast_h * 0.85,
+                px=radius * 0.55, py=base_h + mast_h * 0.425, pz=radius * 0.3,
+                color=primary)
+
     else:
         box(width, height, depth)
+
+    # After generating the base shapes, apply the master position offset.
+    # The AI is instructed to provide this based on the host site DNA.
+    position_offset = spatial_params.get("position", {"x": 0, "y": 0, "z": 0})
+    offset_x = position_offset.get("x", 0)
+    offset_y = position_offset.get("y", 0) # This is the vertical offset in Three.js
+    offset_z = position_offset.get("z", 0)
+
+    # Apply the main position offset to all generated geometries
+    for g in geos:
+        g["position"][0] += offset_x
+        g["position"][1] += offset_y
+        g["position"][2] += offset_z
 
     return geos
 
@@ -387,6 +482,7 @@ def generate_mermaid_diagram(prompt, matches, spatial_params):
     return "\n".join(lines)
 
 DIAGRAMS_DIR = os.path.join(BASE_DIR, 'archive', 'diagrams')
+SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
 
 def _source_to_diagram_key(source_name: str) -> str:
     """'Parc de la Villette' → 'parc_de_la_villette'"""
@@ -394,7 +490,9 @@ def _source_to_diagram_key(source_name: str) -> str:
 
 def load_spatial_blueprints(matches: list) -> dict:
     """
-    For each ChromaDB match, look for archive/diagrams/{site}_diagram.json.
+    For each ChromaDB match, look for a spatial blueprint JSON in priority order:
+      1. archive/diagrams/{site}_rhino_parsed.json  (Rhino-native, most accurate)
+      2. archive/diagrams/{site}_diagram.json        (vision-agent fallback)
     Returns {source_name: blueprint_dict} for every file that exists.
     """
     blueprints = {}
@@ -404,15 +502,20 @@ def load_spatial_blueprints(matches: list) -> dict:
         if not src or src in seen:
             continue
         seen.add(src)
-        key  = _source_to_diagram_key(src)
-        path = os.path.join(DIAGRAMS_DIR, f"{key}_diagram.json")
-        if os.path.exists(path):
-            try:
-                with open(path, encoding='utf-8') as f:
-                    blueprints[src] = json.load(f)
-                print(f"      -> Blueprint loaded: {os.path.basename(path)}")
-            except Exception as e:
-                print(f"      -> Blueprint load failed ({path}): {e}")
+        key = _source_to_diagram_key(src)
+        candidates = [
+            os.path.join(DIAGRAMS_DIR, f"{key}_rhino_parsed.json"),
+            os.path.join(DIAGRAMS_DIR, f"{key}_diagram.json"),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                try:
+                    with open(path, encoding='utf-8') as f:
+                        blueprints[src] = json.load(f)
+                    print(f"      -> Blueprint loaded: {os.path.basename(path)}")
+                except Exception as e:
+                    print(f"      -> Blueprint load failed ({path}): {e}")
+                break  # stop at first found
     return blueprints
 
 def format_blueprints_for_prompt(blueprints: dict) -> str:
@@ -472,9 +575,21 @@ async def generate_memory_node(payload: MemoryPrompt):
         for m in matches
     ])
 
+    # --- HOST SITE INJECTION ---
     # Load any spatial blueprint JSONs that correspond to matched sources
     blueprints     = load_spatial_blueprints(matches)
     blueprint_text = format_blueprints_for_prompt(blueprints)
+
+    host_blueprint = {}
+    host_blueprint_path = os.path.join(DIAGRAMS_DIR, "pershing_square_rhino_parsed.json")
+    if os.path.exists(host_blueprint_path):
+        try:
+            with open(host_blueprint_path, encoding='utf-8') as f:
+                host_blueprint = json.load(f)
+            print("      -> Host site blueprint loaded: pershing_square_rhino_parsed.json")
+        except Exception as e:
+            print(f"      -> Host blueprint load failed: {e}")
+
     blueprint_section = (
         f"\n\n[ RETRIEVED SPATIAL BLUEPRINTS ]\n"
         f"The following diagram analyses were extracted from precedent site drawings.\n"
@@ -483,20 +598,33 @@ async def generate_memory_node(payload: MemoryPrompt):
         f"{blueprint_text}"
     ) if blueprint_text else ""
 
+    host_site_section = ""
+    if host_blueprint:
+        erasure_targets = host_blueprint.get("erasure_targets", [])
+        erasure_text = ", ".join(erasure_targets) if erasure_targets else "None"
+        host_site_section = (
+            f"\n\n[ HOST SITE DNA - PERSHING SQUARE ]\n"
+            f"The intervention will be placed on this existing site. You MUST use this data for placement.\n"
+            f"Host Site Logic: {host_blueprint.get('design_logic', 'N/A')[:300]}\n"
+            f"Erasure Targets: These are hostile elements to be overwritten or collided with: {erasure_text}\n"
+        )
+
     system_prompt = (
         'You are an expert architect for the "Memory Machine" project. Your task is to translate a user\'s qualitative desire into a concrete architectural intervention for Pershing Square, Los Angeles. '
         'You will be given a user prompt, "memory fragments" from a review database, and (when available) spatial blueprint data extracted from precedent diagrams. '
         'Synthesize all of this into a single, valid JSON object with NO additional text or markdown. The JSON object must have three top-level keys: "name", "narrative", and "spatial_parameters".\n\n'
         f'USER PROMPT:\n"{prompt}"\n\n'
         f'RETRIEVED MEMORY FRAGMENTS:\n{context_excerpts}'
+        f'{host_site_section}'
         f'{blueprint_section}\n\n'
         'INSTRUCTIONS:\n'
         '1.  **name**: Create a poetic name for the intervention (e.g., "Canopy of Whispers").\n'
         '2.  **narrative**: Write a short (2-paragraph) architectural narrative describing the space, its "witness marks" from the memory fragments, and how it collides with Pershing Square.'
         + (' Reference at least one specific zone, path, or relationship from the spatial blueprints to show the design logic is grounded in the precedent DNA.' if blueprint_text else '') + '\n'
-        '3.  **spatial_parameters**: Generate precise parameters for a 3D model. This object MUST contain:\n'
-        '    - "geometry_type": (string) Choose one: "pavilion_with_water", "shade_canopy", "water_garden", "acoustic_screen", "memory_tower", "landscape_mound", "amphitheater".\n'
+        '3.  **spatial_parameters**: Generate precise parameters for a 3D model. Your geometry should be positioned to interact with the [ HOST SITE DNA ], specifically targeting elements listed in `erasure_targets`. This object MUST contain:\n'
+        '    - "geometry_type": (string) Choose one: "pavilion_with_water", "shade_canopy", "water_garden", "acoustic_screen", "memory_tower", "landscape_mound", "amphitheater", "supertree", "kinetic_mast".\n'
         '    - "footprint_m": (object) with "width" and "depth" keys.\n'
+        '    - "position": (object) with "x", "y", and "z" keys in Three.js units (1 unit = 5m) to place the object relative to the park center (0,0,0). Use the Erasure Targets to inform this position.\n'
         '    - "height_m": (float) The overall height in meters.\n'
         '    - "materials": (list of strings) e.g., ["concrete", "water", "steel", "glass", "wood", "vegetation", "stone"].\n'
         + ('    - "blueprint_sources": (list of strings) Name the precedent sites whose spatial DNA most influenced this design.\n' if blueprint_text else '')
@@ -508,7 +636,11 @@ async def generate_memory_node(payload: MemoryPrompt):
         '        - If "memory_tower": "levels" (integer), "facade_material" (string, e.g., "concrete_panels", "reclaimed_wood", "reflective_glass"), "observation_deck_height_m" (float), "base_shape" (string, e.g., "square", "circular").\n'
         '        - If "landscape_mound": "slope_angle_degrees" (float, 0-90), "vegetation_type" (string, e.g., "grass", "succulents", "wildflowers"), "path_material" (string, e.g., "gravel", "paving_stones", "dirt").\n'
         '        - If "amphitheater": "tiers" (integer, number of seating levels), "seating_material" (string), "stage_width_m" (float), "orientation" (string, e.g., "circular", "fan_shaped", "rectangular").\n'
-        'Choose "amphitheater" whenever the memory fragments reference tiered seating, stepped plazas, auditoriums, bowl-shaped spaces, or performance venues.\n\n'
+        '        - If "supertree": "trunk_height_m" (float), "crown_radius_m" (float), "frond_count" (integer, 6-16), "canopy_material" (string, e.g., "living_plants", "solar_panels", "perforated_steel").\n'
+        '        - If "kinetic_mast": "mast_height_m" (float), "boom_length_m" (float), "lamp_type" (string, e.g., "spotlight", "diffuse_ring", "programmable_rgb"), "mast_count" (integer, 1-4).\n'
+        'Choose "amphitheater" whenever the memory fragments reference tiered seating, stepped plazas, auditoriums, bowl-shaped spaces, or performance venues.\n'
+        'Choose "supertree" whenever fragments reference vertical gardens, living infrastructure, canopy structures, or Gardens by the Bay.\n'
+        'Choose "kinetic_mast" whenever fragments reference hydraulic masts, actuated elements, movable lighting, or Schouwburgplein.\n\n'
         + ('When spatial blueprints are provided, let the zones and relationships guide the geometry_type choice and footprint. '
            'For example: a blueprint with a strong linear promenade and distributed attractors suggests "acoustic_screen" or multiple "shade_canopy" elements; '
            'a blueprint with a central anchor building and radiating paths suggests "pavilion_with_water" or "amphitheater".\n\n'
@@ -564,6 +696,82 @@ async def generate_memory_node(payload: MemoryPrompt):
         "site_context": PERSHING_SQUARE_CONTEXT,
         "diagram":      diagram,
     }
+
+@app.post("/api/bake")
+async def bake_to_rhino(payload: BakeRequest):
+    """
+    Saves the active intervention geometry to data/current_intervention.json
+    and triggers bake_to_rhino.py to inject it into the live Rhino session.
+    """
+    data_dir = os.path.join(BASE_DIR, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    intervention_path = os.path.join(data_dir, 'current_intervention.json')
+
+    try:
+        with open(intervention_path, 'w', encoding='utf-8') as f:
+            json.dump(payload.geometries, f, indent=2)
+        print(f"[bake] Wrote {len(payload.geometries)} geometries to {intervention_path}")
+    except Exception as e:
+        return {"status": "error", "message": f"Could not write intervention file: {e}"}
+
+    bake_script = os.path.join(BASE_DIR, 'logic', 'bake_to_rhino.py')
+    try:
+        process = subprocess.Popen(
+            [sys.executable, bake_script],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        print(f"[bake] Launched bake_to_rhino.py (PID {process.pid}) for '{payload.name}'")
+    except Exception as e:
+        return {"status": "error", "message": f"Could not launch bake script: {e}"}
+
+    return {"status": "success", "message": f"Bake initiated for '{payload.name}'. Check Rhino — layer MEM_GENERATED."}
+
+
+@app.get("/diagrams", response_class=HTMLResponse)
+async def diagram_viewer():
+    """Serves the interactive SVG diagram viewer."""
+    return FileResponse(os.path.join(BASE_DIR, "templates", "diagram_viewer.html"))
+
+
+@app.get("/api/diagram-data")
+async def list_diagrams():
+    """Returns all sites that have an SVG in data/ParkSVG. JSON is optional."""
+    if not os.path.isdir(SVG_DIR):
+        return {"sites": []}
+    svg_files = sorted(f for f in os.listdir(SVG_DIR) if f.lower().endswith(".svg"))
+    # Build lowercase→actual-stem map for available JSONs
+    json_map = {}
+    if os.path.isdir(DIAGRAMS_DIR):
+        for f in os.listdir(DIAGRAMS_DIR):
+            if f.endswith("_rhino_parsed.json"):
+                stem = f.replace("_rhino_parsed.json", "")
+                json_map[stem.lower()] = stem
+    sites = []
+    for svg_f in svg_files:
+        stem = os.path.splitext(svg_f)[0]
+        sites.append({"site": stem, "has_json": stem.lower() in json_map})
+    return {"sites": sites}
+
+
+@app.get("/api/diagram-data/{site}")
+async def get_diagram(site: str):
+    """Returns SVG content and parsed JSON data for a single site."""
+    svg_path = os.path.join(SVG_DIR, f"{site}.svg")
+    if not os.path.exists(svg_path):
+        return {"error": f"SVG for '{site}' not found in data/ParkSVG/"}
+    with open(svg_path, encoding="utf-8", errors="replace") as f:
+        svg_content = f.read()
+    # Case-insensitive JSON lookup
+    data = {"site": site, "zones": [], "paths": [], "relationships": [], "design_logic": ""}
+    if os.path.isdir(DIAGRAMS_DIR):
+        for f in os.listdir(DIAGRAMS_DIR):
+            if f.endswith("_rhino_parsed.json") and f.replace("_rhino_parsed.json", "").lower() == site.lower():
+                with open(os.path.join(DIAGRAMS_DIR, f), encoding="utf-8") as jf:
+                    data = json.load(jf)
+                break
+    data["svg"] = svg_content
+    return data
+
 
 @app.post("/api/harvest")
 async def trigger_harvest(payload: HarvestRequest):

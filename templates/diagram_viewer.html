@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Machine // Diagram Viewer</title>
+<style>
+  :root {
+    --bg:      #050505;
+    --surface: #0d0d0d;
+    --panel:   #111111;
+    --accent:  #fff4ca;
+    --text:    #c8c8c0;
+    --muted:   #484840;
+    --border:  #1c1c1c;
+    --green:   #00ff88;
+    --glow:    rgba(255, 244, 202, 0.18);
+    --highlight: rgba(0, 255, 136, 0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; overflow: hidden; }
+
+  /* ── Layout ── */
+  #app { display: grid; grid-template-columns: 1fr 360px; height: 100vh; }
+
+  /* ── Header bar ── */
+  #header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  #app { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: auto 1fr; height: 100vh; }
+  #header h1 {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  #header .sep { color: var(--muted); }
+
+  /* Site selector */
+  #site-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    padding: 0.35rem 0.6rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 220px;
+  }
+  #site-select:focus { border-color: var(--muted); }
+  #site-select option { background: var(--surface); }
+
+  #status {
+    margin-left: auto;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  #status.active { color: var(--green); }
+
+  /* ── SVG pane (left) ── */
+  #svg-pane {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    border-right: 1px solid var(--border);
+  }
+  #svg-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #svg-container svg {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* SVG layer highlighting */
+  #svg-container svg g { transition: opacity 0.25s ease, filter 0.25s ease; }
+  #svg-container svg g.layer-dim { opacity: 0.12; }
+  #svg-container svg g.layer-glow {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px #fff4ca) drop-shadow(0 0 12px #fff4ca88);
+  }
+
+  #empty-state {
+    text-align: center;
+    pointer-events: none;
+  }
+  #empty-state .label {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  #empty-state .hint {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: #2a2a2a;
+  }
+
+  /* ── Data pane (right) ── */
+  #data-pane {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: var(--panel);
+    padding: 1.25rem;
+    gap: 1.5rem;
+  }
+
+  /* Section */
+  .section-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Design logic block */
+  #design-logic-text {
+    font-size: 0.68rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  /* Zone / path cards */
+  .item-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .item-card:hover,
+  .item-card.highlighted {
+    border-color: var(--accent);
+    background: var(--glow);
+  }
+  .item-card .card-id {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+  .item-card .card-label {
+    font-size: 0.7rem;
+    color: var(--accent);
+    margin-bottom: 0.15rem;
+  }
+  .item-card .card-type {
+    font-size: 0.6rem;
+    color: var(--text);
+    opacity: 0.7;
+  }
+
+  /* Relationship pills */
+  .rel-item {
+    font-size: 0.62rem;
+    color: var(--text);
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+  .rel-item:last-child { border-bottom: none; }
+  .rel-arrow { color: var(--muted); }
+
+  /* Empty list msg */
+  .empty-list {
+    font-size: 0.6rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <div id="header">
+    <h1>Memory Machine <span class="sep">//</span> Diagram Viewer</h1>
+    <select id="site-select">
+      <option value="">-- select site --</option>
+    </select>
+    <span id="status">loading...</span>
+  </div>
+
+  <!-- ── SVG Pane ── -->
+  <div id="svg-pane">
+    <div id="svg-container">
+      <div id="empty-state">
+        <div class="label">No diagram loaded</div>
+        <div class="hint">Select a site above — export SVG from Rhino to archive/diagrams/</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Data Pane ── -->
+  <div id="data-pane">
+
+    <div id="logic-section">
+      <div class="section-label">Design Logic</div>
+      <div id="design-logic-text" class="empty-list">—</div>
+    </div>
+
+    <div id="zones-section">
+      <div class="section-label">Zones</div>
+      <div id="zones-list"><span class="empty-list">—</span></div>
+    </div>
+
+    <div id="paths-section">
+      <div class="section-label">Paths</div>
+      <div id="paths-list"><span class="empty-list">—</span></div>
+    </div>
+
+    <div id="relationships-section">
+      <div class="section-label">Relationships</div>
+      <div id="relationships-list"><span class="empty-list">—</span></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Layer name mapping: zone types → SVG group ids ──────────────────────────
+// Rhino exports layers as <g id="LAYER NAME"> (spaces preserved or as underscores)
+const TYPE_TO_LAYER = {
+  'main attractor':    ['MAJOR ATTRACTORS', 'MAJOR_ATTRACTORS'],
+  'minor attractor':   ['MINOR ATTRACTORS', 'MINOR_ATTRACTORS'],
+  'green space':       ['GREEN SPACE', 'GREEN_SPACE'],
+  'hardscape':         ['BOUNDARY'],
+  'boundary':          ['BOUNDARY'],
+  'plaza':             ['BOUNDARY'],
+  'water':             ['WATER FEATURES', 'WATER_FEATURES'],
+  'path':              ['PEDESTRIAN PATH', 'PEDESTRIAN_PATH'],
+  'street':            ['STREET'],
+  'building':          ['BUILDINGS'],
+  'infrastructure':    ['INFRASTRUCTURE CON', 'INFRASTRUCTURE_CON'],
+  'unique element':    ['UNIQUE ELEMENTS', 'UNIQUE_ELEMENTS'],
+  'street furniture':  ['STREET FURNITURE', 'STREET_FURNITURE'],
+  'shade':             ['SHADE'],
+};
+
+// ── State ───────────────────────────────────────────────────────────────────
+let currentData = null;
+let allSvgGroups = [];
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const siteSelect       = document.getElementById('site-select');
+const statusEl         = document.getElementById('status');
+const svgContainer     = document.getElementById('svg-container');
+const emptyState       = document.getElementById('empty-state');
+const designLogicText  = document.getElementById('design-logic-text');
+const zonesList        = document.getElementById('zones-list');
+const pathsList        = document.getElementById('paths-list');
+const relsList         = document.getElementById('relationships-list');
+
+// ── Boot: load site list ─────────────────────────────────────────────────────
+async function loadSiteList() {
+  try {
+    const res  = await fetch('/api/diagram-data');
+    const data = await res.json();
+    statusEl.textContent = `${data.sites.length} site(s) available`;
+    statusEl.className = data.sites.length ? 'active' : '';
+
+    data.sites.forEach(({ site }) => {
+      const opt = document.createElement('option');
+      opt.value = site;
+      opt.textContent = site.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      siteSelect.appendChild(opt);
+    });
+
+    // Auto-load first site if available
+    if (data.sites.length) {
+      siteSelect.value = data.sites[0].site;
+      loadSite(data.sites[0].site);
+    }
+  } catch (e) {
+    statusEl.textContent = 'error loading sites';
+    console.error(e);
+  }
+}
+
+siteSelect.addEventListener('change', () => {
+  if (siteSelect.value) loadSite(siteSelect.value);
+});
+
+// ── Load a site ──────────────────────────────────────────────────────────────
+async function loadSite(site) {
+  statusEl.textContent = 'loading...';
+  statusEl.className = '';
+  clearAll();
+
+  try {
+    const res  = await fetch(`/api/diagram-data/${site}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    currentData = await res.json();
+    renderAll(currentData);
+    statusEl.textContent = currentData.site || site;
+    statusEl.className = 'active';
+  } catch (e) {
+    statusEl.textContent = 'error — check console';
+    console.error(e);
+  }
+}
+
+// ── Render everything ────────────────────────────────────────────────────────
+function renderAll(data) {
+  // SVG
+  if (data.svg) {
+    injectSVG(data.svg);
+  } else {
+    showEmptyState('No SVG found — export from Rhino and save to data/ParkSVG/');
+  }
+
+  designLogicText.textContent = data.design_logic || '—';
+  designLogicText.className = data.design_logic ? '' : 'empty-list';
+
+  renderCards(zonesList, data.zones || [], 'zone');
+
+  // Paths
+  renderCards(pathsList, data.paths || [], 'path');
+
+  // Relationships
+  renderRelationships(relsList, data.relationships || []);
+}
+
+function clearAll() {
+  svgContainer.innerHTML = '';
+  allSvgGroups = [];
+  emptyState.style.display = 'block';
+  svgContainer.appendChild(emptyState);
+  designLogicText.textContent = '—';
+  zonesList.innerHTML = '<span class="empty-list">—</span>';
+  pathsList.innerHTML = '<span class="empty-list">—</span>';
+  relsList.innerHTML  = '<span class="empty-list">—</span>';
+}
+
+function showEmptyState(msg) {
+  emptyState.querySelector('.hint').textContent = msg;
+  emptyState.style.display = 'block';
+}
+
+// ── SVG injection ─────────────────────────────────────────────────────────────
+function injectSVG(svgString) {
+  // Remove old empty state
+  svgContainer.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+  wrapper.innerHTML = svgString;
+
+  const svgEl = wrapper.querySelector('svg');
+  if (!svgEl) {
+    svgContainer.appendChild(wrapper);
+    showEmptyState('SVG content invalid.');
+    return;
+  }
+
+  // Make SVG fill container
+  svgEl.removeAttribute('width');
+  svgEl.removeAttribute('height');
+  svgEl.style.cssText = 'max-width:100%;max-height:100%;width:100%;height:100%;';
+  if (!svgEl.getAttribute('viewBox')) {
+    // Fallback viewBox from width/height attrs if present
+    const w = svgEl.getAttribute('width') || '800';
+    const h = svgEl.getAttribute('height') || '600';
+    svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  }
+
+  svgContainer.appendChild(wrapper);
+
+  // Collect all <g> layers
+  allSvgGroups = Array.from(svgEl.querySelectorAll('g[id]'));
+
+  // Add hover listeners to each SVG group
+  allSvgGroups.forEach(g => {
+    g.style.cursor = 'default';
+    g.addEventListener('mouseenter', () => onSvgGroupHover(g.id));
+    g.addEventListener('mouseleave', () => clearHighlights());
+  });
+}
+
+// ── Card rendering ────────────────────────────────────────────────────────────
+function renderCards(container, items, kind) {
+  if (!items || items.length === 0) {
+    container.innerHTML = '<span class="empty-list">—</span>';
+    return;
+  }
+  container.innerHTML = '';
+  items.forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.dataset.index = i;
+    card.dataset.kind  = kind;
+
+    const label = item.label || item.name || item.id || `${kind} ${i+1}`;
+    const type  = item.type  || item.character || '';
+    const id    = item.id    || '';
+
+    card.innerHTML = `
+      ${id ? `<div class="card-id">${id}</div>` : ''}
+      <div class="card-label">${label}</div>
+      ${type ? `<div class="card-type">${type}</div>` : ''}
+    `;
+
+    card.addEventListener('mouseenter', () => onCardHover(item, card));
+    card.addEventListener('mouseleave', () => clearHighlights());
+    container.appendChild(card);
+  });
+}
+
+function renderRelationships(container, rels) {
+  if (!rels || rels.length === 0) {
+    container.innerHTML = '<span class="empty-list">—</span>';
+    return;
+  }
+  container.innerHTML = '';
+  rels.forEach(rel => {
+    const div = document.createElement('div');
+    div.className = 'rel-item';
+    const from = rel.from || rel.source || '?';
+    const to   = rel.to   || rel.target || '?';
+    const type = rel.type || rel.relationship || '';
+    div.innerHTML = `<span>${from}</span> <span class="rel-arrow">→</span> <span>${to}</span>${type ? ` <span class="rel-arrow">// ${type}</span>` : ''}`;
+    container.appendChild(div);
+  });
+}
+
+// ── Hover: card → SVG ─────────────────────────────────────────────────────────
+function onCardHover(item, cardEl) {
+  // Highlight the card
+  document.querySelectorAll('.item-card').forEach(c => c.classList.remove('highlighted'));
+  cardEl.classList.add('highlighted');
+
+  // Find matching SVG layers
+  const type = (item.type || item.character || '').toLowerCase();
+  const label = (item.label || item.name || '').toLowerCase();
+
+  // Priority: exact label match, then type mapping
+  const targetIds = new Set();
+
+  // 1. Try to find a group whose id contains the label
+  allSvgGroups.forEach(g => {
+    if (g.id.toLowerCase().includes(label) || label.includes(g.id.toLowerCase())) {
+      targetIds.add(g.id);
+    }
+  });
+
+  // 2. Also map by type
+  for (const [key, layerNames] of Object.entries(TYPE_TO_LAYER)) {
+    if (type.includes(key) || key.includes(type)) {
+      layerNames.forEach(ln => targetIds.add(ln));
+    }
+  }
+
+  highlightSvgLayers(targetIds);
+}
+
+// ── Hover: SVG group → cards ──────────────────────────────────────────────────
+function onSvgGroupHover(groupId) {
+  const lowerGroupId = groupId.toLowerCase().replace(/_/g, ' ');
+
+  // Dim all other layers
+  highlightSvgLayers(new Set([groupId]));
+
+  // Highlight matching cards
+  document.querySelectorAll('.item-card').forEach(card => {
+    card.classList.remove('highlighted');
+    const label = card.querySelector('.card-label');
+    const type  = card.querySelector('.card-type');
+    const lbl   = (label ? label.textContent : '').toLowerCase();
+    const typ   = (type  ? type.textContent  : '').toLowerCase();
+
+    // Check label match
+    if (lbl.includes(lowerGroupId) || lowerGroupId.includes(lbl)) {
+      card.classList.add('highlighted');
+      return;
+    }
+
+    // Check type → layer mapping
+    for (const [key, layerNames] of Object.entries(TYPE_TO_LAYER)) {
+      if (typ.includes(key)) {
+        const lowerLayerNames = layerNames.map(l => l.toLowerCase().replace(/_/g, ' '));
+        if (lowerLayerNames.some(ln => ln === lowerGroupId)) {
+          card.classList.add('highlighted');
+          return;
+        }
+      }
+    }
+  });
+}
+
+// ── SVG highlight helpers ─────────────────────────────────────────────────────
+function highlightSvgLayers(targetIds) {
+  if (!allSvgGroups.length) return;
+
+  const normalise = id => id.toLowerCase().replace(/_/g, ' ').trim();
+  const targetNorm = new Set([...targetIds].map(normalise));
+
+  allSvgGroups.forEach(g => {
+    const gNorm = normalise(g.id);
+    const match = targetNorm.has(gNorm) || [...targetNorm].some(t => gNorm.includes(t) || t.includes(gNorm));
+    if (targetIds.size === 0) {
+      g.classList.remove('layer-dim', 'layer-glow');
+    } else if (match) {
+      g.classList.remove('layer-dim');
+      g.classList.add('layer-glow');
+    } else {
+      g.classList.remove('layer-glow');
+      g.classList.add('layer-dim');
+    }
+  });
+}
+
+function clearHighlights() {
+  allSvgGroups.forEach(g => g.classList.remove('layer-dim', 'layer-glow'));
+  document.querySelectorAll('.item-card').forEach(c => c.classList.remove('highlighted'));
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSiteList();
+</script>
+</body>
+</html>

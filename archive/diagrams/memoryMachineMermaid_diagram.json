@@ -1,0 +1,2067 @@
+{
+  "site": "Unknown",
+  "orientation_analysis": "Not applicable - the diagram represents a computational workflow, not a physical site. Its layout is organized hierarchically and sequentially to depict data flow and process stages.",
+  "zones": [
+    {
+      "id": "Z1",
+      "label": "User / Architect",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "The human initiator and guide of the entire computational design process.",
+      "bounding_polygon": [
+        [
+          450,
+          20
+        ],
+        [
+          550,
+          20
+        ],
+        [
+          550,
+          70
+        ],
+        [
+          450,
+          70
+        ]
+      ]
+    },
+    {
+      "id": "Z2",
+      "label": "Open-Ended Query",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "An initial unstructured input prompt provided by the user.",
+      "bounding_polygon": [
+        [
+          200,
+          190
+        ],
+        [
+          300,
+          190
+        ],
+        [
+          300,
+          220
+        ],
+        [
+          200,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "Z3",
+      "label": "autonomous_discovery.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script responsible for autonomously discovering data targets.",
+      "bounding_polygon": [
+        [
+          160,
+          245
+        ],
+        [
+          340,
+          245
+        ],
+        [
+          340,
+          280
+        ],
+        [
+          160,
+          280
+        ]
+      ]
+    },
+    {
+      "id": "Z4",
+      "label": "Feeds Targets",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "An intermediate data or instruction set that guides data harvesting.",
+      "bounding_polygon": [
+        [
+          200,
+          305
+        ],
+        [
+          300,
+          305
+        ],
+        [
+          300,
+          330
+        ],
+        [
+          200,
+          330
+        ]
+      ]
+    },
+    {
+      "id": "Z5",
+      "label": "machine_os.py",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "The central orchestration script for machine operations and data harvesting queries.",
+      "bounding_polygon": [
+        [
+          390,
+          300
+        ],
+        [
+          510,
+          300
+        ],
+        [
+          510,
+          335
+        ],
+        [
+          390,
+          335
+        ]
+      ]
+    },
+    {
+      "id": "Z6",
+      "label": "Text Search",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A specific query type for textual data.",
+      "bounding_polygon": [
+        [
+          200,
+          355
+        ],
+        [
+          300,
+          355
+        ],
+        [
+          300,
+          380
+        ],
+        [
+          200,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "Z7",
+      "label": "free_scraper.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for generic web content scraping.",
+      "bounding_polygon": [
+        [
+          170,
+          405
+        ],
+        [
+          330,
+          405
+        ],
+        [
+          330,
+          440
+        ],
+        [
+          170,
+          440
+        ]
+      ]
+    },
+    {
+      "id": "Z8",
+      "label": "Raw Text",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Unprocessed textual data obtained from scraping.",
+      "bounding_polygon": [
+        [
+          160,
+          470
+        ],
+        [
+          245,
+          470
+        ],
+        [
+          245,
+          495
+        ],
+        [
+          160,
+          495
+        ]
+      ]
+    },
+    {
+      "id": "Z9",
+      "label": "Sentiment/Data",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Extracted data or sentiment analysis results.",
+      "bounding_polygon": [
+        [
+          270,
+          470
+        ],
+        [
+          380,
+          470
+        ],
+        [
+          380,
+          495
+        ],
+        [
+          270,
+          495
+        ]
+      ]
+    },
+    {
+      "id": "Z10",
+      "label": "Map Query",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A specific query type for map-related data.",
+      "bounding_polygon": [
+        [
+          400,
+          355
+        ],
+        [
+          500,
+          355
+        ],
+        [
+          500,
+          380
+        ],
+        [
+          400,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "Z11",
+      "label": "osm_scraper.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for scraping OpenStreetMap (OSM) data.",
+      "bounding_polygon": [
+        [
+          370,
+          405
+        ],
+        [
+          530,
+          405
+        ],
+        [
+          530,
+          440
+        ],
+        [
+          370,
+          440
+        ]
+      ]
+    },
+    {
+      "id": "Z12",
+      "label": "GIS Data",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Geographic Information System data.",
+      "bounding_polygon": [
+        [
+          410,
+          470
+        ],
+        [
+          490,
+          470
+        ],
+        [
+          490,
+          495
+        ],
+        [
+          410,
+          495
+        ]
+      ]
+    },
+    {
+      "id": "Z13",
+      "label": "Natural Language Prompt",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "User input provided in a natural language format.",
+      "bounding_polygon": [
+        [
+          600,
+          190
+        ],
+        [
+          700,
+          190
+        ],
+        [
+          700,
+          220
+        ],
+        [
+          600,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "Z14",
+      "label": "Image Search",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A specific query type for image data.",
+      "bounding_polygon": [
+        [
+          600,
+          355
+        ],
+        [
+          700,
+          355
+        ],
+        [
+          700,
+          380
+        ],
+        [
+          600,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "Z15",
+      "label": "satellite_scraper.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for scraping satellite imagery.",
+      "bounding_polygon": [
+        [
+          570,
+          405
+        ],
+        [
+          730,
+          405
+        ],
+        [
+          730,
+          440
+        ],
+        [
+          570,
+          440
+        ]
+      ]
+    },
+    {
+      "id": "Z16",
+      "label": "Google Maps JPG",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Satellite imagery in JPG format, likely from Google Maps.",
+      "bounding_polygon": [
+        [
+          590,
+          470
+        ],
+        [
+          710,
+          470
+        ],
+        [
+          710,
+          495
+        ],
+        [
+          590,
+          495
+        ]
+      ]
+    },
+    {
+      "id": "Z17",
+      "label": "spatial_extractor.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for extracting spatial information from raw data.",
+      "bounding_polygon": [
+        [
+          150,
+          560
+        ],
+        [
+          300,
+          560
+        ],
+        [
+          300,
+          595
+        ],
+        [
+          150,
+          595
+        ]
+      ]
+    },
+    {
+      "id": "Z18",
+      "label": "Keywords",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Extracted keywords from textual data.",
+      "bounding_polygon": [
+        [
+          180,
+          615
+        ],
+        [
+          270,
+          615
+        ],
+        [
+          270,
+          640
+        ],
+        [
+          180,
+          640
+        ]
+      ]
+    },
+    {
+      "id": "Z19",
+      "label": "spatial_mapper.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for mapping extracted spatial data.",
+      "bounding_polygon": [
+        [
+          160,
+          660
+        ],
+        [
+          290,
+          660
+        ],
+        [
+          290,
+          695
+        ],
+        [
+          160,
+          695
+        ]
+      ]
+    },
+    {
+      "id": "Z20",
+      "label": "Outputs",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "General outputs generated by the spatial mapping process.",
+      "bounding_polygon": [
+        [
+          180,
+          715
+        ],
+        [
+          270,
+          715
+        ],
+        [
+          270,
+          740
+        ],
+        [
+          180,
+          740
+        ]
+      ]
+    },
+    {
+      "id": "Z21",
+      "label": "target_massing.csv",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A CSV file containing data for target architectural massing.",
+      "bounding_polygon": [
+        [
+          160,
+          760
+        ],
+        [
+          300,
+          760
+        ],
+        [
+          300,
+          795
+        ],
+        [
+          160,
+          795
+        ]
+      ]
+    },
+    {
+      "id": "Z22",
+      "label": "parser.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for parsing structured and unstructured data.",
+      "bounding_polygon": [
+        [
+          340,
+          560
+        ],
+        [
+          440,
+          560
+        ],
+        [
+          440,
+          595
+        ],
+        [
+          340,
+          595
+        ]
+      ]
+    },
+    {
+      "id": "Z23",
+      "label": "Compiles",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "An intermediate state representing compiled data.",
+      "bounding_polygon": [
+        [
+          340,
+          615
+        ],
+        [
+          430,
+          615
+        ],
+        [
+          430,
+          640
+        ],
+        [
+          340,
+          640
+        ]
+      ]
+    },
+    {
+      "id": "Z24",
+      "label": "memory_manifest.json",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A JSON file storing a manifest of data in memory.",
+      "bounding_polygon": [
+        [
+          310,
+          660
+        ],
+        [
+          470,
+          660
+        ],
+        [
+          470,
+          695
+        ],
+        [
+          310,
+          695
+        ]
+      ]
+    },
+    {
+      "id": "Z25",
+      "label": "pershing_osm.json",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A specific JSON dataset likely derived from OpenStreetMap data for 'Pershing' site.",
+      "bounding_polygon": [
+        [
+          490,
+          555
+        ],
+        [
+          600,
+          555
+        ],
+        [
+          600,
+          590
+        ],
+        [
+          490,
+          590
+        ]
+      ]
+    },
+    {
+      "id": "Z26",
+      "label": "opencv_site_mapper.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script using OpenCV for mapping and analyzing site imagery.",
+      "bounding_polygon": [
+        [
+          600,
+          560
+        ],
+        [
+          760,
+          560
+        ],
+        [
+          760,
+          595
+        ],
+        [
+          600,
+          595
+        ]
+      ]
+    },
+    {
+      "id": "Z27",
+      "label": "Coordinate Extraction",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "The process or output of extracting precise coordinates from imagery.",
+      "bounding_polygon": [
+        [
+          600,
+          615
+        ],
+        [
+          750,
+          615
+        ],
+        [
+          750,
+          640
+        ],
+        [
+          600,
+          640
+        ]
+      ]
+    },
+    {
+      "id": "Z28",
+      "label": "extracted_trees.csv",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A CSV file containing data about extracted tree locations and attributes.",
+      "bounding_polygon": [
+        [
+          600,
+          660
+        ],
+        [
+          750,
+          660
+        ],
+        [
+          750,
+          695
+        ],
+        [
+          600,
+          695
+        ]
+      ]
+    },
+    {
+      "id": "Z29",
+      "label": "intervention_engine.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for generating or simulating design interventions.",
+      "bounding_polygon": [
+        [
+          610,
+          760
+        ],
+        [
+          780,
+          760
+        ],
+        [
+          780,
+          795
+        ],
+        [
+          610,
+          795
+        ]
+      ]
+    },
+    {
+      "id": "Z30",
+      "label": "rhino_universal.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A universal Python script for integrating with Rhino 3D modeling software.",
+      "bounding_polygon": [
+        [
+          600,
+          825
+        ],
+        [
+          770,
+          825
+        ],
+        [
+          770,
+          860
+        ],
+        [
+          600,
+          860
+        ]
+      ]
+    },
+    {
+      "id": "Z31",
+      "label": "rhino_osm_builder.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for building Rhino models using OpenStreetMap data.",
+      "bounding_polygon": [
+        [
+          800,
+          760
+        ],
+        [
+          960,
+          760
+        ],
+        [
+          960,
+          795
+        ],
+        [
+          800,
+          795
+        ]
+      ]
+    },
+    {
+      "id": "Z32",
+      "label": "site_reconstruction.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A Python script for reconstructing the site's geometry in 3D.",
+      "bounding_polygon": [
+        [
+          810,
+          705
+        ],
+        [
+          960,
+          705
+        ],
+        [
+          960,
+          740
+        ],
+        [
+          810,
+          740
+        ]
+      ]
+    },
+    {
+      "id": "Z33",
+      "label": "3D Masterplan",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "The central three-dimensional architectural model or design outcome.",
+      "bounding_polygon": [
+        [
+          790,
+          825
+        ],
+        [
+          970,
+          825
+        ],
+        [
+          970,
+          860
+        ],
+        [
+          790,
+          860
+        ]
+      ]
+    },
+    {
+      "id": "Z34",
+      "label": "Auto-Screenshot",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "An automated process for capturing screenshots of the 3D Masterplan.",
+      "bounding_polygon": [
+        [
+          800,
+          885
+        ],
+        [
+          960,
+          885
+        ],
+        [
+          960,
+          910
+        ],
+        [
+          800,
+          910
+        ]
+      ]
+    },
+    {
+      "id": "Z35",
+      "label": "archive/render_output/",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "A directory designated for storing rendered outputs and archival data.",
+      "bounding_polygon": [
+        [
+          800,
+          930
+        ],
+        [
+          960,
+          930
+        ],
+        [
+          960,
+          965
+        ],
+        [
+          800,
+          965
+        ]
+      ]
+    },
+    {
+      "id": "Z36",
+      "label": "deck_compiler.py / zine_compiler.py",
+      "type": "Unique Element",
+      "system": "points",
+      "character": "Python scripts for compiling presentations or digital zines.",
+      "bounding_polygon": [
+        [
+          800,
+          985
+        ],
+        [
+          960,
+          985
+        ],
+        [
+          960,
+          1020
+        ],
+        [
+          800,
+          1020
+        ]
+      ]
+    },
+    {
+      "id": "Z37",
+      "label": "presentation_deck.html",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "The final HTML-based presentation document, the ultimate deliverable.",
+      "bounding_polygon": [
+        [
+          800,
+          1040
+        ],
+        [
+          960,
+          1040
+        ],
+        [
+          960,
+          1075
+        ],
+        [
+          800,
+          1075
+        ]
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "P1",
+      "label": "Open-Ended Query",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z2"
+      ],
+      "bounding_polygon": [
+        [
+          200,
+          70
+        ],
+        [
+          550,
+          70
+        ],
+        [
+          550,
+          220
+        ],
+        [
+          200,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "P2",
+      "label": "Natural Language Prompt",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z13"
+      ],
+      "bounding_polygon": [
+        [
+          500,
+          70
+        ],
+        [
+          700,
+          70
+        ],
+        [
+          700,
+          220
+        ],
+        [
+          500,
+          220
+        ]
+      ]
+    },
+    {
+      "id": "P3",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z2",
+        "Z3"
+      ],
+      "bounding_polygon": [
+        [
+          245,
+          220
+        ],
+        [
+          255,
+          220
+        ],
+        [
+          255,
+          245
+        ],
+        [
+          245,
+          245
+        ]
+      ]
+    },
+    {
+      "id": "P4",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z3",
+        "Z4"
+      ],
+      "bounding_polygon": [
+        [
+          245,
+          280
+        ],
+        [
+          255,
+          280
+        ],
+        [
+          255,
+          305
+        ],
+        [
+          245,
+          305
+        ]
+      ]
+    },
+    {
+      "id": "P5",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z4",
+        "Z5"
+      ],
+      "bounding_polygon": [
+        [
+          300,
+          310
+        ],
+        [
+          390,
+          310
+        ],
+        [
+          390,
+          320
+        ],
+        [
+          300,
+          320
+        ]
+      ]
+    },
+    {
+      "id": "P6",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z5",
+        "Z6"
+      ],
+      "bounding_polygon": [
+        [
+          240,
+          335
+        ],
+        [
+          460,
+          335
+        ],
+        [
+          460,
+          380
+        ],
+        [
+          240,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "P7",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z5",
+        "Z10"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          335
+        ],
+        [
+          460,
+          335
+        ],
+        [
+          460,
+          355
+        ],
+        [
+          440,
+          355
+        ]
+      ]
+    },
+    {
+      "id": "P8",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z5",
+        "Z14"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          335
+        ],
+        [
+          650,
+          335
+        ],
+        [
+          650,
+          380
+        ],
+        [
+          440,
+          380
+        ]
+      ]
+    },
+    {
+      "id": "P9",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z6",
+        "Z7"
+      ],
+      "bounding_polygon": [
+        [
+          245,
+          380
+        ],
+        [
+          255,
+          380
+        ],
+        [
+          255,
+          405
+        ],
+        [
+          245,
+          405
+        ]
+      ]
+    },
+    {
+      "id": "P10",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z7",
+        "Z8"
+      ],
+      "bounding_polygon": [
+        [
+          200,
+          440
+        ],
+        [
+          210,
+          440
+        ],
+        [
+          210,
+          470
+        ],
+        [
+          200,
+          470
+        ]
+      ]
+    },
+    {
+      "id": "P11",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z7",
+        "Z9"
+      ],
+      "bounding_polygon": [
+        [
+          290,
+          440
+        ],
+        [
+          300,
+          440
+        ],
+        [
+          300,
+          470
+        ],
+        [
+          290,
+          470
+        ]
+      ]
+    },
+    {
+      "id": "P12",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z10",
+        "Z11"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          380
+        ],
+        [
+          450,
+          380
+        ],
+        [
+          450,
+          405
+        ],
+        [
+          440,
+          405
+        ]
+      ]
+    },
+    {
+      "id": "P13",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z11",
+        "Z12"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          440
+        ],
+        [
+          450,
+          440
+        ],
+        [
+          450,
+          470
+        ],
+        [
+          440,
+          470
+        ]
+      ]
+    },
+    {
+      "id": "P14",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z13",
+        "Z5"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          220
+        ],
+        [
+          510,
+          220
+        ],
+        [
+          510,
+          300
+        ],
+        [
+          440,
+          300
+        ]
+      ]
+    },
+    {
+      "id": "P15",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z14",
+        "Z15"
+      ],
+      "bounding_polygon": [
+        [
+          645,
+          380
+        ],
+        [
+          655,
+          380
+        ],
+        [
+          655,
+          405
+        ],
+        [
+          645,
+          405
+        ]
+      ]
+    },
+    {
+      "id": "P16",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z15",
+        "Z16"
+      ],
+      "bounding_polygon": [
+        [
+          645,
+          440
+        ],
+        [
+          655,
+          440
+        ],
+        [
+          655,
+          470
+        ],
+        [
+          645,
+          470
+        ]
+      ]
+    },
+    {
+      "id": "P17",
+      "label": "Raw Text",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z8",
+        "Z17"
+      ],
+      "bounding_polygon": [
+        [
+          200,
+          495
+        ],
+        [
+          210,
+          495
+        ],
+        [
+          210,
+          560
+        ],
+        [
+          200,
+          560
+        ]
+      ]
+    },
+    {
+      "id": "P18",
+      "label": "Sentiment/Data",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z9",
+        "Z22"
+      ],
+      "bounding_polygon": [
+        [
+          320,
+          495
+        ],
+        [
+          380,
+          495
+        ],
+        [
+          380,
+          560
+        ],
+        [
+          320,
+          560
+        ]
+      ]
+    },
+    {
+      "id": "P19",
+      "label": "GIS Data",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z12",
+        "Z25"
+      ],
+      "bounding_polygon": [
+        [
+          440,
+          495
+        ],
+        [
+          490,
+          495
+        ],
+        [
+          490,
+          555
+        ],
+        [
+          440,
+          555
+        ]
+      ]
+    },
+    {
+      "id": "P20",
+      "label": "Google Maps JPG",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z16",
+        "Z26"
+      ],
+      "bounding_polygon": [
+        [
+          645,
+          495
+        ],
+        [
+          655,
+          495
+        ],
+        [
+          655,
+          560
+        ],
+        [
+          645,
+          560
+        ]
+      ]
+    },
+    {
+      "id": "P21",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z17",
+        "Z18"
+      ],
+      "bounding_polygon": [
+        [
+          220,
+          595
+        ],
+        [
+          230,
+          595
+        ],
+        [
+          230,
+          615
+        ],
+        [
+          220,
+          615
+        ]
+      ]
+    },
+    {
+      "id": "P22",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z18",
+        "Z19"
+      ],
+      "bounding_polygon": [
+        [
+          220,
+          640
+        ],
+        [
+          230,
+          640
+        ],
+        [
+          230,
+          660
+        ],
+        [
+          220,
+          660
+        ]
+      ]
+    },
+    {
+      "id": "P23",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z19",
+        "Z20"
+      ],
+      "bounding_polygon": [
+        [
+          220,
+          695
+        ],
+        [
+          230,
+          695
+        ],
+        [
+          230,
+          715
+        ],
+        [
+          220,
+          715
+        ]
+      ]
+    },
+    {
+      "id": "P24",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z19",
+        "Z21"
+      ],
+      "bounding_polygon": [
+        [
+          220,
+          695
+        ],
+        [
+          230,
+          695
+        ],
+        [
+          230,
+          760
+        ],
+        [
+          220,
+          760
+        ]
+      ]
+    },
+    {
+      "id": "P25",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z22",
+        "Z23"
+      ],
+      "bounding_polygon": [
+        [
+          380,
+          595
+        ],
+        [
+          390,
+          595
+        ],
+        [
+          390,
+          615
+        ],
+        [
+          380,
+          615
+        ]
+      ]
+    },
+    {
+      "id": "P26",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z23",
+        "Z24"
+      ],
+      "bounding_polygon": [
+        [
+          380,
+          640
+        ],
+        [
+          390,
+          640
+        ],
+        [
+          390,
+          660
+        ],
+        [
+          380,
+          660
+        ]
+      ]
+    },
+    {
+      "id": "P27",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z26",
+        "Z27"
+      ],
+      "bounding_polygon": [
+        [
+          670,
+          595
+        ],
+        [
+          680,
+          595
+        ],
+        [
+          680,
+          615
+        ],
+        [
+          670,
+          615
+        ]
+      ]
+    },
+    {
+      "id": "P28",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z26",
+        "Z28"
+      ],
+      "bounding_polygon": [
+        [
+          670,
+          595
+        ],
+        [
+          680,
+          595
+        ],
+        [
+          680,
+          660
+        ],
+        [
+          670,
+          660
+        ]
+      ]
+    },
+    {
+      "id": "P29",
+      "label": "Beamed via F4",
+      "type": "Infrastructure Connection",
+      "system": "lines",
+      "connects": [
+        "Z24",
+        "Z29"
+      ],
+      "bounding_polygon": [
+        [
+          450,
+          695
+        ],
+        [
+          680,
+          695
+        ],
+        [
+          680,
+          795
+        ],
+        [
+          450,
+          795
+        ]
+      ]
+    },
+    {
+      "id": "P30",
+      "label": "Beamed via F4",
+      "type": "Infrastructure Connection",
+      "system": "lines",
+      "connects": [
+        "Z21",
+        "Z30"
+      ],
+      "bounding_polygon": [
+        [
+          220,
+          795
+        ],
+        [
+          680,
+          795
+        ],
+        [
+          680,
+          860
+        ],
+        [
+          220,
+          860
+        ]
+      ]
+    },
+    {
+      "id": "P31",
+      "label": "Beamed via F4",
+      "type": "Infrastructure Connection",
+      "system": "lines",
+      "connects": [
+        "Z25",
+        "Z31"
+      ],
+      "bounding_polygon": [
+        [
+          540,
+          590
+        ],
+        [
+          880,
+          590
+        ],
+        [
+          880,
+          795
+        ],
+        [
+          540,
+          795
+        ]
+      ]
+    },
+    {
+      "id": "P32",
+      "label": "Beamed via F4",
+      "type": "Infrastructure Connection",
+      "system": "lines",
+      "connects": [
+        "Z28",
+        "Z32"
+      ],
+      "bounding_polygon": [
+        [
+          680,
+          695
+        ],
+        [
+          880,
+          695
+        ],
+        [
+          880,
+          740
+        ],
+        [
+          680,
+          740
+        ]
+      ]
+    },
+    {
+      "id": "P33",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z29",
+        "Z33"
+      ],
+      "bounding_polygon": [
+        [
+          690,
+          795
+        ],
+        [
+          880,
+          795
+        ],
+        [
+          880,
+          825
+        ],
+        [
+          690,
+          825
+        ]
+      ]
+    },
+    {
+      "id": "P34",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z30",
+        "Z33"
+      ],
+      "bounding_polygon": [
+        [
+          680,
+          825
+        ],
+        [
+          880,
+          825
+        ],
+        [
+          880,
+          860
+        ],
+        [
+          680,
+          860
+        ]
+      ]
+    },
+    {
+      "id": "P35",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z31",
+        "Z33"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          795
+        ],
+        [
+          890,
+          795
+        ],
+        [
+          890,
+          825
+        ],
+        [
+          880,
+          825
+        ]
+      ]
+    },
+    {
+      "id": "P36",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z32",
+        "Z33"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          740
+        ],
+        [
+          890,
+          740
+        ],
+        [
+          890,
+          825
+        ],
+        [
+          880,
+          825
+        ]
+      ]
+    },
+    {
+      "id": "P37",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z33",
+        "Z34"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          860
+        ],
+        [
+          890,
+          860
+        ],
+        [
+          890,
+          885
+        ],
+        [
+          880,
+          885
+        ]
+      ]
+    },
+    {
+      "id": "P38",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z34",
+        "Z35"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          910
+        ],
+        [
+          890,
+          910
+        ],
+        [
+          890,
+          930
+        ],
+        [
+          880,
+          930
+        ]
+      ]
+    },
+    {
+      "id": "P39",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z35",
+        "Z36"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          965
+        ],
+        [
+          890,
+          965
+        ],
+        [
+          890,
+          985
+        ],
+        [
+          880,
+          985
+        ]
+      ]
+    },
+    {
+      "id": "P40",
+      "label": "Data Flow",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z36",
+        "Z37"
+      ],
+      "bounding_polygon": [
+        [
+          880,
+          1020
+        ],
+        [
+          890,
+          1020
+        ],
+        [
+          890,
+          1040
+        ],
+        [
+          880,
+          1040
+        ]
+      ]
+    }
+  ],
+  "erasure_targets": [],
+  "relationships": [
+    "The 'User / Architect' (Z1), classified as a 'Main Attractor', serves as the singular human input point, initiating two distinct paths ('Open-Ended Query' and 'Natural Language Prompt') into the automated system.",
+    "Phase 1, 'Data Harvest', is characterized by a divergent 'lines' system of query types ('Text Search', 'Map Query', 'Image Search') originating from the central 'machine_os.py' orchestrator (Z5), illustrating parallel data acquisition strategies.",
+    "The outputs of Phase 1, including 'Raw Text' (Z8), 'Sentiment/Data' (Z9), 'GIS Data' (Z12), and 'Google Maps JPG' (Z16), form a system of distinct data 'points' that become the primary inputs for Phase 2, 'Processing & Extraction'.",
+    "Phase 2, 'Processing & Extraction', demonstrates a convergent logic where disparate raw data 'points' are systematically transformed by specialized Python scripts (e.g., Z17, Z22, Z26) into refined, structured data 'points' like 'Keywords' (Z18) and 'extracted_trees.csv' (Z28).",
+    "A key 'Infrastructure Connection' system, explicitly labeled 'Beamed via F4' (P29, P30, P31, P32), acts as a critical bridge, efficiently transferring processed data from Phase 2 to the 'The Rhino 3D Canvas' in Phase 3.",
+    "Phase 3, 'The Rhino 3D Canvas', is centered around the '3D Masterplan' (Z33) as its 'Main Attractor', which is a composite output formed by the convergence of multiple specialized computational design 'Unique Element' scripts (Z29, Z30, Z31, Z32).",
+    "The transition from digital 3D model (Z33) to final presentation (Z37) is streamlined through an automated 'lines' system, starting with 'Auto-Screenshot' (Z34) and followed by compiler scripts (Z36) to generate the 'presentation_deck.html'.",
+    "A notable feedback loop exists where 'autonomous_discovery.py' (Z3) 'Feeds Targets' (Z4) back into the 'machine_os.py' (Z5), suggesting an iterative or self-optimizing data acquisition process.",
+    "The overall structure is hierarchical, organized into four distinct phases, but within each phase, the 'points' system of individual scripts and data artifacts interacts dynamically through an intricate 'lines' system of data flow.",
+    "The 'surfaces' system of distinct data types (e.g., raw text vs. JSON manifest) undergoes a clear progressive refinement, moving from unstructured inputs to highly structured, design-ready formats."
+  ],
+  "design_logic": "The dominant spatial logic of this diagram represents a sophisticated, modular, and data-driven workflow for architectural design, moving from initial user input through automated data acquisition, rigorous processing, 3D model generation, and final presentation. The 'User / Architect' serves as the singular initiator, driving a decentralized 'Data Harvest' phase where various 'Unique Element' scraping scripts gather diverse raw data. This raw data is then channeled into a 'Processing & Extraction' phase, which acts as a complex 'surface' where specialized scripts meticulously transform and refine information into structured, design-ready 'points'. A critical 'Infrastructure Connection' system ('Beamed via F4') efficiently transfers these refined datasets to 'The Rhino 3D Canvas' for the core architectural synthesis. Here, a network of design-specific scripts collaboratively builds the central '3D Masterplan' 'Main Attractor'. The entire pipeline culminates in an 'Archival & Synthesis' phase, ensuring automated documentation and the creation of a polished 'presentation_deck.html' deliverable. This logic emphasizes a systematic, hierarchical progression, leveraging computational power to integrate disparate data sources into a cohesive and presentable architectural proposal."
+}

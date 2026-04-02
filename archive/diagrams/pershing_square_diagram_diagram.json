@@ -1,0 +1,434 @@
+{
+  "site": "Pershing Square",
+  "orientation_analysis": "The site, defined by its boundary, is an orthogonal rectangle whose axes are aligned with the image frame. However, it is rotated approximately 40 degrees relative to the primary surrounding vehicular street grid, which runs diagonally across the frame at roughly +/- 40-degree angles to the image's axes. This creates a distinct urban insertion that visually contrasts with its immediate context.",
+  "zones": [
+    {
+      "id": "Z1",
+      "label": "Central Green Space",
+      "type": "Green Space",
+      "system": "surfaces",
+      "character": "Expansive, verdant, central area providing open space and unifying elements.",
+      "bounding_polygon": [
+        [
+          330,
+          240
+        ],
+        [
+          670,
+          240
+        ],
+        [
+          670,
+          630
+        ],
+        [
+          330,
+          630
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "Z2",
+      "label": "Hexagonal Fountain Feature",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Focal, ornate circular element with patterned paving, drawing attention in the lower-left quadrant.",
+      "bounding_polygon": [
+        [
+          350,
+          530
+        ],
+        [
+          410,
+          530
+        ],
+        [
+          410,
+          590
+        ],
+        [
+          350,
+          590
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "Z3",
+      "label": "Second Hexagonal Feature",
+      "type": "Main Attractor",
+      "system": "points",
+      "character": "Distinct circular element with patterned paving, serving as a focal point in the upper-right quadrant.",
+      "bounding_polygon": [
+        [
+          590,
+          280
+        ],
+        [
+          650,
+          280
+        ],
+        [
+          650,
+          340
+        ],
+        [
+          590,
+          340
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "Z4",
+      "label": "Circular Gathering Point",
+      "type": "Minor Attractor",
+      "system": "points",
+      "character": "Subtle, open circular space offering a secondary gathering or rest point on the western edge.",
+      "bounding_polygon": [
+        [
+          340,
+          400
+        ],
+        [
+          380,
+          400
+        ],
+        [
+          380,
+          440
+        ],
+        [
+          340,
+          440
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "Z5",
+      "label": "Reflecting Pool",
+      "type": "Water Feature",
+      "system": "surfaces",
+      "character": "Rectangular, tranquil water body providing reflective qualities and a sense of calm in the north-west.",
+      "bounding_polygon": [
+        [
+          430,
+          270
+        ],
+        [
+          470,
+          270
+        ],
+        [
+          470,
+          320
+        ],
+        [
+          430,
+          320
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "Z6",
+      "label": "Labyrinthine Paving",
+      "type": "Unique Element",
+      "system": "surfaces",
+      "character": "Intricate, square-patterned paving designed for engagement and unique pedestrian experience in the center-east.",
+      "bounding_polygon": [
+        [
+          510,
+          400
+        ],
+        [
+          590,
+          400
+        ],
+        [
+          590,
+          480
+        ],
+        [
+          510,
+          480
+        ]
+      ],
+      "rotation_degrees": 0
+    }
+  ],
+  "paths": [
+    {
+      "id": "P_Boundary",
+      "label": "Site Boundary",
+      "type": "Site Boundary",
+      "system": "lines",
+      "connects": [],
+      "bounding_polygon": [
+        [
+          290,
+          200
+        ],
+        [
+          710,
+          200
+        ],
+        [
+          710,
+          670
+        ],
+        [
+          290,
+          670
+        ]
+      ],
+      "rotation_degrees": 0
+    },
+    {
+      "id": "P_Street_TL",
+      "label": "North-West Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [
+        "P_Boundary"
+      ],
+      "bounding_polygon": [
+        [
+          147,
+          104
+        ],
+        [
+          397,
+          304
+        ],
+        [
+          403,
+          296
+        ],
+        [
+          153,
+          96
+        ]
+      ],
+      "rotation_degrees": 40
+    },
+    {
+      "id": "P_Street_BL",
+      "label": "South-West Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [
+        "P_Boundary"
+      ],
+      "bounding_polygon": [
+        [
+          147,
+          696
+        ],
+        [
+          397,
+          496
+        ],
+        [
+          403,
+          504
+        ],
+        [
+          153,
+          704
+        ]
+      ],
+      "rotation_degrees": -40
+    },
+    {
+      "id": "P_Street_TR",
+      "label": "North-East Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [
+        "P_Boundary"
+      ],
+      "bounding_polygon": [
+        [
+          547,
+          104
+        ],
+        [
+          797,
+          304
+        ],
+        [
+          803,
+          296
+        ],
+        [
+          553,
+          96
+        ]
+      ],
+      "rotation_degrees": 40
+    },
+    {
+      "id": "P_Street_BR",
+      "label": "South-East Vehicular Street",
+      "type": "Vehicular Street",
+      "system": "lines",
+      "connects": [
+        "P_Boundary"
+      ],
+      "bounding_polygon": [
+        [
+          547,
+          696
+        ],
+        [
+          797,
+          496
+        ],
+        [
+          803,
+          504
+        ],
+        [
+          553,
+          704
+        ]
+      ],
+      "rotation_degrees": -40
+    },
+    {
+      "id": "P5",
+      "label": "North-East Pedestrian Path",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z3",
+        "Z5"
+      ],
+      "bounding_polygon": [
+        [
+          430,
+          272
+        ],
+        [
+          620,
+          312
+        ],
+        [
+          621,
+          308
+        ],
+        [
+          431,
+          268
+        ]
+      ],
+      "rotation_degrees": 12
+    },
+    {
+      "id": "P6",
+      "label": "South-West Pedestrian Path",
+      "type": "Primary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z2",
+        "Z6"
+      ],
+      "bounding_polygon": [
+        [
+          381,
+          562
+        ],
+        [
+          511,
+          482
+        ],
+        [
+          509,
+          478
+        ],
+        [
+          379,
+          558
+        ]
+      ],
+      "rotation_degrees": -32
+    },
+    {
+      "id": "P7",
+      "label": "West Pedestrian Path",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z4",
+        "Z5"
+      ],
+      "bounding_polygon": [
+        [
+          362,
+          421
+        ],
+        [
+          432,
+          271
+        ],
+        [
+          428,
+          269
+        ],
+        [
+          358,
+          419
+        ]
+      ],
+      "rotation_degrees": -65
+    },
+    {
+      "id": "P8",
+      "label": "East Pedestrian Path",
+      "type": "Secondary Pedestrian",
+      "system": "lines",
+      "connects": [
+        "Z1",
+        "Z3",
+        "Z6"
+      ],
+      "bounding_polygon": [
+        [
+          592,
+          401
+        ],
+        [
+          622,
+          311
+        ],
+        [
+          618,
+          309
+        ],
+        [
+          588,
+          399
+        ]
+      ],
+      "rotation_degrees": -72
+    }
+  ],
+  "erasure_targets": [],
+  "relationships": [
+    "The site's orthogonal geometry (P_Boundary) stands in stark contrast to the diagonal orientation of the surrounding vehicular street grid (P_Street_TL-BR), creating a distinct urban block identity.",
+    "The large 'Green Space' (Z1) serves as the primary surface system, acting as a unifying anchor around which all 'points' (attractors) and specialized 'surfaces' (water, labyrinth) are arranged.",
+    "The curvilinear 'Pedestrian Pathways' (P5-P8) form a non-hierarchical 'lines' network, deliberately connecting the various 'Main' (Z2, Z3) and 'Minor' (Z4) Attractors, and Unique Elements (Z5, Z6) within the site.",
+    "The design employs a compelling juxtaposition of curvilinear pathways and circular attractors against the rectilinear forms of the reflecting pool (Z5), labyrinth (Z6), and the overall site boundary (P_Boundary).",
+    "Water features (Z5) and intricate paving (Z6) provide diverse tactile and visual experiences, enriching the park's overall green space (Z1) and offering moments of pause and engagement.",
+    "The 'Main Attractors' (Z2, Z3) are strategically positioned near opposing corners of the site, serving as magnetic poles that draw pedestrian movement and define key destinations within the park.",
+    "The 'Site Boundary' (P_Boundary) acts as a clear demarcation, mediating between the internal, programmed landscape and the external, rotated urban context, while allowing for controlled visual and pedestrian permeability.",
+    "The 'lines' system of pedestrian paths often traces the periphery of the central green space (Z1), implicitly defining circulation loops that engage the site's various features while offering multiple points of entry and exit."
+  ],
+  "design_logic": "The design of Pershing Square operates on a principle of intentional spatial tension and contrast. Its primary design logic stems from the site's orthogonal placement within an otherwise diagonally-oriented urban street grid, immediately establishing a distinct identity. Within this clear boundary, a network of curvilinear pedestrian pathways gracefully connects a series of diverse programmatic elements: prominent main attractors, a contemplative water feature, an intricate labyrinthine paving, and a more subtle gathering point, all embedded within a unifying central green space. This interplay of curvilinear circulation with rectilinear forms and rotated urban context creates a dynamic and explorative environment, where distinct focal points are integrated into a cohesive, yet varied, public realm, inviting movement and discovery."
+}
