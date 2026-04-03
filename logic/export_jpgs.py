@@ -45,7 +45,7 @@ def export_jpgs():
         """)
         
         zine_viewer = page.locator('.zine-viewer')
-        total_spreads = 19
+        total_spreads = page.evaluate("totalSpreads")
         
         for i in range(1, total_spreads + 1):
             print(f"Capturing Spread {i:02d}...")

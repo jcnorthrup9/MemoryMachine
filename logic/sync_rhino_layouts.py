@@ -33,8 +33,8 @@ import os, time
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-PARK_DIR         = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\ParkDiagrams"
-REFERENCE_DOC    = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\PrecedentDiagrams.3dm"
+PARK_DIR         = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "ParkDiagrams")
+REFERENCE_DOC    = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "PrecedentDiagrams.3dm")
 REFERENCE_LAYOUT = "Schouwburgplein"
 
 TARGETS = [

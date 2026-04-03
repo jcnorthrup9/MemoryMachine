@@ -32,12 +32,17 @@ Scale formula:
   Image is 1100 x 660 px.  Output units are feet (x 3.28084).
 """
 
-import rhinoscriptsyntax as rs
-import scriptcontext as sc
-import Rhino
-import Rhino.DocObjects as DO
-import Rhino.Geometry as RG
-import System
+try:
+    import rhinoscriptsyntax as rs
+    import scriptcontext as sc
+    import Rhino
+    import Rhino.DocObjects as DO
+    import Rhino.Geometry as RG
+    import System
+    INSIDE_RHINO = True
+except ImportError:
+    INSIDE_RHINO = False
+
 import os
 import time
 import math
@@ -45,10 +50,10 @@ import math
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-BASE_DIR      = r"C:\Users\jcnor\MemoryMachine"
+BASE_DIR      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SATELLITE_DIR = os.path.join(BASE_DIR, "assets", "precedents")
-PARK_DIR      = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\ParkDiagrams"
-REFERENCE_DOC    = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\PrecedentDiagrams.3dm"
+PARK_DIR      = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "ParkDiagrams")
+REFERENCE_DOC = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "PrecedentDiagrams.3dm")
 REFERENCE_LAYOUT = "Schouwburgplein"
 
 IMG_W_PX       = 1100
@@ -279,9 +284,10 @@ def insert_picture_frame(doc, img_path, width_ft, height_ft):
     """
     plane  = RG.Plane.WorldXY
     obj_id = doc.Objects.AddPictureFrame(plane, img_path,
-                                          width_ft, height_ft,
-                                          False,    # selfIllumination
-                                          False)    # embed
+                                         False,    # asMesh
+                                         width_ft, height_ft,
+                                         False,    # selfIllumination
+                                         False)    # embed
     if obj_id == System.Guid.Empty:
         print("  [ERROR] AddPictureFrame returned empty GUID for: {}".format(img_path))
         return False
@@ -399,4 +405,34 @@ def main():
         print("  {:30s}  {}".format(name, msg))
 
 
-main()
+if __name__ == "__main__":
+    if INSIDE_RHINO:
+        main()
+    else:
+        print("Standard Python detected. Dispatching to Rhino via COM...")
+        try:
+            import win32com.client
+            import sys
+            
+            # Connect to running Rhino 8 instance
+            try:
+                rhino = win32com.client.dynamic.Dispatch("Rhino.Interface.8")
+            except Exception:
+                rhino = win32com.client.dynamic.Dispatch("Rhino.Application")
+
+            try:
+                rs_app = rhino.GetScriptObject()
+            except Exception:
+                rs_app = rhino
+
+            script_path = os.path.abspath(__file__)
+            cmd = f'_-ScriptEditor Run "{script_path}"'
+
+            if hasattr(rs_app, "RunScript"):
+                rs_app.RunScript(cmd, 1)
+            else:
+                rhino.RunScript(cmd, 1)
+            print("✅ Setup command successfully sent to Rhino.")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            print("Ensure Rhino 8 is running and 'pip install pywin32' is executed in your environment.")

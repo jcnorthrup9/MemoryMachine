@@ -32,7 +32,7 @@ sys.path.insert(0, BASE_DIR)
 # ---------------------------------------------------------------------------
 DIAGRAMS_DIR    = os.path.join(BASE_DIR, 'archive', 'diagrams')
 SATELLITE_DIR   = os.path.join(BASE_DIR, 'assets', 'precedents')
-PARK_DIAG_DIR   = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\ParkDiagrams"
+PARK_DIAG_DIR   = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "ParkDiagrams")
 SCRIPTS_DIR     = os.path.join(BASE_DIR, 'data', 'orchestrator_scripts')
 VISION_TRACER   = os.path.join(BASE_DIR, 'logic', 'ai_vision_tracer.py')
 

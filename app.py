@@ -42,6 +42,7 @@ if AI_ENABLED:
         AI_ENABLED = False
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/models", StaticFiles(directory="models"), name="models")
 
 class MemoryPrompt(BaseModel):
     prompt: str
@@ -52,6 +53,16 @@ class HarvestRequest(BaseModel):
 class BakeRequest(BaseModel):
     name: str = "Unnamed Intervention"
     geometries: list
+
+class FootprintItem(BaseModel):
+    site: str
+    layerId: str
+    label: str
+    color: str
+    footprint: dict  # { cx, cz, width, depth, rotRad }
+
+class Generate3DRequest(BaseModel):
+    footprints: list[FootprintItem]
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -725,6 +736,81 @@ async def bake_to_rhino(payload: BakeRequest):
         return {"status": "error", "message": f"Could not launch bake script: {e}"}
 
     return {"status": "success", "message": f"Bake initiated for '{payload.name}'. Check Rhino — layer MEM_GENERATED."}
+
+
+def generate_comfyui_mesh(prompt: str, footprint: dict) -> dict:  # noqa: ARG001
+    """
+    ComfyUI bridge — structured to call localhost:8188 when ComfyUI is running.
+    Currently returns a stub so the rest of the pipeline can be validated.
+
+    When ComfyUI is operational, replace the stub block below with:
+        workflow = build_comfyui_workflow(prompt, footprint)
+        res = requests.post("http://localhost:8188/prompt", json={"prompt": workflow})
+        glb_path = poll_comfyui_output(res.json()["prompt_id"])
+        return {"glb_url": f"/static/generated/{os.path.basename(glb_path)}", "footprint": footprint}
+    """
+    # STUB — returns None so the frontend skips GLB loading gracefully
+    return {"glb_url": None, "footprint": footprint}
+
+
+@app.post("/api/generate-3d")
+async def generate_3d_meshes(payload: Generate3DRequest):
+    """
+    Task 17: Receives 2D footprint data from the remix stack, queries ChromaDB
+    for spatial context, prompts Gemini for an architectural description per layer,
+    and calls generate_comfyui_mesh() for each footprint.
+
+    Returns a list of mesh descriptors (glb_url + footprint) for the frontend
+    to load via GLTFLoader and fit to the footprint bbox.
+    """
+    if not AI_ENABLED:
+        return {"status": "error", "message": "AI core disabled — check server logs."}
+
+    meshes = []
+    narrative_parts = []
+
+    for item in payload.footprints:
+        query = f"{item.site} {item.layerId} {item.label} spatial design"
+        try:
+            results = collection.query(query_texts=[query], n_results=3, include=["documents", "metadatas"])
+            context = "\n".join(results["documents"][0]) if results["documents"][0] else ""
+        except Exception:
+            context = ""
+
+        fp = item.footprint
+        dim_str = f"{fp.get('width', 0):.1f}m wide × {fp.get('depth', 0):.1f}m deep"
+
+        prompt_text = f"""You are an architectural sculptor working on a park intervention.
+Layer: {item.label} ({item.layerId}) from {item.site}
+Footprint: {dim_str}, centered at world position ({fp.get('cx',0):.1f}, {fp.get('cz',0):.1f})
+Relevant precedent memory:
+{context}
+
+Describe in 2-3 sentences the 3D massing, material quality, and spatial experience of this element
+as it would appear in Pershing Square, DTLA. Be specific about height, form, and materiality."""
+
+        try:
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(prompt_text)
+            description = response.text.strip()
+        except Exception as e:
+            description = f"[AI description unavailable: {e}]"
+
+        narrative_parts.append(f"**{item.label}** ({item.site}): {description}")
+
+        mesh_result = generate_comfyui_mesh(description, fp)
+        mesh_result["site"]    = item.site
+        mesh_result["layerId"] = item.layerId
+        mesh_result["label"]   = item.label
+        mesh_result["description"] = description
+        meshes.append(mesh_result)
+
+    return {
+        "status": "success",
+        "message": f"AI descriptions generated for {len(meshes)} layers. ComfyUI mesh generation pending.",
+        "meshes": meshes,
+        "narrative": "\n\n".join(narrative_parts),
+    }
 
 
 @app.get("/diagrams", response_class=HTMLResponse)
