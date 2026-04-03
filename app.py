@@ -42,6 +42,8 @@ if AI_ENABLED:
         AI_ENABLED = False
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+os.makedirs(os.path.join(BASE_DIR, "models"), exist_ok=True)
 app.mount("/models", StaticFiles(directory="models"), name="models")
 
 class MemoryPrompt(BaseModel):

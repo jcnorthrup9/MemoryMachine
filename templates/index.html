@@ -440,8 +440,7 @@ function buildExportSVG(mode) {
     const g = baseSVGEl.querySelector(`[id="${lid}"]`);
     if (!g) return;
     const c = g.cloneNode(true);
-    const entrances = c.querySelector('[id="PARKING::entrances"]');
-    if (entrances) entrances.remove();
+    c.querySelectorAll('[id*="entrances"], [id*="Entrances"]').forEach(el => el.remove());
     if (isDark) {
       c.querySelectorAll('[stroke]:not([stroke="none"])').forEach(el => el.setAttribute('stroke', contextStroke));
       c.querySelectorAll('[fill]:not([fill="none"])').forEach(el => el.setAttribute('fill', contextColor));
@@ -840,8 +839,7 @@ function renderRemixSVG() {
     const g = baseSVGEl.querySelector(`[id="${lid}"]`);
     if (!g) return;
     const c = g.cloneNode(true);
-    const entrances = c.querySelector('[id="PARKING::entrances"]');
-    if (entrances) entrances.remove();
+    c.querySelectorAll('[id*="entrances"], [id*="Entrances"]').forEach(el => el.remove());
     c.querySelectorAll('[stroke]:not([stroke="none"])').forEach(el => el.setAttribute('stroke', '#3a3a3a'));
     c.querySelectorAll('[fill]:not([fill="none"])').forEach(el => el.setAttribute('fill', '#1e1e1e'));
     c.style.opacity = '0.9';
