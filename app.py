@@ -4,9 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn, subprocess, sys, os, json, re, math
 from datetime import datetime
-import time
-import urllib.request
-import urllib.parse
 
 # --- AI & DB IMPORTS ---
 try:
@@ -49,9 +46,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 os.makedirs(os.path.join(BASE_DIR, "models"), exist_ok=True)
 app.mount("/models", StaticFiles(directory="models"), name="models")
 
-os.makedirs(os.path.join(BASE_DIR, "html"), exist_ok=True)
-app.mount("/archive", StaticFiles(directory="html"), name="archive")
-
 class MemoryPrompt(BaseModel):
     prompt: str
 
@@ -61,8 +55,6 @@ class HarvestRequest(BaseModel):
 class BakeRequest(BaseModel):
     name: str = "Unnamed Intervention"
     geometries: list
-    svg_scale: float = 0.04        # SVG pts → Three.js world units
-    stack_footprints: list = []    # extractFootprints() output — world-space placement per layer
 
 class FootprintItem(BaseModel):
     site: str
@@ -80,8 +72,129 @@ async def read_root():
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
 # Real-world location + source metadata for each ingested dataset
-with open(os.path.join(BASE_DIR, "data", "app_context", "precedents_meta.json"), "r") as f:
-    SOURCE_INFO = json.load(f)
+SOURCE_INFO = {
+    "Pershing Square": {
+        "full_name":   "Pershing Square",
+        "location":    "532 S Olive St, Downtown Los Angeles, CA",
+        "source_type": "Google Maps Reviews",
+        "notes":       "Five-acre public plaza in the heart of DTLA. Subject of this project — currently being redesigned for the third time in three decades.",
+        "logic":       "target_site",
+        "coordinates": {"lat": 34.0483, "lon": -118.2525}
+    },
+    "Schouwburgplein": {
+        "full_name":   "Schouwburgplein",
+        "location":    "Rotterdam, Netherlands",
+        "source_type": "Spatial Observations",
+        "notes":       "Vast elevated hard plaza defined by four 35m hydraulic lighting masts operable by the public. Epoxy-coated steel deck, no conventional furniture.",
+        "logic":       "vertical_actuated",
+        "coordinates": {"lat": 51.9226, "lon": 4.4726}
+    },
+    "Grand Park LA": {
+        "full_name":   "Grand Park",
+        "location":    "200 N Grand Ave, Downtown Los Angeles, CA",
+        "source_type": "Spatial Observations",
+        "notes":       "Four-block civic park with a signature bright pink rubber splash pad membrane. Cooling social focal point in a hot urban climate.",
+        "logic":       "surface_membrane",
+        "coordinates": {"lat": 34.0563, "lon": -118.2462}
+    },
+    "Tanner Springs Park": {
+        "full_name":   "Tanner Springs Park",
+        "location":    "NW 10th Ave & NW Marshall St, Portland, OR",
+        "source_type": "Spatial Observations",
+        "notes":       "Naturalistic stormwater wetland park bounded by 368 reclaimed railway tracks set vertically, with fused glass inlays. Strong acoustic baffle effect.",
+        "logic":       "boundary_texture",
+        "coordinates": {"lat": 45.5258, "lon": -122.6841}
+    },
+    "Gardens by the Bay": {
+        "full_name":   "Gardens by the Bay — Supertree Grove",
+        "location":    "18 Marina Gardens Dr, Singapore",
+        "source_type": "Spatial Observations",
+        "notes":       "18 vertical gardens 25-50m tall; concrete and steel armatures supporting living plant canopies that shade, collect rainwater, and vent the greenhouses below.",
+        "logic":       "infrastructure_vent",
+        "coordinates": {"lat": 1.2816, "lon": 103.8636}
+    },
+    "Superkilen": {
+        "full_name":   "Superkilen",
+        "location":    "Norrebro, Copenhagen, Denmark",
+        "source_type": "Spatial Observations",
+        "notes":       "750m linear park in three color-coded zones; the Red Square features undulating black-and-white stripe patterns on modeled topography. Global furniture collection.",
+        "logic":       "ground_pattern",
+        "coordinates": {"lat": 55.6964, "lon": 12.5476}
+    },
+    "Paley Park": {
+        "full_name":   "Paley Park",
+        "location":    "3 E 53rd St, New York, NY",
+        "source_type": "Spatial Observations",
+        "notes":       "42x100ft vest-pocket park with a 20ft full-width water wall generating ~75dB white noise that masks Midtown Manhattan traffic. Movable chairs, honey locust canopy.",
+        "logic":       "acoustic_wall",
+        "coordinates": {"lat": 40.7601, "lon": -73.9714}
+    },
+    "Klyde Warren Park": {
+        "full_name":   "Klyde Warren Park",
+        "location":    "2012 Woodall Rodgers Fwy, Dallas, TX",
+        "source_type": "Spatial Observations",
+        "notes":       "5.2-acre deck park over a freeway in a hot continental climate. Shade trees, splash pad, food truck row, dog park — programmatic activation as primary strategy.",
+        "logic":       "deck_program",
+        "coordinates": {"lat": 32.7893, "lon": -96.8021}
+    },
+    "Millennium Park": {
+        "full_name":   "Millennium Park",
+        "location":    "201 E Randolph St, Chicago, IL",
+        "source_type": "Spatial Observations",
+        "notes":       "24.5-acre park over a rail yard. Crown Fountain: twin 50ft towers projecting faces that periodically jet water into a shallow black granite plaza. Cloud Gate reflects city at multiple scales.",
+        "logic":       "interactive_surface",
+        "coordinates": {"lat": 41.8826, "lon": -87.6226}
+    },
+    "Parc de la Villette": {
+        "full_name":   "Parc de la Villette",
+        "location":    "211 Av. Jean Jaures, Paris, France",
+        "source_type": "Spatial Observations",
+        "notes":       "55ha park by Tschumi; 26 red steel follies on a 120m grid provide wayfinding and distributed program across a landscape of lines, surfaces, and thematic gardens.",
+        "logic":       "folly_grid",
+        "coordinates": {"lat": 48.8937, "lon": 2.3931}
+    },
+    "Zaryadye Park": {
+        "full_name":   "Zaryadye Park",
+        "location":    "Varvarka St, Moscow, Russia",
+        "source_type": "Spatial Observations",
+        "notes":       "35-acre park adjacent to Red Square compressing four Russian biomes — tundra, steppe, forest, wetland. Floating cantilevered bridge over the Moscow River.",
+        "logic":       "landscape_hybrid",
+        "coordinates": {"lat": 55.7510, "lon": 37.6262}
+    },
+    "Piazza del Campo": {
+        "full_name":   "Piazza del Campo",
+        "location":    "Siena, Italy",
+        "source_type": "Spatial Observations",
+        "notes":       "Medieval public square known for its shell shape and sloping brick paving divided into nine segments.",
+        "logic":       "radial_sloped_plaza",
+        "coordinates": {"lat": 43.3183, "lon": 11.3315}
+    },
+    "The High Line": {
+        "full_name":   "The High Line",
+        "location":    "New York, NY",
+        "source_type": "Spatial Observations",
+        "notes":       "Elevated linear park built on a historic freight rail line. Combines hardscape paths with wild, naturalistic planting.",
+        "logic":       "linear_infrastructure",
+        "coordinates": {"lat": 40.7475, "lon": -74.0048}
+    },
+    "Federation Square": {
+        "full_name":   "Federation Square",
+        "location":    "Melbourne, Australia",
+        "source_type": "Spatial Observations",
+        "notes":       "Modern civic plaza with complex deconstructivist geometry, intricate paving, and mixed cultural programming.",
+        "logic":       "fractal_plaza",
+        "coordinates": {"lat": -37.8179, "lon": 144.9690}
+    },
+    "Pioneer Courthouse Square": {
+        "full_name":   "Pioneer Courthouse Square",
+        "location":    "Portland, OR",
+        "source_type": "Spatial Observations",
+        "notes":       "Terraced urban amphitheater known as 'Portland's living room' featuring brick paving and steps.",
+        "logic":       "terraced_amphitheater",
+        "coordinates": {"lat": 45.5191, "lon": -122.6793}
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Pershing Square static site context — loaded from Rhino-derived geometry JSON.
@@ -89,12 +202,31 @@ with open(os.path.join(BASE_DIR, "data", "app_context", "precedents_meta.json"),
 # 1 Three.js unit = 5 real metres = 16.4042 ft
 # Origin = centre of the park block. X=E(+)/W(-), Y=Up, Z=S(+)/N(-)
 # ---------------------------------------------------------------------------
+_B = "#111116"   # close buildings
+_T = "#0d0d12"   # background towers
 
-with open(os.path.join(BASE_DIR, "data", "app_context", "dtla_context.json"), "r") as f:
-    _DTLA_CONTEXT = json.load(f)
+# Surrounding building / skyline context kept here (not in Rhino model)
+_DTLA_CONTEXT = [
+    # ── Surrounding buildings — immediate context ──────────────────────────
+    {"type": "box", "args": [9,  8, 14], "position": [-19, 4.0,  -6], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [9,  6, 10], "position": [-19, 3.0,  +8], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [7, 12, 10], "position": [+18, 6.0,  -7], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [6, 17,  8], "position": [+18, 8.5,  +8], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [14, 6,  8], "position": [ -3, 3.0, -22], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [ 7, 5,  6], "position": [+9,  2.5, -21], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [14, 9, 10], "position": [ -4, 4.5, +23], "color": _B, "opacity": 0.85},
+    {"type": "box", "args": [ 8, 6,  8], "position": [ +9, 3.0, +24], "color": _B, "opacity": 0.85},
+    # ── Background towers — DTLA skyline ──────────────────────────────────
+    {"type": "box", "args": [5, 40, 5], "position": [-36, 20, -22], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [5, 22, 5], "position": [-28, 11, -10], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [5, 30, 5], "position": [-26, 15, +20], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 18, 4], "position": [+27, 9,  +20], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 14, 4], "position": [+32, 7,  -15], "color": _T, "opacity": 0.65},
+    {"type": "box", "args": [4, 16, 4], "position": [-14, 8,  -28], "color": _T, "opacity": 0.65},
+]
 
 # Load park geometry from Rhino-derived JSON; fall back to empty list if missing.
-_SITE_JSON = os.path.join(BASE_DIR, 'data', 'app_context', 'pershing_site_context.json')
+_SITE_JSON = os.path.join(BASE_DIR, 'data', 'pershing_site_context.json')
 try:
     with open(_SITE_JSON) as _f:
         _park_geo = json.load(_f).get("geometries", [])
@@ -490,22 +622,45 @@ async def generate_memory_node(payload: MemoryPrompt):
             f"Erasure Targets: These are hostile elements to be overwritten or collided with: {erasure_text}\n"
         )
 
-    with open(os.path.join(BASE_DIR, "prompts", "architect_agent.md"), "r") as f:
-        system_prompt_template = f.read()
-
-    system_prompt = system_prompt_template.format(
-        prompt=prompt,
-        context_excerpts=context_excerpts,
-        host_site_section=host_site_section,
-        blueprint_section=blueprint_section,
-        blueprint_instruction=' Reference at least one specific zone, path, or relationship from the spatial blueprints to show the design logic is grounded in the precedent DNA.' if blueprint_text else '',
-        blueprint_sources_instruction='    - "blueprint_sources": (list of strings) Name the precedent sites whose spatial DNA most influenced this design.\n' if blueprint_text else '',
-        blueprint_guidance=('When spatial blueprints are provided, let the zones and relationships guide the geometry_type choice and footprint. '
+    system_prompt = (
+        'You are an expert architect for the "Memory Machine" project. Your task is to translate a user\'s qualitative desire into a concrete architectural intervention for Pershing Square, Los Angeles. '
+        'You will be given a user prompt, "memory fragments" from a review database, and (when available) spatial blueprint data extracted from precedent diagrams. '
+        'Synthesize all of this into a single, valid JSON object with NO additional text or markdown. The JSON object must have three top-level keys: "name", "narrative", and "spatial_parameters".\n\n'
+        f'USER PROMPT:\n"{prompt}"\n\n'
+        f'RETRIEVED MEMORY FRAGMENTS:\n{context_excerpts}'
+        f'{host_site_section}'
+        f'{blueprint_section}\n\n'
+        'INSTRUCTIONS:\n'
+        '1.  **name**: Create a poetic name for the intervention (e.g., "Canopy of Whispers").\n'
+        '2.  **narrative**: Write a short (2-paragraph) architectural narrative describing the space, its "witness marks" from the memory fragments, and how it collides with Pershing Square.'
+        + (' Reference at least one specific zone, path, or relationship from the spatial blueprints to show the design logic is grounded in the precedent DNA.' if blueprint_text else '') + '\n'
+        '3.  **spatial_parameters**: Generate precise parameters for a 3D model. Your geometry should be positioned to interact with the [ HOST SITE DNA ], specifically targeting elements listed in `erasure_targets`. This object MUST contain:\n'
+        '    - "geometry_type": (string) Choose one: "pavilion_with_water", "shade_canopy", "water_garden", "acoustic_screen", "memory_tower", "landscape_mound", "amphitheater", "supertree", "kinetic_mast".\n'
+        '    - "footprint_m": (object) with "width" and "depth" keys.\n'
+        '    - "position": (object) with "x", "y", and "z" keys in Three.js units (1 unit = 5m) to place the object relative to the park center (0,0,0). Use the Erasure Targets to inform this position.\n'
+        '    - "height_m": (float) The overall height in meters.\n'
+        '    - "materials": (list of strings) e.g., ["concrete", "water", "steel", "glass", "wood", "vegetation", "stone"].\n'
+        + ('    - "blueprint_sources": (list of strings) Name the precedent sites whose spatial DNA most influenced this design.\n' if blueprint_text else '')
+        + '    - **Specific parameters based on geometry_type (add 2-3 relevant keys):**\n'
+        '        - If "shade_canopy": "canopy_shape" (string, e.g., "flat_grid", "curved_fabric", "perforated_mesh"), "column_count" (integer), "shade_percentage" (float 0.0-1.0).\n'
+        '        - If "water_garden": "pool_depth_m" (float), "water_feature_type" (string, e.g., "shallow_wading_pool", "bubbler_fountain", "trickling_stream"), "seating_elements" (list of strings, e.g., ["integrated_benches", "loose_stones"]).\n'
+        '        - If "pavilion_with_water": "roof_type" (string, e.g., "flat", "pitched", "domed"), "wall_material" (string, e.g., "glass", "wood_slats", "perforated_metal"), "water_body_shape" (string, e.g., "rectangular", "organic", "circular").\n'
+        '        - If "acoustic_screen": "screen_pattern" (string, e.g., "perforated", "slatted", "textured"), "screen_height_m" (float), "screen_length_m" (float), "orientation" (string, e.g., "linear", "curved").\n'
+        '        - If "memory_tower": "levels" (integer), "facade_material" (string, e.g., "concrete_panels", "reclaimed_wood", "reflective_glass"), "observation_deck_height_m" (float), "base_shape" (string, e.g., "square", "circular").\n'
+        '        - If "landscape_mound": "slope_angle_degrees" (float, 0-90), "vegetation_type" (string, e.g., "grass", "succulents", "wildflowers"), "path_material" (string, e.g., "gravel", "paving_stones", "dirt").\n'
+        '        - If "amphitheater": "tiers" (integer, number of seating levels), "seating_material" (string), "stage_width_m" (float), "orientation" (string, e.g., "circular", "fan_shaped", "rectangular").\n'
+        '        - If "supertree": "trunk_height_m" (float), "crown_radius_m" (float), "frond_count" (integer, 6-16), "canopy_material" (string, e.g., "living_plants", "solar_panels", "perforated_steel").\n'
+        '        - If "kinetic_mast": "mast_height_m" (float), "boom_length_m" (float), "lamp_type" (string, e.g., "spotlight", "diffuse_ring", "programmable_rgb"), "mast_count" (integer, 1-4).\n'
+        'Choose "amphitheater" whenever the memory fragments reference tiered seating, stepped plazas, auditoriums, bowl-shaped spaces, or performance venues.\n'
+        'Choose "supertree" whenever fragments reference vertical gardens, living infrastructure, canopy structures, or Gardens by the Bay.\n'
+        'Choose "kinetic_mast" whenever fragments reference hydraulic masts, actuated elements, movable lighting, or Schouwburgplein.\n\n'
+        + ('When spatial blueprints are provided, let the zones and relationships guide the geometry_type choice and footprint. '
            'For example: a blueprint with a strong linear promenade and distributed attractors suggests "acoustic_screen" or multiple "shade_canopy" elements; '
            'a blueprint with a central anchor building and radiating paths suggests "pavilion_with_water" or "amphitheater".\n\n'
            if blueprint_text else '')
+        + 'Respond with ONLY the raw JSON object.'
     )
-
+    
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(system_prompt)
@@ -566,15 +721,9 @@ async def bake_to_rhino(payload: BakeRequest):
     intervention_path = os.path.join(data_dir, 'current_intervention.json')
 
     try:
-        bake_data = {
-            "name":             payload.name,
-            "svg_scale":        payload.svg_scale,
-            "stack_footprints": payload.stack_footprints,
-            "geometries":       payload.geometries,
-        }
         with open(intervention_path, 'w', encoding='utf-8') as f:
-            json.dump(bake_data, f, indent=2)
-        print(f"[bake] Wrote {len(payload.geometries)} geometries + {len(payload.stack_footprints)} footprints to {intervention_path}")
+            json.dump(payload.geometries, f, indent=2)
+        print(f"[bake] Wrote {len(payload.geometries)} geometries to {intervention_path}")
     except Exception as e:
         return {"status": "error", "message": f"Could not write intervention file: {e}"}
 
@@ -588,88 +737,22 @@ async def bake_to_rhino(payload: BakeRequest):
     except Exception as e:
         return {"status": "error", "message": f"Could not launch bake script: {e}"}
 
-    # Trigger autonomous presentation compilers in the background
-    subprocess.Popen([sys.executable, os.path.join(BASE_DIR, 'logic', 'zine_compiler.py')])
-    subprocess.Popen([sys.executable, os.path.join(BASE_DIR, 'logic', 'scrapbook_compiler.py')])
-
     return {"status": "success", "message": f"Bake initiated for '{payload.name}'. Check Rhino — layer MEM_GENERATED."}
 
 
-def generate_comfyui_mesh(prompt: str, footprint: dict) -> dict:
+def generate_comfyui_mesh(prompt: str, footprint: dict) -> dict:  # noqa: ARG001
     """
-    ComfyUI bridge — Intercepts the workflow JSON, injects the AI prompt and
-    footprint dimensions, and polls the local ComfyUI server for the generated mesh.
+    ComfyUI bridge — structured to call localhost:8188 when ComfyUI is running.
+    Currently returns a stub so the rest of the pipeline can be validated.
+
+    When ComfyUI is operational, replace the stub block below with:
+        workflow = build_comfyui_workflow(prompt, footprint)
+        res = requests.post("http://localhost:8188/prompt", json={"prompt": workflow})
+        glb_path = poll_comfyui_output(res.json()["prompt_id"])
+        return {"glb_url": f"/static/generated/{os.path.basename(glb_path)}", "footprint": footprint}
     """
-    print(f"\n[ComfyUI] Booting AI Sculptor for footprint: {footprint.get('width', 0):.1f}x{footprint.get('depth', 0):.1f}m")
-    
-    workflow_path = os.path.join(BASE_DIR, "data", "workflows", "triposr_optimized_api.json")
-    if not os.path.exists(workflow_path):
-        print(f"[ComfyUI] ❌ Error: Workflow JSON not found at {workflow_path}")
-        return {"glb_url": None, "footprint": footprint}
-        
-    with open(workflow_path, "r", encoding="utf-8") as f:
-        workflow = json.load(f)
-        
-    # 1. Inject the prompt into Node 9 (CLIPTextEncode)
-    enhanced_prompt = f"A high-fidelity architectural 3D model, {prompt}. Professional architectural photography, clean studio background, sharp edges, 8k resolution, photorealistic, neutral lighting."
-    workflow["9"]["inputs"]["text"] = enhanced_prompt
-    
-    # 2. Adjust Aspect Ratio (Node 11 - EmptyLatentImage) based on the exact 2D footprint
-    # We keep the total area around 1024x1024 (1,048,576 pixels)
-    fp_w = max(float(footprint.get("width", 10)), 0.1)
-    fp_d = max(float(footprint.get("depth", 10)), 0.1)
-    ratio = fp_w / fp_d
-    
-    base_res = 1024
-    px_w = int(base_res * math.sqrt(ratio)) // 16 * 16
-    px_h = int(base_res / math.sqrt(ratio)) // 16 * 16
-    workflow["11"]["inputs"]["width"] = px_w
-    workflow["11"]["inputs"]["height"] = px_h
-    print(f"[ComfyUI] 📐 Scaled generation resolution to {px_w} x {px_h}")
-    
-    # 3. Inject Unique Filename into Node 15 (SaveGLB)
-    unique_id = f"intervention_{int(time.time())}"
-    workflow["15"]["inputs"]["filename_prefix"] = f"mesh/{unique_id}"
-    
-    # 4. Fire the Request to ComfyUI
-    COMFY_URL = "http://127.0.0.1:8188"
-    try:
-        req = urllib.request.Request(f"{COMFY_URL}/prompt", data=json.dumps({"prompt": workflow}).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req) as response:
-            prompt_id = json.loads(response.read())["prompt_id"]
-    except Exception as e:
-        print(f"[ComfyUI] ❌ Connection failed: {e}. Is ComfyUI running on port 8188?")
-        return {"glb_url": None, "footprint": footprint}
-        
-    # 5. Poll for completion and extract the file
-    print(f"[ComfyUI] ⚙️ Workflow submitted (ID: {prompt_id}). Generating mesh...")
-    output_filename = f"{unique_id}_00001.glb" # Default SaveGLB format
-    
-    while True:
-        time.sleep(2)
-        try:
-            hist_req = urllib.request.Request(f"{COMFY_URL}/history/{prompt_id}")
-            with urllib.request.urlopen(hist_req) as hist_res:
-                history = json.loads(hist_res.read())
-                if prompt_id in history:
-                    break # Extraction complete!
-        except Exception:
-            pass
-            
-    # 6. Download the file from ComfyUI's output folder to our static web folder
-    static_gen_dir = os.path.join(BASE_DIR, "static", "generated")
-    os.makedirs(static_gen_dir, exist_ok=True)
-    local_glb_path = os.path.join(static_gen_dir, output_filename)
-    
-    download_url = f"{COMFY_URL}/view?filename={output_filename}&subfolder=mesh&type=output"
-    try:
-        with urllib.request.urlopen(download_url) as dl_res, open(local_glb_path, 'wb') as out_f:
-            out_f.write(dl_res.read())
-        print(f"[ComfyUI] ✅ 3D Mesh successfully saved to {local_glb_path}")
-        return {"glb_url": f"/static/generated/{output_filename}", "footprint": footprint}
-    except Exception as e:
-        print(f"[ComfyUI] ❌ Failed to download GLB: {e}")
-        return {"glb_url": None, "footprint": footprint}
+    # STUB — returns None so the frontend skips GLB loading gracefully
+    return {"glb_url": None, "footprint": footprint}
 
 
 @app.post("/api/generate-3d")

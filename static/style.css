@@ -30,27 +30,10 @@ body.light-mode #remix-inset-wrap { background: #ffffff; }
 body.light-mode #canvas-placeholder { background: #ffffff; color: var(--muted); }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; overflow: hidden; display: flex; flex-direction: column; }
-
-/* ── Global Navigation Portal ── */
-#global-nav {
-  display: flex; justify-content: space-between; align-items: center;
-  background: var(--panel); border-bottom: 1px solid var(--border);
-  padding: 0.5rem 1.5rem; flex-shrink: 0;
-}
-#global-nav .nav-brand { font-size: 0.8rem; font-weight: bold; letter-spacing: 0.25em; color: var(--text); }
-#global-nav .nav-links { display: flex; gap: 1rem; }
-.global-tab {
-  background: none; border: 1px solid transparent; color: var(--muted);
-  font-family: 'Courier New', monospace; font-size: 0.65rem; padding: 0.4rem 0.8rem;
-  letter-spacing: 0.15em; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
-}
-.global-tab:hover { color: var(--text); border-color: var(--border); }
-.global-tab.active { color: var(--accent); border-color: var(--accent); }
-#portal-frame { width: 100%; flex: 1; border: none; background: var(--bg); }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; overflow: hidden; }
 
 /* ── Layout ── */
-#app { display: grid; grid-template-columns: 380px 1fr; grid-template-rows: 1fr; flex: 1; min-height: 0; }
+#app { display: grid; grid-template-columns: 380px 1fr; grid-template-rows: 1fr; height: 100vh; }
 
 /* ── Left Panel ── */
 #panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--panel); overflow-y: auto; }
@@ -118,7 +101,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .stack-label { flex: 1; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stack-vis { font-size: 0.6rem; color: var(--muted); cursor: pointer; padding: 0 0.2rem; }
 .stack-vis.hidden { opacity: 0.35; }
-.stack-opacity { width: 46px; height: 3px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
 .stack-remove { font-size: 0.7rem; color: var(--muted); cursor: pointer; padding: 0 0.2rem; line-height: 1; }
 .stack-remove:hover { color: var(--red); }
 

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Machine // Digital Palimpsest</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/loaders/SVGLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <div class="main-grid">
+        <div id="canvas-container">
+            <!-- Three.js canvas will be inserted here by main.js -->
+        </div>
+        <div class="terminal-container">
+            <div id="narrative-output" class="narrative-output">
+                <pre>> MEMORY MACHINE v0.1 // WAITING FOR INPUT</pre>
+                <pre>> TARGET SITE: PERSHING SQUARE, LOS ANGELES</pre>
+                <pre>> Describe a spatial memory to cross-pollinate...</pre>
+            </div>
+            <div class="input-container">
+                <span class="prompt-arrow">></span>
+                <input type="text" id="prompt-input" placeholder="e.g., a place with lots of shade and wading pools..." autofocus>
+            </div>
+        </div>
+        <div id="diagram-container" class="diagram-container">
+            <h2 class="page-header">LOGIC DIAGRAM</h2>
+            <div class="mermaid">
+                graph TD
+                    A["Start"] --> B["Waiting for User Input"];
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/main.js"></script>
+  </body>
+</html>

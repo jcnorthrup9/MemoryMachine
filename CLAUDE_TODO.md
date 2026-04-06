@@ -69,44 +69,15 @@
 
 ## TODO — Next Steps
 
-### Phase 7.5: Pre-ComfyUI Code Refactor
-- [x] **Task 14.5: Extract JavaScript Monolith (`templates/index.html` & `static/main.js`)**
-  - Extracted all inline JS (1516 lines) from `<script>` in `templates/index.html` to `static/main.js`.
-  - Linked via `<script src="/static/main.js"></script>` (plain, not module — preserves global scope for all `onclick` handlers).
-  - HTML head retains Three.js CDN, ES module loader imports (GLTFLoader/OBJLoader/MTLLoader → window.*), and mermaid.
-
 ### Phase 8: AI Parametric Sculptor & ComfyUI Prep
-- [x] **Task 15: UI Toggle for Draft vs. Dream Mode (`index.html`, `style.css`, `main.js`)**
-  - Add a UI toggle switch near the "Deploy to 3D" button labeled "Draft Mode (Fast)" vs "Dream Mode (ComfyUI AI)".
-  - Update `MemoryState` to track this mode.
-- [x] **Task 16: 2D Footprint Math Extraction (`main.js`)**
-  - Intercept the 2D geometry before extrusion. For each clipped layer, mathematically calculate its real-world bounding box footprint (width, depth, center coordinates in Three.js units).
-  - Package this exact footprint data, layer ID, and precedent name into a JSON payload for the backend.
+- [x] **Task 15: UI Toggle for Draft vs. Dream Mode (`index.html`, `style.css`)**
+  - Draft/Dream toggle added above Deploy button. `MemoryState.dreamMode` tracks state. Button label changes to "Dream to 3D" when active.
+- [x] **Task 16: 2D Footprint Math Extraction (`index.html`)**
+  - `extractFootprints()` computes `{ cx, cz, width, depth, rotRad }` per visible stack item in Three.js world units, mirroring the deployTo3D transform math.
 - [x] **Task 17: Backend ComfyUI Bridge Prep (`app.py`)**
-  - Create a new endpoint `/api/generate-3d` that receives the 2D footprint payload.
-  - Query ChromaDB for memories related to the specific precedent/layer.
-  - Prompt Gemini to synthesize an architectural visual description constrained by the exact footprint dimensions.
-  - Create a placeholder Python function `generate_comfyui_mesh(prompt, footprint)` that currently just returns a stub path (or routes to `build_geometries` primitives) but is perfectly structured to make the `localhost:8188` API call later.
-- [x] **Task 18: Dynamic .glb Loading (`main.js` & `index.html`)**
-  - Add Three.js `GLTFLoader` to `index.html` scripts.
-  - In "Dream Mode", handle the backend response by downloading the `.glb` file instead of flat-extruding.
-  - Apply Three.js math to automatically scale, rotate, and position the loaded `.glb` mesh so it perfectly fits the extracted 2D footprint bounding box over the Pershing Square base.
-
-### Phase 9: Dynamic UI Polish & Data Sync
-- [x] **Task 19: Per-Layer Opacity Controls (`main.js`, `style.css`)**
-  - Added `opacity: 0.85` to each new stack item. Added `changeOpacity(id, val)` function.
-  - `renderStackUI()` now renders a 46px range slider per item (`class="stack-opacity"`).
-  - `renderRemixSVG()` uses `item.opacity ?? 0.85` instead of hardcoded `0.85`.
-  - `_drawStackLines()` passes `opacity` and `transparent` to `THREE.LineBasicMaterial`.
-  - CSS `.stack-opacity` added to `style.css`. Persists through save/load automatically.
-- [x] **Task 20: Auto-Populating Info Tabs (`main.js`)**
-  - Added `updateInfoTabs()` — called after every stack mutation (add, remove, toggle, clear, load).
-  - Precedents tab: shows one card per visible layer with site name, layer type, layer description, and current transform/opacity values. Falls back gracefully if ChromaDB cards already present from Generate.
-  - Logic Diagram tab: generates a Mermaid `flowchart LR` from stack state (site → layer → Pershing Square) with no API call.
-- [x] **Task 21: Rhino Bake Math Alignment (`main.js`, `app.py`)**
-  - `bakeToRhino()` now sends `svg_scale: SVG_SCALE` and `stack_footprints: extractFootprints()` in the bake payload.
-  - `BakeRequest` Pydantic model updated with optional `svg_scale` (default 0.04) and `stack_footprints` fields.
-  - `current_intervention.json` now contains `name`, `svg_scale`, `stack_footprints`, and `geometries` — Python bake script has everything needed to reconstruct exact Rhino placement.
+  - `/api/generate-3d` endpoint added. Queries ChromaDB per layer, prompts Gemini for per-footprint architectural description. `generate_comfyui_mesh(prompt, footprint)` stub returns `glb_url: null` — structured to swap in the `localhost:8188` API call when ComfyUI is running.
+- [x] **Task 18: Dynamic .glb Loading (`index.html`)**
+  - `GLTFLoader` added via CDN. Dream mode branch in `deployTo3D()` POSTs footprints to `/api/generate-3d`, loads each `.glb` response, scales/rotates/positions mesh to fit its footprint bbox. Falls back gracefully when `glb_url` is null (stub phase). Scene setup extracted to shared `initSceneShell()`.
 
 ### High Priority
 
