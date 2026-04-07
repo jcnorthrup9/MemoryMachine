@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import rhinoscriptsyntax as rs
 import json
 import os

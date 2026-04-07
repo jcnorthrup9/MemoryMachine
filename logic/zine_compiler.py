@@ -928,17 +928,11 @@ def compile_zine():
     for iv in interventions:
         print(f"     - {iv.get('name','?')}")
 
-    # ── Load precedent analyses ───────────────────────────────────────────
-    analyses = load_precedent_analyses(interventions)
-    print(f"   > Precedent Analyses found: {len(analyses)}")
-    for a in analyses:
-        print(f"     - {a.get('name','?')}")
-
     # ── Determine spread counts ───────────────────────────────────────────
-    FIXED_SPREADS = 17  # spreads 1-17 (References moved to end)
+    FIXED_SPREADS = 18  # spreads 1-18
     SPREADS_PER_IV = 3
     iv_spread_count = len(interventions) * SPREADS_PER_IV
-    total_spreads = FIXED_SPREADS + len(analyses) + iv_spread_count + 1
+    total_spreads = FIXED_SPREADS + iv_spread_count
 
     # ── Build spread labels (JS array) ────────────────────────────────────
     fixed_labels = [
@@ -949,16 +943,15 @@ def compile_zine():
         "IX // 1992 NODE", "X // 1992 RENDER",
         "XI // 1994 NODE", "XII // 1994 RENDER",
         "XIII // ROSSI", "XIV // NEU MUSEUM",
-        "XV // ZEITZ MOCAA", "XVI // GENBAKU", "XVII // DO HO SUH"
+        "XV // ZEITZ MOCAA", "XVI // GENBAKU", "XVII // DO HO SUH",
+        "XVIII // REFERENCES",
     ]
-    ana_labels = [f"ANALYSIS // {esc(a['name']).upper()}" for a in analyses]
     iv_labels = []
     for i, iv in enumerate(interventions):
         tag = f"IV_{i+1:02d}"
         iv_labels += [f"{tag} // NARRATIVE", f"{tag} // DIAGRAM", f"{tag} // MASTERPLAN"]
 
-    ref_labels = ["XVIII // REFERENCES"]
-    all_labels = fixed_labels + ana_labels + iv_labels + ref_labels
+    all_labels = fixed_labels + iv_labels
     labels_js  = ", ".join(f'"{l}"' for l in all_labels)
 
     # ── TOC ───────────────────────────────────────────────────────────────
@@ -981,33 +974,8 @@ def compile_zine():
         arch_memory, references, pipeline_data, toc_text, fixed_labels
     )
 
-    # ── Assemble precedent analyses spreads ───────────────────────────────
-    ana_html, _, next_n = build_precedent_analysis_spreads(analyses, FIXED_SPREADS + 1)
-
     # ── Assemble intervention spreads ─────────────────────────────────────
-    iv_html, _ = build_intervention_spreads(interventions, next_n)
-
-    # ── Assemble references spread ────────────────────────────────────────
-    ref_n = total_spreads
-    ref_html = f'''
-        <div class="spread" id="spread-{ref_n}">
-            <div class="page-side left-page">
-                <div class="grid-layout">
-                    <h2 class="page-header">{ref_n:02d} // References</h2>
-                    <div class="vessel vessel-span-12">
-                        <pre style="color:#555; font-size:0.7rem;">{esc(references)}</pre>
-                    </div>
-                </div>
-            </div>
-            <div class="page-side right-page">
-                <div class="grid-layout">
-                    <h2 class="page-header">{ref_n:02d} // System Status</h2>
-                    <div class="vessel vessel-span-12">
-                        <pre style="color:#333; font-size:0.65rem;">{esc(pipeline_data)}</pre>
-                    </div>
-                </div>
-            </div>
-        </div>'''
+    iv_html, _ = build_intervention_spreads(interventions, FIXED_SPREADS + 1)
 
     # ── Write final HTML ──────────────────────────────────────────────────
     print("   > Assembling HTML...")
@@ -1028,9 +996,7 @@ def compile_zine():
         <div class="spread-container">
             <div class="spine"></div>
             {fixed_html}
-            {ana_html}
             {iv_html}
-            {ref_html}
         </div>
 
         <div class="zine-footer">
@@ -1070,4 +1036,85 @@ def compile_zine():
                     nextBtn.innerText = "[ REINITIALIZE ]";
                     nextBtn.classList.add('reboot-mode');
                     nextBtn.onclick = () => location.reload();
-       
+                    clearInterval(artifactInterval);
+                }}, 30000);
+            }}, 60000);
+        }}
+
+        function injectArtifact() {{
+            const hiddenSpreads = document.querySelectorAll('.spread:not(.active)');
+            if (!hiddenSpreads.length) return;
+            const src  = hiddenSpreads[Math.floor(Math.random() * hiddenSpreads.length)];
+            const tgts = src.querySelectorAll('p, h1, h2, img, pre');
+            if (!tgts.length) return;
+            const clone = tgts[Math.floor(Math.random() * tgts.length)].cloneNode(true);
+            clone.classList.add('ghost-fragment');
+            clone.style.top  = Math.random() * 80 + '%';
+            clone.style.left = Math.random() * 80 + '%';
+            clone.style.setProperty('--r', Math.random() * 360 + 'deg');
+            clone.style.setProperty('--s', 0.5 + Math.random());
+            const p1 = Math.floor(Math.random()*100), p2 = Math.floor(Math.random()*100);
+            clone.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${{p1}}%, ${{p2}}% 100%, 0% 100%)`;
+            document.querySelector('.zine-viewer').appendChild(clone);
+            const ghosts = document.querySelectorAll('.ghost-fragment');
+            if (ghosts.length > 40) ghosts[0].remove();
+        }}
+
+        // Boot sequence
+        setTimeout(() => {{
+            document.body.classList.add('glitch-mode');
+            glitchInterval = setInterval(() => {{
+                showSpread(Math.floor(Math.random() * totalSpreads) + 1, true);
+            }}, 200);
+        }}, 2000);
+        setTimeout(() => {{
+            clearInterval(glitchInterval);
+            document.body.classList.remove('glitch-mode');
+            showSpread(1, true);
+            resetDegradation();
+        }}, 5000);
+
+        let currentSpread = 1;
+        function showSpread(n, suppressGlitch) {{
+            resetDegradation();
+            const base = 0.4, v = base * (Math.random()*0.04+0.01) * (Math.random()<0.5?-1:1);
+            document.documentElement.style.setProperty('--trans-speed', (base+v)+'s');
+            if (!suppressGlitch) {{
+                document.body.classList.add('glitch-mode');
+                setTimeout(() => document.body.classList.remove('glitch-mode'), 260);
+            }}
+            document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+            document.getElementById('spread-'+n).classList.add('active');
+            document.getElementById('page-indicator').innerText = labels[n-1] || n;
+            currentSpread = n;
+        }}
+        function nextSpread() {{ currentSpread < totalSpreads ? showSpread(currentSpread+1) : showSpread(1); }}
+        function prevSpread() {{ currentSpread > 1 ? showSpread(currentSpread-1) : showSpread(totalSpreads); }}
+        document.addEventListener('keydown', e => {{
+            if (e.key==='ArrowRight') nextSpread();
+            if (e.key==='ArrowLeft')  prevSpread();
+        }});
+    </script>
+</body>
+</html>"""
+
+    os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
+    with open(OUTPUT, 'w', encoding='utf-8') as f:
+        f.write(html)
+
+    print(f"\n[OK] BUILD SUCCESSFUL")
+    print(f"   Output : {OUTPUT}")
+    print(f"   Spreads: {total_spreads} total ({FIXED_SPREADS} fixed + {iv_spread_count} intervention)")
+    if interventions:
+        print(f"   Interventions compiled:")
+        for iv in interventions:
+            print(f"     [{iv.get('name','?')}] — 3 spreads")
+    else:
+        print("   No interventions found in data/cross_pollination/")
+        print("   Run the web app and generate interventions, then save their JSON")
+        print("   to data/cross_pollination/<name>.json and re-run this script.")
+    print()
+
+
+if __name__ == "__main__":
+    compile_zine()

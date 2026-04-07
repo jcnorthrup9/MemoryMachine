@@ -17,10 +17,9 @@ import rhinoscriptsyntax as rs
 import scriptcontext as sc
 import Rhino
 import System.Drawing
-import os
 
-PARK_DIAGRAMS_DIR = os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "ParkDiagrams")
-REFERENCE_FILE    = os.path.join(PARK_DIAGRAMS_DIR, "Schouwburgplein.3dm")
+PARK_DIAGRAMS_DIR = r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\ParkDiagrams"
+REFERENCE_FILE    = PARK_DIAGRAMS_DIR + r"\Schouwburgplein.3dm"
 
 # ---------------------------------------------------------------------------
 # Helpers

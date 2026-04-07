@@ -22,7 +22,7 @@ PARSER_SCRIPT_PATH = os.path.abspath(os.path.join(BASE_DIR, 'logic', 'rhino_diag
 
 def main():
     parser = argparse.ArgumentParser(description="Orchestrates Rhino diagram parsing.")
-    parser.add_argument("--folder", default=os.path.join(os.path.expanduser("~"), "OneDrive - SCI-Arc", "2026_3GB_Spring", "SP26-Studio", "Rhino", "ParkDiagrams"),
+    parser.add_argument("--folder", default=r"C:\Users\jcnor\OneDrive - SCI-Arc\2026_3GB_Spring\SP26-Studio\Rhino\ParkDiagrams",
                         help="Path to the folder containing .3dm diagram files.")
     args = parser.parse_args()
 
