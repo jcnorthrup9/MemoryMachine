@@ -3,8 +3,82 @@ import re
 import json
 import random
 import math
+import xml.etree.ElementTree as ET
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def shoelace_area(points):
+    """Calculates the true area of a polygon using the Shoelace formula."""
+    n = len(points)
+    if n < 3:
+        return 0
+    area = 0
+    for i in range(n):
+        j = (i + 1) % n
+        area += points[i][0] * points[j][1] - points[j][0] * points[i][1]
+    return abs(area) / 2.0
+
+def get_layer_density(site_id, layer_id):
+    """
+    Calculates the ratio of the actual drawn area (via Shoelace) 
+    versus the Axis-Aligned Bounding Box (AABB) area for an SVG layer.
+    """
+    fallback_density = 0.5
+    svg_dir = os.path.join(BASE_DIR, 'data', 'ParkSVG')
+    
+    target_file = None
+    if os.path.exists(svg_dir):
+        for f in os.listdir(svg_dir):
+            if f[:-4].replace("_", "").replace(" ", "").lower() == site_id.lower():
+                target_file = os.path.join(svg_dir, f)
+                break
+                
+    if not target_file:
+        return fallback_density
+        
+    try:
+        tree = ET.parse(target_file)
+        root = tree.getroot()
+        
+        total_true_area = 0
+        min_x, min_y = float('inf'), float('inf')
+        max_x, max_y = float('-inf'), float('-inf')
+        
+        def process_points(pts):
+            nonlocal min_x, min_y, max_x, max_y
+            if len(pts) < 3: return 0
+            for px, py in pts:
+                min_x, min_y = min(min_x, px), min(min_y, py)
+                max_x, max_y = max(max_x, px), max(max_y, py)
+            return shoelace_area(pts)
+        
+        layer_found = False
+        for elem in root.iter():
+            tag = elem.tag.lower()
+            if tag.endswith('g') and 'id' in elem.attrib:
+                if layer_id.upper() in elem.attrib['id'].upper():
+                    layer_found = True
+                    for child in elem.iter():
+                        ctag = child.tag.lower()
+                        if ctag.endswith('path') or ctag.endswith('polygon') or ctag.endswith('polyline'):
+                            data = child.attrib.get('d', '') or child.attrib.get('points', '')
+                            data = re.sub(r'[Aa]\s*[-+]?[\d.]+\s*[, ]?\s*[-+]?[\d.]+\s*[, ]?\s*[-+]?[\d.]+\s*[, ]?\s*[01]\s*[, ]?\s*[01]\s*[, ]?', '', data)
+                            nums = [float(n) for n in re.findall(r'-?\d+\.?\d*', data)]
+                            pts = [(nums[i], nums[i+1]) for i in range(0, len(nums)-1, 2)]
+                            total_true_area += process_points(pts)
+        
+        if not layer_found:
+            return fallback_density
+            
+        if min_x != float('inf') and max_x != float('-inf'):
+            bbox_area = (max_x - min_x) * (max_y - min_y)
+            if bbox_area > 0:
+                return max(0.05, min(1.0, total_true_area / bbox_area))
+                
+    except Exception as e:
+        print(f"      -> [DENSITY ERROR] Failed to parse SVG for {site_id}/{layer_id}: {e}")
+        
+    return fallback_density
 
 class GuidelineManager:
     """Parses urban_design_guidelines.md table for dynamic Zonal Metadata."""
@@ -167,7 +241,10 @@ def remix_layers(seed_items):
             target_layer_pct = safe_targets[cat] / count
             site_w, site_h = 1224, 792
             site_area = site_w * site_h
-            target_layer_area = site_area * (target_layer_pct / 100.0)
+            
+            # Fetch True Density Ratio to account for sparse/thin layers
+            density_ratio = get_layer_density(site, layer)
+            target_layer_area = (site_area * (target_layer_pct / 100.0)) / density_ratio
             
             base_side = math.sqrt(base_layer_area)
             
@@ -188,7 +265,10 @@ def remix_layers(seed_items):
                 visible_area = max(0, right - left) * max(0, bottom - top)
                 
                 if visible_area < target_layer_area:
-                    final_scale += step
+                    if visible_area == 0 and (x < -site_w/2 or x > site_w/2 or y < -site_h/2 or y > site_h/2):
+                        final_scale *= 0.8  # Penalize runaway scale if completely outside boundary
+                    else:
+                        final_scale += step
                 else:
                     final_scale -= step
                 step /= 1.5

@@ -85,7 +85,7 @@ function initThreeScene() {
   threeCamera.position.set(0, 50, 80);
   threeCamera.lookAt(0, 0, 0);
 
-  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   threeRenderer.setSize(w, h);
   threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   threeRenderer.shadowMap.enabled = true;
@@ -296,7 +296,7 @@ async function generate() {
     }
 
     // 5. Trigger Auto-Export Pipeline
-    // NOTE: captureDashboardUI is manual-only (html2canvas at scale:2 OOMs the tab).
+    // NOTE: captureDashboardUI now uses the Playwright backend to safely capture without OOMs.
     if (autoExportEnabled && data.spatial_seed && data.spatial_seed.length > 0) {
       setTimeout(async () => {
         const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -307,7 +307,9 @@ async function generate() {
         await handleExport('jpg-color');
         await delay(300);
         await handleExport('jpg-grey');
-        setStatus('Synthesis & Auto-Exports complete.', 'success');
+        await delay(300);
+        await captureDashboardUI();
+        setStatus('Synthesis, Auto-Exports & UI Capture complete.', 'success');
       }, 500); // 500ms delay ensures DOM is fully painted with new SVG first
     }
 
@@ -455,13 +457,25 @@ function _wireSliders() {
 }
 
 // ── ZONAL CONSTRAINTS HUD ────────────────────────────────────────────────────
+// RAF handle — ensures HUD DOM writes are batched to one per display frame
+// even if updateHUD() is called many times during a single slider drag.
+let _hudRafId = null;
+
 function updateHUD() {
+  if (_hudRafId) return; // already scheduled for this frame
+  _hudRafId = requestAnimationFrame(() => {
+    _hudRafId = null;
+    _flushHUD();
+  });
+}
+
+function _flushHUD() {
   const stats = MemoryState.getProgramStats();
   (['SOFT', 'HARD', 'PROG', 'BLUE']).forEach(key => {
-    const pct  = stats[key] ?? 0;
-    const g    = _guidelines[key];
-    const row  = document.getElementById(`hud-${key}`);
-    const bar  = document.getElementById(`hud-bar-${key}`);
+    const pct   = stats[key] ?? 0;
+    const g     = _guidelines[key];
+    const row   = document.getElementById(`hud-${key}`);
+    const bar   = document.getElementById(`hud-bar-${key}`);
     const pctEl = document.getElementById(`hud-pct-${key}`);
     const tgtEl = document.getElementById(`hud-tgt-${key}`);
     if (!row) return;
@@ -470,9 +484,8 @@ function updateHUD() {
     if (tgtEl && g) tgtEl.textContent = `${g.min}–${g.max}%`;
     if (bar)  bar.style.width = Math.min(pct, 100) + '%';
 
-    // Compliance class
     row.classList.remove('hud-ok', 'hud-warn', 'hud-over');
-    if (pct === 0) { /* no class — idle */ }
+    if (pct === 0) { /* idle — no class */ }
     else if (pct > (g?.max ?? 100)) row.classList.add('hud-over');
     else if (pct < (g?.min ?? 0))   row.classList.add('hud-warn');
     else                             row.classList.add('hud-ok');
@@ -492,25 +505,22 @@ function appendToTerminal(text, cls) {
 
 // ── UI CAPTURE ───────────────────────────────────────────────────────────────
 async function captureDashboardUI() {
-  setStatus('Capturing Dashboard UI...', 'running');
+  setStatus('Capturing Dashboard UI via Backend...', 'running');
   try {
-    const grid = document.querySelector('.main-grid');
-    const canvas = await html2canvas(grid, {
-      backgroundColor: document.body.classList.contains('light-mode') ? '#f4f4f4' : '#050505',
-      scale: 2, // High-res capture
-      logging: false
-    });
-    
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-    const timestamp = Date.now();
-    
-    const res = await fetch('/api/export-diagram', {
+    const prompt = document.getElementById('prompt-input').value.trim() || "Memory Machine Synthesis";
+    const isLightMode = document.body.classList.contains('light-mode');
+    const activeTab = document.querySelector('.tab-pane.active')?.id.replace('tab-', '') || '2d';
+
+    const res = await fetch('/api/capture-dashboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        filename: `dashboard_capture_${timestamp}.jpg`,
-        data: dataUrl,
-        type: 'ui-capture'
+        prompt: prompt,
+        spatial_seed: MemoryState.stack,
+        geometries: MemoryState.lastGeneration.geometries || [],
+        narrative: MemoryState.lastGeneration.narrative || '',
+        isLightMode: isLightMode,
+        activeTab: activeTab
       })
     });
     if (res.ok) setStatus('UI Capture saved to appTests archive', 'success');

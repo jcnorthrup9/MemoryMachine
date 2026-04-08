@@ -4,6 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn, os, json, base64
 import xml.etree.ElementTree as ET
+import sys
+import asyncio
+
+# Fix for Playwright subprocess error on Windows (NotImplementedError)
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 # --- MODULAR LOGIC IMPORTS ---
 from logic.geometry_engine import build_geometries
@@ -61,6 +67,14 @@ class ExportPayload(BaseModel):
     data: str
     type: str
 
+class CapturePayload(BaseModel):
+    prompt: str
+    spatial_seed: list
+    geometries: list
+    narrative: str
+    isLightMode: bool
+    activeTab: str
+
 # --- ROUTES ---
 
 @app.get("/", response_class=HTMLResponse)
@@ -74,8 +88,10 @@ async def get_available_sites():
     if os.path.exists(SVG_DIR):
         for file in os.listdir(SVG_DIR):
             if file.lower().endswith(".svg"):
-                site_id = file[:-4].replace("_", "").replace(" ", "")
-                site_name = file[:-4].replace("_", " ").title()
+                # Normalize names to PascalCase to ensure frontend alignment and prevent 404s
+                base_name = file[:-4].replace("_", " ").title()
+                site_id = base_name.replace(" ", "")
+                site_name = base_name
                 
                 width, height = 1224, 792 # Default fallback
                 try:
@@ -125,10 +141,7 @@ async def get_guidelines():
 @app.post("/api/export-diagram")
 async def export_diagram(payload: ExportPayload):
     """Receives exported canvas/SVG data and saves it locally to the archive."""
-    if payload.type == "ui-capture":
-        export_dir = os.path.join(BASE_DIR, 'archive', 'workflowScreenshots', 'appTests')
-    else:
-        export_dir = os.path.join(BASE_DIR, 'archive', 'diagrams', 'generated')
+    export_dir = os.path.join(BASE_DIR, 'archive', 'diagrams', 'generated')
         
     os.makedirs(export_dir, exist_ok=True)
     
@@ -137,12 +150,82 @@ async def export_diagram(payload: ExportPayload):
         if payload.type == "svg":
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(payload.data)
-        elif payload.type in ["jpg", "ui-capture"]:
+        elif payload.type == "jpg":
             header, encoded = payload.data.split(",", 1)
             with open(filepath, "wb") as f:
                 f.write(base64.b64decode(encoded))
         return {"status": "success", "path": filepath}
     except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/capture-dashboard")
+async def capture_dashboard(payload: CapturePayload):
+    """Uses headless Playwright to take a pixel-perfect snapshot of the UI."""
+    try:
+        from playwright.async_api import async_playwright
+        import time
+        export_dir = os.path.join(BASE_DIR, 'archive', 'workflowScreenshots', 'appTests')
+        os.makedirs(export_dir, exist_ok=True)
+        filepath = os.path.join(export_dir, f"dashboard_capture_{int(time.time()*1000)}.jpg")
+        
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page(viewport={"width": 1920, "height": 1080})
+            await page.goto("http://127.0.0.1:8000/", wait_until="networkidle")
+            
+            if payload.isLightMode:
+                await page.evaluate("document.body.classList.add('light-mode'); document.body.classList.remove('dark-mode');")
+                
+            state_script = f"""
+                async () => {{
+                    document.getElementById('prompt-input').value = {json.dumps(payload.prompt)};
+                    window.MemoryState.stack = {json.dumps(payload.spatial_seed)};
+                    window.MemoryState.lastGeneration = {{
+                        narrative: {json.dumps(payload.narrative)},
+                        geometries: {json.dumps(payload.geometries)},
+                        diagram: ''
+                    }};
+                    const sites = [...new Set(window.MemoryState.stack.map(s => s.site || 'PershingSquare'))];
+                    if (!sites.includes('PershingSquare')) sites.push('PershingSquare');
+                    for (const site of sites) {{
+                        if (!window.MemoryState.svgCache[site]) {{
+                            const res = await fetch('/api/diagram-data/' + site);
+                            const data = await res.json();
+                            window.MemoryState.svgCache[site] = data.svg;
+                        }}
+                    }}
+                    window.MemoryState.baseCleared = true;
+                    if (window.renderRemixSVG) window.renderRemixSVG();
+                    if (typeof refreshStackUI !== 'undefined') refreshStackUI();
+                    
+                    if ({json.dumps(payload.activeTab)} === '3d') {{
+                        if (typeof switchToTab !== 'undefined') switchToTab('3d');
+                        if (typeof initThreeScene !== 'undefined') initThreeScene();
+                        if (typeof renderGeometries !== 'undefined') renderGeometries(window.MemoryState.lastGeneration.geometries);
+                    }}
+                    
+                    const out = document.getElementById('narrative-output');
+                    if (out) {{
+                        out.innerHTML = '';
+                        const p1 = document.createElement('pre');
+                        p1.textContent = '> ' + {json.dumps(payload.prompt)};
+                        const p2 = document.createElement('pre');
+                        p2.className = 'success';
+                        p2.textContent = {json.dumps(payload.narrative)};
+                        out.appendChild(p1);
+                        out.appendChild(p2);
+                    }}
+                }}
+            """
+            await page.evaluate(f"({state_script})()")
+            await page.wait_for_timeout(1500) # Give 1.5 seconds for ThreeJS/SVG to render
+            
+            await page.screenshot(path=filepath, type="jpeg", quality=95)
+            await browser.close()
+            
+        return {"status": "success", "path": filepath}
+    except Exception as e:
+        print(f"Capture error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/generate")
