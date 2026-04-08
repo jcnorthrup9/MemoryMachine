@@ -1,0 +1,1 @@
+# File deprecated. Logic moved safely to logic/geometry_engine.py

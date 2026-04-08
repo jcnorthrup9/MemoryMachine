@@ -116,8 +116,13 @@ async function handlePromptSubmit() {
             if (geom.type === 'box') {
                 const geometry = new THREE.BoxGeometry(...geom.args);
                 mesh = new THREE.Mesh(geometry, material);
+            } else if (geom.type === 'cylinder') {
+                const geometry = new THREE.CylinderGeometry(...geom.args);
+                mesh = new THREE.Mesh(geometry, material);
+            } else if (geom.type === 'sphere') {
+                const geometry = new THREE.SphereGeometry(...geom.args);
+                mesh = new THREE.Mesh(geometry, material);
             }
-            // TODO: Add other geometry types here (sphere, cylinder, etc.)
 
             if (mesh) {
                 mesh.position.set(...geom.position);

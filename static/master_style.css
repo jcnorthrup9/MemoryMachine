@@ -1,0 +1,213 @@
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* =========================================
+   MEMORY MACHINE // MASTER STYLE GUIDE
+   ========================================= */
+
+/* --- GLOBAL VARIABLES --- */
+:root {
+    --bg-color: #050505;
+    --text-color: #e0e0e0;
+    --accent-glow: #fff4ca;
+    --border-dim: #222;
+    --trans-speed: 0.4s;
+    
+    --bg:      #050505;
+    --surface: #0f0f0f;
+    --accent:  #fff4ca;
+    --text:    #c8c8c0;
+    --muted:   #555;
+    --border:  #1e1e1e;
+    
+    --paper:   #f4f0e6;
+    --paper2:  #ede8d8;
+    --ink:     #2a2318;
+    --ink2:    #4a3f30;
+    --faint:   #9a8f80;
+    --red:     #8b1a1a;
+    --stamp:   rgba(139,26,26,0.18);
+    --rule:    rgba(42,35,24,0.12);
+}
+
+* { box-sizing: border-box; }
+
+/* --- GLOBAL KEYFRAMES --- */
+@keyframes fade-in-image { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+@keyframes ghost-flicker { 0% { opacity: 0; clip-path: inset(0 0 0 0); filter: blur(0px); } 20% { opacity: 0.4; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 90%); filter: blur(2px) hue-rotate(45deg); } 50% { opacity: 0.7; clip-path: polygon(0 0, 100% 10%, 100% 90%, 0 100%); filter: blur(1px) hue-rotate(90deg); } 80% { opacity: 0.3; clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); filter: blur(4px) hue-rotate(135deg); } 100% { opacity: 0; clip-path: inset(0 0 0 0); filter: blur(10px); } }
+@keyframes ghost-shift { 0% { translate: 0 0; } 20% { translate: 10px -10px; } 40% { translate: -15px 15px; } 60% { translate: 20px 5px; } 80% { translate: -10px -20px; } 100% { translate: 0 0; } }
+@keyframes subtle-rot { 0% { filter: hue-rotate(0deg) blur(0px); opacity: 1; } 50% { filter: hue-rotate(5deg) blur(0.5px) sepia(0.2); opacity: 0.95; } 100% { filter: hue-rotate(0deg) blur(0px); opacity: 1; } }
+@keyframes datamosh-freeze { 0% { filter: none; transform: none; clip-path: inset(0 0 0 0); } 20% { filter: contrast(1.2) hue-rotate(20deg) blur(2px); transform: scale(1.02) skewX(2deg); } 40% { filter: contrast(1.5) hue-rotate(40deg) blur(4px); transform: translate(-5px,5px) skewY(2deg); clip-path: polygon(0 0, 100% 10%, 100% 100%, 0 90%); } 60% { filter: contrast(2) hue-rotate(90deg) blur(8px); transform: scale(1.1) rotate(1deg); clip-path: inset(5% 10% 5% 5%); } 80% { filter: contrast(3) hue-rotate(180deg) blur(12px) opacity(0.8); transform: scale(1.2) translate(10px,-10px); } 100% { filter: contrast(4) grayscale(1) blur(20px) opacity(0); transform: scale(1.3) rotate(5deg); pointer-events: none; } }
+@keyframes gpu-tear { 0% { transform: translate(0,0) skew(0deg); clip-path: inset(0 0 0 0); filter: none; } 20% { transform: translate(-2px,1px) skew(5deg); clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%); filter: blur(1px); } 40% { transform: translate(4px,-4px) skew(-10deg); clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%); filter: contrast(1.5) blur(2px); } 60% { transform: translate(-5px,5px) skew(20deg); clip-path: polygon(0 10%, 100% 0, 90% 100%, 10% 100%); filter: hue-rotate(90deg) blur(4px); } 80% { transform: translate(10px,-10px) skew(-30deg) scale(1.1); clip-path: polygon(0 0, 50% 10%, 100% 0, 100% 100%, 50% 90%, 0 100%); filter: hue-rotate(180deg) blur(8px); } 100% { transform: translate(50px,50px) scale(1.2); opacity: 0; filter: blur(15px); } }
+@keyframes glitch-anim { 0% { clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%); transform: translate(0,0) skew(0); } 20% { clip-path: polygon(0 15%, 100% 15%, 100% 15%, 0 15%); transform: translate(-25px,2px) skew(40deg); } 40% { clip-path: polygon(0 10%, 100% 10%, 100% 20%, 0 20%); transform: translate(25px,-2px) skew(-40deg); } 60% { clip-path: polygon(0 1%, 100% 1%, 100% 2%, 0 2%); transform: translate(15px,0) skew(15deg); } 80% { clip-path: polygon(0 33%, 100% 33%, 100% 33%, 0 33%); transform: translate(-15px,2px) skew(-10deg); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transform: translate(0,0) skew(0); } }
+
+/* =========================================
+   1. ZINE & DECK COMMON FRAMEWORK
+   ========================================= */
+body.zine-theme, body.deck-theme {
+    background-color: var(--bg-color); color: var(--text-color);
+    font-family: 'Courier New', Courier, monospace; margin: 0;
+    height: 100vh; display: flex; justify-content: center;
+    align-items: center; overflow: hidden;
+}
+.zine-theme .zine-viewer, .deck-theme .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; position: relative; }
+.zine-theme .spread-container, .deck-theme .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; z-index: 2; }
+.zine-theme .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border-dim); z-index: 10; }
+.zine-theme .spread, .deck-theme .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.zine-theme .spread.active, .deck-theme .spread.active { display: flex; }
+.zine-theme .zine-footer, .deck-theme .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 100; position: relative; }
+.zine-theme .nav-controls button, .deck-theme .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
+.zine-theme .nav-controls button:hover, .deck-theme .nav-controls button:hover { background: #111; border-color: #666; color: #fff; }
+
+/* =========================================
+   2. ZINE SPECIFIC
+   ========================================= */
+.zine-theme .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; transition: all var(--trans-speed) cubic-bezier(0.2, 0.8, 0.2, 1); }
+.zine-theme .left-page { padding: 60px 100px 60px 60px; }
+.zine-theme .right-page { padding: 60px 60px 60px 100px; }
+.zine-theme .grid-layout { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: auto 1fr; gap: 20px; height: 100%; }
+.zine-theme .abstract-flow { column-count: 2; column-gap: 40px; column-rule: 1px solid #1a1a1a; text-align: justify; text-align-last: left; font-size: 0.85rem; line-height: 1.6; color: #bbb; height: 100%; column-fill: balance; overflow: hidden; grid-column: 1 / -1; transition: all var(--trans-speed) ease-out; }
+.zine-theme .vessel { display: flex; flex-direction: column; height: 100%; overflow: hidden; transition: all var(--trans-speed) ease-out; }
+.zine-theme .vessel-span-8  { grid-column: span 8; }
+.zine-theme .vessel-span-4  { grid-column: span 4; border-left: 1px solid var(--border-dim); padding-left: 20px; }
+.zine-theme .vessel-span-12 { grid-column: 1 / -1; }
+.zine-theme .vignette { border-left: 1px solid var(--accent-glow); padding-left: 20px; margin-bottom: 30px; font-size: 0.85em; color: #aaa; text-align: left; }
+.zine-theme h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; transition: all var(--trans-speed) ease-out; }
+.zine-theme h2.page-header { color: #444; font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid #111; padding-bottom: 10px; margin-bottom: 30px; flex-shrink: 0; grid-column: 1 / -1; transition: all var(--trans-speed) ease-out; }
+.zine-theme pre { margin: 0; font-size: 0.7rem; line-height: 1.4; color: #555; white-space: pre-wrap; transition: all var(--trans-speed) ease-out; }
+.zine-theme .json-block { color: #88ff88; text-align: left; width: 100%; }
+.zine-theme .binary-block { color: #444; letter-spacing: 3px; text-align: center; font-size: 0.65rem; }
+.zine-theme .matrix-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; align-content: start; }
+.zine-theme .matrix-item { background: #080808; border: 1px solid #111; position: relative; display: flex; flex-direction: column; }
+.zine-theme .matrix-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: center; display: block; }
+.zine-theme .matrix-label { padding: 8px; font-size: 0.6rem; color: #888; text-transform: uppercase; text-align: center; border-top: 1px solid #111; letter-spacing: 1px; }
+.zine-theme .single-image-view { width: 100%; height: 100%; display: flex; flex-direction: column; border: 1px solid #111; background: #080808; }
+.zine-theme .single-image-view img { flex-grow: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+.zine-theme .single-image-view .matrix-label { border-top: 1px solid #111; padding: 10px; font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+.zine-theme .yearbook-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
+.zine-theme .yearbook-entry { display: flex; flex-direction: column; align-items: center; }
+.zine-theme .yearbook-placeholder { width: 100%; aspect-ratio: 1; background: #0a0a0a; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; color: #444; font-size: 0.6rem; overflow: hidden; }
+.zine-theme .yearbook-placeholder img { width: 100%; height: 100%; object-fit: cover; }
+.zine-theme .yearbook-label { margin-top: 5px; font-size: 0.55rem; color: #666; text-transform: uppercase; text-align: center; letter-spacing: 1px; }
+.zine-theme .watercolor-image { opacity: 0; }
+.zine-theme .spread.active .watercolor-image { animation: fade-in-image 1.5s ease-out 0.4s forwards; }
+.zine-theme .binary-texture { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.05; font-size: 0.6rem; line-height: 1.1; color: #fff; overflow: hidden; z-index: 1; user-select: none; word-wrap: break-word; pointer-events: none; }
+.zine-theme .ghost-fragment { position: absolute; pointer-events: none; opacity: 0.6; z-index: 50; filter: grayscale(1) contrast(2); mix-blend-mode: hard-light; transform: rotate(var(--r, 0deg)) scale(var(--s, 1)); animation: ghost-flicker 4s infinite ease-in-out, ghost-shift 8s infinite ease-in-out; max-width: 300px; box-shadow: 2px 0 0 rgba(255,0,0,0.5), -2px 0 0 rgba(0,0,255,0.5); overflow: hidden; border: 1px solid red; background: #000; }
+.zine-theme .stability-btn { position: absolute; top: 0; right: 0; width: 150px; height: 150px; z-index: 10000; cursor: crosshair; }
+.zine-theme .stability-btn:active { background-color: rgba(255,255,255,0.05); }
+body.zine-theme.degrading-mild .spread-container { animation: subtle-rot 6s infinite ease-in-out; }
+body.zine-theme.degrading-severe .spread-container { animation: datamosh-freeze 45s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+body.zine-theme.degrading-severe .page-side h1, body.zine-theme.degrading-severe .page-side h2, body.zine-theme.degrading-severe .page-side p, body.zine-theme.degrading-severe .page-side img { animation: gpu-tear 40s steps(60) forwards; }
+body.zine-theme.glitch-mode .page-side { animation: glitch-anim 0.6s infinite steps(2); filter: invert(1); }
+body.zine-theme.glitch-mode .left-page  { transform: translateX(20px) rotate(-1deg); }
+body.zine-theme.glitch-mode .right-page { transform: translateX(-20px) rotate(1deg); margin-left: -50px; }
+body.zine-theme.glitch-mode h1, body.zine-theme.glitch-mode h2 { animation: glitch-anim 4s infinite linear alternate-reverse; color: #ff0000; text-shadow: 2px 0 #00ff00; }
+body.zine-theme.glitch-mode pre { animation: glitch-anim 1s infinite; opacity: 0.5; }
+body.zine-theme.glitch-mode .binary-texture { animation: glitch-anim 0.2s infinite reverse; color: #00ff00; opacity: 0.2; }
+.zine-theme .nav-controls button.reboot-mode { background-color: #f00; color: #000; border: 1px solid #f00; animation: glitch-anim 0.2s infinite; font-weight: bold; }
+.zine-theme .intervention-tag { display: inline-block; font-size: 0.6rem; letter-spacing: 3px; color: var(--accent-glow); border: 1px solid var(--accent-glow); padding: 2px 8px; margin-bottom: 14px; text-transform: uppercase; }
+.zine-theme .intervention-name { font-size: 2rem; color: var(--accent-glow); line-height: 1.1; margin-bottom: 20px; }
+.zine-theme .narrative-block { font-size: 0.8rem; line-height: 1.7; color: #bbb; overflow: hidden; flex: 1; }
+.zine-theme .narrative-block p { margin: 0 0 1em; }
+.zine-theme .mermaid-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: auto; }
+.zine-theme .mermaid { font-size: 0.6rem !important; }
+.zine-theme .render-full { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; filter: brightness(0.9) contrast(1.1); }
+.zine-theme .source-chip { display: inline-block; font-size: 0.55rem; color: #666; border: 1px solid #222; padding: 2px 6px; margin: 2px 2px 0 0; letter-spacing: 1px; }
+
+@media print {
+    @page { size: letter landscape; margin: 0; }
+    html, body.zine-theme { display: block !important; width: 100%; height: auto !important; overflow: visible !important; background-color: #050505 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .zine-theme .zine-viewer { display: block !important; width: 100%; height: auto !important; max-width: none; border: none; position: static; overflow: visible; margin: 0 !important; }
+    .zine-theme .spread-container { display: block !important; position: static; overflow: visible; height: auto !important; }
+    .zine-theme .spine, .zine-theme .nav-controls, .zine-theme .stability-btn, .zine-theme .binary-texture, .zine-theme #page-indicator { display: none !important; }
+    .zine-theme .spread { display: flex !important; position: relative !important; width: 100%; height: 100vh !important; page-break-after: always; break-after: page; top: auto; left: auto; opacity: 1 !important; visibility: visible !important; }
+    .zine-theme .ghost-fragment { mix-blend-mode: normal !important; opacity: 0.7 !important; filter: contrast(1.5) grayscale(1); border-color: #ff0000 !important; }
+    .zine-theme .watercolor-image { opacity: 1 !important; animation: none !important; }
+    .zine-theme .mermaid svg { max-height: 80vh; }
+}
+
+/* =========================================
+   3. DECK SPECIFIC
+   ========================================= */
+.deck-theme .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; padding: 60px; overflow: visible;}
+.deck-theme h1.zine-title { font-size: 2.5rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px; white-space: nowrap; flex-shrink: 0; position: relative; z-index: 20;}
+.deck-theme h2.page-header { color: #888; font-size: 1rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; word-wrap: break-word; flex-shrink: 0;}
+.deck-theme .text-wrap { white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4; color: #ccc; text-align: justify; word-wrap: break-word; padding-right: 20px; overflow: hidden;}
+.deck-theme .img-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; flex: 1; min-height: 0; justify-content: center; margin-top: 10px; }
+.deck-theme .img-box { position: relative; width: 100%; border: 1px solid #333; background: #080808; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; flex: 1; min-height: 0; }
+.deck-theme .img-box.dashed { border: 1px dashed #444; }
+.deck-theme .img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+/* =========================================
+   4. PRECEDENT DECK THEME
+   ========================================= */
+body.precedent-theme { font-family: sans-serif; background-color: #111; color: #eee; margin: 0; padding: 40px; }
+.precedent-theme h1 { text-align: center; color: #f9a825; border-bottom: 1px solid #444; padding-bottom: 20px; margin-bottom: 40px; }
+.precedent-theme .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px; }
+.precedent-theme .card { background-color: #1a1a1a; border: 1px solid #333; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+.precedent-theme .card-image { width: 100%; height: 250px; object-fit: cover; background-color: #222; }
+.precedent-theme .card-content { padding: 20px; }
+.precedent-theme .card h2 { margin-top: 0; color: #f9a825; }
+.precedent-theme .card p { color: #ccc; line-height: 1.6; }
+
+/* =========================================
+   5. QUALITATIVE SEARCH OUTPUT
+   ========================================= */
+body.search-theme { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; padding: 2.5rem 3rem; line-height: 1.75; max-width: 1100px; margin: 0 auto; }
+.search-theme h1 { color: var(--accent); font-size: 1.1rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.search-theme h2 { color: var(--accent); font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin: 2.5rem 0 1rem; }
+.search-theme h3 { color: var(--accent); font-size: 0.8rem; margin-bottom: 0.4rem; }
+.search-theme .subtitle { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2rem; }
+.search-theme .intervention-title { font-size: 1.3rem; color: var(--accent); margin: 0.5rem 0 1rem; }
+.search-theme .geo-badge { display: inline-block; background: var(--accent); color: var(--bg); font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.2rem 0.7rem; margin-bottom: 0.6rem; }
+.search-theme .query-box { border: 1px solid var(--border); padding: 1rem 1.5rem; margin: 1rem 0; font-style: italic; color: var(--accent); opacity: 0.75; font-size: 0.9rem; }
+.search-theme .narrative p { margin-bottom: 1.1rem; font-size: 0.88rem; }
+.search-theme .sources-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.search-theme .source-card { border: 1px solid var(--border); padding: 1rem 1.2rem; background: var(--surface); }
+.search-theme .matched-terms { font-size: 0.68rem; color: var(--muted); margin: 0.25rem 0 0.6rem; }
+.search-theme blockquote { border-left: 2px solid var(--accent); padding-left: 0.75rem; font-size: 0.78rem; color: var(--muted); font-style: italic; margin: 0; }
+.search-theme table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.search-theme td { padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--border); }
+.search-theme td:first-child { color: var(--muted); width: 38%; }
+.search-theme .mermaid-wrap { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; overflow-x: auto; }
+.search-theme footer { margin-top: 3rem; color: var(--muted); font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; border-top: 1px solid var(--border); padding-top: 1rem; }
+
+/* =========================================
+   6. SCRAPBOOK THEME
+   ========================================= */
+body.scrapbook-theme { background: #cbc4b4 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23bbb5a4'/%3E%3Ccircle cx='1' cy='1' r='0.7' fill='%23c4bdb0' opacity='0.5'/%3E%3C/svg%3E"); font-family: 'Courier Prime', 'Courier New', monospace; color: var(--ink); padding: 2rem 1rem 4rem; }
+.scrapbook-theme .cover { max-width: 900px; margin: 0 auto 3rem; background: var(--paper); border: 2px solid var(--ink); padding: 2.5rem 3rem; position: relative; box-shadow: 4px 4px 0 rgba(0,0,0,0.25); }
+.scrapbook-theme .cover::before { content: ''; position: absolute; inset: 6px; border: 1px dashed var(--faint); pointer-events: none; }
+.scrapbook-theme .cover-label { font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--faint); margin-bottom: 0.4rem; }
+.scrapbook-theme .cover-title { font-family: 'Special Elite', cursive; font-size: 2.4rem; line-height: 1.1; letter-spacing: 0.04em; color: var(--ink); }
+.scrapbook-theme .cover-subtitle { margin-top: 0.6rem; font-size: 0.85rem; color: var(--ink2); border-top: 1px solid var(--rule); padding-top: 0.5rem; margin-top: 0.8rem; }
+.scrapbook-theme .cover-meta { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem; font-size: 0.72rem; color: var(--faint); letter-spacing: 0.1em; }
+.scrapbook-theme .stamp-classified { position: absolute; top: 1.8rem; right: 2rem; font-family: 'Special Elite', cursive; font-size: 1.1rem; color: var(--red); border: 2px solid var(--red); padding: 0.2rem 0.6rem; transform: rotate(-4deg); opacity: 0.6; letter-spacing: 0.12em; }
+.scrapbook-theme .dossier-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 3rem; }
+.scrapbook-theme .card { background: var(--paper); border: 1.5px solid var(--ink2); padding: 0; box-shadow: 3px 5px 0 rgba(0,0,0,0.20); position: relative; page-break-inside: avoid; }
+.scrapbook-theme .card::after { content: ''; position: absolute; inset: 5px; border: 1px dotted var(--rule); pointer-events: none; }
+.scrapbook-theme .card-header { background: var(--paper2); border-bottom: 1.5px solid var(--ink2); padding: 1rem 1.4rem 0.8rem; display: flex; align-items: baseline; gap: 1rem; }
+.scrapbook-theme .card-number { font-size: 0.65rem; color: var(--faint); letter-spacing: 0.25em; white-space: nowrap; }
+.scrapbook-theme .card-name { font-family: 'Special Elite', cursive; font-size: 1.45rem; color: var(--ink); line-height: 1.1; }
+.scrapbook-theme .card-location { font-size: 0.72rem; color: var(--faint); letter-spacing: 0.08em; margin-left: auto; white-space: nowrap; }
+.scrapbook-theme .card-body { display: grid; grid-template-columns: 200px 1fr; gap: 0; }
+.scrapbook-theme .polaroid-wrap { padding: 1.2rem 0.8rem 0.8rem 1.2rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.scrapbook-theme .polaroid { background: #fff; padding: 6px 6px 28px; box-shadow: 2px 3px 8px rgba(0,0,0,0.28); width: 160px; }
+.scrapbook-theme .polaroid img { display: block; width: 148px; height: 110px; object-fit: cover; filter: sepia(0.18) contrast(1.05); }
+.scrapbook-theme .polaroid-missing { width: 148px; height: 110px; background: #ccc8bc; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #888; text-align: center; letter-spacing: 0.06em; line-height: 1.4; }
+.scrapbook-theme .polaroid-caption { font-size: 0.6rem; color: var(--faint); text-align: center; letter-spacing: 0.05em; margin-top: 2px; font-style: italic; }
+.scrapbook-theme .card-tag { display: inline-block; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; background: var(--ink); color: var(--paper); padding: 0.15rem 0.45rem; margin-top: 0.4rem; }
+.scrapbook-theme .card-text { padding: 1.2rem 1.4rem 1.2rem 0.8rem; border-left: 1.5px solid var(--rule); }
+.scrapbook-theme .section-label { font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--faint); border-bottom: 1px solid var(--rule); padding-bottom: 0.2rem; margin-bottom: 0.5rem; }
+.scrapbook-theme .wiki-blurb { font-size: 0.8rem; line-height: 1.65; color: var(--ink2); margin-bottom: 1.1rem; }
+.scrapbook-theme .wiki-blurb em { font-style: italic; }
+.scrapbook-theme .reviews-list { list-style: none; padding: 0; }
+.scrapbook-theme .reviews-list li { font-size: 0.76rem; line-height: 1.55; color: var(--ink); padding: 0.3rem 0 0.3rem 1.1rem; border-bottom: 1px dotted var(--rule); position: relative; }
+.scrapbook-theme .reviews-list li::before { content: '›'; position: absolute; left: 0; color: var(--faint); }
+.scrapbook-theme .reviews-list li:last-child { border-bottom: none; }
+.scrapbook-theme .no-data { font-size: 0.75rem; color: var(--faint); font-style: italic; padding: 0.5rem 0; }
+.scrapbook-theme .footer { max-width: 900px; margin: 3rem auto 0; text-align: center; font-size: 0.65rem; color: var(--faint); letter-spacing: 0.1em; border-top: 1px solid var(--rule); padding-top: 1rem; }
+.scrapbook-theme .toc { margin-top: 1rem; }
+.scrapbook-theme .toc-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.3rem 1.5rem; padding: 0; }
+.scrapbook-theme .toc-list li a { font-size: 0.72rem; color: var(--ink2); text-decoration: none; letter-spacing: 0.04em; }
+.scrapbook-theme .toc-list li a:hover { text-decoration: underline; color: var(--red); }
+.scrapbook-theme .toc-num { color: var(--faint); margin-right: 0.2rem; }

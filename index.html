@@ -4,36 +4,177 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Memory Machine // Digital Palimpsest</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   </head>
-  <body>
-    <div class="main-grid">
-        <div id="canvas-container">
-            <!-- Three.js canvas will be inserted here by main.js -->
+  <body class="dark-mode">
+    <header class="app-header">
+        <div class="header-left">
+            <h1>MEMORY MACHINE <span>// DIGITAL PALIMPSEST</span></h1>
         </div>
-        <div class="terminal-container">
+        <div class="header-right">
+            <select id="load-svg-dropdown">
+                <option value="">Load SVG file...</option>
+                <option value="PershingSquare" selected>Pershing Square</option>
+                <option value="ParcdelaVillette">Parc de la Villette</option>
+                <option value="ZaryadyePark">Zaryadye Park</option>
+                <option value="Schouwburgplein">Schouwburgplein</option>
+            </select>
+                <button id="capture-ui-btn" class="secondary-btn" title="Capture Dashboard UI">Capture UI</button>
+                <button id="auto-export-toggle" class="secondary-btn" style="color: var(--green); border-color: var(--green);" title="Automatically export SVG & JPG after generation">Auto-Export: ON</button>
+            <button id="theme-toggle" class="icon-btn">☀ / ☾</button>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <!-- Left Panel: Viewports -->
+        <div class="visual-panel">
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="2d">2D Canvas</button>
+                <button class="tab-btn" data-tab="3d">3D Preview</button>
+                <div class="tab-controls">
+                    <button id="lofi-toggle-btn" class="secondary-btn">Lofi 3D Inset</button>
+                    <div class="mode-toggle">
+                        <span class="mode-label">Draft</span>
+                        <label class="switch">
+                            <input type="checkbox" id="dream-mode-toggle">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="mode-label">Dream ✦</span>
+                    </div>
+                    <button id="deploy-3d-btn" class="primary-btn">Deploy to 3D</button>
+                    <button id="clear-stack-btn" class="danger-btn">Clear Stack</button>
+                </div>
+            </div>
+
+            <div class="tab-content-container">
+                <div id="tab-2d" class="tab-pane active">
+                    <div id="remix-svg-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;"></div>
+                    <div id="lofi-3d-inset" class="lofi-inset hidden"></div>
+                </div>
+                <div id="tab-3d" class="tab-pane">
+                    <div id="canvas-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;">
+                        <div id="canvas-placeholder">3D PREVIEW — GENERATE OR DEPLOY TO ACTIVATE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Terminal & AI -->
+        <div class="terminal-panel">
+            <div class="status-bar">
+                <span id="status-dot" class="success"></span>
+                <span id="status-text">SYSTEM READY</span>
+            </div>
             <div id="narrative-output" class="narrative-output">
-                <pre>> MEMORY MACHINE v0.1 // WAITING FOR INPUT</pre>
-                <pre>> TARGET SITE: PERSHING SQUARE, LOS ANGELES</pre>
-                <pre>> Describe a spatial memory to cross-pollinate...</pre>
+                <pre>> MEMORY MACHINE v1.2 // AWAITING INPUT</pre>
             </div>
             <div class="input-container">
                 <span class="prompt-arrow">></span>
-                <input type="text" id="prompt-input" placeholder="e.g., a place with lots of shade and wading pools..." autofocus>
+                <input type="text" id="prompt-input" placeholder="Describe a spatial memory to cross-pollinate..." autofocus>
+                <button id="generate-btn">GEN</button>
             </div>
-        </div>
-        <div id="diagram-container" class="diagram-container">
-            <h2 class="page-header">LOGIC DIAGRAM</h2>
-            <div class="mermaid">
-                graph TD
-                    A["Start"] --> B["Waiting for User Input"];
+
+            <!-- ── PANEL RESIZER ─────────────────────────────────────── -->
+            <div id="panel-resizer" class="panel-resizer" title="Drag to resize"></div>
+
+            <!-- ── STACK EDITOR ──────────────────────────────────────── -->
+            <div class="stack-editor">
+                <div class="stack-editor-header">
+                    <span class="section-label">LAYER STACK</span>
+                    <span id="stack-count" class="stack-count">0 LAYERS</span>
+                </div>
+                <div id="stack-list" class="stack-list">
+                    <div class="stack-empty">No layers generated yet.</div>
+                </div>
+                <!-- Slider panel — shown when a layer is selected -->
+                <div id="xform-panel" class="xform-panel" style="display:none;">
+                    <div class="xform-label" id="xform-title">SELECT A LAYER</div>
+                    <div class="xform-row">
+                        <label>X</label>
+                        <input type="range" id="xform-x" min="-400" max="400" value="0" step="1">
+                        <input type="number" id="xform-x-val" class="xform-val-input" step="1">
+                    </div>
+                    <div class="xform-row">
+                        <label>Y</label>
+                        <input type="range" id="xform-y" min="-300" max="300" value="0" step="1">
+                        <input type="number" id="xform-y-val" class="xform-val-input" step="1">
+                    </div>
+                    <div class="xform-row">
+                        <label>SCL</label>
+                        <input type="range" id="xform-scale" min="10" max="500" value="100" step="1">
+                        <input type="number" id="xform-scale-val" class="xform-val-input" step="0.1">
+                    </div>
+                    <div class="xform-row">
+                        <label>ROT</label>
+                        <input type="range" id="xform-rot" min="0" max="360" value="0" step="1">
+                        <input type="number" id="xform-rot-val" class="xform-val-input" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── ZONAL CONSTRAINTS HUD ─────────────────────────────── -->
+            <div class="zonal-hud">
+                <div class="section-label">ZONAL CONSTRAINTS</div>
+                <div id="hud-rows" class="hud-rows">
+                    <div class="hud-row" id="hud-SOFT">
+                        <span class="hud-label">SOFTSCAPE</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-SOFT"></span></span>
+                        <span class="hud-pct" id="hud-pct-SOFT">0%</span>
+                        <span class="hud-target" id="hud-tgt-SOFT">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-HARD">
+                        <span class="hud-label">HARDSCAPE</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-HARD"></span></span>
+                        <span class="hud-pct" id="hud-pct-HARD">0%</span>
+                        <span class="hud-target" id="hud-tgt-HARD">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-PROG">
+                        <span class="hud-label">ACTIVATORS</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-PROG"></span></span>
+                        <span class="hud-pct" id="hud-pct-PROG">0%</span>
+                        <span class="hud-target" id="hud-tgt-PROG">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-BLUE">
+                        <span class="hud-label">WATER</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-BLUE"></span></span>
+                        <span class="hud-pct" id="hud-pct-BLUE">0%</span>
+                        <span class="hud-target" id="hud-tgt-BLUE">—</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script type="module" src="/static/main.js"></script>
+    <!-- Modular logic: load order matters — constants → state → engine2D → main -->
+    <script src="/static/js/constants.js"></script>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/engine2D.js"></script>
+
+    <!-- Tab switching (inline, immediate — no dependency on main.js) -->
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById('tab-' + e.target.dataset.tab)?.classList.add('active');
+                if (e.target.dataset.tab === '3d') window.dispatchEvent(new Event('resize'));
+            });
+        });
+        document.getElementById('lofi-toggle-btn')?.addEventListener('click', () => {
+            document.getElementById('lofi-3d-inset').classList.toggle('hidden');
+        });
+        document.getElementById('theme-toggle')?.addEventListener('click', () => {
+            document.body.classList.toggle('light-mode');
+            window.renderRemixSVG?.();
+        });
+    </script>
+
+    <!-- Main application controller -->
+    <script src="/static/main.js"></script>
   </body>
 </html>

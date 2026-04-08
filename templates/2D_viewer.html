@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Machine // Cross-Pollination Engine</title>
+  
+  <!-- Modern UI Styling -->
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#9670;</text></svg>">
+
+  <!-- External dependencies for diagrams and 3D -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+  <!-- Global Navigation Portal -->
+  <nav id="global-nav">
+    <div class="nav-brand">MEMORY MACHINE // PORTAL</div>
+    <div class="nav-links">
+      <button class="global-tab active" onclick="switchGlobalView('app', this)">REMIX ENGINE</button>
+      <button class="global-tab" onclick="switchGlobalView('/diagrams', this)">DIAGRAM ARCHIVE</button>
+      <button class="global-tab" onclick="switchGlobalView('/archive/digital_zine.html', this)">DIGITAL ZINE</button>
+      <button class="global-tab" onclick="switchGlobalView('/archive/precedent_scrapbook.html', this)">SCRAPBOOK</button>
+    </div>
+  </nav>
+
+  <div id="app">
+    <!-- LEFT PANEL: Inputs & Layer Stack -->
+    <div id="panel">
+      <div id="panel-header">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <h1>Memory Machine</h1>
+            <div class="subtitle">Cross-Pollination Engine // Pershing Square, DTLA</div>
+          </div>
+          <button id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
+        </div>
+      </div>
+
+      <!-- AI Synthesis Input -->
+      <div id="input-section">
+        <label>Describe the qualitative spatial experience you want</label>
+        <textarea id="prompt-input" placeholder="e.g. I want a space with lots of shade, shallow wading pools, and water features that create a pleasant acoustic hum."></textarea>
+
+        <div id="mode-toggle-row">
+          <button id="btn-mode-draft" class="mode-btn active" onclick="setDreamMode(false)">&#9670; Draft</button>
+          <button id="btn-mode-dream" class="mode-btn" onclick="setDreamMode(true)">&#10022; Dream</button>
+        </div>
+
+        <button id="generate-btn" class="action-btn" onclick="generate()">Generate Intervention</button>
+
+        <div class="export-wrap" style="margin-top:0.5rem">
+          <button id="export-btn" class="action-btn secondary-btn" onclick="toggleExportDropdown()">Export 2D Diagram ▾</button>
+          <div class="export-dropdown" id="export-dropdown">
+            <button class="export-opt" onclick="exportSVG('color')">Export SVG — Color</button>
+            <button class="export-opt" onclick="exportSVG('linework')">Export SVG — Linework</button>
+          </div>
+        </div>
+        <button id="bake-btn" class="action-btn" onclick="bakeToRhino()" disabled>&#9670; Bake to Rhino</button>
+      </div>
+
+      <!-- 2D Layer Stack & Remixing -->
+      <div id="remix-section">
+        <div class="section-label">2D Remix — Layer Stack</div>
+
+        <div id="program-mix-container">
+          <div class="mix-header">
+            <span>Programmatic Mix</span>
+            <span id="mix-hud">&#9670; AWAITING DATA</span>
+          </div>
+          <div class="mix-bar">
+            <div id="mix-soft"></div>
+            <div id="mix-hard"></div>
+            <div id="mix-active"></div>
+            <div id="mix-blue"></div>
+          </div>
+          <div class="mix-legend">
+            <span id="mix-soft-val" class="mix-leg-soft">Soft: 0%</span>
+            <span id="mix-hard-val" class="mix-leg-hard">Hard: 0%</span>
+            <span id="mix-active-val" class="mix-leg-active">Prog: 0%</span>
+            <span id="mix-blue-val" class="mix-leg-blue">Blue: 0%</span>
+          </div>
+        </div>
+
+        <div class="select-row">
+          <select id="site-select">
+            <option value="PershingSquare">Pershing Square</option>
+            <option value="ParcdelaVillette">Parc de la Villette</option>
+            <option value="ZaryadyePark">Zaryadye Park</option>
+            <option value="Schouwburgplein">Schouwburgplein</option>
+          </select>
+        </div>
+        <div class="select-row">
+          <select id="layer-select"></select>
+        </div>
+
+        <div class="xform-row">
+          <label>X offset</label>
+          <input type="range" id="xform-x" min="-400" max="400" step="5" value="0">
+          <span class="xform-val" id="xform-x-val">0</span>
+        </div>
+        <div class="xform-row">
+          <label>Y offset</label>
+          <input type="range" id="xform-y" min="-300" max="300" step="5" value="0">
+          <span class="xform-val" id="xform-y-val">0</span>
+        </div>
+        <div class="xform-row">
+          <label>Scale</label>
+          <input type="range" id="xform-scale" min="15" max="200" step="1" value="100">
+          <span class="xform-val" id="xform-scale-val">1.00×</span>
+        </div>
+        <div class="xform-row">
+          <label>Rotate</label>
+          <input type="range" id="xform-rot" min="-180" max="180" step="1" value="0">
+          <span class="xform-val" id="xform-rot-val">0°</span>
+        </div>
+        
+        <div style="display:flex;gap:8px;">
+            <button id="remix-reset" style="flex:1" onclick="resetAll()">Clear Stack</button>
+            <button id="add-layer-btn" style="flex:2" onclick="addToStack()">+ Add to Stack</button>
+        </div>
+
+        <div id="stack-list"></div>
+      </div>
+
+      <div id="status-bar">
+        <div id="status-dot"></div>
+        <span id="status-text">Awaiting directive...</span>
+      </div>
+
+      <div id="narrative-section">
+        <div class="section-label">Architectural Narrative</div>
+        <div id="narrative-text" class="placeholder">Synthesis pending...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Visualizers -->
+    <div id="right">
+      <div id="tabs">
+        <button class="tab-btn active" onclick="switchTab('2d', this)">2D Remix</button>
+        <button class="tab-btn" onclick="switchTab('canvas', this)">3D Preview</button>
+        <button class="tab-btn" onclick="switchTab('precedents', this)">Precedents</button>
+        <button class="tab-btn" onclick="switchTab('diagram', this)">Logic Diagram</button>
+      </div>
+
+      <!-- 2D Remix Container -->
+      <div class="tab-pane active" id="tab-2d">
+        <div id="remix-canvas-wrap">
+          <div id="remix-svg-container">
+            <!-- Engine2D renders dynamic SVG here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D Preview Container -->
+      <div class="tab-pane" id="tab-canvas">
+        <div id="canvas-placeholder">Initializing 3D Environment...</div>
+        <canvas id="three-canvas" style="display:none;"></canvas>
+      </div>
+
+      <!-- Precedents Tab -->
+      <div class="tab-pane" id="tab-precedents">
+        <div id="precedents-render"></div>
+      </div>
+
+      <!-- Logic Diagram Tab -->
+      <div class="tab-pane" id="tab-diagram">
+        <div id="diagram-render"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Guideline HUD -->
+  <div id="guideline-hud">
+    <div class="hud-title">ZONAL CONSTRAINTS</div>
+    <div id="hud-soft" class="hud-row">
+      <span class="hud-label">Softscape</span>
+      <span class="hud-val" id="hud-soft-val">— / 30–50%</span>
+    </div>
+    <div id="hud-hard" class="hud-row">
+      <span class="hud-label">Hardscape</span>
+      <span class="hud-val" id="hud-hard-val">— / 40–60%</span>
+    </div>
+    <div id="hud-active" class="hud-row">
+      <span class="hud-label">Active</span>
+      <span class="hud-val" id="hud-active-val">— / 10–20%</span>
+    </div>
+    <div id="hud-blue" class="hud-row">
+      <span class="hud-label">Blue Space</span>
+      <span class="hud-val" id="hud-blue-val">— / 2–10%</span>
+    </div>
+  </div>
+
+  <iframe id="portal-frame" src="" style="display:none;"></iframe>
+
+  <!-- Load logic scripts in correct order -->
+  <script src="/static/js/constants.js"></script>
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/engine2d.js"></script>
+  
+  <script type="module">
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+    window.GLTFLoader = GLTFLoader;
+    window.OBJLoader = OBJLoader;
+    window.MTLLoader = MTLLoader;
+  </script>
+
+  <script type="module" src="/static/main.js"></script>
+
+</body>
+</html>
