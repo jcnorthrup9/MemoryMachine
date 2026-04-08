@@ -246,6 +246,20 @@ async def generate_memory_node(payload: MemoryPrompt):
     # 3. Remix
     spatial_seed = remix_layers(spatial_seed_raw)
     
+    # 3.1 Geometric Truth: Base Seed
+    base_seed = {
+        "site": "PershingSquare",
+        "layerId": "BOUNDARY",
+        "label": "Site Boundary",
+        "transform": {"x": 0, "y": 0, "scale": 1.0, "rot": 0},
+        "visible": True,
+        "opacity": 1.0,
+        "target_width": 1224,
+        "target_height": 792,
+        "primitive": "box"
+    }
+    spatial_seed.insert(0, base_seed)
+
     # 3.5. 3D Geometry Generation
     geometries = []
     for item in spatial_seed:

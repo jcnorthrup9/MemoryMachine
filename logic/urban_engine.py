@@ -7,79 +7,6 @@ import xml.etree.ElementTree as ET
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-def shoelace_area(points):
-    """Calculates the true area of a polygon using the Shoelace formula."""
-    n = len(points)
-    if n < 3:
-        return 0
-    area = 0
-    for i in range(n):
-        j = (i + 1) % n
-        area += points[i][0] * points[j][1] - points[j][0] * points[i][1]
-    return abs(area) / 2.0
-
-def get_layer_density(site_id, layer_id):
-    """
-    Calculates the ratio of the actual drawn area (via Shoelace) 
-    versus the Axis-Aligned Bounding Box (AABB) area for an SVG layer.
-    """
-    fallback_density = 0.5
-    svg_dir = os.path.join(BASE_DIR, 'data', 'ParkSVG')
-    
-    target_file = None
-    if os.path.exists(svg_dir):
-        for f in os.listdir(svg_dir):
-            if f[:-4].replace("_", "").replace(" ", "").lower() == site_id.lower():
-                target_file = os.path.join(svg_dir, f)
-                break
-                
-    if not target_file:
-        return fallback_density
-        
-    try:
-        tree = ET.parse(target_file)
-        root = tree.getroot()
-        
-        total_true_area = 0
-        min_x, min_y = float('inf'), float('inf')
-        max_x, max_y = float('-inf'), float('-inf')
-        
-        def process_points(pts):
-            nonlocal min_x, min_y, max_x, max_y
-            if len(pts) < 3: return 0
-            for px, py in pts:
-                min_x, min_y = min(min_x, px), min(min_y, py)
-                max_x, max_y = max(max_x, px), max(max_y, py)
-            return shoelace_area(pts)
-        
-        layer_found = False
-        for elem in root.iter():
-            tag = elem.tag.lower()
-            if tag.endswith('g') and 'id' in elem.attrib:
-                if layer_id.upper() in elem.attrib['id'].upper():
-                    layer_found = True
-                    for child in elem.iter():
-                        ctag = child.tag.lower()
-                        if ctag.endswith('path') or ctag.endswith('polygon') or ctag.endswith('polyline'):
-                            data = child.attrib.get('d', '') or child.attrib.get('points', '')
-                            data = re.sub(r'[Aa]\s*[-+]?[\d.]+\s*[, ]?\s*[-+]?[\d.]+\s*[, ]?\s*[-+]?[\d.]+\s*[, ]?\s*[01]\s*[, ]?\s*[01]\s*[, ]?', '', data)
-                            nums = [float(n) for n in re.findall(r'-?\d+\.?\d*', data)]
-                            pts = [(nums[i], nums[i+1]) for i in range(0, len(nums)-1, 2)]
-                            total_true_area += process_points(pts)
-        
-        if not layer_found:
-            return fallback_density
-            
-        if min_x != float('inf') and max_x != float('-inf'):
-            bbox_area = (max_x - min_x) * (max_y - min_y)
-            if bbox_area > 0:
-                return max(0.05, min(1.0, total_true_area / bbox_area))
-                
-    except Exception as e:
-        print(f"      -> [DENSITY ERROR] Failed to parse SVG for {site_id}/{layer_id}: {e}")
-        
-    return fallback_density
-
 class GuidelineManager:
     """Parses urban_design_guidelines.md table for dynamic Zonal Metadata."""
     def __init__(self, filepath):
@@ -186,8 +113,6 @@ def remix_layers(seed_items):
         valid_sites = [f[:-4].replace("_", "").replace(" ", "") for f in os.listdir(SVG_DIR) if f.lower().endswith(".svg")]
     if not valid_sites: valid_sites = ["PershingSquare", "ParcdelaVillette", "ZaryadyePark", "Schouwburgplein"]
     
-    layer_to_cat = {l: cat for cat, layers in zonal_metadata.items() for l in layers}
-    
     composed = []
     
     if not isinstance(seed_items, list):
@@ -195,22 +120,6 @@ def remix_layers(seed_items):
         
     seed_items = seed_items[:5]
     
-    # 2. Count categories in this specific generation
-    # Keys must match zonal_metadata keys: "SOFT", "HARD", "PROG", "BLUE"
-    cat_counts = {"SOFT": 0, "HARD": 0, "PROG": 0, "BLUE": 0}
-    for item in seed_items:
-        cat = layer_to_cat.get(item.get("layer", "GREEN_SPACE"), "HARD")
-        if cat in cat_counts:
-            cat_counts[cat] += 1
-
-    # 3. Define safe middle-ground targets based on parsed guidelines
-    safe_targets = {}
-    for cat, limits in urban_guidelines.items():
-        safe_targets[cat] = (limits["min"] + limits["max"]) / 2.0
-        
-    # Realistic average footprint of a native SVG layer
-    base_layer_area = 65000  
-
     for item in seed_items:
         site = item.get("site", "PershingSquare")
         layer = item.get("layer", "GREEN_SPACE")
@@ -218,66 +127,12 @@ def remix_layers(seed_items):
         if site not in valid_sites: site = "PershingSquare"
         if layer not in valid_layers: layer = "GREEN_SPACE"
         
-        cat = layer_to_cat.get(layer, "HARD")
         prim = primitives_map.get(layer, "box")
-        count = cat_counts.get(cat, 0)
         
-        # Semantic Grid Translation Matrix
-        grid_map = {
-            "North": (0, -150), "North-East": (200, -150), "East": (200, 0),
-            "South-East": (200, 150), "South": (0, 150), "South-West": (-200, 150),
-            "West": (-200, 0), "North-West": (-200, -150), "Center": (0, 0)
-        }
-        
-        loc_str = item.get("location", "Center")
-        base_x, base_y = grid_map.get(loc_str, (0, 0))
-        
-        # Apply organic clustering jitter so objects in the same cell don't perfectly overlap
-        x = base_x + random.randint(-40, 40)
-        y = base_y + random.randint(-40, 40)
-        
-        # 4. Calculate deterministic scale using a Spatial Physics Solver
-        if count > 0 and cat in safe_targets:
-            target_layer_pct = safe_targets[cat] / count
-            site_w, site_h = 1224, 792
-            site_area = site_w * site_h
-            
-            # Fetch True Density Ratio to account for sparse/thin layers
-            density_ratio = get_layer_density(site, layer)
-            target_layer_area = (site_area * (target_layer_pct / 100.0)) / density_ratio
-            
-            base_side = math.sqrt(base_layer_area)
-            
-            # Iterative solver to find the perfect scale that results in the target VISIBLE area
-            final_scale = 1.0
-            step = 1.0
-            
-            for _ in range(15):
-                w = base_side * final_scale
-                h = base_side * final_scale
-                
-                # Calculate visible overlap with site boundary (origin is 0,0)
-                left = max(x - w/2, -site_w/2)
-                right = min(x + w/2, site_w/2)
-                top = max(y - h/2, -site_h/2)
-                bottom = min(y + h/2, site_h/2)
-                
-                visible_area = max(0, right - left) * max(0, bottom - top)
-                
-                if visible_area < target_layer_area:
-                    if visible_area == 0 and (x < -site_w/2 or x > site_w/2 or y < -site_h/2 or y > site_h/2):
-                        final_scale *= 0.8  # Penalize runaway scale if completely outside boundary
-                    else:
-                        final_scale += step
-                else:
-                    final_scale -= step
-                step /= 1.5
-            
-            # Cap scale: prevent runaway values when object lands outside boundary
-            final_scale = max(0.2, min(final_scale, 3.0))
-            final_scale = round(final_scale * random.uniform(0.95, 1.05), 2)
-        else:
-            final_scale = 1.0
+        # CLEAN SLATE: Flat 1.0 scale at origin (0,0)
+        final_scale = 1.0
+        x = 0
+        y = 0
             
         # Smart dimensions based on the calculated scale
         width = int(400 * final_scale)
@@ -287,7 +142,7 @@ def remix_layers(seed_items):
             "x": x,
             "y": y,
             "scale": final_scale,
-            "rot": random.choice([0, 90, 180, 270])
+            "rot": 0
         }
         
         composed.append({
