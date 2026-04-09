@@ -60,6 +60,18 @@ async def read_root():
     """Serves the main landing page."""
     return FileResponse(os.path.join(BASE_DIR, "templates", "index.html"))
 
+@app.get("/diagrams", response_class=HTMLResponse)
+async def viewer_2d():
+    """Serves the 2D interactive SVG viewer dashboard."""
+    return FileResponse(os.path.join(BASE_DIR, "templates", "viewer_2d.html"))
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    favicon_path = os.path.join(BASE_DIR, "static", "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path)
+    return JSONResponse(status_code=204, content=None)
+
 @app.get("/api/site-context")
 async def get_site_context():
     """Loads the base Rhino/DTLA context for the 3D viewer."""

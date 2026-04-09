@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Machine // 2D Spatial Remixer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+      body {
+          margin: 0;
+          overflow: hidden;
+          background-color: #050505;
+          color: #e0e0e0;
+          font-family: 'Courier New', Courier, monospace;
+      }
+      .viewer-grid {
+          display: grid;
+          grid-template-columns: 1fr 400px;
+          height: 100vh;
+      }
+      .svg-pane {
+          background-color: #ffffff; /* Clean white pane for SVG as requested in logs */
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 40px;
+          overflow: auto;
+          position: relative;
+      }
+      .svg-pane svg {
+          width: 100%;
+          height: 100%;
+          max-height: 80vh;
+          transition: all 0.3s ease;
+      }
+      .data-pane {
+          background-color: #0a0a0a;
+          border-left: 1px solid #333;
+          padding: 30px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          overflow-y: auto;
+      }
+      .site-selector select {
+          width: 100%;
+          background: #111;
+          color: #00ff66;
+          border: 1px solid #333;
+          padding: 10px;
+          font-family: inherit;
+          font-size: 1rem;
+          outline: none;
+          cursor: pointer;
+      }
+      #test-import-btn:not(:disabled):hover {
+          background: #03A9F4 !important;
+          color: #111 !important;
+          box-shadow: 0px 0px 8px rgba(3, 169, 244, 0.6);
+      }
+      #test-import-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+      }
+      #clear-btn:hover {
+          background: #ff4444 !important;
+          color: #111 !important;
+          box-shadow: 0px 0px 8px rgba(255, 68, 68, 0.6);
+      }
+      .layer-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          background: #111;
+          padding: 15px;
+          border: 1px solid #333;
+      }
+      .layer-toggle {
+          background: #222;
+          padding: 8px;
+          border: 1px solid;
+          font-family: inherit;
+          font-size: 0.85rem;
+          font-weight: bold;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.3s ease;
+      }
+      .layer-toggle:hover {
+          background: #333;
+      }
+      .data-output {
+          flex-grow: 1;
+          background: #000;
+          border: 1px solid #222;
+          padding: 15px;
+          overflow-y: auto;
+          font-size: 0.8rem;
+          color: #88ff88;
+          white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewer-grid">
+        <div class="svg-pane" id="svg-container">
+            <p style="color: #ccc; font-family: sans-serif; letter-spacing: 2px;">// AWAITING VECTOR DATA</p>
+        </div>
+        
+        <div class="data-pane">
+            <h2 style="color: #fff4ca; font-size: 1.2rem; margin: 0; letter-spacing: 0.1em;">SPATIAL DNA JSON</h2>
+            <div class="site-selector">
+                <select id="site-select">
+                    <option value="">[ SELECT TARGET SITE ]</option>
+                    <option value="Schouwburgplein">Schouwburgplein</option>
+                    <option value="ParcdelaVillette">Parc de la Villette</option>
+                    <option value="Pershing_Square">Pershing Square</option>
+                </select>
+                <button id="clear-btn" style="width: 100%; background: #222; color: #ff4444; border: 1px solid #ff4444; padding: 10px; margin-top: 10px; cursor: pointer; font-family: inherit; font-weight: bold; letter-spacing: 1px; transition: all 0.3s ease;">[ CLEAR SITE ]</button>
+                
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                    <h3 style="color: #9E9E9E; font-size: 0.85rem; margin-top: 0; margin-bottom: 8px;">CROSS-POLLINATOR TEST</h3>
+                    <select id="test-import-select" style="width: 100%; background: #111; color: #03A9F4; border: 1px solid #333; padding: 10px; margin-bottom: 8px; font-family: inherit; font-size: 0.85rem; outline: none;">
+                        <option value="Schouwburgplein|GREEN_SPACE">Schouwburgplein: GREEN_SPACE</option>
+                    </select>
+                    <button id="test-import-btn" style="width: 100%; background: #222; color: #03A9F4; border: 1px solid #03A9F4; padding: 10px; cursor: pointer; font-family: inherit; font-weight: bold; letter-spacing: 1px; transition: all 0.3s ease;">[ IMPORT ELEMENT ]</button>
+                </div>
+            </div>
+            
+            <div class="layer-stack" id="layer-stack">
+                <!-- Populated dynamically by JS -->
+            </div>
+
+            <div class="metrics-panel" style="background: #111; padding: 15px; border: 1px solid #333;">
+                <div style="display: flex; justify-content: space-between; color: #9E9E9E; font-family: monospace; font-weight: bold;">
+                    <span>HARDSCAPE (HARD_01)</span>
+                    <span id="metric-hardscape">---%</span>
+                </div>
+                <div style="width: 100%; background: #222; height: 10px; margin-top: 8px;">
+                    <div id="bar-hardscape" style="width: 0%; background: #9E9E9E; height: 100%; transition: width 0.5s ease;"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; color: #4CAF50; font-family: monospace; font-weight: bold; margin-top: 15px;">
+                    <span>SOFTSCAPE (SOFT_01)</span>
+                    <span id="metric-softscape">---%</span>
+                </div>
+                <div style="width: 100%; background: #222; height: 10px; margin-top: 8px;">
+                    <div id="bar-softscape" style="width: 0%; background: #4CAF50; height: 100%; transition: width 0.5s ease;"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; color: #03A9F4; font-family: monospace; font-weight: bold; margin-top: 15px;">
+                    <span>BLUE SPACE (BLUE_01)</span>
+                    <span id="metric-bluespace">---%</span>
+                </div>
+                <div style="width: 100%; background: #222; height: 10px; margin-top: 8px;">
+                    <div id="bar-bluespace" style="width: 0%; background: #03A9F4; height: 100%; transition: width 0.5s ease;"></div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; color: #FF9800; font-family: monospace; font-weight: bold; margin-top: 15px;">
+                    <span>ACTIVE PROGRAM (PROG_01)</span>
+                    <span id="metric-prog">---%</span>
+                </div>
+                <div style="width: 100%; background: #222; height: 10px; margin-top: 8px;">
+                    <div id="bar-prog" style="width: 0%; background: #FF9800; height: 100%; transition: width 0.5s ease;"></div>
+                </div>
+            </div>
+
+            <div class="data-output" id="json-output">
+                > WAITING FOR SELECTION...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateZonalMetrics() {
+            const svg = document.querySelector('#svg-container svg');
+            if (!svg) return;
+
+            const boundaryGroup = svg.querySelector('g[id="BOUNDARY"]') || svg.querySelector('g[id*="BOUNDARY"]');
+            if (!boundaryGroup) return;
+
+            try {
+                // Get absolute bounding area for the Site Boundary to prevent exploded-line collapse
+                const boundaryBBox = boundaryGroup.getBBox();
+                const totalSiteArea = boundaryBBox.width * boundaryBBox.height;
+                if (totalSiteArea === 0) return;
+
+                // Shoelace Formula Helper via Native SVG Path Walking
+                function getExactArea(group) {
+                    let totalArea = 0;
+                    group.querySelectorAll('path, polygon, polyline, rect, circle, ellipse').forEach(el => {
+                        if (typeof el.getTotalLength !== 'function') return;
+                        
+                        const len = el.getTotalLength();
+                        if (len <= 0) return;
+
+                        // Sample points along the path to accurately trace bezier curves
+                        const points = [];
+                        const numSamples = 50; 
+                        const step = len / numSamples;
+                        
+                        for (let i = 0; i < numSamples; i++) {
+                            points.push(el.getPointAtLength(i * step));
+                        }
+                        
+                        // Apply Shoelace formula on the exact perimeter path
+                        let area = 0;
+                        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                            area += (points[j].x + points[i].x) * (points[j].y - points[i].y);
+                        }
+                        totalArea += Math.abs(area / 2);
+                    });
+                    return totalArea;
+                }
+
+                let softscapeArea = 0;
+                let blueSpaceArea = 0;
+                let activeProgramArea = 0;
+
+                // Calculate exact mathematical area of specific metric layers
+                const groups = Array.from(svg.querySelectorAll('g[id]'));
+                groups.forEach(g => {
+                    const id = g.getAttribute('id').toUpperCase();
+                    const isVisible = g.style.display !== 'none' && g.style.opacity !== '0';
+
+                    if (isVisible) {
+                        if (id.includes('GREEN') || id.includes('SOFT')) {
+                            softscapeArea += getExactArea(g);
+                        } else if (id.includes('WATER') || id.includes('BLUE')) {
+                            blueSpaceArea += getExactArea(g);
+                        } else if (id.includes('FURNITURE') || id.includes('PROG')) {
+                            activeProgramArea += getExactArea(g);
+                        }
+                    }
+                });
+
+                // Prevent floating point errors from dropping it below 0% or above 100%
+                softscapeArea = Math.min(softscapeArea, totalSiteArea);
+                blueSpaceArea = Math.min(blueSpaceArea, totalSiteArea);
+                activeProgramArea = Math.min(activeProgramArea, totalSiteArea);
+                
+                // Hardscape is exactly whatever is left over
+                let hardscapeArea = totalSiteArea - (softscapeArea + blueSpaceArea + activeProgramArea);
+                hardscapeArea = Math.max(hardscapeArea, 0); // Prevent negative if bounding boxes overlap too much
+
+                const hardscapePercentage = ((hardscapeArea / totalSiteArea) * 100).toFixed(1);
+                const softscapePercentage = ((softscapeArea / totalSiteArea) * 100).toFixed(1);
+                const blueSpacePercentage = ((blueSpaceArea / totalSiteArea) * 100).toFixed(1);
+                const activeProgramPercentage = ((activeProgramArea / totalSiteArea) * 100).toFixed(1);
+
+                document.getElementById('metric-hardscape').textContent = `${hardscapePercentage}%`;
+                document.getElementById('bar-hardscape').style.width = `${hardscapePercentage}%`;
+                document.getElementById('metric-softscape').textContent = `${softscapePercentage}%`;
+                document.getElementById('bar-softscape').style.width = `${softscapePercentage}%`;
+                document.getElementById('metric-bluespace').textContent = `${blueSpacePercentage}%`;
+                document.getElementById('bar-bluespace').style.width = `${blueSpacePercentage}%`;
+                document.getElementById('metric-prog').textContent = `${activeProgramPercentage}%`;
+                document.getElementById('bar-prog').style.width = `${activeProgramPercentage}%`;
+            } catch (e) {
+                console.warn("Awaiting layout rendering to calculate metrics...");
+            }
+        }
+
+        async function loadDiagram(site) {
+            if (!site) return;
+            
+            const svgContainer = document.getElementById('svg-container');
+            const jsonOutput = document.getElementById('json-output');
+            
+            svgContainer.innerHTML = '<p style="color: #ccc; font-family: sans-serif; letter-spacing: 2px;">// LOADING VECTOR DATA...</p>';
+            jsonOutput.textContent = '> FETCHING SPATIAL DNA...';
+            
+            try {
+                const res = await fetch(`/api/diagram-data/${site}`);
+                if (!res.ok) throw new Error('Diagram not found on server.');
+                const data = await res.json();
+                
+                // Inject the raw SVG code into the DOM
+                svgContainer.innerHTML = data.svg;
+                
+                // Set up the clipping mask using the BOUNDARY layer
+                const svg = svgContainer.querySelector('svg');
+                if (svg) {
+                    const boundaryGroup = svg.querySelector('g[id="BOUNDARY"]') || svg.querySelector('g[id*="BOUNDARY"]');
+                    if (boundaryGroup) {
+                        let defs = svg.querySelector('defs');
+                        if (!defs) {
+                            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                            svg.insertBefore(defs, svg.firstChild);
+                        }
+                        
+                        const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+                        clipPath.setAttribute('id', 'site-clip');
+                        
+                        // Clone the boundary paths into the clipPath
+                        Array.from(boundaryGroup.children).forEach(child => {
+                            const maskShape = child.cloneNode(true);
+                            maskShape.setAttribute('fill', '#FFFFFF'); // Make the clipping mask solid so content is visible!
+                            clipPath.appendChild(maskShape);
+                        });
+                        // Use a solid bounding box rect instead of exploded Rhino lines to guarantee mask area!
+                        const bBBox = boundaryGroup.getBBox();
+                        const maskRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        maskRect.setAttribute('x', bBBox.x);
+                        maskRect.setAttribute('y', bBBox.y);
+                        maskRect.setAttribute('width', bBBox.width);
+                        maskRect.setAttribute('height', bBBox.height);
+                        clipPath.appendChild(maskRect);
+                        
+                        defs.appendChild(clipPath);
+
+                        // Create a master group for newly generated elements masked to the boundary
+                        const generatedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        generatedGroup.setAttribute('id', 'GENERATED_STACK');
+                        generatedGroup.setAttribute('clip-path', 'url(#site-clip)');
+                        svg.appendChild(generatedGroup);
+                        
+                        // Make the Boundary line thick and black for now
+                        boundaryGroup.querySelectorAll('path, polyline, polygon, line, rect').forEach(el => {
+                            el.setAttribute('stroke', '#000000');
+                            el.setAttribute('stroke-width', '3');
+                            el.setAttribute('fill', 'none');
+                        });
+                    }
+                }
+                
+                // --- BUILD LAYER STACK ---
+                const layerStack = document.getElementById('layer-stack');
+                layerStack.innerHTML = '<div style="color: #9E9E9E; font-family: monospace; font-weight: bold; margin-bottom: 5px;">PROGRAMMABLE LAYERS</div>';
+                
+                const contextLayers = ['BOUNDARY', 'BUILDINGS', 'STREET', 'GENERATED_STACK'];
+                const groups = Array.from(svg.querySelectorAll('g[id]'));
+                
+                groups.forEach(g => {
+                    const rawId = g.getAttribute('id');
+                    const id = rawId.toUpperCase();
+                    
+                    // Skip context layers
+                    if (contextLayers.some(ctx => id.includes(ctx))) return;
+                    
+                    // Color code the toggle based on Zonal Metrics
+                    let color = '#9E9E9E'; 
+                    if (id.includes('GREEN') || id.includes('SOFT')) color = '#4CAF50';
+                    else if (id.includes('WATER') || id.includes('BLUE')) color = '#03A9F4';
+                    else if (id.includes('FURNITURE') || id.includes('PROG')) color = '#FF9800';
+                    else if (id.includes('PATH')) color = '#ccaa66';
+                    else return; // Skip generating buttons for raw Rhino sub-groups to prevent extreme lag
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'layer-toggle active';
+                    btn.style.color = color;
+                    btn.style.borderColor = color;
+                    btn.innerHTML = `[ ON ] ${rawId}`;
+                    btn.dataset.layerId = rawId;
+                    
+                    btn.addEventListener('click', () => {
+                        const isActive = btn.classList.contains('active');
+                        if (isActive) {
+                            btn.classList.remove('active');
+                            btn.innerHTML = `[ OFF ] ${rawId}`;
+                            btn.style.opacity = '0.5';
+                            g.style.opacity = '0';
+                            setTimeout(() => g.style.display = 'none', 300);
+                        } else {
+                            btn.classList.add('active');
+                            btn.innerHTML = `[ ON ] ${rawId}`;
+                            btn.style.opacity = '1';
+                            g.style.display = 'block';
+                            setTimeout(() => g.style.opacity = '1', 10);
+                        }
+                        setTimeout(updateZonalMetrics, 50);
+                    });
+                    
+                    layerStack.appendChild(btn);
+                });
+                
+                // Display the JSON data in the right pane
+                jsonOutput.textContent = JSON.stringify(data, null, 2);
+                
+                // Calculate initial metrics
+                setTimeout(updateZonalMetrics, 100);
+            } catch (err) {
+                svgContainer.innerHTML = `<p style="color: #ff4444; font-family: sans-serif; letter-spacing: 2px;">// ERROR: ${err.message}</p>`;
+                jsonOutput.textContent = `> ERR: ${err.message}`;
+            }
+        }
+        
+        document.getElementById('site-select').addEventListener('change', (e) => loadDiagram(e.target.value));
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            const svg = document.querySelector('#svg-container svg');
+            if (!svg) return;
+
+            // Hide non-context groups with a smooth fade
+            const groups = Array.from(svg.querySelectorAll('g[id]'));
+            groups.forEach(g => {
+                const id = g.getAttribute('id').toUpperCase();
+                const shouldKeep = id === 'BOUNDARY' || id.includes('BUILDINGS') || id === 'STREET';
+                
+                if (!shouldKeep && id !== 'GENERATED_STACK') {
+                    g.style.opacity = '0';
+                    setTimeout(() => g.style.display = 'none', 300);
+                }
+            });
+            
+            // Sync UI toggle switches (Moved outside the loop to prevent extreme lag!)
+            document.querySelectorAll('.layer-toggle').forEach(btn => {
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = `[ OFF ] ${btn.dataset.layerId}`;
+                    btn.style.opacity = '0.5';
+                }
+            });
+            
+            // Recalculate metrics after the fade-out completes
+            setTimeout(updateZonalMetrics, 350);
+        });
+        
+        document.getElementById('test-import-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('test-import-btn');
+            btn.disabled = true;
+            btn.textContent = '[ FETCHING... ]';
+            
+            try {
+                const res = await fetch('/api/diagram-data/Schouwburgplein');
+                if (!res.ok) throw new Error('Could not load Schouwburgplein data.');
+                const data = await res.json();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.svg, "image/svg+xml");
+                
+                // Grab the Green Space Layer
+                const sourceGroup = doc.querySelector('g[id="GREEN_SPACE"]') || doc.querySelector('g[id*="GREEN"]');
+                if (!sourceGroup) throw new Error('GREEN_SPACE layer not found in Schouwburgplein.');
+                
+                const targetSvg = document.querySelector('#svg-container svg');
+                const generatedStack = document.getElementById('GENERATED_STACK');
+                
+                const clone = sourceGroup.cloneNode(true);
+                const newId = `SCHOUWBURGPLEIN_GREEN_SPACE_${Date.now()}`;
+                clone.setAttribute('id', newId);
+                
+                // Sanitize and Color Sync to ensure it renders and counts toward Softscape
+                clone.removeAttribute('display');
+                clone.style.display = 'block';
+                clone.querySelectorAll('[display="none"], [style*="display: none"]').forEach(el => {
+                    el.removeAttribute('display');
+                    el.style.display = '';
+                });
+                clone.querySelectorAll('path, polygon, rect, polyline, circle, ellipse').forEach(el => {
+                    el.setAttribute('fill', '#4CAF50'); // Set to Softscape Green
+                    el.setAttribute('stroke', '#4CAF50');
+                    el.setAttribute('opacity', '0.85');
+                });
+                
+                // Temporarily append to the main SVG canvas so getBBox() calculates correctly (unclipped)
+                targetSvg.appendChild(clone);
+                
+                // Smart Centering
+                const boundaryGroup = targetSvg.querySelector('g[id="BOUNDARY"]') || targetSvg.querySelector('g[id*="BOUNDARY"]');
+                const tBBox = boundaryGroup.getBBox();
+                const targetCx = tBBox.x + (tBBox.width / 2);
+                const targetCy = tBBox.y + (tBBox.height / 2);
+                
+                const sBBox = clone.getBBox();
+                const sourceCx = sBBox.x + (sBBox.width / 2);
+                const sourceCy = sBBox.y + (sBBox.height / 2);
+                
+                const tx = targetCx - sourceCx;
+                const ty = targetCy - sourceCy;
+                clone.setAttribute('transform', `translate(${tx}, ${ty})`);
+                
+                // Move the properly-measured shape into the masked stack
+                generatedStack.appendChild(clone);
+                
+                // Recalculate metrics immediately!
+                updateZonalMetrics();
+                
+                // Give some UI feedback
+                btn.textContent = '[ SUCCESS! ]';
+                setTimeout(() => { btn.textContent = '[ IMPORT ELEMENT ]'; btn.disabled = false; }, 1500);
+                
+            } catch (err) {
+                console.error(err);
+                btn.textContent = '[ ERROR ]';
+                setTimeout(() => { btn.textContent = '[ IMPORT ELEMENT ]'; btn.disabled = false; }, 2000);
+            }
+        });
+
+        // Auto-load Pershing Square on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('site-select').value = 'Pershing_Square';
+            loadDiagram('Pershing_Square');
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Machine // SVG Builder</title>
+    <style>
+        :root { --bg-color: #050505; --text-color: #e0e0e0; --accent: #fff4ca; }
+        body { font-family: 'Courier New', Courier, monospace; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
+        #svg-container { background: #111; border: 1px solid #333; padding: 20px; min-height: 500px; display: flex; justify-content: center; align-items: center; overflow: auto; }
+        svg { max-width: 100%; height: auto; border: 1px dashed #444; }
+        #validation-results { margin-top: 20px; padding: 15px; border: 1px solid #333; background: #0a0a0a; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .valid { color: #00ff66; font-weight: bold; }
+        .invalid { color: #ff3366; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📐 2D SVG Builder</h1>
+        <div>Target: <strong id="site-name" style="color: #00ff66;">Loading...</strong></div>
+    </div>
+    
+    <div id="svg-container">
+        <p id="loading-msg">Loading Pershing Square diagram...</p>
+    </div>
+    
+    <div id="validation-results">
+        <h3 style="margin-top:0; color:#888;">Spatial Constraints Validation</h3>
+        <div id="stats"><p><i>Waiting for SVG data...</i></p></div>
+    </div>
+
+    <script>
+        // Shoelace Formula to calculate the area of standard SVG polygons
+        function calculatePolygonArea(points) {
+            let area = 0;
+            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                area += (points[j].x + points[i].x) * (points[j].y - points[i].y);
+            }
+            return Math.abs(area / 2);
+        }
+
+        function getSvgPolygonArea(polygonElement) {
+            const points = [];
+            for (let i = 0; i < polygonElement.points.numberOfItems; i++) {
+                points.push(polygonElement.points.getItem(i));
+            }
+            return calculatePolygonArea(points);
+        }
+
+        function validateUrbanHeuristics(svgElement) {
+            let totalSiteArea = 0;
+            let areas = { hardscape: 0, greenSpace: 0, water: 0, shade: 0 };
+
+            // Use loose selectors to support varying Rhino SVG ID exports
+            const boundaryPolygons = svgElement.querySelectorAll('g[id*="Boundary"] polygon');
+            boundaryPolygons.forEach(poly => totalSiteArea += getSvgPolygonArea(poly));
+
+            if (totalSiteArea === 0) {
+                document.getElementById('stats').innerHTML = '<p class="invalid">No Boundary polygons found to calculate area.</p>';
+                return;
+            }
+
+            const layerMapping = {
+                'g[id*="Hardscape"] polygon': 'hardscape',
+                'g[id*="Green"] polygon': 'greenSpace',
+                'g[id*="Water"] polygon': 'water',
+                'g[id*="Shade"] polygon': 'shade'
+            };
+
+            for (const [selector, key] of Object.entries(layerMapping)) {
+                const polygons = svgElement.querySelectorAll(selector);
+                polygons.forEach(poly => areas[key] += getSvgPolygonArea(poly));
+            }
+
+            const hardscapePct = (areas.hardscape / totalSiteArea) * 100;
+            const greenSpacePct = (areas.greenSpace / totalSiteArea) * 100;
+            const waterPct = (areas.water / totalSiteArea) * 100;
+            const shadePct = (areas.shade / totalSiteArea) * 100;
+
+            let html = `<div class="stat-row"><span style="color:#aaa;">Total Area:</span> <span>${totalSiteArea.toFixed(2)} units²</span></div>`;
+            html += `<div class="stat-row ${hardscapePct >= 30 && hardscapePct <= 50 ? 'valid' : 'invalid'}"><span>Hardscape (Target 30-50%):</span> <span>${hardscapePct.toFixed(1)}%</span></div>`;
+            html += `<div class="stat-row ${greenSpacePct >= 40 && greenSpacePct <= 60 ? 'valid' : 'invalid'}"><span>Green Space (Target 40-60%):</span> <span>${greenSpacePct.toFixed(1)}%</span></div>`;
+            html += `<div class="stat-row ${waterPct >= 5 && waterPct <= 15 ? 'valid' : 'invalid'}"><span>Water Features (Target 5-15%):</span> <span>${waterPct.toFixed(1)}%</span></div>`;
+            html += `<div class="stat-row ${shadePct >= 30 ? 'valid' : 'invalid'}"><span>Shade Coverage (Target >30%):</span> <span>${shadePct.toFixed(1)}%</span></div>`;
+            
+            document.getElementById('stats').innerHTML = html;
+        }
+
+        async function loadDefaultDiagram() {
+            try {
+                // Automatically fetches the active default target setup in app.py
+                const response = await fetch('/api/default-diagram');
+                const data = await response.json();
+                
+                if (data.svg) {
+                    document.getElementById('site-name').innerText = data.site || "Pershing Square";
+                    const container = document.getElementById('svg-container');
+                    container.innerHTML = data.svg;
+                    
+                    // Run mathematical validation immediately on the loaded SVG
+                    const svgElement = container.querySelector('svg');
+                    if(svgElement) validateUrbanHeuristics(svgElement);
+                } else {
+                    document.getElementById('svg-container').innerHTML = "<p class='invalid'>Failed to load SVG data.</p>";
+                }
+            } catch (err) {
+                document.getElementById('svg-container').innerHTML = "<p class='invalid'>Error fetching diagram: " + err + "</p>";
+            }
+        }
+
+        // Execute on start!
+        window.onload = loadDefaultDiagram;
+    </script>
+</body>
+</html>
