@@ -166,17 +166,17 @@ const MemoryState = {
    * All zone types (SOFT/HARD/PROG/BLUE) are summed directly — no residual.
    */
   getProgramStats() {
-    if (this.stack.length === 0 || !window.Engine2D) return { SOFT: 0, HARD: 0, PROG: 0, BLUE: 0 };
+    if (this.stack.length === 0 || !window.Engine2D) return { SOFT: 0, SHADE: 0, HARD: 0, PROG: 0, BLUE: 0 };
 
     const baseSVG = this.svgCache['PershingSquare'];
-    if (!baseSVG) return { SOFT: 0, HARD: 0, PROG: 0, BLUE: 0 };
+    if (!baseSVG) return { SOFT: 0, SHADE: 0, HARD: 0, PROG: 0, BLUE: 0 };
 
     const baseEl   = window.Engine2D.parseSVG(baseSVG);
     const baseBBox = window.Engine2D.getBoundaryBBox(baseEl);
     const siteArea = baseBBox.w * baseBBox.h;
     if (siteArea === 0) return { SOFT: 0, HARD: 0, PROG: 0, BLUE: 0 };
 
-    const totals = { SOFT: 0, HARD: 0, PROG: 0, BLUE: 0 };
+    const totals = { SOFT: 0, SHADE: 0, HARD: 0, PROG: 0, BLUE: 0 };
     const cx = baseBBox.x + baseBBox.w / 2;
     const cy = baseBBox.y + baseBBox.h / 2;
 
@@ -187,7 +187,8 @@ const MemoryState = {
 
       // Zone classification — PEDESTRIAN_PATH counts as HARD
       let type = 'HARD';
-      if (lId.includes('GREEN') || lId.includes('SHADE'))           type = 'SOFT';
+      if (lId.includes('SHADE'))                                     type = 'SHADE';
+      else if (lId.includes('GREEN'))                                type = 'SOFT';
       else if (lId.includes('WATER'))                                type = 'BLUE';
       else if (lId.includes('ATTRACTOR') || lId.includes('UNIQUE')) type = 'PROG';
 
@@ -243,10 +244,11 @@ const MemoryState = {
     });
 
     return {
-      SOFT: Math.min(100, (totals.SOFT / siteArea) * 100),
-      HARD: Math.min(100, (totals.HARD / siteArea) * 100),
-      PROG: Math.min(100, (totals.PROG / siteArea) * 100),
-      BLUE: Math.min(100, (totals.BLUE / siteArea) * 100)
+      SOFT:  Math.min(100, (totals.SOFT  / siteArea) * 100),
+      SHADE: Math.min(100, (totals.SHADE / siteArea) * 100),
+      HARD:  Math.min(100, (totals.HARD  / siteArea) * 100),
+      PROG:  Math.min(100, (totals.PROG  / siteArea) * 100),
+      BLUE:  Math.min(100, (totals.BLUE  / siteArea) * 100)
     };
   },
 

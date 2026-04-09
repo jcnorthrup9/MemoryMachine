@@ -113,19 +113,29 @@ def remix_layers(seed_items):
         valid_sites = [f[:-4].replace("_", "").replace(" ", "") for f in os.listdir(SVG_DIR) if f.lower().endswith(".svg")]
     if not valid_sites: valid_sites = ["PershingSquare", "ParcdelaVillette", "ZaryadyePark", "Schouwburgplein"]
     
+    # Layers that only exist in specific SVGs — always route to their canonical site
+    LAYER_SITE_AFFINITY = {
+        "SHADE":       "Schouwburgplein",
+        "AMPHITHEATRE": "ZaryadyePark",
+    }
+
     composed = []
-    
+
     if not isinstance(seed_items, list):
         return composed
-        
+
     seed_items = seed_items[:5]
-    
+
     for item in seed_items:
         site = item.get("site", "PershingSquare")
         layer = item.get("layer", "GREEN_SPACE")
-        
-        if site not in valid_sites: site = "PershingSquare"
+
         if layer not in valid_layers: layer = "GREEN_SPACE"
+        # Override site if the layer only exists in a specific SVG
+        if layer in LAYER_SITE_AFFINITY:
+            site = LAYER_SITE_AFFINITY[layer]
+        elif site not in valid_sites:
+            site = "PershingSquare"
         
         prim = primitives_map.get(layer, "box")
         

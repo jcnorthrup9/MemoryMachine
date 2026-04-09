@@ -86,7 +86,6 @@ const Engine2D = {
     // Apply Theme Stylings 
     const isLightMode = document.body.classList.contains('light-mode');
     const bgFill = isLightMode ? '#ffffff' : '#050505';
-    const ctxStroke = isLightMode ? '#cccccc' : '#444444';
     const bndStroke = isLightMode ? '#000000' : '#ffffff';
 
     const svg = document.createElementNS(ns, 'svg');
@@ -103,9 +102,9 @@ const Engine2D = {
     // 1. DYNAMIC CONTEXT: Streets & Buildings
     const contextGroup = document.createElementNS(ns, 'g');
     contextGroup.setAttribute('class', 'context-group');
-    let contextKeywords = ['STREET', 'BUILDING', 'PARKING', 'PEDESTRIAN'];
-    
-    // If base is cleared, remove internal park infrastructure from context
+    let contextKeywords = ['STREET', 'BUILDING', 'PARKING', 'PEDESTRIAN', 'GREEN_SPACE', 'WATER', 'SHADE', 'FURNITURE'];
+
+    // If base is cleared, keep only urban fabric outside the park boundary
     if (MemoryState.baseCleared) {
       contextKeywords = ['STREET', 'BUILDING'];
     }
@@ -121,15 +120,43 @@ const Engine2D = {
 
       if (contextKeywords.some(key => upperId.includes(key))) {
         const c = g.cloneNode(true);
+        // Remap Rhino layer colours to the app colour system.
+        // Preserve native stroke-widths — they encode Rhino lineweight hierarchy.
+        // Assign color by layer type for dark mode (app color system)
+        let darkCol;
+        if (upperId.includes('GREEN') || upperId.includes('SHADE'))          darkCol = '#4CAF50';
+        else if (upperId.includes('WATER'))                                   darkCol = '#03A9F4';
+        else if (upperId.includes('ATTRACTOR') || upperId.includes('UNIQUE')) darkCol = '#FF9800';
+        else if (upperId.includes('STREET') && !upperId.includes('FURNITURE')) darkCol = '#aaaaaa';
+        else if (upperId.includes('PEDESTRIAN'))                              darkCol = '#888888';
+        else                                                                  darkCol = '#666666';
+
+        // Greyscale tone for light mode
+        let lightCol;
+        if (upperId.includes('STREET') && !upperId.includes('FURNITURE')) lightCol = '#000000';
+        else if (upperId.includes('PEDESTRIAN'))                           lightCol = '#333333';
+        else                                                               lightCol = '#555555';
+
         c.querySelectorAll('path, polyline, line, polygon, rect, circle').forEach(p => {
-          p.setAttribute('fill', 'none'); 
-          p.style.fill = 'none';
-          p.setAttribute('stroke', ctxStroke); 
-          p.style.stroke = ctxStroke;
-          p.setAttribute('stroke-width', '2'); // Make streets thicker
-          p.style.strokeWidth = '2';
+          if (isLightMode) {
+            // Light mode: clean greyscale technical drawing — remap all strokes to black/grey, strip fills
+            p.setAttribute('stroke', lightCol);
+            p.style.stroke = lightCol;
+            p.setAttribute('fill', 'none');
+            p.style.fill = 'none';
+            // Cap heavy Rhino lineweights (STREET at 2.55 → 1.5)
+            const sw = parseFloat(p.getAttribute('stroke-width') || '1');
+            if (sw > 1.5) { p.setAttribute('stroke-width', '1.5'); p.style.strokeWidth = '1.5'; }
+          } else {
+            // Dark mode: apply app color system (greens, blues, oranges, greys)
+            p.setAttribute('stroke', darkCol);
+            p.style.stroke = darkCol;
+            p.setAttribute('fill', 'none');
+            p.style.fill = 'none';
+            const sw = parseFloat(p.getAttribute('stroke-width') || '1');
+            if (sw > 0.8) { p.setAttribute('stroke-width', '0.8'); p.style.strokeWidth = '0.8'; }
+          }
         });
-        c.style.opacity = '0.6';
         contextGroup.appendChild(c);
       }
     });
@@ -158,6 +185,7 @@ const Engine2D = {
       
       MemoryState.stack.forEach(item => {
         if (!item.visible) return;
+        if (item.contextLayer) return; // drawn by context-group; skip here
         const siteSVG = MemoryState.svgCache[item.site];
         if (!siteSVG) return;
         
@@ -185,21 +213,22 @@ const Engine2D = {
           
           xformed.querySelectorAll('path, polyline, line, polygon, rect, circle').forEach(el => {
             const finalCol = isLightMode ? '#222222' : item.color;
-            
-            // Preserve lineweights/dashes from Rhino, but override colors based on HUD
+            const finalFill = isLightMode ? '#888888' : item.color;
+
+            // Preserve lineweights/dashes from Rhino, but override colors
             const origFill = el.getAttribute('fill') || el.style.fill;
             const hadFill = (origFill && origFill !== 'none' && origFill !== '');
-            
+
             if (hadFill) {
-              el.setAttribute('fill', item.color);
-              el.style.fill = item.color;
+              el.setAttribute('fill', finalFill);
+              el.style.fill = finalFill;
               el.setAttribute('fill-opacity', '0.3');
               el.style.fillOpacity = '0.3';
             } else {
-              el.setAttribute('fill', 'none'); 
+              el.setAttribute('fill', 'none');
               el.style.fill = 'none';
             }
-            
+
             el.setAttribute('stroke', finalCol);
             el.style.stroke = finalCol;
             el.setAttribute('data-orig-color', item.color); // Store for colored exports

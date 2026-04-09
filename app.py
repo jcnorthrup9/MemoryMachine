@@ -7,10 +7,6 @@ import xml.etree.ElementTree as ET
 import sys
 import asyncio
 
-# Fix for Playwright subprocess error on Windows (NotImplementedError)
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
 # --- MODULAR LOGIC IMPORTS ---
 from logic.geometry_engine import build_geometries
 from logic.urban_engine import GuidelineManager, remix_layers, guideline_manager
@@ -58,6 +54,10 @@ except Exception as e:
 # --- STATIC MOUNTS ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/archive", StaticFiles(directory="html"), name="archive")
+
+models_dir = os.path.join(BASE_DIR, 'models')
+os.makedirs(models_dir, exist_ok=True)
+app.mount("/models", StaticFiles(directory="models"), name="models")
 
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
@@ -159,22 +159,22 @@ async def export_diagram(payload: ExportPayload):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/capture-dashboard")
-async def capture_dashboard(payload: CapturePayload):
+def capture_dashboard(payload: CapturePayload):
     """Uses headless Playwright to take a pixel-perfect snapshot of the UI."""
     try:
-        from playwright.async_api import async_playwright
+        from playwright.sync_api import sync_playwright
         import time
         export_dir = os.path.join(BASE_DIR, 'archive', 'workflowScreenshots', 'appTests')
         os.makedirs(export_dir, exist_ok=True)
         filepath = os.path.join(export_dir, f"dashboard_capture_{int(time.time()*1000)}.jpg")
         
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page(viewport={"width": 1920, "height": 1080})
-            await page.goto("http://127.0.0.1:8000/", wait_until="networkidle")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1920, "height": 1080})
+            page.goto("http://127.0.0.1:8000/", wait_until="networkidle")
             
             if payload.isLightMode:
-                await page.evaluate("document.body.classList.add('light-mode'); document.body.classList.remove('dark-mode');")
+                page.evaluate("document.body.classList.add('light-mode'); document.body.classList.remove('dark-mode');")
                 
             state_script = f"""
                 async () => {{
@@ -217,11 +217,11 @@ async def capture_dashboard(payload: CapturePayload):
                     }}
                 }}
             """
-            await page.evaluate(f"({state_script})()")
-            await page.wait_for_timeout(1500) # Give 1.5 seconds for ThreeJS/SVG to render
+            page.evaluate(f"({state_script})()")
+            page.wait_for_timeout(1500) # Give 1.5 seconds for ThreeJS/SVG to render
             
-            await page.screenshot(path=filepath, type="jpeg", quality=95)
-            await browser.close()
+            page.screenshot(path=filepath, type="jpeg", quality=95)
+            browser.close()
             
         return {"status": "success", "path": filepath}
     except Exception as e:

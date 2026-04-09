@@ -5,37 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Memory Machine // Digital Palimpsest</title>
     <link rel="icon" href="data:," />
+    <!-- Fonts: Space Grotesk (headlines) / Space Mono (labels) / Inter (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   </head>
-  <body class="dark-mode">
+  <body class="panel-collapsed">
     <header class="app-header">
         <div class="header-left">
             <h1>MEMORY MACHINE <span>// DIGITAL PALIMPSEST</span></h1>
         </div>
         <div class="header-right">
-            <select id="load-svg-dropdown">
-                <option value="">Load SVG file...</option>
-                <option value="PershingSquare" selected>Pershing Square</option>
-                <option value="ParcdelaVillette">Parc de la Villette</option>
-                <option value="ZaryadyePark">Zaryadye Park</option>
-                <option value="Schouwburgplein">Schouwburgplein</option>
-            </select>
-                <button id="capture-ui-btn" class="secondary-btn" title="Capture Dashboard UI">Capture UI</button>
-                <button id="auto-export-toggle" class="secondary-btn" style="color: var(--green); border-color: var(--green);" title="Automatically export SVG & JPG after generation">Auto-Export: ON</button>
+            <button id="auto-export-toggle" class="icon-btn export-toggle-on" title="Auto-export SVG & JPG after generation — click to toggle">⬡</button>
             <button id="theme-toggle" class="icon-btn">☀ / ☾</button>
         </div>
     </header>
+
+    <!-- Panel collapse tab — sits on the right edge of the canvas -->
+    <button id="panel-toggle" class="panel-toggle-tab" title="Toggle panel">›</button>
 
     <div class="main-grid">
         <!-- Left Panel: Viewports -->
         <div class="visual-panel">
             <div class="tab-nav">
                 <button class="tab-btn active" data-tab="2d">2D Canvas</button>
-                <button class="tab-btn" data-tab="3d">3D Preview</button>
+                <button class="tab-btn" data-tab="3d">3D Viewer</button>
                 <div class="tab-controls">
-                    <button id="lofi-toggle-btn" class="secondary-btn">Lofi 3D Inset</button>
                     <div class="mode-toggle">
                         <span class="mode-label">Draft</span>
                         <label class="switch">
@@ -44,19 +45,16 @@
                         </label>
                         <span class="mode-label">Dream ✦</span>
                     </div>
-                    <button id="deploy-3d-btn" class="primary-btn">Deploy to 3D</button>
-                    <button id="clear-stack-btn" class="danger-btn">Clear Stack</button>
                 </div>
             </div>
 
             <div class="tab-content-container">
                 <div id="tab-2d" class="tab-pane active">
                     <div id="remix-svg-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;"></div>
-                    <div id="lofi-3d-inset" class="lofi-inset hidden"></div>
                 </div>
                 <div id="tab-3d" class="tab-pane">
                     <div id="canvas-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;">
-                        <div id="canvas-placeholder">3D PREVIEW — GENERATE OR DEPLOY TO ACTIVATE</div>
+                        <div id="canvas-placeholder">3D VIEWER — GENERATE OR DEPLOY TO ACTIVATE</div>
                     </div>
                 </div>
             </div>
@@ -71,46 +69,59 @@
             <div id="narrative-output" class="narrative-output">
                 <pre>> MEMORY MACHINE v1.2 // AWAITING INPUT</pre>
             </div>
-            <div class="input-container">
-                <span class="prompt-arrow">></span>
-                <input type="text" id="prompt-input" placeholder="Describe a spatial memory to cross-pollinate..." autofocus>
-                <button id="generate-btn">GEN</button>
-            </div>
 
             <!-- ── PANEL RESIZER ─────────────────────────────────────── -->
             <div id="panel-resizer" class="panel-resizer" title="Drag to resize"></div>
 
             <!-- ── STACK EDITOR ──────────────────────────────────────── -->
             <div class="stack-editor">
-                <div class="stack-editor-header">
+                <div class="stack-editor-header" id="stack-toggle" role="button" title="Toggle layer stack">
                     <span class="section-label">LAYER STACK</span>
-                    <span id="stack-count" class="stack-count">0 LAYERS</span>
+                    <div class="stack-header-right">
+                        <span id="stack-count" class="stack-count">0 LAYERS</span>
+                        <span class="stack-chevron">▾</span>
+                    </div>
                 </div>
-                <div id="stack-list" class="stack-list">
-                    <div class="stack-empty">No layers generated yet.</div>
-                </div>
-                <!-- Slider panel — shown when a layer is selected -->
-                <div id="xform-panel" class="xform-panel" style="display:none;">
-                    <div class="xform-label" id="xform-title">SELECT A LAYER</div>
-                    <div class="xform-row">
-                        <label>X</label>
-                        <input type="range" id="xform-x" min="-400" max="400" value="0" step="1">
-                        <input type="number" id="xform-x-val" class="xform-val-input" step="1">
+                <div class="stack-body">
+                    <div id="stack-list" class="stack-list">
+                        <div class="stack-empty">No layers generated yet.</div>
                     </div>
-                    <div class="xform-row">
-                        <label>Y</label>
-                        <input type="range" id="xform-y" min="-300" max="300" value="0" step="1">
-                        <input type="number" id="xform-y-val" class="xform-val-input" step="1">
+                    <!-- Manual layer picker -->
+                    <div class="layer-picker">
+                        <select id="picker-site" class="picker-select" title="Site">
+                            <option value="PershingSquare">Pershing Sq</option>
+                            <option value="ParcdelaVillette">Villette</option>
+                            <option value="ZaryadyePark">Zaryadye</option>
+                            <option value="Schouwburgplein">Schouwburg</option>
+                        </select>
+                        <select id="picker-layer" class="picker-select" title="Layer">
+                            <option value="">— layer —</option>
+                        </select>
+                        <button id="picker-add-btn" class="picker-add-btn" disabled>+ ADD</button>
                     </div>
-                    <div class="xform-row">
-                        <label>SCL</label>
-                        <input type="range" id="xform-scale" min="10" max="500" value="100" step="1">
-                        <input type="number" id="xform-scale-val" class="xform-val-input" step="0.1">
-                    </div>
-                    <div class="xform-row">
-                        <label>ROT</label>
-                        <input type="range" id="xform-rot" min="0" max="360" value="0" step="1">
-                        <input type="number" id="xform-rot-val" class="xform-val-input" step="1">
+                    <!-- Slider panel — shown when a layer is selected -->
+                    <div id="xform-panel" class="xform-panel" style="display:none;">
+                        <div class="xform-label" id="xform-title">SELECT A LAYER</div>
+                        <div class="xform-row">
+                            <label>X</label>
+                            <input type="range" id="xform-x" min="-400" max="400" value="0" step="1">
+                            <input type="number" id="xform-x-val" class="xform-val-input" step="1">
+                        </div>
+                        <div class="xform-row">
+                            <label>Y</label>
+                            <input type="range" id="xform-y" min="-300" max="300" value="0" step="1">
+                            <input type="number" id="xform-y-val" class="xform-val-input" step="1">
+                        </div>
+                        <div class="xform-row">
+                            <label>SCL</label>
+                            <input type="range" id="xform-scale" min="10" max="500" value="100" step="1">
+                            <input type="number" id="xform-scale-val" class="xform-val-input" step="0.1">
+                        </div>
+                        <div class="xform-row">
+                            <label>ROT</label>
+                            <input type="range" id="xform-rot" min="0" max="360" value="0" step="1">
+                            <input type="number" id="xform-rot-val" class="xform-val-input" step="1">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -144,14 +155,15 @@
                         <span class="hud-target" id="hud-tgt-BLUE">—</span>
                     </div>
                 </div>
+                <button id="clear-stack-btn" class="hud-clr-btn">CLR</button>
             </div>
         </div>
     </div>
 
     <!-- Modular logic: load order matters — constants → state → engine2D → main -->
-    <script src="/static/js/constants.js"></script>
-    <script src="/static/js/state.js"></script>
-    <script src="/static/js/engine2D.js"></script>
+    <script src="/static/js/constants.js?v=1775753000"></script>
+    <script src="/static/js/state.js?v=1775753000"></script>
+    <script src="/static/js/engine2D.js?v=1775753000"></script>
 
     <!-- Tab switching (inline, immediate — no dependency on main.js) -->
     <script>
@@ -161,11 +173,14 @@
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 e.target.classList.add('active');
                 document.getElementById('tab-' + e.target.dataset.tab)?.classList.add('active');
-                if (e.target.dataset.tab === '3d') window.dispatchEvent(new Event('resize'));
+                if (e.target.dataset.tab === '3d') {
+                    window.dispatchEvent(new Event('resize'));
+                    window.initThreeScene?.();
+                }
             });
         });
-        document.getElementById('lofi-toggle-btn')?.addEventListener('click', () => {
-            document.getElementById('lofi-3d-inset').classList.toggle('hidden');
+        document.getElementById('stack-toggle')?.addEventListener('click', () => {
+            document.querySelector('.stack-editor').classList.toggle('collapsed');
         });
         document.getElementById('theme-toggle')?.addEventListener('click', () => {
             document.body.classList.toggle('light-mode');
@@ -173,7 +188,31 @@
         });
     </script>
 
+    <!-- Panel collapse toggle -->
+    <script>
+        document.getElementById('panel-toggle')?.addEventListener('click', () => {
+            const collapsed = document.body.classList.toggle('panel-collapsed');
+            document.getElementById('panel-toggle').textContent = collapsed ? '›' : '‹';
+            // Let Three.js know the canvas resized
+            window.dispatchEvent(new Event('resize'));
+        });
+    </script>
+
     <!-- Main application controller -->
-    <script src="/static/main.js"></script>
+    <script src="/static/main.js?v=1775753000"></script>
+
+    <!-- Floating prompt bar — fixed bottom center -->
+    <div class="prompt-bar">
+        <span class="prompt-arrow">></span>
+        <input type="text" id="prompt-input" placeholder="Describe a spatial memory to cross-pollinate..." autofocus>
+        <button id="generate-btn">GEN</button>
+    </div>
+
+    <!-- Bottom status bar -->
+    <footer class="app-footer">
+        <span class="footer-left">MEMORY MACHINE v1.2 // DIGITAL PALIMPSEST</span>
+        <span class="footer-center" id="footer-coords">34.0453° N, 118.2566° W — PERSHING SQUARE, DTLA</span>
+        <span class="footer-right">BRANCH: 2D-LOGIC-REBUILD</span>
+    </footer>
   </body>
 </html>

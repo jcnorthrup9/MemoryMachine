@@ -64,6 +64,8 @@ function initThreeScene() {
     if (threeAnimId) cancelAnimationFrame(threeAnimId);
     threeScene.clear();
     _addSceneLights();
+    _addGroundPlane();
+    _loadBaseModel();
     _startRenderLoop();
     return;
   }
@@ -92,13 +94,14 @@ function initThreeScene() {
 
   _addSceneLights();
   _addGroundPlane();
+  _loadBaseModel();
   _initOrbitControls(canvas);
   _startRenderLoop();
 }
 
 function _addSceneLights() {
-  threeScene.add(new THREE.AmbientLight(0x202020, 3));
-  const key = new THREE.DirectionalLight(0xfff4ca, 2.5);
+  threeScene.add(new THREE.AmbientLight(0x202020, 0.7));
+  const key = new THREE.DirectionalLight(0xfff4ca, 0.7);
   key.position.set(30, 60, 40);
   key.castShadow = true;
   threeScene.add(key);
@@ -121,6 +124,44 @@ function _addGroundPlane() {
   // Grid overlay
   const grid = new THREE.GridHelper(200, 40, 0x1a1a1a, 0x111111);
   threeScene.add(grid);
+}
+
+// ── LOAD BASE OBJ MODEL ──────────────────────────────────────────────────────
+function _loadBaseModel() {
+  if (typeof THREE.OBJLoader === 'undefined') return;
+
+  function _fitAndAdd(object) {
+    const box    = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+    const scale  = 100 / Math.max(size.x, size.y, size.z);
+
+    object.position.sub(center.multiplyScalar(scale));
+    object.scale.setScalar(scale);
+    const boxAfter = new THREE.Box3().setFromObject(object);
+    object.position.y -= boxAfter.min.y;
+
+    object.userData.isBaseModel = true;
+    threeScene.add(object);
+  }
+
+  if (typeof THREE.MTLLoader !== 'undefined') {
+    const mtlLoader = new THREE.MTLLoader();
+    mtlLoader.load('/models/PershingSquareCurrent.mtl', function (materials) {
+      materials.preload();
+      const objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+        undefined, e => console.error('OBJ load error:', e));
+    }, undefined, () => {
+      // MTL failed — fall back to OBJ only
+      new THREE.OBJLoader().load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+        undefined, e => console.error('OBJ load error:', e));
+    });
+  } else {
+    new THREE.OBJLoader().load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+      undefined, e => console.error('OBJ load error:', e));
+  }
 }
 
 // ── GEOMETRY RENDERING ───────────────────────────────────────────────────────
@@ -200,8 +241,9 @@ async function generate() {
   const btn = document.getElementById('generate-btn');
   if (btn) btn.disabled = true;
   
-  // Immediately clear the stack and board for a clean visual slate
-  MemoryState.clear();
+  // Soft reset: keep locked base-context layers, discard prior interventions
+  MemoryState.stack = MemoryState.stack.filter(i => i.locked);
+  MemoryState.pathCache.clear();
   clearSceneGeometries();
   if (window.renderRemixSVG) window.renderRemixSVG();
   refreshStackUI();
@@ -255,24 +297,23 @@ async function generate() {
         })));
       }
 
-      MemoryState.stack = data.spatial_seed.map((seed, idx) => {
+      const newLayers = data.spatial_seed.map((seed, idx) => {
         const lId = seed.layerId || 'GREEN_SPACE';
-        let c = '#888888';
-        if (lId.includes('GREEN') || lId.includes('SHADE')) c = '#4CAF50';
-        else if (lId.includes('WATER')) c = '#03A9F4';
-        else if (lId.includes('ATTRACTOR') || lId.includes('UNIQUE')) c = '#FF9800';
-        else if (lId.includes('STREET') || lId.includes('PATH') || lId.includes('BOUNDARY') || lId.includes('FURNITURE')) c = '#9E9E9E';
-        
         return {
           id: Date.now() + idx,
           site: seed.site || 'PershingSquare',
           layerId: lId,
-          color: c,
+          color: _getLayerColor(lId),
           label: seed.label || lId,
           visible: true,
-          transform: seed.transform || {x: 0, y: 0, scale: 1.0, rot: 0}
+          locked: false,
+          contextLayer: false,
+          base_area_px:   seed.base_area_px   ?? 1,
+          solved_area_px: seed.solved_area_px ?? 1,
+          transform: seed.transform || { x: 0, y: 0, scale: 1.0, rot: 0 }
         };
       });
+      MemoryState.stack.push(...newLayers);
       window.renderRemixSVG?.();
       refreshStackUI();
     }
@@ -326,10 +367,11 @@ async function generate() {
 // Guidelines fetched from /api/guidelines on boot.
 // Shape: { SOFT: {min,max}, HARD: {min,max}, PROG: {min,max}, BLUE: {min,max} }
 let _guidelines = {
-  SOFT: { min: 30, max: 50 },
-  HARD: { min: 40, max: 60 },
-  PROG: { min: 10, max: 20 },
-  BLUE: { min:  2, max: 10 },
+  SOFT:  { min: 30, max: 50 },
+  SHADE: { min: 10, max: 25 },
+  HARD:  { min: 40, max: 60 },
+  PROG:  { min: 10, max: 20 },
+  BLUE:  { min:  2, max: 10 },
 };
 
 /** Re-render the stack list and refresh HUD after any mutation. */
@@ -359,26 +401,31 @@ function refreshStackUI() {
     const siteName  = SITE_LABELS[item.site] || item.site;
     const eyeIcon   = item.visible !== false ? '👁' : '◌';
     const dimClass  = item.visible !== false ? '' : ' hidden-layer';
+    const lockClass = item.locked ? ' locked-layer' : '';
+    const rightEl   = item.locked
+      ? `<span class="stack-lock-icon" title="Identity seed — locked">⬡</span>`
+      : `<button class="stack-eye-btn" data-id="${item.id}" title="Toggle visibility">${eyeIcon}</button>`;
     return `
-    <div class="stack-item${MemoryState.editingId === item.id ? ' selected' : ''}${dimClass}"
+    <div class="stack-item${MemoryState.editingId === item.id ? ' selected' : ''}${dimClass}${lockClass}"
          data-id="${item.id}">
       <span class="stack-swatch" style="background:${item.color}"></span>
       <span class="stack-item-label">${siteName} — ${item.layerId}</span>
-      <button class="stack-eye-btn" data-id="${item.id}" title="Toggle visibility">${eyeIcon}</button>
+      ${rightEl}
     </div>`;
   }).join('');
 
   list.querySelectorAll('.stack-item').forEach(el => {
     el.addEventListener('click', e => {
-      // Don't open xform panel when clicking the eye toggle
+      // Don't open xform panel when clicking the eye toggle or on locked items
       if (e.target.classList.contains('stack-eye-btn')) return;
       const id   = parseInt(el.dataset.id);
-      
+      const item = MemoryState.stack.find(i => i.id === id);
+      if (item?.locked) return;
+
       if (MemoryState.editingId === id) {
         MemoryState.editingId = null;
         document.getElementById('xform-panel').style.display = 'none';
       } else {
-        const item = MemoryState.stack.find(i => i.id === id);
         if (!item) return;
         MemoryState.editingId = id;
         openXformPanel(item);
@@ -551,7 +598,7 @@ async function handleExport(mode) {
   const bgFill = isGrey ? '#ffffff' : '#050505';
   const ctxLine = isGrey ? '#dddddd' : '#444444';
   const bndLine = isGrey ? '#000000' : '#ffffff';
-  const intLine = isGrey ? '#222222' : null; // null keeps original layer color
+  const intLine = isGrey ? '#222222' : '#ffffff'; // color mode uses white stroke
 
   clone.style.background = bgFill;
 
@@ -667,6 +714,147 @@ function switchToTab(name) {
   if (name === '3d') window.dispatchEvent(new Event('resize'));
 }
 
+// ── LAYER COLOR UTILITY ──────────────────────────────────────────────────────
+/** Single source of truth for Rhino layer colors across generation and picker. */
+function _getLayerColor(layerId) {
+  const id = (layerId || '').toUpperCase();
+  if (id.includes('GREEN') || id.includes('SHADE'))               return '#4CAF50';
+  if (id.includes('WATER'))                                        return '#03A9F4';
+  if (id.includes('ATTRACTOR') || id.includes('UNIQUE'))          return '#FF9800';
+  return '#9E9E9E'; // STREET, PATH, BOUNDARY, PARKING, FURNITURE, etc.
+}
+
+// ── BASE CONTEXT INJECTION ────────────────────────────────────────────────────
+/**
+ * Injects locked base Pershing Square layers as "identity seed" items.
+ * These items are rendered by engine2D as context (not as interventions)
+ * and give the HUD a real HARD baseline even before any generation.
+ */
+function _injectBaseContext() {
+  // Infrastructure from Pershing Square (rendered via context-group, not intervention loop)
+  const BASE_LAYERS = [
+    'BOUNDARY', 'STREET', 'PARKING', 'PEDESTRIAN_PATH', 'STREET_FURNITURE'
+  ];
+  // Remove any existing context items (idempotent re-injection)
+  MemoryState.stack = MemoryState.stack.filter(i => !i.contextLayer);
+  MemoryState.baseCleared = false; // ensure context group renders full park infrastructure
+
+  const now = Date.now();
+  BASE_LAYERS.forEach((layerId, idx) => {
+    MemoryState.stack.unshift({
+      id: now + idx,
+      site: 'PershingSquare',
+      layerId,
+      color: _getLayerColor(layerId),
+      label: layerId,
+      visible: true,
+      locked: true,
+      contextLayer: true,
+      base_area_px: 1,
+      solved_area_px: 1,
+      transform: { x: 0, y: 0, scale: 1.0, rot: 0 }
+    });
+  });
+
+  window.renderRemixSVG?.();
+  refreshStackUI();
+}
+
+// ── MANUAL LAYER PICKER ───────────────────────────────────────────────────────
+const KNOWN_LAYERS = [
+  'BOUNDARY', 'GREEN_SPACE', 'SHADE', 'WATER_FEATURES',
+  'STREET', 'PEDESTRIAN_PATH', 'MAJOR_ATTRACTORS',
+  'MINOR_ATTRACTORS', 'UNIQUE_ELEMENTS', 'STREET_FURNITURE', 'PARKING'
+];
+
+/**
+ * Fetches SVG for siteId, scans g[id] elements for known layer IDs,
+ * and populates the picker-layer dropdown.
+ */
+async function _populateLayerPicker(siteId) {
+  const layerSelect = document.getElementById('picker-layer');
+  const addBtn      = document.getElementById('picker-add-btn');
+  if (!layerSelect || !addBtn) return;
+
+  layerSelect.innerHTML = '<option value="">— loading… —</option>';
+  layerSelect.disabled = true;
+  addBtn.disabled = true;
+
+  try {
+    const svgText = await fetchSVG(siteId);
+    const parser  = new DOMParser();
+    const doc     = parser.parseFromString(svgText, 'image/svg+xml');
+    const found   = [];
+
+    doc.querySelectorAll('g[id]').forEach(g => {
+      const gId = g.getAttribute('id') || '';
+      // Match any known layer (case-insensitive partial match)
+      const match = KNOWN_LAYERS.find(l => gId.toUpperCase().includes(l));
+      if (match && !found.includes(match)) found.push(match);
+    });
+
+    // Fall back to full list if SVG has no matching groups
+    const options = found.length > 0 ? found : KNOWN_LAYERS;
+    layerSelect.innerHTML = '<option value="">— layer —</option>' +
+      options.map(l => `<option value="${l}">${l.replace(/_/g,' ')}</option>`).join('');
+    layerSelect.disabled = false;
+  } catch (e) {
+    layerSelect.innerHTML = '<option value="">— error —</option>';
+  }
+}
+
+function _wireLayerPicker() {
+  const siteSelect  = document.getElementById('picker-site');
+  const layerSelect = document.getElementById('picker-layer');
+  const addBtn      = document.getElementById('picker-add-btn');
+  if (!siteSelect || !layerSelect || !addBtn) return;
+
+  // Populate layers when site changes
+  siteSelect.addEventListener('change', () => {
+    _populateLayerPicker(siteSelect.value);
+  });
+
+  // Enable ADD button only when a layer is selected
+  layerSelect.addEventListener('change', () => {
+    addBtn.disabled = !layerSelect.value;
+  });
+
+  // ADD button: push item to stack
+  addBtn.addEventListener('click', () => {
+    const siteId  = siteSelect.value;
+    const layerId = layerSelect.value;
+    if (!siteId || !layerId) return;
+
+    MemoryState.stack.push({
+      id:            Date.now(),
+      site:          siteId,
+      layerId,
+      color:         _getLayerColor(layerId),
+      label:         layerId,
+      visible:       true,
+      locked:        false,
+      contextLayer:  false,
+      base_area_px:  1,
+      solved_area_px: 1,
+      transform:     { x: 0, y: 0, scale: 1.0, rot: 0 }
+    });
+
+    // Ensure SVG is cached for the chosen site
+    fetchSVG(siteId).then(() => {
+      window.renderRemixSVG?.();
+      refreshStackUI();
+      setStatus(`Added ${layerId} from ${siteId}`, 'success');
+    }).catch(err => setStatus('SVG load failed: ' + err.message, 'error'));
+
+    // Reset picker
+    layerSelect.value = '';
+    addBtn.disabled = true;
+  });
+
+  // Populate layers for the default (first) site on load
+  _populateLayerPicker(siteSelect.value);
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
   mermaid.initialize({ startOnLoad: false, theme: 'dark', flowchart: { curve: 'basis' } });
@@ -721,14 +909,17 @@ async function init() {
     console.error('Failed to auto-discover sites:', err);
   }
 
-  // Load Pershing Square SVG as default base
+  // Load Pershing Square SVG as default base, then inject identity seed
   try {
     await fetchSVG('PershingSquare');
-    window.renderRemixSVG?.();
+    _injectBaseContext();
     setStatus('Site loaded — Pershing Square, DTLA', 'success');
   } catch (e) {
     setStatus('SVG load error: ' + e.message, 'error');
   }
+
+  // Wire layer picker (populates layer dropdown for default site)
+  _wireLayerPicker();
 
   // ── Event: prompt submit on Enter ────────────────────────────────────────
   document.getElementById('prompt-input')?.addEventListener('keydown', e => {
@@ -755,19 +946,12 @@ async function init() {
   const exportToggle = document.getElementById('auto-export-toggle');
   exportToggle?.addEventListener('click', () => {
     autoExportEnabled = !autoExportEnabled;
-    if (autoExportEnabled) {
-      exportToggle.textContent = 'Auto-Export: ON';
-      exportToggle.style.color = 'var(--green)';
-      exportToggle.style.borderColor = 'var(--green)';
-    } else {
-      exportToggle.textContent = 'Auto-Export: OFF';
-      exportToggle.style.color = 'var(--muted)';
-      exportToggle.style.borderColor = 'var(--border2)';
-    }
+    exportToggle.classList.toggle('export-toggle-on',  autoExportEnabled);
+    exportToggle.classList.toggle('export-toggle-off', !autoExportEnabled);
+    exportToggle.title = autoExportEnabled
+      ? 'Auto-export ON — click to disable'
+      : 'Auto-export OFF — click to enable';
   });
-
-  // ── Event: Capture UI ────────────────────────────────────────────────────
-  document.getElementById('capture-ui-btn')?.addEventListener('click', captureDashboardUI);
 
   // ── Event: Deploy to 3D ──────────────────────────────────────────────────
   document.getElementById('deploy-3d-btn')?.addEventListener('click', () => {
@@ -795,8 +979,7 @@ async function init() {
   document.getElementById('clear-stack-btn')?.addEventListener('click', () => {
     MemoryState.clear();
     clearSceneGeometries();
-    window.renderRemixSVG?.();
-    refreshStackUI();
+    _injectBaseContext();
     setStatus('Stack cleared.', 'success');
   });
 
@@ -834,6 +1017,9 @@ async function init() {
     }
   });
 }
+
+// Expose for inline tab-switch script
+window.initThreeScene = initThreeScene;
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') {
