@@ -13,16 +13,19 @@ let threeCamera   = null;
 let threeAnimId   = null;
 let _orbitSph     = { theta: 0.6, phi: 0.5, r: 80 };
 let _orbitBound   = false;
+let _cameraMode   = 'orbit';
 
 // ── RENDER LOOP ──────────────────────────────────────────────────────────────
 function _startRenderLoop() {
   if (threeAnimId) cancelAnimationFrame(threeAnimId);
   function _frame() {
     threeAnimId = requestAnimationFrame(_frame);
-    threeCamera.position.x = _orbitSph.r * Math.sin(_orbitSph.phi) * Math.sin(_orbitSph.theta);
-    threeCamera.position.y = _orbitSph.r * Math.cos(_orbitSph.phi);
-    threeCamera.position.z = _orbitSph.r * Math.sin(_orbitSph.phi) * Math.cos(_orbitSph.theta);
-    threeCamera.lookAt(0, 0, 0);
+    if (_cameraMode === 'orbit') {
+      threeCamera.position.x = _orbitSph.r * Math.sin(_orbitSph.phi) * Math.sin(_orbitSph.theta);
+      threeCamera.position.y = _orbitSph.r * Math.cos(_orbitSph.phi);
+      threeCamera.position.z = _orbitSph.r * Math.sin(_orbitSph.phi) * Math.cos(_orbitSph.theta);
+      threeCamera.lookAt(0, 0, 0);
+    }
     threeRenderer.render(threeScene, threeCamera);
   }
   _frame();
@@ -32,7 +35,14 @@ function _initOrbitControls(canvas) {
   if (_orbitBound === canvas) return;
   _orbitBound = canvas;
   let dragging = false, px = 0, py = 0;
-  canvas.addEventListener('mousedown', e => { dragging = true; px = e.clientX; py = e.clientY; });
+  canvas.addEventListener('mousedown', e => { 
+    dragging = true; px = e.clientX; py = e.clientY; 
+    if (_cameraMode === 'human') {
+      _cameraMode = 'orbit';
+      const btn = document.getElementById('btn-human-view');
+      if (btn) btn.textContent = '🧍 Human View';
+    }
+  });
   window.addEventListener('mouseup',   () => { dragging = false; });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
@@ -57,7 +67,9 @@ function _initOrbitControls(canvas) {
 function initThreeScene() {
   const container = document.getElementById('canvas-container');
   const placeholder = document.getElementById('canvas-placeholder');
+  const cameraControls = document.getElementById('camera-controls');
   if (placeholder) placeholder.style.display = 'none';
+  if (cameraControls) cameraControls.style.display = 'flex';
 
   // Reuse renderer if already initialized
   if (threeRenderer) {
@@ -100,12 +112,12 @@ function initThreeScene() {
 }
 
 function _addSceneLights() {
-  threeScene.add(new THREE.AmbientLight(0x202020, 0.7));
-  const key = new THREE.DirectionalLight(0xfff4ca, 0.7);
+  threeScene.add(new THREE.AmbientLight(0x303030, 0.95));
+  const key = new THREE.DirectionalLight(0xfff4ca, 1.25);
   key.position.set(30, 60, 40);
   key.castShadow = true;
   threeScene.add(key);
-  const fill = new THREE.DirectionalLight(0x4488ff, 0.5);
+  const fill = new THREE.DirectionalLight(0x4488ff, 0.65);
   fill.position.set(-40, 20, -30);
   threeScene.add(fill);
 }
@@ -134,32 +146,69 @@ function _loadBaseModel() {
     const box    = new THREE.Box3().setFromObject(object);
     const center = box.getCenter(new THREE.Vector3());
     const size   = box.getSize(new THREE.Vector3());
-    const scale  = 100 / Math.max(size.x, size.y, size.z);
+    // Scale entire model (park + context) so the max footprint dimension = 100 units
+    const scale  = 100 / Math.max(size.x, size.z);
 
     object.position.sub(center.multiplyScalar(scale));
     object.scale.setScalar(scale);
     const boxAfter = new THREE.Box3().setFromObject(object);
     object.position.y -= boxAfter.min.y;
 
+    // Auto-detect hardscape boundary: find all flat Y≈0 meshes (park surface)
+    // that are not the full ground plane (area < 1500 sq units).
+    // These are the park hardscape tiles - take their union.
+    // Detect hardscape surface using geometry directly (no visibility dependency)
+    let hsMinX = Infinity, hsMaxX = -Infinity;
+    let hsMinZ = Infinity, hsMaxZ = -Infinity;
+    let hsMaxY = -Infinity;
+    let found = 0;
+    object.traverse(child => {
+      if (!child.isMesh || !child.geometry) return;
+      // Compute bounds from geometry attribute directly — ignores visibility
+      child.geometry.computeBoundingBox();
+      const lb = child.geometry.boundingBox.clone();
+      // Apply child world matrix
+      child.updateWorldMatrix(true, false);
+      lb.applyMatrix4(child.matrixWorld);
+      const sz = lb.getSize(new THREE.Vector3());
+      const midY = (lb.min.y + lb.max.y) / 2;
+      const area = sz.x * sz.z;
+      if (sz.y < 1.5 && midY > -1.2 && midY < 0.5 && area > 80 && area < 800) {
+        hsMinX = Math.min(hsMinX, lb.min.x);
+        hsMaxX = Math.max(hsMaxX, lb.max.x);
+        hsMinZ = Math.min(hsMinZ, lb.min.z);
+        hsMaxZ = Math.max(hsMaxZ, lb.max.z);
+        hsMaxY = Math.max(hsMaxY, lb.max.y);
+        found++;
+      }
+    });
+    if (found > 0) {
+      _hardscapeMinX = hsMinX; _hardscapeMaxX = hsMaxX;
+      _hardscapeMinZ = hsMinZ; _hardscapeMaxZ = hsMaxZ;
+      _hardscapeSurfaceY = hsMaxY;
+    }
+    console.log(`[Park] Hardscape detected from ${found} meshes: x=${_hardscapeMinX.toFixed(1)}..${_hardscapeMaxX.toFixed(1)}  z=${_hardscapeMinZ.toFixed(1)}..${_hardscapeMaxZ.toFixed(1)}  center=(${((_hardscapeMinX+_hardscapeMaxX)/2).toFixed(1)}, ${((_hardscapeMinZ+_hardscapeMaxZ)/2).toFixed(1)})`);
+
     object.userData.isBaseModel = true;
     threeScene.add(object);
+    _drawHardscapeDebugBox();
   }
 
   if (typeof THREE.MTLLoader !== 'undefined') {
     const mtlLoader = new THREE.MTLLoader();
-    mtlLoader.load('/models/PershingSquareCurrent.mtl', function (materials) {
+    const cb = Date.now();
+    mtlLoader.load(`/models/PershingSQforApp.mtl?v=${cb}`, function (materials) {
       materials.preload();
       const objLoader = new THREE.OBJLoader();
       objLoader.setMaterials(materials);
-      objLoader.load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+      objLoader.load(`/models/PershingSQforApp.obj?v=${cb}`, _fitAndAdd,
         undefined, e => console.error('OBJ load error:', e));
     }, undefined, () => {
-      // MTL failed — fall back to OBJ only
-      new THREE.OBJLoader().load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+      new THREE.OBJLoader().load(`/models/PershingSQforApp.obj?v=${cb}`, _fitAndAdd,
         undefined, e => console.error('OBJ load error:', e));
     });
   } else {
-    new THREE.OBJLoader().load('/models/PershingSquareCurrent.obj', _fitAndAdd,
+    new THREE.OBJLoader().load('/models/PershingSQforApp.obj', _fitAndAdd,
       undefined, e => console.error('OBJ load error:', e));
   }
 }
@@ -213,6 +262,177 @@ function renderGeometries(geometries) {
     wire.position.copy(mesh.position);
     wire.userData.isIntervention = true;
     threeScene.add(wire);
+  });
+}
+
+// ── COORDINATE SYSTEM ────────────────────────────────────────────────────────
+// Authority: SVG HARDSCAPE layer (Pershing Square park boundary)
+//   SVG viewBox:        1224 × 792
+//   HARDSCAPE bounds:   x=297.5..728.6, y=138.9..598.7  (431 × 460 SVG units)
+//   HARDSCAPE center:   (513, 369) in SVG space
+//
+// LOCATION_OFFSETS in urban_engine.py are *relative to park center* (not SVG origin):
+//   East  = +160 SVG units  (74% of half-width  215.5)
+//   North = -140 SVG units  (61% of half-depth  229.9)
+//
+// OBJ → Three.js: entire model scaled so max(x,z) span = 100 units
+//   OBJ model center = (278, -386) in OBJ space → Three.js (0, y, 0)
+//   HARDSCAPE in OBJ ≈ object_45: x=-152..221, z=-616..-153
+//   After scale (÷2174×100) + center: x≈-19.8..-2.6, z≈-10.6..10.7
+//   Half-extents: halfX≈8.6, halfZ≈10.65
+//
+// User confirmed: hardscape top surface = Y=0 (everything sits on this plane)
+
+// Set dynamically by _fitAndAdd via mesh traversal — fallback from vertex analysis
+// Park center is at Three.js (-5.0, 5.0), not (0,0) — OBJ was centered on city block
+let _hardscapeMinX = -19.8;
+let _hardscapeMaxX =   9.8;
+let _hardscapeMinZ = -10.6;
+let _hardscapeMaxZ =  20.6;
+let _hardscapeSurfaceY = 2.07;  // Y of park top surface; set dynamically from mesh
+
+// SVG offset range that maps to the full hardscape extent
+const SVG_OFFSET_MAX_X = 160;  // East/West max
+const SVG_OFFSET_MAX_Z = 140;  // North/South max
+
+// ── CALIBRATION WIREFRAME ─────────────────────────────────────────────────────
+// True park rectangle derived from SVG HARDSCAPE corner analysis:
+//   SVG corners: TL(526.6,156.8) TR(727.9,276.4) BR(481.5,598.7) BL(303.9,471.9)
+//   Rotation TL→TR: -0.5361 rad (-30.7°) around Three.js Y axis
+//   True rect in Three.js: 16.79 × 27.67 units
+//   Center: (-5.0, 0, 5.0)
+const PARK_ROTATION_Y  = -0.6807;   // radians (-38.7°)
+const PARK_RECT_WIDTH  = 16.79;     // Three.js units (SVG TL→TR direction)
+const PARK_RECT_DEPTH  = 27.67;     // Three.js units (SVG TL→BL direction)
+const PARK_CENTER_X    = -5.0;
+const PARK_CENTER_Z    =  5.0;
+
+function _drawHardscapeDebugBox() {
+  if (!threeScene) return;
+
+  // Remove previous debug objects
+  const toRemove = [];
+  threeScene.traverse(o => { if (o.userData.debugMarker) toRemove.push(o); });
+  toRemove.forEach(o => threeScene.remove(o));
+
+  const Y = _hardscapeSurfaceY + 0.1;
+  const cos = Math.cos(PARK_ROTATION_Y);
+  const sin = Math.sin(PARK_ROTATION_Y);
+  const hw = PARK_RECT_WIDTH / 2;
+  const hd = PARK_RECT_DEPTH / 2;
+
+  // Orange boundary box
+  const geo = new THREE.BoxGeometry(PARK_RECT_WIDTH, 0.05, PARK_RECT_DEPTH);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xFF9800, wireframe: true, transparent: true, opacity: 0.7 });
+  const box = new THREE.Mesh(geo, mat);
+  box.position.set(PARK_CENTER_X, Y, PARK_CENTER_Z);
+  box.rotation.y = PARK_ROTATION_Y;
+  box.userData.debugMarker = true;
+  box.visible = false;
+  threeScene.add(box);
+
+  // Cardinal markers — small spheres at N/S/E/W edges of the rotated rect
+  // Each cardinal maps to a park-local offset, rotated into world space
+  const cardinals = [
+    { label: 'N', lx:  0, lz: -1, color: 0x2196F3 },  // North: blue
+    { label: 'S', lx:  0, lz:  1, color: 0xF44336 },  // South: red
+    { label: 'E', lx:  1, lz:  0, color: 0x4CAF50 },  // East: green
+    { label: 'W', lx: -1, lz:  0, color: 0xFFEB3B },  // West: yellow
+  ];
+
+  cardinals.forEach(({ label, lx, lz, color }) => {
+    // Rotate park-local edge midpoint into world space (Three.js Y-rotation matrix)
+    const wx = PARK_CENTER_X + (lx * hw * cos + lz * hd * sin);
+    const wz = PARK_CENTER_Z + (-lx * hw * sin + lz * hd * cos);
+
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4, 8, 8),
+      new THREE.MeshBasicMaterial({ color })
+    );
+    sphere.position.set(wx, Y + 0.5, wz);
+    sphere.userData.debugMarker = true;
+    sphere.visible = false;
+    sphere.name = `cardinal-${label}`;
+    threeScene.add(sphere);
+  });
+}
+
+// Zone → PBR material properties
+const ZONE_MATERIALS = {
+  GREEN_SPACE:     { color: 0x4CAF50, roughness: 0.9, metalness: 0.0 },
+  WATER_FEATURES:  { color: 0x03A9F4, roughness: 0.1, metalness: 0.1 },
+  UNIQUE_ELEMENTS: { color: 0xFF9800, roughness: 0.6, metalness: 0.3 },
+  SHADE:           { color: 0xBCAAA4, roughness: 0.8, metalness: 0.1 },
+  HARDSCAPE:       { color: 0x9E9E9E, roughness: 0.95, metalness: 0.0 },
+};
+
+// ── GLB LOADER ────────────────────────────────────────────────────────────────
+function loadGLBIntoScene(glbUrl, svgX, svgZ, zoneType = '') {
+  if (!threeScene) return;
+  if (typeof THREE.GLTFLoader === 'undefined') {
+    console.warn('[GLB] GLTFLoader not available');
+    return;
+  }
+
+  // Map SVG offsets (±160 X, ±140 Z) to the rotated park rectangle.
+  // SVG offset axes align with the park's local axes (along/across the diagonal).
+  // Rotate the offset into Three.js world space using PARK_ROTATION_Y.
+  const halfW = PARK_RECT_WIDTH  / 2;
+  const halfD = PARK_RECT_DEPTH  / 2;
+
+  // Normalise SVG offsets to [-1, 1] in park-local space, capped at 85% of edge
+  const localX = Math.max(-0.85, Math.min(0.85, svgX / SVG_OFFSET_MAX_X));
+  const localZ = Math.max(-0.85, Math.min(0.85, svgZ / SVG_OFFSET_MAX_Z));
+
+  // Rotate park-local coords into world space using Three.js Y-rotation matrix:
+  // worldX = localX*cos + localZ*sin
+  // worldZ = -localX*sin + localZ*cos
+  const cos = Math.cos(PARK_ROTATION_Y);
+  const sin = Math.sin(PARK_ROTATION_Y);
+  const clampedX = PARK_CENTER_X + (localX * halfW * cos + localZ * halfD * sin);
+  const clampedZ = PARK_CENTER_Z + (-localX * halfW * sin + localZ * halfD * cos);
+
+  const loader = new THREE.GLTFLoader();
+  loader.load(glbUrl, (gltf) => {
+    const obj = gltf.scene;
+
+    // Scale to ~10% of hardscape width (reasonable element size)
+    const box  = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3());
+    const targetHeight = halfW * 0.25;  // ~2 Three.js units tall, readable at park scale
+    const scale = targetHeight / Math.max(size.x, size.y, size.z);
+    obj.scale.setScalar(scale);
+
+    // Seat on hardscape surface
+    const boxAfter = new THREE.Box3().setFromObject(obj);
+    obj.position.y = _hardscapeSurfaceY - boxAfter.min.y;
+
+    obj.position.x = clampedX;
+    obj.position.z = clampedZ;
+
+    const zoneMat = ZONE_MATERIALS[zoneType];
+    obj.userData.isIntervention = true;
+    obj.traverse(child => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.userData.isIntervention = true;
+        if (zoneMat) {
+          child.material = new THREE.MeshStandardMaterial({
+            color: zoneMat.color,
+            roughness: zoneMat.roughness,
+            metalness: zoneMat.metalness,
+          });
+        }
+      }
+    });
+
+    threeScene.add(obj);
+    switchToTab('3d');
+    const b2 = new THREE.Box3().setFromObject(obj);
+    const sz2 = b2.getSize(new THREE.Vector3());
+    console.log(`[GLB] ${glbUrl} → pos(${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})  size(${sz2.x.toFixed(2)}, ${sz2.y.toFixed(2)}, ${sz2.z.toFixed(2)})`);
+  }, undefined, (err) => {
+    console.error('[GLB] Load error:', err);
   });
 }
 
@@ -321,19 +541,48 @@ async function generate() {
     // 3. Mermaid diagram
     if (data.diagram) renderDiagram(data.diagram);
 
-    // 4. Update view based on mode
-    if (MemoryState.dreamMode && data.geometries?.length > 0) {
-      switchToTab('3d');
-      initThreeScene();
-      renderGeometries(data.geometries);
-      setStatus(`Dream rendered — ${data.geometries.length} forms.`, 'success');
-    } else {
-      // Update live if user is already watching the 3D tab
-      if (document.getElementById('tab-3d')?.classList.contains('active')) {
-        initThreeScene();
-        renderGeometries(data.geometries);
+    // 4. Always update the 2D diagram; prime the 3D scene.
+    // Primitives from renderGeometries() are replaced by ComfyUI GLBs — skip them.
+    setStatus('Synthesis complete.', 'success');
+    initThreeScene();
+
+    // 4b. Always fire ComfyUI for every intervention layer.
+    // GLBs load asynchronously — they appear in the 3D viewer as they finish.
+    if (data.spatial_seed?.length > 0) {
+      const interventionLayers = data.spatial_seed.filter(
+        s => s.layerId !== 'STREET' && s.layerId !== 'BUILDING'
+      );
+      if (interventionLayers.length > 0) {
+        setStatus(`Generating ${interventionLayers.length} 3D element(s)…`, 'running');
+        let doneCount = 0;
+        interventionLayers.forEach(seed => {
+          const tx = seed.transform?.x ?? 0;
+          const ty = seed.transform?.y ?? 0;
+          const zonePrompt = `${prompt}. ${seed.label || seed.layerId} element, urban park, architectural scale model`;
+          fetch('/api/comfy-text-to-3d', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: zonePrompt,
+              zone_type: seed.layerId,
+              position_x: tx,
+              position_z: ty,
+            }),
+          })
+          .then(r => r.json())
+          .then(result => {
+            if (result.status === 'success') {
+              loadGLBIntoScene(result.glb_url, result.position.x, result.position.z, seed.layerId);
+              appendToTerminal(`✓ 3D: ${seed.label || seed.layerId} → (${result.position.x.toFixed(0)}, ${result.position.z.toFixed(0)})`, 'line-muted');
+            }
+            doneCount++;
+            if (doneCount === interventionLayers.length) {
+              setStatus('2D + 3D synthesis complete.', 'success');
+            }
+          })
+          .catch(err => console.warn('[GLB pipeline]', err));
+        });
       }
-      setStatus('Synthesis complete.', 'success');
     }
 
     // 5. Trigger Auto-Export Pipeline
@@ -381,9 +630,10 @@ function refreshStackUI() {
   if (!list) return;
 
   const stack = MemoryState.stack;
-  counter.textContent = `${stack.length} LAYER${stack.length !== 1 ? 'S' : ''}`;
+  const visibleItems = stack.filter(i => !i.locked);
+  counter.textContent = `${visibleItems.length} LAYER${visibleItems.length !== 1 ? 'S' : ''}`;
 
-  if (stack.length === 0) {
+  if (visibleItems.length === 0) {
     list.innerHTML = '<div class="stack-empty">No layers generated yet.</div>';
     document.getElementById('xform-panel').style.display = 'none';
     updateHUD();
@@ -397,7 +647,7 @@ function refreshStackUI() {
     Schouwburgplein:   'Schouwburgplein',
   };
 
-  list.innerHTML = stack.map(item => {
+  list.innerHTML = visibleItems.map(item => {
     const siteName  = SITE_LABELS[item.site] || item.site;
     const eyeIcon   = item.visible !== false ? '👁' : '◌';
     const dimClass  = item.visible !== false ? '' : ' hidden-layer';
@@ -953,6 +1203,85 @@ async function init() {
       : 'Auto-export OFF — click to enable';
   });
 
+  // ── Event: Manual Export ─────────────────────────────────────────────────
+  document.getElementById('manual-export-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('manual-export-btn');
+    btn.textContent = '⏳';
+    await handleExport('jpg-color');
+    await new Promise(r => setTimeout(r, 300));
+    await handleExport('svg-color');
+    btn.textContent = '📷';
+  });
+
+  // ── Event: Diagram Snapshot (Direct Download) ────────────────────────────
+  document.getElementById('diagram-snapshot-btn')?.addEventListener('click', async () => {
+    const svgEl = document.querySelector('#remix-svg-container svg');
+    if (!svgEl) {
+      setStatus('No SVG to capture', 'error');
+      return;
+    }
+    const btn = document.getElementById('diagram-snapshot-btn');
+    btn.textContent = '⏳';
+    
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('viewBox', '0 0 1224 792');
+    clone.setAttribute('width', '1224');
+    clone.setAttribute('height', '792');
+    
+    const isLightMode = document.body.classList.contains('light-mode');
+    const bgFill = isLightMode ? '#f5f3ef' : '#050505';
+    const ctxLine = isLightMode ? '#c0bdb7' : '#444444';
+    const bndLine = isLightMode ? '#1a1a1a' : '#ffffff';
+    
+    clone.style.background = bgFill;
+    
+    clone.querySelectorAll('.blackout-mask path, .blackout-mask polygon, .blackout-mask rect, .blackout-mask circle').forEach(p => {
+      p.setAttribute('fill', bgFill); p.style.fill = bgFill;
+    });
+    clone.querySelectorAll('.context-group path, .context-group polyline, .context-group line, .context-group polygon, .context-group rect, .context-group circle').forEach(p => {
+      p.setAttribute('stroke', ctxLine); p.style.stroke = ctxLine;
+    });
+    clone.querySelectorAll('.boundary-group path, .boundary-group polyline, .boundary-group polygon, .boundary-group line, .boundary-group rect').forEach(p => {
+      p.setAttribute('stroke', bndLine); p.style.stroke = bndLine;
+    });
+    clone.querySelectorAll('.intervention-group path, .intervention-group polyline, .intervention-group line, .intervention-group polygon, .intervention-group rect, .intervention-group circle').forEach(p => {
+      const origCol = p.getAttribute('data-orig-color');
+      if (origCol) {
+        p.setAttribute('stroke', origCol); p.style.stroke = origCol;
+        const currentFill = p.getAttribute('fill');
+        if (currentFill && currentFill !== 'none') p.setAttribute('fill', origCol); p.style.fill = origCol;
+      }
+    });
+    
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1224; canvas.height = 792;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = bgFill;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      const link = document.createElement('a');
+      link.download = `MemoryMachine_Diagram_Snapshot_${Date.now()}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+      
+      URL.revokeObjectURL(url);
+      btn.textContent = '•';
+      setStatus('Diagram Snapshot saved!', 'success');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      btn.textContent = '•';
+      setStatus('Failed to capture snapshot', 'error');
+    };
+    img.src = url;
+  });
+
   // ── Event: Deploy to 3D ──────────────────────────────────────────────────
   document.getElementById('deploy-3d-btn')?.addEventListener('click', () => {
     switchToTab('3d');
@@ -972,6 +1301,32 @@ async function init() {
     const btn = document.getElementById('generate-btn');
     if (btn) btn.classList.toggle('dream-active', MemoryState.dreamMode);
     setStatus(MemoryState.dreamMode ? 'Dream mode active.' : 'Draft mode active.', 'success');
+  });
+
+  // ── Event: 3D Camera Controls ────────────────────────────────────────────
+  document.getElementById('btn-human-view')?.addEventListener('click', () => {
+    if (!threeCamera) return;
+    _cameraMode = _cameraMode === 'orbit' ? 'human' : 'orbit';
+    const btn = document.getElementById('btn-human-view');
+    if (_cameraMode === 'human') {
+      btn.textContent = '🚁 Bird\'s Eye';
+      // South edge of park looking north — good street-level preview angle
+      threeCamera.position.set(PARK_CENTER_X + 12, _hardscapeSurfaceY + 1.7, PARK_CENTER_Z + 18);
+      threeCamera.lookAt(PARK_CENTER_X, _hardscapeSurfaceY + 1.0, PARK_CENTER_Z);
+    } else {
+      btn.textContent = '🧍 Human View';
+    }
+  });
+
+  document.getElementById('btn-3d-snapshot')?.addEventListener('click', () => {
+    if (!threeRenderer || !threeCamera || !threeScene) return;
+    threeRenderer.render(threeScene, threeCamera);
+    const dataURL = threeRenderer.domElement.toDataURL('image/jpeg', 0.95);
+    const link = document.createElement('a');
+    link.download = `MemoryMachine_3D_Snapshot_${Date.now()}.jpg`;
+    link.href = dataURL;
+    link.click();
+    setStatus('3D Snapshot saved!', 'success');
   });
 
   // ── Event: Clear stack ───────────────────────────────────────────────────

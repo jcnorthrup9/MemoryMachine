@@ -66,7 +66,7 @@ body {
   font-family: var(--font-label);
   background: var(--bg);
   color: var(--on-surface);
-  font-size: 12px;
+  font-size: 18px;
   line-height: 1.5;
   /* Atmospheric radial — matches guide */
   background: radial-gradient(ellipse at 30% 20%, #0a1018 0%, #000000 70%);
@@ -96,14 +96,14 @@ body {
 }
 .app-header h1 {
   font-family: var(--font-headline);
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgba(255, 183, 123, 0.75);
 }
 .app-header h1 span {
   font-family: var(--font-label);
-  font-size: 0.65rem;
+  font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.12em;
   color: rgba(196,198,204,0.35);
@@ -115,7 +115,7 @@ body {
   border: 1px solid var(--outline-v);
   color: var(--on-variant);
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
   padding: 5px 10px;
   cursor: pointer;
@@ -145,7 +145,7 @@ body {
 }
 .app-footer span {
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -170,7 +170,7 @@ body.panel-collapsed { --panel-w: 0px; }
   border: 1px solid rgba(255,255,255,0.07);
   border-right: none;
   color: rgba(255,183,123,0.5);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -243,7 +243,7 @@ body.panel-collapsed .panel-toggle-tab {
 }
 .tab-btn {
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(196,198,204,0.35);
@@ -266,7 +266,7 @@ body.panel-collapsed .panel-toggle-tab {
 }
 .mode-label {
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
   color: rgba(196,198,204,0.35);
   text-transform: uppercase;
@@ -344,15 +344,28 @@ body.panel-collapsed .panel-toggle-tab {
   align-items: center;
   justify-content: center;
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   letter-spacing: 0.2em;
   color: rgba(196,198,204,0.15);
+}
+
+.camera-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+.camera-controls .secondary-btn {
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(5px);
 }
 
 /* ── BUTTONS ─────────────────────────────────────────────────────────────────── */
 button {
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
@@ -387,7 +400,7 @@ button {
   border: 1px solid var(--outline-v);
   color: var(--on-variant);
   padding: 5px 8px;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 .icon-btn:hover { border-color: var(--secondary); color: var(--secondary); }
 
@@ -493,7 +506,7 @@ body.panel-collapsed .zonal-hud {
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 #status-text {
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.16em;
   color: rgba(196,198,204,0.45);
 }
@@ -508,14 +521,14 @@ body.panel-collapsed .zonal-hud {
 }
 .narrative-output pre {
   font-family: var(--font-label);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
   color: rgba(226,226,230,0.7);
 }
 .narrative-output .line-accent { color: var(--secondary); }
-.narrative-output .line-muted  { color: rgba(196,198,204,0.3); font-size: 0.6rem; }
+.narrative-output .line-muted  { color: rgba(196,198,204,0.3); font-size: 0.7rem; }
 .narrative-output .line-error  { color: var(--red); }
 
 /* ── FLOATING PROMPT BAR (fixed bottom center) ───────────────────────────────── */
@@ -544,7 +557,7 @@ body.panel-collapsed .zonal-hud {
 }
 .prompt-arrow {
   font-family: var(--font-label);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: rgba(255,183,123,0.4);
   flex-shrink: 0;
 }
@@ -554,7 +567,7 @@ body.panel-collapsed .zonal-hud {
   border: none;
   outline: none;
   font-family: var(--font-label);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   color: var(--on-surface);
   caret-color: var(--secondary);
@@ -565,7 +578,7 @@ body.panel-collapsed .zonal-hud {
   border: 1px solid rgba(255,183,123,0.4);
   color: var(--secondary);
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   padding: 6px 14px;
@@ -594,7 +607,7 @@ body.panel-collapsed .zonal-hud {
 /* ── SECTION LABELS ──────────────────────────────────────────────────────────── */
 .section-label {
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(196,198,204,0.3);
@@ -623,12 +636,12 @@ body.panel-collapsed .zonal-hud {
 }
 .stack-count {
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 0.14em;
   color: rgba(255,183,123,0.4);
 }
 .stack-chevron {
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   color: rgba(196,198,204,0.3);
   transition: transform 0.25s ease;
   line-height: 1;
@@ -651,7 +664,7 @@ body.panel-collapsed .zonal-hud {
 .stack-empty {
   padding: 12px 14px;
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
   color: rgba(196,198,204,0.2);
   font-style: italic;
@@ -680,7 +693,7 @@ body.panel-collapsed .zonal-hud {
 }
 .stack-item-label {
   font-family: var(--font-label);
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   letter-spacing: 0.04em;
   color: var(--on-surface);
   overflow: hidden;
@@ -690,7 +703,7 @@ body.panel-collapsed .zonal-hud {
 }
 .stack-item-site {
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   color: rgba(196,198,204,0.3);
   white-space: nowrap;
 }
@@ -698,7 +711,7 @@ body.panel-collapsed .zonal-hud {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: rgba(196,198,204,0.4);
   flex-shrink: 0;
   padding: 0 2px;
@@ -712,7 +725,7 @@ body.panel-collapsed .zonal-hud {
 .stack-item.locked-layer:hover { background: transparent; }
 .stack-lock-icon {
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: rgba(196,198,204,0.3);
   flex-shrink: 0;
   padding: 0 2px;
@@ -733,7 +746,7 @@ body.panel-collapsed .zonal-hud {
   color: var(--on-variant);
   border: 1px solid var(--outline-v);
   font-family: var(--font-label);
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   letter-spacing: 0.04em;
   padding: 4px 6px;
   min-width: 0;
@@ -747,7 +760,7 @@ body.panel-collapsed .zonal-hud {
   border: 1px solid rgba(255,183,123,0.3);
   color: var(--secondary);
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
   padding: 4px 10px;
   cursor: pointer;
@@ -766,7 +779,7 @@ body.panel-collapsed .zonal-hud {
 }
 .xform-label {
   font-family: var(--font-headline);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--secondary);
@@ -782,7 +795,7 @@ body.panel-collapsed .zonal-hud {
 }
 .xform-row label {
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   letter-spacing: 0.14em;
   color: rgba(196,198,204,0.35);
   text-transform: uppercase;
@@ -817,7 +830,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .xform-val-input {
   font-family: var(--font-label);
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   text-align: right;
   background: var(--bg);
   border: 1px solid var(--outline-v);
@@ -838,7 +851,7 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   color: rgba(255,82,82,0.4);
   font-family: var(--font-label);
-  font-size: 0.45rem;
+  font-size: 0.55rem;
   letter-spacing: 0.14em;
   cursor: pointer;
   padding: 0;
@@ -857,7 +870,7 @@ input[type="range"]::-moz-range-thumb {
   display: block;
   margin-bottom: 8px;
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 0.22em;
   color: rgba(196,198,204,0.25);
 }
@@ -871,7 +884,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .hud-label {
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 0.1em;
   color: rgba(196,198,204,0.35);
   text-transform: uppercase;
@@ -891,14 +904,14 @@ input[type="range"]::-moz-range-thumb {
 }
 .hud-pct {
   font-family: var(--font-label);
-  font-size: 0.55rem;
+  font-size: 0.65rem;
   text-align: right;
   color: rgba(196,198,204,0.4);
   transition: color 0.3s;
 }
 .hud-target {
   font-family: var(--font-label);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   text-align: right;
   color: rgba(196,198,204,0.2);
   white-space: nowrap;
@@ -916,7 +929,7 @@ input[type="range"]::-moz-range-thumb {
 #mermaid-graph {
   padding: 16px;
   font-family: var(--font-label);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   overflow: auto;
   color: var(--on-surface);
 }

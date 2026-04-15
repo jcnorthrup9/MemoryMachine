@@ -23,7 +23,7 @@ class GuidelineManager:
         # Translation Bridge: Maps Markdown theory to exact Rhino layer IDs
         layer_map = {
             "**SOFT_01**": (["GREEN_SPACE", "SHADE"], "sphere", False),
-            "**HARD_01**": (["STREET", "PEDESTRIAN_PATH", "STREET_FURNITURE", "PARKING", "BOUNDARY"], "box", True),
+            "**HARD_01**": (["STREET", "PEDESTRIAN_PATH", "STREET_FURNITURE", "PARKING", "BOUNDARY", "HARDSCAPE"], "box", True),
             "**PROG_01**": (["MAJOR_ATTRACTORS", "MINOR_ATTRACTORS", "UNIQUE_ELEMENTS"], "cylinder", False),
             "**BLUE_01**": (["WATER_FEATURES"], "disc", False)
         }
@@ -62,7 +62,7 @@ class GuidelineManager:
         if not metadata:
             metadata = {
                 "SOFT": ["GREEN_SPACE", "SHADE"],
-                "HARD": ["STREET", "PEDESTRIAN_PATH", "STREET_FURNITURE", "PARKING", "BOUNDARY"],
+                "HARD": ["STREET", "PEDESTRIAN_PATH", "STREET_FURNITURE", "PARKING", "BOUNDARY", "HARDSCAPE"],
                 "PROG": ["MAJOR_ATTRACTORS", "MINOR_ATTRACTORS", "UNIQUE_ELEMENTS"],
                 "BLUE": ["WATER_FEATURES"]
             }
@@ -78,7 +78,7 @@ class GuidelineManager:
             primitives = {
                 "GREEN_SPACE": "sphere", "SHADE": "sphere",
                 "WATER_FEATURES": "disc",
-                "STREET": "box", "PEDESTRIAN_PATH": "box", "STREET_FURNITURE": "box", "PARKING": "box", "BOUNDARY": "box",
+                "STREET": "box", "PEDESTRIAN_PATH": "box", "STREET_FURNITURE": "box", "PARKING": "box", "BOUNDARY": "box", "HARDSCAPE": "box",
                 "MAJOR_ATTRACTORS": "cylinder", "MINOR_ATTRACTORS": "cylinder", "UNIQUE_ELEMENTS": "cylinder"
             }
         if not locked:
@@ -91,32 +91,70 @@ guideline_manager = GuidelineManager(os.path.join(BASE_DIR, "urban_design_guidel
 def remix_layers(seed_items):
     """
     Offsets and scales the selected SVG layers within the Pershing Square bounds.
-    Uses a deterministic mathematical check to ensure the initial 'Draft' layout 
-    strictly complies with the URBAN_GUIDELINES target percentages.
-    Includes a locked static layer injection for Infrastructure layers.
+    Cardinal location from AI is translated to SVG-space offsets relative to site center.
+    Pershing Square boundary is ~436x468 SVG units — offsets are tuned to that scale.
     """
     import random
     import math
-    
+
     # Pull exclusively from GuidelineManager
     gm_data = guideline_manager.parse()
     zonal_metadata = gm_data.get("metadata", {})
     primitives_map = gm_data.get("primitives", {})
-    locked_layers = gm_data.get("locked", [])
     urban_guidelines = gm_data.get("guidelines", {})
 
     valid_layers = [layer for category in zonal_metadata.values() for layer in category]
-    
+
+    # Bug fix #4: HARDSCAPE exists in SVGs but wasn't in valid_layers
+    if "HARDSCAPE" not in valid_layers:
+        valid_layers.append("HARDSCAPE")
+
     SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
-    valid_sites = []
+
+    # Bug fix #3: normalize site names to match svgCache keys used by JS
+    SITE_NAME_CANONICAL = {
+        "pershingsquare":    "PershingSquare",
+        "parcdelavillette":  "ParcdelaVillette",
+        "zaryadyepark":      "ZaryadyePark",
+        "schouwburgplein":   "Schouwburgplein",
+        "gardensbythebay":   "GardensByTheBay",
+    }
+    valid_sites = list(SITE_NAME_CANONICAL.values())
     if os.path.exists(SVG_DIR):
-        valid_sites = [f[:-4].replace("_", "").replace(" ", "") for f in os.listdir(SVG_DIR) if f.lower().endswith(".svg")]
-    if not valid_sites: valid_sites = ["PershingSquare", "ParcdelaVillette", "ZaryadyePark", "Schouwburgplein"]
-    
+        for f in os.listdir(SVG_DIR):
+            if f.lower().endswith(".svg"):
+                raw = f[:-4].replace("_", "").replace(" ", "").lower()
+                canonical = SITE_NAME_CANONICAL.get(raw, f[:-4])
+                if canonical not in valid_sites:
+                    valid_sites.append(canonical)
+
     # Layers that only exist in specific SVGs — always route to their canonical site
     LAYER_SITE_AFFINITY = {
-        "SHADE":       "Schouwburgplein",
-        "AMPHITHEATRE": "ZaryadyePark",
+        "SHADE":            "Schouwburgplein",
+        "HARDSCAPE":        "Schouwburgplein",   # also in ZaryadyePark
+        "AMPHITHEATRE":     "ZaryadyePark",
+        # Bug fix #2: MAJOR/MINOR_ATTRACTORS don't exist — alias to UNIQUE_ELEMENTS
+        "MAJOR_ATTRACTORS": "PershingSquare",
+        "MINOR_ATTRACTORS": "PershingSquare",
+    }
+
+    # Bug fix #2: layer name aliases — remap to the geometry that actually exists
+    LAYER_ALIAS = {
+        "MAJOR_ATTRACTORS": "UNIQUE_ELEMENTS",
+        "MINOR_ATTRACTORS": "UNIQUE_ELEMENTS",
+    }
+
+    # Bug fix #1: cardinal location → SVG-space offsets (park ~436w x 468h)
+    LOCATION_OFFSETS = {
+        "Center":     (   0,    0),
+        "North":      (   0, -140),
+        "South":      (   0,  140),
+        "East":       ( 160,    0),
+        "West":       (-160,    0),
+        "North-East": ( 120, -110),
+        "North-West": (-120, -110),
+        "South-East": ( 120,  110),
+        "South-West": (-120,  110),
     }
 
     composed = []
@@ -127,41 +165,45 @@ def remix_layers(seed_items):
     seed_items = seed_items[:5]
 
     for item in seed_items:
-        site = item.get("site", "PershingSquare")
-        layer = item.get("layer", "GREEN_SPACE")
+        raw_site  = item.get("site", "PershingSquare")
+        layer     = item.get("layer", "GREEN_SPACE")
+        location  = item.get("location", "Center")
 
-        if layer not in valid_layers: layer = "GREEN_SPACE"
+        # Bug fix #2: alias before validity check
+        layer = LAYER_ALIAS.get(layer, layer)
+
+        if layer not in valid_layers:
+            layer = "GREEN_SPACE"
+
+        # Normalize site name
+        raw_key = raw_site.replace("_", "").replace(" ", "").lower()
+        site = SITE_NAME_CANONICAL.get(raw_key, raw_site)
+
         # Override site if the layer only exists in a specific SVG
         if layer in LAYER_SITE_AFFINITY:
             site = LAYER_SITE_AFFINITY[layer]
         elif site not in valid_sites:
             site = "PershingSquare"
-        
+
         prim = primitives_map.get(layer, "box")
-        
-        # CLEAN SLATE: Flat 1.0 scale at origin (0,0)
-        final_scale = 1.0
-        x = 0
-        y = 0
-            
-        # Smart dimensions based on the calculated scale
-        width = int(400 * final_scale)
-        height = int(400 * final_scale)
+
+        # Bug fix #1: translate cardinal location to x/y offset
+        x, y = LOCATION_OFFSETS.get(location, (0, 0))
 
         transform = {
             "x": x,
             "y": y,
-            "scale": final_scale,
+            "scale": 1.0,
             "rot": 0
         }
-        
+
         composed.append({
-            "site": site, 
-            "layerId": layer, 
-            "transform": transform, 
+            "site": site,
+            "layerId": layer,
+            "transform": transform,
             "opacity": 0.85,
-            "target_width": width,
-            "target_height": height,
+            "target_width": 400,
+            "target_height": 400,
             "primitive": prim
         })
     return composed

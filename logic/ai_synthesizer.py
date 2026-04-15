@@ -86,6 +86,7 @@ def generate_spatial_seed(prompt: str, matches: list = None) -> tuple:
         "CRITICAL RULE 1: You are FORBIDDEN from using Lurie Garden, Millennium Park, or Tanner Springs as your inspiration_park. Your inspiration_park MUST be chosen strictly from the Available Sites list provided below.\n"
         "CRITICAL RULE 2 (Water Logic): If you select a BLUE_01 (Water) layer, it MUST be assigned the exact same 'location' as a SOFT_01 (Green Space) layer so they are adjacent.\n"
         "CRITICAL RULE 3 (Edge Rule): Do NOT assign PROG_01 (Active Program) layers to the extreme corners (North-West, North-East, South-West, South-East) to maintain edge clearances.\n"
+        "CRITICAL RULE 4: The only valid PROG_01 layer name is 'UNIQUE_ELEMENTS'. Do NOT use MAJOR_ATTRACTORS or MINOR_ATTRACTORS — they do not exist.\n"
         "Output ONLY a valid JSON object. Do not write any markdown or conversational text.\n"
         "The JSON object must have exactly four keys:\n"
         "1. 'narrative': A short 2-sentence explanation of why these pieces were chosen, explicitly naming the real-world park that inspired you.\n"

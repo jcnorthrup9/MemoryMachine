@@ -1,0 +1,640 @@
+{
+  "1": {
+    "inputs": {
+      "image": "pasted/image (5).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-Q5_K_M.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "clip_name": "qwen_3_8b_fp8mixed.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "4": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "5": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "A photorealistic, highly detailed architectural photograph of the Nakagin Capsule Tower in a dense urban Tokyo setting with a a high speed rail line running adjacent to the building. The structure consists of two central dark concrete service cores. Attached organically to the faces of these cores are dozens of staggered, cantilevered rectangular capsules. Each capsule is a lightweight steel box covered in silver, galvanized, rib-reinforced steel panels with a vertical corrugated texture. Centered on the outer face of every capsule is a single, massive, iconic circular porthole window. The arrangement of the capsules is cellular and stepped, embodying the Japanese Metabolism architectural movement. 1970s retro-futuristic design, utopian science fiction aesthetic. The building exhibits a beautiful, melancholic state of decay; the once-glossy finish is slightly weathered, showing the passage of time and collective memory. Cinematic lighting, overcast sky, architectural visualization, 8k, masterpiece, highly intricate details.",
+      "clip": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "noise_seed": 783510402647816
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "flux2_klein",
+      "images": [
+        "8:19",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "10": {
+    "inputs": {
+      "images": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "17": {
+    "inputs": {
+      "image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "22": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "26": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "43",
+        0
+      ],
+      "resize_type.height": [
+        "44",
+        0
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "nearest-exact",
+      "input": [
+        "32",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "27": {
+    "inputs": {
+      "images": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "32": {
+    "inputs": {
+      "ckpt_name": "depth_anything_vitl14.pth",
+      "resolution": 512,
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "DepthAnythingPreprocessor",
+    "_meta": {
+      "title": "Depth Anything"
+    }
+  },
+  "34": {
+    "inputs": {
+      "merge_with_lineart": "lineart_standard",
+      "resolution": 1280,
+      "lineart_lower_bound": 0,
+      "lineart_upper_bound": 1,
+      "object_min_size": 36,
+      "object_connectivity": 1,
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "AnyLineArtPreprocessor_aux",
+    "_meta": {
+      "title": "AnyLine Lineart"
+    }
+  },
+  "35": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.width": [
+        "43",
+        0
+      ],
+      "resize_type.height": [
+        "44",
+        0
+      ],
+      "resize_type.crop": "center",
+      "scale_method": "nearest-exact",
+      "input": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "36": {
+    "inputs": {
+      "images": [
+        "35",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "40": {
+    "inputs": {
+      "value": 1024
+    },
+    "class_type": "easy int",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "41": {
+    "inputs": {
+      "value": 1024
+    },
+    "class_type": "easy int",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "42": {
+    "inputs": {
+      "value": false
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Enable T2I"
+    }
+  },
+  "43": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "40",
+        0
+      ],
+      "on_false": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "44": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "41",
+        0
+      ],
+      "on_false": [
+        "17",
+        1
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "45": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "40",
+        0
+      ],
+      "on_false": [
+        "8:12",
+        0
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "46": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "41",
+        0
+      ],
+      "on_false": [
+        "8:12",
+        1
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "47": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "6",
+        0
+      ],
+      "on_false": [
+        "20:12:76",
+        0
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "48": {
+    "inputs": {
+      "boolean": [
+        "42",
+        0
+      ],
+      "on_true": [
+        "22",
+        0
+      ],
+      "on_false": [
+        "20:12:77",
+        0
+      ]
+    },
+    "class_type": "easy ifElse",
+    "_meta": {
+      "title": "If else"
+    }
+  },
+  "8:16": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "8:12": {
+    "inputs": {
+      "image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "20:12:78": {
+    "inputs": {
+      "pixels": [
+        "5",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "20:12:76": {
+    "inputs": {
+      "conditioning": [
+        "6",
+        0
+      ],
+      "latent": [
+        "20:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "20:12:77": {
+    "inputs": {
+      "conditioning": [
+        "22",
+        0
+      ],
+      "latent": [
+        "20:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "8:17": {
+    "inputs": {
+      "steps": 20,
+      "width": [
+        "45",
+        0
+      ],
+      "height": [
+        "46",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "8:18": {
+    "inputs": {
+      "width": [
+        "45",
+        0
+      ],
+      "height": [
+        "46",
+        0
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "28:12:78": {
+    "inputs": {
+      "pixels": [
+        "26",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "28:12:76": {
+    "inputs": {
+      "conditioning": [
+        "47",
+        0
+      ],
+      "latent": [
+        "28:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "28:12:77": {
+    "inputs": {
+      "conditioning": [
+        "47",
+        0
+      ],
+      "latent": [
+        "28:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "37:12:78": {
+    "inputs": {
+      "pixels": [
+        "35",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "37:12:76": {
+    "inputs": {
+      "conditioning": [
+        "28:12:76",
+        0
+      ],
+      "latent": [
+        "37:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "37:12:77": {
+    "inputs": {
+      "conditioning": [
+        "28:12:77",
+        0
+      ],
+      "latent": [
+        "37:12:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "8:15": {
+    "inputs": {
+      "cfg": 2.5,
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "37:12:76",
+        0
+      ],
+      "negative": [
+        "37:12:77",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "8:20": {
+    "inputs": {
+      "noise": [
+        "7",
+        0
+      ],
+      "guider": [
+        "8:15",
+        0
+      ],
+      "sampler": [
+        "8:16",
+        0
+      ],
+      "sigmas": [
+        "8:17",
+        0
+      ],
+      "latent_image": [
+        "8:18",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "8:19": {
+    "inputs": {
+      "samples": [
+        "8:20",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  }
+}

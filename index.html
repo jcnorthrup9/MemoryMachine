@@ -10,10 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=1776130000">
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/MTLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   </head>
   <body class="panel-collapsed">
@@ -22,6 +23,8 @@
             <h1>MEMORY MACHINE <span>// DIGITAL PALIMPSEST</span></h1>
         </div>
         <div class="header-right">
+            <button id="manual-export-btn" class="icon-btn" title="Manual export (SVG & JPG) at 1224x792">📷</button>
+            <button id="diagram-snapshot-btn" class="icon-btn" title="Download 2D Diagram Snapshot to your computer">•</button>
             <button id="auto-export-toggle" class="icon-btn export-toggle-on" title="Auto-export SVG & JPG after generation — click to toggle">⬡</button>
             <button id="theme-toggle" class="icon-btn">☀ / ☾</button>
         </div>
@@ -54,7 +57,11 @@
                 </div>
                 <div id="tab-3d" class="tab-pane">
                     <div id="canvas-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;">
-                        <div id="canvas-placeholder">3D VIEWER — GENERATE OR DEPLOY TO ACTIVATE</div>
+                        <div id="canvas-placeholder">3D VIEWER — HIT GEN TO SYNTHESISE</div>
+                        <div id="camera-controls" class="camera-controls" style="display: none;">
+                            <button id="btn-human-view" class="secondary-btn">🧍 Human View</button>
+                            <button id="btn-3d-snapshot" class="secondary-btn">📷 Snapshot</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -161,9 +168,9 @@
     </div>
 
     <!-- Modular logic: load order matters — constants → state → engine2D → main -->
-    <script src="/static/js/constants.js?v=1775753000"></script>
-    <script src="/static/js/state.js?v=1775753000"></script>
-    <script src="/static/js/engine2D.js?v=1775753000"></script>
+    <script src="/static/js/constants.js?v=1776120000"></script>
+    <script src="/static/js/state.js?v=1776120000"></script>
+    <script src="/static/js/engine2D.js?v=1776120000"></script>
 
     <!-- Tab switching (inline, immediate — no dependency on main.js) -->
     <script>
@@ -199,7 +206,7 @@
     </script>
 
     <!-- Main application controller -->
-    <script src="/static/main.js?v=1775753000"></script>
+    <script src="/static/main.js?v=1776140000"></script>
 
     <!-- Floating prompt bar — fixed bottom center -->
     <div class="prompt-bar">

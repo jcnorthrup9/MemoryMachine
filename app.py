@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import uvicorn, os, json, base64
+import uvicorn, os, json, base64, time
 import xml.etree.ElementTree as ET
 import sys
 import asyncio
@@ -13,6 +13,7 @@ from logic.urban_engine import GuidelineManager, remix_layers, guideline_manager
 from logic.ai_synthesizer import (
     generate_spatial_seed, generate_mermaid_diagram
 )
+from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,6 +60,10 @@ models_dir = os.path.join(BASE_DIR, 'models')
 os.makedirs(models_dir, exist_ok=True)
 app.mount("/models", StaticFiles(directory="models"), name="models")
 
+comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
+if os.path.exists(comfy_output_dir):
+    app.mount("/comfy-output", StaticFiles(directory=comfy_output_dir), name="comfy-output")
+
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
 
@@ -74,6 +79,16 @@ class CapturePayload(BaseModel):
     narrative: str
     isLightMode: bool
     activeTab: str
+
+class ComfyTextTo3DPayload(BaseModel):
+    prompt: str          # spatial narrative / zone description
+    zone_type: str       # e.g. "GREEN_SPACE", "WATER_FEATURES", "UNIQUE_ELEMENTS"
+    position_x: float = 0.0   # Three.js world X (from 2D transform)
+    position_z: float = 0.0   # Three.js world Z (from 2D transform Y)
+
+class ComfyRenderPayload(BaseModel):
+    image_b64: str       # base64 PNG from Three.js canvas
+    narrative: str       # spatial quality narrative for the prompt
 
 # --- ROUTES ---
 
@@ -297,6 +312,150 @@ async def generate_memory_node(payload: MemoryPrompt):
         "spatial_seed": spatial_seed,
         "geometries": geometries
     }
+
+# ── COMFY: HEALTH CHECK ───────────────────────────────────────────────────────
+@app.get("/api/comfy-status")
+async def comfy_status():
+    """Quick check — is ComfyUI reachable?"""
+    alive = comfy_ping()
+    return {"online": alive, "url": "http://127.0.0.1:8188"}
+
+
+# ── COMFY: TEXT → IMAGE → 3D (TripoSR) ───────────────────────────────────────
+@app.post("/api/comfy-text-to-3d")
+async def comfy_text_to_3d(payload: ComfyTextTo3DPayload):
+    """
+    Phase 2: Text prompt → Flux image → TripoSR GLB.
+    Patches textToimageTo3D.json, queues it, polls for the GLB output.
+    Returns the GLB path served via /comfy-output/ static mount.
+    """
+    try:
+        if not comfy_ping():
+            return JSONResponse(status_code=503, content={"error": "ComfyUI not reachable at localhost:8188"})
+
+        wf_path = os.path.join(BASE_DIR, "data", "comfy", "textToimageTo3D.json")
+        if not os.path.exists(wf_path):
+            return JSONResponse(status_code=500, content={"error": f"Workflow not found: {wf_path}"})
+
+        workflow = load_workflow(wf_path)
+
+        zone_style = {
+            "GREEN_SPACE":     "lush green park landscape element, trees and vegetation, architectural plan view",
+            "WATER_FEATURES":  "urban water feature, fountain or reflecting pool, architectural model",
+            "UNIQUE_ELEMENTS": "urban architectural activator, pavilion or public sculpture, clean white model",
+            "SHADE":           "shade structure or canopy, architectural pergola, clean model",
+            "HARDSCAPE":       "urban hardscape element, paving or plaza surface, architectural model",
+        }.get(payload.zone_type, "urban park architectural element, clean white model")
+
+        full_prompt = f"{payload.prompt}. {zone_style}. Isolated on white background, architectural massing model, no shadows."
+
+        patched = patch_workflow(workflow, {
+            "9":  {"text": full_prompt},
+            "10": {"text": ""},
+            "11": {"width": 1024, "height": 1024, "batch_size": 1},
+        })
+
+        prompt_id = queue_workflow(patched)
+        if not prompt_id:
+            return JSONResponse(status_code=500, content={"error": "Failed to queue workflow"})
+
+        glb_path = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: poll_for_output(prompt_id, ".glb")
+        )
+
+        if not glb_path:
+            return JSONResponse(status_code=504, content={"error": "Timed out waiting for GLB output"})
+
+        rel_path = os.path.relpath(glb_path, r"C:\ComfyUI_windows_portable\ComfyUI\output")
+        return {
+            "status": "success",
+            "prompt_id": prompt_id,
+            "glb_path": glb_path,
+            "glb_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}",
+            "position": {"x": payload.position_x, "y": 0, "z": payload.position_z}
+        }
+    except Exception as e:
+        import traceback
+        print(f"[comfy-text-to-3d ERROR] {traceback.format_exc()}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── COMFY: 3D SCENE CAPTURE → FLUX KONTEXT RENDER ────────────────────────────
+@app.post("/api/comfy-render")
+async def comfy_render(payload: ComfyRenderPayload):
+    """
+    Phase 3: Three.js canvas capture + narrative → Flux Kontext atmospheric render.
+    Writes the base64 image to a temp file, patches flux1dev.json, queues, polls.
+    Returns the output image URL.
+    """
+    if not comfy_ping():
+        return JSONResponse(status_code=503, content={"error": "ComfyUI not reachable at localhost:8188"})
+
+    wf_path = os.path.join(BASE_DIR, "data", "comfy", "flux1dev.json")
+    if not os.path.exists(wf_path):
+        return JSONResponse(status_code=500, content={"error": f"Workflow not found: {wf_path}"})
+
+    # Write the canvas capture to ComfyUI's input folder so LoadImage can find it
+    comfy_input_dir = r"C:\ComfyUI_windows_portable\ComfyUI\input"
+    os.makedirs(comfy_input_dir, exist_ok=True)
+    temp_filename = f"mm_capture_{int(time.time()*1000)}.png"
+    temp_path = os.path.join(comfy_input_dir, temp_filename)
+
+    try:
+        # Strip base64 header if present
+        img_data = payload.image_b64
+        if "," in img_data:
+            img_data = img_data.split(",", 1)[1]
+        with open(temp_path, "wb") as f:
+            f.write(base64.b64decode(img_data))
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Bad image data: {e}"})
+
+    workflow = load_workflow(wf_path)
+
+    # Build atmospheric architectural prompt from narrative
+    full_prompt = (
+        f"{payload.narrative}. "
+        "Architectural visualization, urban park, golden hour lighting, "
+        "photorealistic render, high detail, cinematic composition."
+    )
+
+    patched = patch_workflow(workflow, {
+        "6":   {"text": full_prompt},          # Positive prompt
+        "142": {"image": temp_filename},        # Input image → LoadImageOutput → use temp file
+    })
+
+    # Node 142 is LoadImageOutput which loads from ComfyUI output folder.
+    # Since we're providing a capture (not a prior output), swap to a standard LoadImage node approach
+    # by injecting the filename directly. ComfyUI will find it in the input/ folder.
+    patched["142"]["class_type"] = "LoadImage"
+    patched["142"]["inputs"] = {"image": temp_filename}
+
+    prompt_id = queue_workflow(patched)
+    if not prompt_id:
+        return JSONResponse(status_code=500, content={"error": "Failed to queue render workflow"})
+
+    img_path = await asyncio.get_running_loop().run_in_executor(
+        None, lambda: poll_for_output(prompt_id, ".png")
+    )
+
+    if not img_path:
+        # Try jpg fallback
+        img_path = await asyncio.get_running_loop().run_in_executor(
+            None, lambda: poll_for_output(prompt_id, ".jpg")
+        )
+
+    if not img_path:
+        return JSONResponse(status_code=504, content={"error": "Timed out waiting for render output"})
+
+    rel_path = os.path.relpath(img_path, r"C:\ComfyUI_windows_portable\ComfyUI\output")
+    return {
+        "status": "success",
+        "prompt_id": prompt_id,
+        "image_path": img_path,
+        "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
+    }
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
