@@ -46,8 +46,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         .text-wrap { white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4; color: #ccc; text-align: justify; word-wrap: break-word; padding-right: 20px; overflow: hidden;}
         
-        .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        .spread.active { display: flex; }
+        .spread { opacity: 0; pointer-events: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: flex; z-index: 0; transition: opacity var(--trans-speed); }
+        .spread.active { opacity: 1; pointer-events: auto; z-index: 10; }
         
         .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 100; position: relative; }
         .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
@@ -58,8 +58,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .img-box.dashed { border: 1px dashed #444; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
         mermaid.initialize({
             startOnLoad: true,
             theme: 'dark',
@@ -157,16 +157,20 @@ def get_ai_summary(filename, topic):
 def build_payload():
     """Generates the content payload used by both HTML and Figma."""
     def get_single_image(rel_path):
-        img_path = os.path.join(BASE_DIR, *rel_path.split('/'))
+        # Support absolute Windows paths directly if provided
+        if os.path.isabs(rel_path) or ":" in rel_path:
+            img_path = rel_path
+        else:
+            img_path = os.path.join(BASE_DIR, *rel_path.replace('\\', '/').split('/'))
         
         if not os.path.exists(img_path):
-            for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif']:
+            for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif', '.gif']:
                 if os.path.exists(img_path + ext):
                     img_path = img_path + ext
                     break
             if not os.path.exists(img_path):
                 base_p = os.path.splitext(img_path)[0]
-                for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif']:
+                for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif', '.gif']:
                     if os.path.exists(base_p + ext):
                         img_path = base_p + ext
                         break
@@ -176,7 +180,7 @@ def build_payload():
             with open(img_path, "rb") as img_file:
                 b64 = base64.b64encode(img_file.read()).decode('utf-8')
             ext = os.path.splitext(img_path)[1].lower()
-            mime = "image/png" if ext == '.png' else "image/webp" if ext == '.webp' else "image/jpeg"
+            mime = "image/gif" if ext == '.gif' else "image/svg+xml" if ext == '.svg' else "image/png" if ext == '.png' else "image/webp" if ext == '.webp' else "image/jpeg"
             return {"image": b64, "mime_type": mime}
         print(f"   [-] Hero Image Missing: {img_path}")
         return None
@@ -190,7 +194,7 @@ def build_payload():
                 
                 if img_path and not os.path.exists(img_path):
                     base_p = os.path.splitext(img_path)[0]
-                    for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif']:
+                    for ext in ['.png', '.webp', '.jpg', '.jpeg', '.tif', '.gif']:
                         if os.path.exists(base_p + ext):
                             img_path = base_p + ext
                             break
@@ -204,6 +208,7 @@ def build_payload():
                     ext = os.path.splitext(img_path)[1].lower()
                     if ext == '.png': mime_type = "image/png"
                     elif ext == '.webp': mime_type = "image/webp"
+                    elif ext == '.gif': mime_type = "image/gif"
                 else:
                     print(f"   [-] Image Missing: {item.get('image_path') or 'Empty Path'}")
                 padded.append({"label": item['label'], "image": base64_data, "mime_type": mime_type, "object_position": item.get('object_position', 'center'), "object_fit": item.get('object_fit', 'cover')})
@@ -215,7 +220,7 @@ def build_payload():
         full_path = os.path.join(BASE_DIR, *relative_folder.split('/'))
         items = []
         if os.path.exists(full_path):
-            valid_exts = {'.jpg', '.jpeg', '.png', '.tif', '.webp'}
+            valid_exts = {'.jpg', '.jpeg', '.png', '.tif', '.webp', '.gif'}
             files = sorted([f for f in os.listdir(full_path) if os.path.splitext(f)[1].lower() in valid_exts])
             for idx, f in enumerate(files):
                 rel_path = f"{relative_folder}/{f}"
@@ -231,14 +236,15 @@ def build_payload():
     # Bottega Louie Comparison Setup
     bl_ext_items = get_image_items("archive/render_output/bottegaLouieExterior", "GEN EXT")
     bl_int_items = get_image_items("archive/render_output/bottegaLouieInterior", "GEN INT")
+    bl_actual_items = get_image_items("archive/reference_images/BottegaLouie", "ACTUAL")
     
     bl_left = [
-        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/8368f423-3a98-456b-bfa9-b661efd009ac.jpg"},
-        {"label": "ACTUAL 02", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
+        {"label": "ACTUAL 02", "image_path": "archive/reference_images/BottegaLouie/InteriorPano.jpg"},
+        {"label": "ACTUAL 01", "image_path": "archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg"}
     ]
-    bl_right = bl_int_items[:2][::-1] if len(bl_int_items) >= 2 else [
-        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"},
-        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}
+    bl_right = [
+        {"label": "GEN INT 01", "image_path": "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"}, 
+        {"label": "GEN INT 02", "image_path": "archive/render_output/bottegaLouieInterior/BottegaInterior02.png"}
     ]
 
     nakagin_ext_items = get_image_items("archive/render_output/nakaginExterior", "NAKAGIN EXT")
@@ -330,8 +336,11 @@ def build_payload():
     workflow_body = f"--- SYSTEM DIRECTIVE ---\n{system_prompt}"
     pipeline_body = (
         "A visual mapping of the autonomous generative pipeline.\n\n"
-        "The architecture is divided into four distinct phases:\n"
-        "1. Data Harvest\n2. Processing & Extraction\n3. The Rhino 3D Canvas\n4. Archival & Synthesis"
+        "The architecture traces a path from Text, to Image, to 3D Space:\n\n"
+        "1. Narrative Data (Text): Visitor reviews and prompts are synthesized into spatial parameters.\n\n"
+        "2. Vision & Diagramming (Image): AI vision traces satellite imagery to generate geometric scripts.\n\n"
+        "3. 2D to 3D Translation (Rhino): Scripts draw 2D boundaries, which are parsed into formal logic.\n\n"
+        "4. Site Intervention (3D): Procedural generation deploys the hallucinatory 3D masterplan."
     )
 
     bottega_quant = get_text_data(os.path.join(DATA_DIR, 'bottega_massing.csv'), "Element,Instances,DimX,DimY,DimZ,Layer\nLobby,1,40,30,15,01_INTERIOR\nDesk,5,5,3,3,03_FIXTURES")
@@ -340,47 +349,33 @@ def build_payload():
 
     pershing_quant = get_text_data(os.path.join(DATA_DIR, 'extracted_trees.csv'), "X,Y,Radius\n150.0,200.0,20.0\n180.0,240.0,25.0\n100.0,300.0,18.0\n400.0,800.0,30.0")
 
-    mermaid_chart = """graph TD
-    User((User / Architect)) -->|Prompt| OS[machine_os.py]
-    User -->|Query| Auto[autonomous_discovery.py]
-    
-    subgraph Phase1 [Phase 1: Data Harvest]
-    Auto -->|Targets| OS
-    OS -->|Text Search| Scraper[free_scraper.py]
-    OS -->|Image Search| SatScraper[satellite_scraper.py]
-    OS -->|Map Query| OSM[osm_scraper.py]
-    end
+    mermaid_chart = """graph LR
+        User((Architect)) -->|Qualitative Prompt| QS[qualitative_search.py]
+        User -->|Selects Site| ADO[autonomous_diagram_orchestrator.py]
+        
+        subgraph Phase1 ["Phase 1: Narrative Data"]
+            Reviews[(Scraped Reviews)] -->|Sentiments| QS
+            QS -->|Extracts Keywords| Params[(Spatial Parameters)]
+        end
 
-    subgraph Phase2 [Phase 2: Processing & Extraction]
-    Scraper -->|Raw Text| Extractor[spatial_extractor.py]
-    Extractor -->|Keywords| Mapper[spatial_mapper.py]
-    Mapper -->|Outputs| MassingCSV[(target_massing.csv)]
-    
-    SatScraper -->|Google Maps JPG| CV[opencv_site_mapper.py]
-    CV -->|Coords| TreeCSV[(extracted_trees.csv)]
+        subgraph Phase2 ["Phase 2: AI Vision & Diagramming"]
+            ADO -->|Captures| SatImg[(Satellite Image)]
+            SatImg -->|Canny Edge Map| AVT[ai_vision_tracer.py]
+            AVT -->|Gemini Vision| Script[Rhino Drawing Script]
+        end
 
-    Scraper -->|Sentiment/Data| Parser[parser.py]
-    Parser -->|Compiles| Manifest[(memory_manifest.json)]
-    
-    OSM -->|GIS Data| MapJSON[(pershing_osm.json)]
-    end
+        subgraph Phase3 ["Phase 3: 2D to 3D Translation"]
+            Script -. Executes in Rhino .-> Diagram[2D Canvas Space]
+            Diagram -->|Analyzed| RDP[rhino_diagram_parser.py]
+            RDP -->|Maps Zones & Paths| Manifest[(memory_manifest.json)]
+            Params --> Manifest
+        end
 
-    subgraph Phase3 [Phase 3: The Rhino 3D Canvas]
-    MassingCSV -.->|Beamed via F4| Uni[rhino_universal.py]
-    TreeCSV -.->|Beamed via F4| Site[site_reconstruction.py]
-    MapJSON -.->|Beamed via F4| SiteOSM[rhino_osm_builder.py]
-    Manifest -.->|Beamed via F4| Engine[intervention_engine.py]
-    
-    Site --> Masterplan[3D Masterplan]
-    SiteOSM --> Masterplan
-    Engine --> Masterplan
-    end
-
-    subgraph Phase4 [Phase 4: Archival & Synthesis]
-    Masterplan -->|Auto-Screenshot| Renders[render_output]
-    Renders --> Compiler[deck_compiler.py]
-    Compiler --> FinalDeck[presentation_deck.html]
-    end"""
+        subgraph Phase4 ["Phase 4: Site Intervention"]
+            Manifest -. Read by .-> IE[intervention_engine.py]
+            IE -->|Procedural Generation| Masterplan[3D Rhino Masterplan]
+            Masterplan -->|Exports| Payload[(figma_payload.json)]
+        end"""
 
     bottega_summary = (
         "Bottega Louie is a high-end patisserie and restaurant situated in the historic Brockman Building in Downtown Los Angeles.\n\n"
@@ -403,7 +398,97 @@ def build_payload():
         "The site’s continuous overwriting of physical form perfectly embodies the unstable, shifting nature of both human and machine memory."
     )
 
-    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and architectural reconstruction. This repository contains the logic for procedurally reconstructing memories, harvesting digital artifacts, and compiling a digital palimpsest.")
+    abstract_text = get_text_data(os.path.join(DATA_DIR, 'project_summary.txt'), "A computational design project exploring the intersection of human memory decay, artificial intelligence, and procedural architecture.")
+
+    def make_phase_col(title, desc_text, binary_text, image_paths):
+        # Clean up newlines in desc_text for a tighter UI fit
+        d_clean = " ".join(desc_text.split())
+        d_text = d_clean[:140] + "..." if len(d_clean) > 140 else d_clean
+        
+        # Divide binary text so each image gets a different chunk
+        b_chunk = max(len(binary_text) // 3, 150)
+        items = []
+        for idx, path in enumerate(image_paths):
+            img = get_single_image(path) if path else None
+            b_start = idx * b_chunk
+            b_end = b_start + b_chunk
+            if binary_text == "":
+                b_str = ""
+            else:
+                b_str = binary_text[b_start:b_end] if len(binary_text) > b_start else "01110000 01100101 01101110 01100100 01101001 01101110 01100111"
+            items.append({
+                "image": img,
+                "desc": d_text,
+                "binary": b_str.strip()
+            })
+        return {"title": title, "items": items}
+
+    phase1 = {
+        "type": "phase_grid_slide",
+        "title": "04 // PHASE 1: DOMESTIC GEOMETRIES",
+        "columns": [
+            make_phase_col(
+                "TRAILER (1988)", 
+                get_text_data(os.path.join(DATA_DIR, '1988_trailer_parsed.txt'), "A small modular A-Frame construction in the yard..."),
+                get_text_data(os.path.join(DATA_DIR, '1988_trailer_binary_strata.txt'), "01010100 01110010 01100001 01101001 01101100 01100101 01110010"),
+                [
+                    "archive/render_output/1988_trailer.png",
+                    "archive/render_output/1988_trailerWatercolor.png",
+                    "archive/render_output/1988_trailerwatercolorInterior2.png"
+                ]
+            ),
+            make_phase_col(
+                "BIRTHDAY (1992)", 
+                get_text_data(os.path.join(DATA_DIR, '1992_birthday_parsed.txt'), "An internal living room environment, saturated with 90s aesthetic memories..."),
+                get_text_data(os.path.join(DATA_DIR, '1992_birthday_binary_strata.txt'), "01000010 01101001 01110010 01110100 01101000 01100100 01100001 01111001"),
+                ["archive/render_output/1992_birthday.png", "archive/render_output/1992_birthday.jpg", "archive/render_output/1992_birthday2.png"]
+            ),
+            make_phase_col(
+                "BASIN (1994)", 
+                get_text_data(os.path.join(DATA_DIR, '1994_basin_parsed.txt'), "The geographic basin acting as a catchment for atmospheric decay..."),
+                get_text_data(os.path.join(DATA_DIR, '1994_basin_binary_strata.txt'), "01000010 01100001 01110011 01101001 01101110"),
+                ["archive/render_output/1994_basin.png", "archive/render_output/basin_1994.jpg", "archive/render_output/Gemini_Generated_Image_9kmmrb9kmmrb9kmm.png"]
+            )
+        ]
+    }
+
+    phase2 = {
+        "type": "phase_grid_slide",
+        "title": "05 // PHASE 2: SYNTHETIC TYPOLOGIES",
+        "columns": [
+            make_phase_col(
+                "BOTTEGA LOUIE", 
+                bottega_qual_samples[0] + " " + bottega_qual_samples[1],
+                bottega_quant,
+                ["archive/reference_images/BottegaLouie/bottega_louie_ref_4.jpg", "archive/reference_images/BottegaLouie/ViewCapture20260316_165252.png", "archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg"]
+            ),
+            make_phase_col(
+                "NAKAGIN TOWER", 
+                nakagin_qual_samples[0] + " " + nakagin_qual_samples[1],
+                nakagin_quant,
+                ["archive/reference_images/nakaginCapsuleTower/2362d526d98b4e9d982ec03b92f753db.f5fb7444.jpg", "archive/render_output/Nakagin/ComfyUI_temp_ecvpn_00001_.png", "archive/render_output/Nakagin/flux2_klein_00123_.png"]
+            )
+        ]
+    }
+
+    phase3 = {
+        "type": "phase_grid_slide",
+        "title": "06 // PHASE 3: OPERATIONAL ASSEMBLAGE",
+        "img_flex": "2",
+        "text_flex": "1",
+        "img_max_width": "65%",
+        "columns": [
+            make_phase_col("PERSHING // CONTEXT", "", "", [
+                r"C:\Users\john\MemoryMachine\assets\precedents\pershing_square_satellite.jpg", 
+                "archive/reference_images/PershingSquare/pershing_square_hero_resized.jpg"
+            ]),
+            make_phase_col("PERSHING // DIAGRAM", "", "", [
+                r"C:\Users\john\MemoryMachine\archive\diagrams\PershingDiagram.jpg", 
+                r"C:\Users\john\MemoryMachine\archive\GIF\ezgif-4207c926a3a4318b.gif"
+            ]),
+            make_phase_col("PERSHING // SYNTHESIS", "", "", ["", ""])
+        ]
+    }
 
     payload = {
         "deck_title": "Memory Machine // Digital Palimpsest",
@@ -419,18 +504,21 @@ def build_payload():
                 "type": "workflow_slide",
                 "title": "01 // THE MACHINE WORKFLOW",
                 "steps": [
-                    {"title": "DATA HARVEST", "desc": "Scraping historical archives, visitor reviews, and spatial coordinates."},
-                    {"title": "SPATIAL PARSING", "desc": "Extracting hard dimensional limits and atmospheric memory fragments."},
-                    {"title": "GENERATION", "desc": "Procedurally rebuilding the structural massing via scripts."},
-                    {"title": "HALLUCINATION", "desc": "Applying memory decay and material inference via AI visual workflows."},
-                    {"title": "SYNTHESIS", "desc": "Compiling the forensic architectural dossier."}
+                    {"title": "TEXT // NARRATIVE", "desc": "Scraping historical archives, visitor reviews, and extracting qualitative spatial parameters."},
+                    {"title": "IMAGE // VISION", "desc": "Capturing satellite imagery and employing AI vision tracing to locate physical boundaries."},
+                    {"title": "2D // DIAGRAMMING", "desc": "Generating Python scripts to procedurally draw and parse 2D spatial logic in Rhino."},
+                    {"title": "3D // INTERVENTION", "desc": "Translating the 2D diagram and narrative parameters into a procedural 3D massing masterplan."},
+                    {"title": "SYNTHESIS // ARCHIVE", "desc": "Capturing the final digital palimpsest into an interactive forensic dossier."}
                 ]
             },
             {
-                "type": "text_and_mermaid_slide",
+                "type": "text_slide",
                 "title": "02 // SYSTEM PIPELINE",
-                "body": pipeline_body,
-                "right_title": "WORKFLOW DIAGRAM",
+                "body": pipeline_body
+            },
+            {
+                "type": "mermaid_slide",
+                "title": "02 // SYSTEM PIPELINE (DIAGRAM)",
                 "mermaid_code": mermaid_chart
             },
             {
@@ -442,85 +530,9 @@ def build_payload():
                     {"label": "WITNESS MARKS", "image_path": "archive/render_output/front_cover.jpg"}
                 ], count=1)
             },
-            {
-                "type": "text_and_image_slide",
-                "title": "04 // BOTTEGA LOUIE",
-                "body": bottega_summary,
-                "right_title": "",
-                "right_grid": make_grid(bl_int_items, count=1)
-            },
-            {
-                "type": "dual_text_slide",
-                "title": "05 // BOTTEGA LOUIE",
-                "left_title": "QUALITATIVE DATA [ REDACTED ]",
-                "left_body": bottega_qual,
-                "right_title": "QUANTITATIVE DATA [ BINARY STRATA ]",
-                "right_body": bottega_quant
-            },
-            {
-                "type": "grid_slide",
-                "title": "06 // BOTTEGA LOUIE",
-                "left_title": "",
-                "right_title": "",
-                "left_grid": make_grid(bl_left),
-                "right_grid": make_grid(bl_right)
-            },
-            {
-                "type": "text_and_image_slide",
-                "title": "07 // NAKAGIN CAPSULE TOWER",
-                "body": nakagin_summary,
-                "right_title": "",
-                "right_grid": make_grid([
-                    {"label": "GENERATED EXTERIOR", "image_path": "archive/render_output/Nakagin/flux2_klein_00122_.png"}
-                ], count=1)
-            },
-            {
-                "type": "dual_text_slide",
-                "title": "08 // NAKAGIN CAPSULE TOWER",
-                "left_title": "QUALITATIVE DATA [ REDACTED ]",
-                "left_body": nakagin_qual,
-                "right_title": "QUANTITATIVE DATA [ BINARY STRATA ]",
-                "right_body": nakagin_quant
-            },
-            {
-                "type": "grid_slide",
-                "title": "09 // NAKAGIN CAPSULE TOWER",
-                "left_title": "",
-                "right_title": "",
-                "left_grid": make_grid([
-                    {"label": "NAKAGIN TOWER", "image_path": "archive/reference_images/nakaginCapsuleTower/2362d526d98b4e9d982ec03b92f753db.f5fb7444.jpg"}
-                ], count=1),
-                "right_grid": make_grid([
-                    {"label": "GENERATED EXTERIOR", "image_path": "archive/render_output/Nakagin/flux2_klein_00123_.png"}
-                ], count=1)
-            },
-            {
-                "type": "text_and_image_slide",
-                "title": "10 // PERSHING SQUARE",
-                "body": pershing_summary,
-                "right_title": "",
-                "right_grid": make_grid([
-                    {"label": "HERO IMAGE", "image_path": "archive/reference_images/PershingSquare/pershing_square_hero_resized.webp"}
-                ], count=1)
-            },
-            {
-                "type": "dual_text_slide",
-                "title": "11 // PERSHING SQUARE",
-                "left_title": "QUALITATIVE DATA [ REDACTED ]",
-                "left_body": pershing_qual,
-                "right_title": "QUANTITATIVE DATA [ BINARY STRATA ]",
-                "right_body": pershing_quant,
-                "right_image": get_single_image("archive/reference_images/PershingSquare/pershingMap.jpg")
-            },
-            {
-                "type": "text_and_image_slide",
-                "title": "12 // PERSHING SQUARE",
-                "body": pershing_reviews_formatted,
-                "right_title": "",
-                "right_grid": make_grid([
-                    {"label": "LEGORRETA 07", "image_path": "archive/reference_images/PershingSquare/_Pershing_Square_Lourdes_Legorreta_07_.jpg"}
-                ], count=1)
-            }
+            phase1,
+            phase2,
+            phase3
         ]
     }
     return payload
@@ -588,6 +600,17 @@ def compile_deck():
                 </div>
                 <div class="page-side right-page" style="display:none;"></div>
             '''
+        elif slide["type"] == "mermaid_slide":
+            slides_html += f'''
+                <div class="page-side" style="width: 100%; padding: 40px 60px; flex-direction: column; z-index: 10;">
+                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #333; background: #080808; padding: 20px; width: 100%;">
+                        <div class="mermaid" style="width: 100%; height: 100%; display: flex; justify-content: center;">
+{slide["mermaid_code"]}
+                        </div>
+                    </div>
+                </div>
+            '''
         elif slide["type"] == "text_and_mermaid_slide":
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
@@ -632,12 +655,11 @@ def compile_deck():
             '''
         elif slide["type"] == "dual_text_slide":
             right_img_html = ""
-            text_container_style = "margin-top: 115px; flex: 1; overflow: hidden; display: flex; align-items: flex-start;"
-            
+            text_flex = "1"
             if slide.get("right_image") and slide["right_image"].get("image"):
                 img_data = slide["right_image"]
-                right_img_html = f'<div class="img-stack" style="margin-top: 20px;"><div class="img-box"><img src="data:{img_data["mime_type"]};base64,{img_data["image"]}" style="width: 100%; height: 100%; object-fit: cover;"></div></div>'
-                text_container_style = "margin-top: 115px; height: 150px; flex-shrink: 0; overflow: hidden; display: flex; align-items: flex-start;"
+                right_img_html = f'<div class="img-stack" style="margin-top: 0px;"><div class="img-box"><img src="data:{img_data["mime_type"]};base64,{img_data["image"]}" style="width: 100%; height: 100%; object-fit: cover;"></div></div>'
+                text_flex = "0 0 auto"
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
@@ -648,8 +670,8 @@ def compile_deck():
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
                     <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
-                    <div style="{text_container_style}">
-                        <div class="text-wrap" style="font-family: monospace; color: #00ff66; overflow: hidden; flex: 1; word-break: break-all; white-space: pre-wrap;">{slide["right_body"]}</div>
+                    <div style="height: 115px; overflow: hidden; display: flex; align-items: flex-start;">
+                        <div class="text-wrap" style="font-family: monospace; color: #00ff66; overflow: hidden; flex: {text_flex}; word-break: break-all;">{slide["right_body"]}</div>
                     </div>
                     {right_img_html}
                 </div>
@@ -689,6 +711,61 @@ def compile_deck():
                     <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
                     <div class="img-stack" style="margin-top: 115px;">{right_boxes}</div>
+                </div>
+            '''
+        elif slide["type"] == "phase_grid_slide":
+            img_flex = slide.get("img_flex", "1")
+            text_flex = slide.get("text_flex", "1.5")
+            img_max_width = slide.get("img_max_width", "40%")
+            
+            cols_html = ""
+            for col in slide["columns"]:
+                rows_html = ""
+                for item in col["items"]:
+                    if item.get("image") and item["image"].get("image"):
+                        img_data = item["image"]
+                        img_tag = f'<img src="data:{img_data["mime_type"]};base64,{img_data["image"]}" style="width:100%; height:100%; object-fit:cover;">'
+                        dashed = "img-box"
+                    else:
+                        img_tag = ''
+                        dashed = "img-box dashed"
+                    
+                    if item.get("desc") or item.get("binary"):
+                        rows_html += f'''
+                        <div style="display: flex; gap: 15px; flex: 1; min-height: 0;">
+                            <div class="{dashed}" style="flex: {img_flex}; max-width: {img_max_width};">
+                                {img_tag}
+                            </div>
+                            <div style="flex: {text_flex}; display: flex; flex-direction: column; overflow: hidden; padding-right: 5px;">
+                                <div style="font-size: 0.7rem; color: #ccc; margin-bottom: 8px; line-height: 1.3; text-align: justify; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">{item["desc"]}</div>
+                                <div style="font-size: 0.6rem; color: #555; font-family: monospace; word-break: break-all; overflow-y: hidden;">{item["binary"]}</div>
+                            </div>
+                        </div>
+                        '''
+                    else:
+                        rows_html += f'''
+                        <div style="display: flex; gap: 15px; flex: 1; min-height: 0;">
+                            <div class="{dashed}" style="flex: 1; max-width: 100%;">
+                                {img_tag}
+                            </div>
+                        </div>
+                        '''
+                    
+                cols_html += f'''
+                <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid #222; background: #080808; padding: 20px;">
+                    <h2 class="page-header" style="text-align: center; border-bottom: 1px dashed #444; padding-bottom: 10px; margin-bottom: 20px; color: var(--accent-glow);">{col["title"]}</h2>
+                    <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; min-height: 0;">
+                        {rows_html}
+                    </div>
+                </div>
+                '''
+
+            slides_html += f'''
+                <div class="page-side" style="width: 100%; padding: 40px 60px; flex-direction: column; z-index: 10;">
+                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
+                    <div style="display: flex; gap: 20px; flex: 1; min-height: 0; width: 100%;">
+                        {cols_html}
+                    </div>
                 </div>
             '''
         slides_html += '</div>\n'
