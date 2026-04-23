@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -6,6 +6,7 @@ import uvicorn, os, json, base64, time
 import xml.etree.ElementTree as ET
 import sys
 import asyncio
+import subprocess
 
 # --- MODULAR LOGIC IMPORTS ---
 from logic.geometry_engine import build_geometries
@@ -14,6 +15,7 @@ from logic.ai_synthesizer import (
     generate_spatial_seed, generate_mermaid_diagram
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
+from logic.blender_demo import run_blender_demo
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +62,14 @@ models_dir = os.path.join(BASE_DIR, 'models')
 os.makedirs(models_dir, exist_ok=True)
 app.mount("/models", StaticFiles(directory="models"), name="models")
 
-comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
+blender_output_dir = os.path.join(BASE_DIR, "output", "blender")
+os.makedirs(blender_output_dir, exist_ok=True)
+app.mount("/blender-output", StaticFiles(directory=blender_output_dir), name="blender-output")
+
+comfy_output_dir = r"D:\ComfyUI_windows_portable\ComfyUI\output"
+if not os.path.exists(comfy_output_dir):
+    comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
+
 if os.path.exists(comfy_output_dir):
     app.mount("/comfy-output", StaticFiles(directory=comfy_output_dir), name="comfy-output")
 
@@ -89,6 +98,13 @@ class ComfyTextTo3DPayload(BaseModel):
 class ComfyRenderPayload(BaseModel):
     image_b64: str       # base64 PNG from Three.js canvas
     narrative: str       # spatial quality narrative for the prompt
+
+class BlenderDemoPayload(BaseModel):
+    svg_filename: str = ""          # optional: name of SVG in data/ParkSVG/
+    dense_hills:  bool = True       # True = 3x more mounds, taller relief
+    height_scale: float = 1.0       # 1.0 = normal  2.0 = very hilly
+    trunk_r:      float = 0.65      # tree trunk radius mm
+    option_name:  str = "Demo"      # output filename stem
 
 # --- ROUTES ---
 
@@ -222,12 +238,9 @@ def capture_dashboard(payload: CapturePayload):
                     const out = document.getElementById('narrative-output');
                     if (out) {{
                         out.innerHTML = '';
-                        const p1 = document.createElement('pre');
-                        p1.textContent = '> ' + {json.dumps(payload.prompt)};
                         const p2 = document.createElement('pre');
                         p2.className = 'success';
                         p2.textContent = {json.dumps(payload.narrative)};
-                        out.appendChild(p1);
                         out.appendChild(p2);
                     }}
                 }}
@@ -244,7 +257,7 @@ def capture_dashboard(payload: CapturePayload):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/generate")
-async def generate_memory_node(payload: MemoryPrompt):
+async def generate_memory_node(payload: MemoryPrompt, background_tasks: BackgroundTasks):
     prompt = payload.prompt
     
     # 1. Retrieval (ChromaDB)
@@ -277,6 +290,15 @@ async def generate_memory_node(payload: MemoryPrompt):
 
     # 3.5. 3D Geometry Generation
     geometries = []
+    
+    comfy_mesh_dir = os.path.join(comfy_output_dir, "mesh")
+    recent_glbs = []
+    if os.path.exists(comfy_mesh_dir):
+        files = [os.path.join(comfy_mesh_dir, f) for f in os.listdir(comfy_mesh_dir) if f.lower().endswith('.glb')]
+        files.sort(key=os.path.getmtime, reverse=True)
+        recent_glbs = files
+
+    glb_idx = 0
     for item in spatial_seed:
         width = item.get("target_width", 20)
         depth = item.get("target_height", 20)
@@ -284,6 +306,23 @@ async def generate_memory_node(payload: MemoryPrompt):
         z = item.get("transform", {}).get("y", 0) # Map 2D Y to 3D Z
         
         layer_id = item.get("layerId", "")
+        
+        if layer_id == "BOUNDARY":
+            continue
+            
+        if recent_glbs and "HARDSCAPE" not in layer_id:
+            glb_path = recent_glbs[glb_idx % len(recent_glbs)]
+            glb_idx += 1
+            rel_path = os.path.relpath(glb_path, comfy_output_dir)
+            geometries.append({
+                "geometry_type": "glb",
+                "glb_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}",
+                "position": {"x": x, "y": 0, "z": z},
+                "footprint_m": {"width": width, "depth": depth},
+                "height_m": 15.0
+            })
+            continue
+
         geo_type = "box"
         if "WATER" in layer_id: geo_type = "water_garden"
         elif "SHADE" in layer_id: geo_type = "shade_canopy"
@@ -304,6 +343,41 @@ async def generate_memory_node(payload: MemoryPrompt):
 
     # 4. Metadata
     diagram = generate_mermaid_diagram(prompt, matches, {"geometry_type": "Hybrid Assembly", "height_m": 15})
+
+    # 5. Handshake: Save intervention data for Rhino
+    intervention_data = {
+        "spatial_seed": spatial_seed,
+        "geometries": geometries
+    }
+    with open(os.path.join(BASE_DIR, 'data', 'current_intervention.json'), 'w') as f:
+        json.dump(intervention_data, f, indent=4)
+
+    # 5.1 Archive a timestamped copy
+    archive_dir = os.path.join(BASE_DIR, 'archive', 'interventions')
+    os.makedirs(archive_dir, exist_ok=True)
+    with open(os.path.join(archive_dir, f'intervention_{int(time.time()*1000)}.json'), 'w') as f:
+        json.dump(intervention_data, f, indent=4)
+
+    # 6. Auto-Trigger Rhino Integration (DISABLED)
+    # def trigger_rhino():
+    #     script_path = os.path.join(BASE_DIR, 'run_rhino_script.py')
+    #     bake_path = os.path.join(BASE_DIR, 'logic', 'bake_to_rhino.py')
+    #     try:
+    #         subprocess.run([sys.executable, script_path, bake_path], check=True)
+    #     except Exception as e:
+    #         print(f"Rhino auto-bake failed: {e}")
+    #         
+    # background_tasks.add_task(trigger_rhino)
+
+    # 7. Auto-Trigger Blender Integration
+    def trigger_blender():
+        bake_path = os.path.join(BASE_DIR, 'logic', 'bake_to_blender.py')
+        try:
+            subprocess.Popen(["blender", "--python", bake_path])
+        except Exception as e:
+            print(f"Blender auto-bake failed (Ensure 'blender' is in your system PATH): {e}")
+            
+    background_tasks.add_task(trigger_blender)
 
     return {
         "status": "success",
@@ -366,7 +440,7 @@ async def comfy_text_to_3d(payload: ComfyTextTo3DPayload):
         if not glb_path:
             return JSONResponse(status_code=504, content={"error": "Timed out waiting for GLB output"})
 
-        rel_path = os.path.relpath(glb_path, r"C:\ComfyUI_windows_portable\ComfyUI\output")
+        rel_path = os.path.relpath(glb_path, comfy_output_dir)
         return {
             "status": "success",
             "prompt_id": prompt_id,
@@ -396,7 +470,9 @@ async def comfy_render(payload: ComfyRenderPayload):
         return JSONResponse(status_code=500, content={"error": f"Workflow not found: {wf_path}"})
 
     # Write the canvas capture to ComfyUI's input folder so LoadImage can find it
-    comfy_input_dir = r"C:\ComfyUI_windows_portable\ComfyUI\input"
+    comfy_input_dir = r"D:\ComfyUI_windows_portable\ComfyUI\input"
+    if not os.path.exists(comfy_input_dir):
+        comfy_input_dir = r"C:\ComfyUI_windows_portable\ComfyUI\input"
     os.makedirs(comfy_input_dir, exist_ok=True)
     temp_filename = f"mm_capture_{int(time.time()*1000)}.png"
     temp_path = os.path.join(comfy_input_dir, temp_filename)
@@ -448,13 +524,74 @@ async def comfy_render(payload: ComfyRenderPayload):
     if not img_path:
         return JSONResponse(status_code=504, content={"error": "Timed out waiting for render output"})
 
-    rel_path = os.path.relpath(img_path, r"C:\ComfyUI_windows_portable\ComfyUI\output")
+    rel_path = os.path.relpath(img_path, comfy_output_dir)
     return {
         "status": "success",
         "prompt_id": prompt_id,
         "image_path": img_path,
         "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
     }
+
+
+# ── BLENDER: DEMO MODE STATUS CHECK ──────────────────────────────────────────
+@app.get("/api/blender-status")
+async def blender_status():
+    """Quick check — is Blender reachable on PATH or at BLENDER_PATH?"""
+    import shutil
+    from logic.blender_demo import BLENDER_BIN
+    found = os.path.exists(BLENDER_BIN) or shutil.which(BLENDER_BIN) is not None
+    return {"online": found, "path": BLENDER_BIN}
+
+
+# ── BLENDER: DEMO MODE GENERATION ────────────────────────────────────────────
+@app.post("/api/blender-demo")
+async def blender_demo(payload: BlenderDemoPayload):
+    """
+    Demo Mode: generates a Pershing Square 3D model via headless Blender.
+    Fast alternative to /api/comfy-text-to-3d — no GPU, no ComfyUI needed.
+
+    If svg_filename is provided, resolves it from data/ParkSVG/.
+    Returns stl_url served via /blender-output/ static mount — same
+    pattern as comfy-output so the frontend can load it identically.
+    """
+    try:
+        svg_path = ""
+        if payload.svg_filename:
+            svg_path = os.path.join(BASE_DIR, "data", "ParkSVG", payload.svg_filename)
+            if not os.path.exists(svg_path):
+                return JSONResponse(status_code=404, content={
+                    "error": f"SVG not found: {payload.svg_filename}"
+                })
+
+        result = await asyncio.get_running_loop().run_in_executor(
+            None,
+            lambda: run_blender_demo(
+                svg_path     = svg_path,
+                dense_hills  = payload.dense_hills,
+                height_scale = payload.height_scale,
+                trunk_r      = payload.trunk_r,
+                option_name  = payload.option_name,
+            )
+        )
+
+        # Mirror the response shape of /api/comfy-text-to-3d so the
+        # frontend can handle both responses with the same code path
+        return {
+            "status":      "success",
+            "stl_url":     result["stl_url"],
+            "duration_s":  result["duration_s"],
+            "mode":        "demo",
+            # glb_url is None — frontend should check stl_url instead
+            "glb_url":     None,
+            "position":    {"x": 0, "y": 0, "z": 0},
+        }
+
+    except RuntimeError as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+    except Exception as e:
+        import traceback
+        print(f"[blender-demo ERROR] {traceback.format_exc()}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 if __name__ == "__main__":

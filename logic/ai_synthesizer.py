@@ -29,8 +29,27 @@ def fetch_osm_map(lat: float, lon: float, site_name: str):
     except Exception as e:
         print(f"      -> [OSM ERROR] Could not fetch map for {site_name}: {e}")
 
-def query_ollama(system_prompt: str, user_prompt: str) -> str:
-    """Calls the local Ollama server running Llama 3."""
+def query_ai(system_prompt: str, user_prompt: str) -> str:
+    """Calls Gemini API if available, otherwise falls back to local Ollama."""
+    try:
+        from dotenv import load_dotenv
+        from google import genai
+        load_dotenv(os.path.join(BASE_DIR, '.env'))
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        
+        if api_key:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-2.5-flash', 
+                contents=[system_prompt + "\n\n" + user_prompt]
+            )
+            text = response.text.strip()
+            if text.startswith("```json"): text = text[7:]
+            if text.endswith("```"): text = text[:-3]
+            return text.strip()
+    except Exception as e:
+        print(f"      -> [GEMINI ERROR] Falling back to Ollama: {e}")
+
     url = "http://localhost:11434/api/generate"
     payload = {
         "model": "llama3",
@@ -101,9 +120,9 @@ def generate_spatial_seed(prompt: str, matches: list = None) -> tuple:
     )
     user_prompt = f"User Request: {prompt}\n\nHistorical Context (Reviews):\n{context_text}"
 
-    # 2. Query Local AI Brain
-    print(f"      -> [AI] Querying local Llama 3 via Ollama...")
-    ai_response = query_ollama(sys_prompt, user_prompt)
+    # 2. Query AI Brain
+    print(f"      -> [AI] Querying AI Engine...")
+    ai_response = query_ai(sys_prompt, user_prompt)
     
     if ai_response:
         try:

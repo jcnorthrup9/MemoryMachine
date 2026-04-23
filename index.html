@@ -10,11 +10,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
-    <link rel="stylesheet" href="/static/style.css?v=1776130000">
+    <link rel="stylesheet" href="/static/style.css?v=1776960000">
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/MTLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   </head>
   <body class="panel-collapsed">
@@ -61,6 +62,7 @@
                         <div id="camera-controls" class="camera-controls" style="display: none;">
                             <button id="btn-human-view" class="secondary-btn">🧍 Human View</button>
                             <button id="btn-3d-snapshot" class="secondary-btn">📷 Snapshot</button>
+                            <button class="secondary-btn" onclick="toggleVegetation(this)">Hide Trees</button>
                         </div>
                     </div>
                 </div>
@@ -73,9 +75,14 @@
                 <span id="status-dot" class="success"></span>
                 <span id="status-text">SYSTEM READY</span>
             </div>
-            <div id="narrative-output" class="narrative-output">
-                <pre>> MEMORY MACHINE v1.2 // AWAITING INPUT</pre>
+
+            <!-- ── INLINE PROMPT BAR ─────────────────────────────────── -->
+            <div class="prompt-inline">
+                <span class="prompt-arrow">></span>
+                <input type="text" id="prompt-input" placeholder="Describe a spatial memory to cross-pollinate..." autofocus>
             </div>
+
+            <div id="narrative-output" class="narrative-output"></div>
 
             <!-- ── PANEL RESIZER ─────────────────────────────────────── -->
             <div id="panel-resizer" class="panel-resizer" title="Drag to resize"></div>
@@ -162,7 +169,30 @@
                         <span class="hud-target" id="hud-tgt-BLUE">—</span>
                     </div>
                 </div>
-                <button id="clear-stack-btn" class="hud-clr-btn">CLR</button>
+                <div class="hud-actions">
+                    <div id="dream-demo-toggle" class="mode-toggle-wrap" title="Switch generation mode">
+                        <button
+                            id="btn-dream-mode"
+                            class="mode-toggle-btn active"
+                            onclick="setGenerationMode('dream')"
+                            aria-pressed="true"
+                        >
+                            <span class="mode-icon">✦</span>
+                            <span class="mode-label">Dream</span>
+                        </button>
+                        <button
+                            id="btn-demo-mode"
+                            class="mode-toggle-btn"
+                            onclick="setGenerationMode('demo')"
+                            aria-pressed="false"
+                        >
+                            <span class="mode-icon">⚡</span>
+                            <span class="mode-label">Demo</span>
+                        </button>
+                    </div>
+                    <button id="clear-stack-btn" class="hud-clr-btn">CLR</button>
+                    <button id="generate-btn">GEN</button>
+                </div>
             </div>
         </div>
     </div>
@@ -206,14 +236,7 @@
     </script>
 
     <!-- Main application controller -->
-    <script src="/static/main.js?v=1776140000"></script>
-
-    <!-- Floating prompt bar — fixed bottom center -->
-    <div class="prompt-bar">
-        <span class="prompt-arrow">></span>
-        <input type="text" id="prompt-input" placeholder="Describe a spatial memory to cross-pollinate..." autofocus>
-        <button id="generate-btn">GEN</button>
-    </div>
+    <script src="/static/main.js?v=1777010000"></script>
 
     <!-- Bottom status bar -->
     <footer class="app-footer">

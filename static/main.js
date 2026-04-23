@@ -6,6 +6,50 @@
 
 let autoExportEnabled = true;
 
+// Demo Mode toggle state — false = Dream Mode (ComfyUI), true = Demo Mode (Blender)
+window.MemoryState = window.MemoryState || {};
+window.MemoryState.isDemoMode = false;
+
+// ── RHINO LAYER MANIFEST ─────────────────────────────────────────────────────
+// Maps OBJ object names → Rhino layer (derived from pershingSQcurrent.3dm export order)
+const RHINO_LAYER_MAP = {
+  object_1:'SMALL BASE',object_2:'OSM_CONTEXT',object_3:'OSM_CONTEXT',
+  object_4:'LANDSCAPE',object_5:'LANDSCAPE',object_6:'LANDSCAPE',object_7:'LANDSCAPE',
+  object_8:'LANDSCAPE',object_9:'LANDSCAPE',object_10:'OSM_CONTEXT',object_11:'OSM_CONTEXT',
+  object_12:'OSM_CONTEXT',object_13:'OSM_CONTEXT',object_14:'OSM_CONTEXT',object_15:'OSM_CONTEXT',
+  object_16:'OSM_CONTEXT',object_17:'OSM_CONTEXT',object_18:'OSM_CONTEXT',object_19:'OSM_CONTEXT',
+  object_20:'OSM_CONTEXT',object_21:'OSM_CONTEXT',object_22:'OSM_CONTEXT',object_23:'OSM_CONTEXT',
+  object_24:'OSM_CONTEXT',object_25:'OSM_CONTEXT',object_26:'OSM_CONTEXT',object_27:'OSM_CONTEXT',
+  object_28:'OSM_CONTEXT',object_29:'OSM_CONTEXT',object_30:'OSM_CONTEXT',object_31:'OSM_CONTEXT',
+  object_32:'OSM_CONTEXT',object_33:'OSM_CONTEXT',object_34:'OSM_CONTEXT',object_35:'OSM_CONTEXT',
+  object_36:'OSM_CONTEXT',object_37:'OSM_CONTEXT',object_38:'OSM_CONTEXT',object_39:'OSM_CONTEXT',
+  object_40:'OSM_CONTEXT',object_41:'OSM_CONTEXT',object_42:'ICONIC_GEO',object_43:'OSM_CONTEXT',
+  object_44:'OSM_CONTEXT',object_45:'OSM_CONTEXT',object_46:'ICONIC_GEO',object_47:'ICONIC_GEO',
+  object_48:'ICONIC_GEO',object_49:'OSM_CONTEXT',object_50:'HARDSCAPE',object_51:'HARDSCAPE',
+  object_52:'ICONIC_GEO',object_53:'LANDSCAPE',object_54:'LANDSCAPE',object_55:'ICONIC_GEO',
+  object_56:'OSM_CONTEXT',object_57:'SIDEWALK',object_58:'OSM_CONTEXT',object_59:'HARDSCAPE',
+  object_60:'HARDSCAPE',object_61:'HARDSCAPE',object_62:'ICONIC_GEO',object_63:'ICONIC_GEO',
+  object_64:'HARDSCAPE',object_65:'OSM_CONTEXT',object_66:'HARDSCAPE',object_67:'ICONIC_GEO',
+  object_68:'ICONIC_GEO',object_69:'ICONIC_GEO',object_70:'ICONIC_GEO',object_71:'ICONIC_GEO',
+  object_72:'ICONIC_GEO',object_73:'ICONIC_GEO',object_74:'WATER',object_75:'HARDSCAPE',
+  object_76:'OSM_CONTEXT',object_77:'ICONIC_GEO',object_78:'ICONIC_GEO',object_79:'OSM_CONTEXT',
+  object_80:'HARDSCAPE',object_81:'RAMPS',object_82:'RAMPS',object_83:'SUBTERRANEAN_GARAGE',
+  object_84:'OSM_CONTEXT',object_85:'SIDEWALK',object_86:'SIDEWALK',object_87:'SIDEWALK',
+  object_88:'OSM_CONTEXT',object_89:'OSM_CONTEXT',object_90:'OSM_CONTEXT',object_91:'OSM_CONTEXT',
+  object_92:'OSM_CONTEXT',object_93:'OSM_CONTEXT',object_94:'OSM_CONTEXT',object_95:'ICONIC_GEO',
+  object_96:'OSM_CONTEXT',object_97:'OSM_CONTEXT',object_98:'OSM_CONTEXT',object_99:'OSM_CONTEXT',
+  object_100:'OSM_CONTEXT',object_101:'OSM_CONTEXT',object_102:'OSM_CONTEXT',object_103:'OSM_CONTEXT',
+  object_104:'OSM_CONTEXT',object_105:'OSM_CONTEXT',object_106:'OSM_CONTEXT',object_107:'OSM_CONTEXT',
+  object_108:'OSM_CONTEXT',object_109:'OSM_CONTEXT',object_110:'OSM_CONTEXT',object_111:'OSM_CONTEXT',
+  object_112:'OSM_CONTEXT',object_113:'OSM_CONTEXT',object_114:'OSM_CONTEXT',object_115:'OSM_CONTEXT',
+  object_116:'OSM_CONTEXT',object_117:'OSM_CONTEXT',object_118:'OSM_CONTEXT',
+  object_119:'STREET',object_120:'STREET',object_121:'STREET',object_122:'STREET',
+  object_123:'Default',object_124:'aPerson',object_125:'aPerson',object_126:'Default',
+  object_127:'Default',object_128:'Default',object_129:'Default',object_130:'Default',object_131:'aPerson',
+};
+// Layers hidden by default — everything in 00_SITE except OSM_CONTEXT, STREET, SIDEWALK
+const SITE_LAYERS_HIDDEN = new Set(['SMALL BASE','LANDSCAPE','ICONIC_GEO','WATER','SUBTERRANEAN_GARAGE','HARDSCAPE','RAMPS']);
+
 // ── THREE.JS SCENE STATE ─────────────────────────────────────────────────────
 let threeRenderer = null;
 let threeScene    = null;
@@ -147,7 +191,7 @@ function _loadBaseModel() {
     const center = box.getCenter(new THREE.Vector3());
     const size   = box.getSize(new THREE.Vector3());
     // Scale entire model (park + context) so the max footprint dimension = 100 units
-    const scale  = 100 / Math.max(size.x, size.z);
+    const scale  = 130 / Math.max(size.x, size.z);
 
     object.position.sub(center.multiplyScalar(scale));
     object.scale.setScalar(scale);
@@ -191,24 +235,26 @@ function _loadBaseModel() {
 
     object.userData.isBaseModel = true;
     threeScene.add(object);
+
+
     _drawHardscapeDebugBox();
   }
 
   if (typeof THREE.MTLLoader !== 'undefined') {
     const mtlLoader = new THREE.MTLLoader();
     const cb = Date.now();
-    mtlLoader.load(`/models/PershingSQforApp.mtl?v=${cb}`, function (materials) {
+    mtlLoader.load(`/models/PershingSQforAppEMPTY.mtl?v=${cb}`, function (materials) {
       materials.preload();
       const objLoader = new THREE.OBJLoader();
       objLoader.setMaterials(materials);
-      objLoader.load(`/models/PershingSQforApp.obj?v=${cb}`, _fitAndAdd,
+      objLoader.load(`/models/PershingSQforAppEMPTY.obj?v=${cb}`, _fitAndAdd,
         undefined, e => console.error('OBJ load error:', e));
     }, undefined, () => {
-      new THREE.OBJLoader().load(`/models/PershingSQforApp.obj?v=${cb}`, _fitAndAdd,
+      new THREE.OBJLoader().load(`/models/PershingSQforAppEMPTY.obj?v=${cb}`, _fitAndAdd,
         undefined, e => console.error('OBJ load error:', e));
     });
   } else {
-    new THREE.OBJLoader().load('/models/PershingSQforApp.obj', _fitAndAdd,
+    new THREE.OBJLoader().load('/models/PershingSQforAppEMPTY.obj', _fitAndAdd,
       undefined, e => console.error('OBJ load error:', e));
   }
 }
@@ -469,7 +515,6 @@ async function generate() {
   refreshStackUI();
 
   setStatus('Synthesising memory node...', 'running');
-  appendToTerminal(`> ${prompt}`, 'line-accent');
 
   try {
     const res  = await fetch('/api/generate', {
@@ -559,28 +604,48 @@ async function generate() {
           const tx = seed.transform?.x ?? 0;
           const ty = seed.transform?.y ?? 0;
           const zonePrompt = `${prompt}. ${seed.label || seed.layerId} element, urban park, architectural scale model`;
-          fetch('/api/comfy-text-to-3d', {
+          const endpoint = window.MemoryState.isDemoMode
+            ? '/api/blender-demo'
+            : '/api/comfy-text-to-3d';
+
+          const requestBody = window.MemoryState.isDemoMode ? {
+            svg_filename: '',
+            dense_hills:  true,
+            height_scale: 1.0,
+            trunk_r:      0.65,
+            option_name:  `Demo_${Date.now()}`,
+          } : {
+            prompt: zonePrompt,
+            zone_type: seed.layerId,
+            position_x: tx,
+            position_z: ty,
+          };
+
+          fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: zonePrompt,
-              zone_type: seed.layerId,
-              position_x: tx,
-              position_z: ty,
-            }),
+            body: JSON.stringify(requestBody),
           })
           .then(r => r.json())
           .then(result => {
             if (result.status === 'success') {
-              loadGLBIntoScene(result.glb_url, result.position.x, result.position.z, seed.layerId);
-              appendToTerminal(`✓ 3D: ${seed.label || seed.layerId} → (${result.position.x.toFixed(0)}, ${result.position.z.toFixed(0)})`, 'line-muted');
+              const modelUrl = result.glb_url || result.stl_url || null;
+              const pos = result.position || { x: tx, z: ty };
+              if (modelUrl) {
+                if (result.stl_url && !result.glb_url) {
+                  loadSTLIntoScene(modelUrl, pos.x, pos.z, seed.layerId);
+                } else {
+                  loadGLBIntoScene(modelUrl, pos.x, pos.z, seed.layerId);
+                }
+                appendToTerminal(`✓ 3D: ${seed.label || seed.layerId} → (${(pos.x||0).toFixed(0)}, ${(pos.z||0).toFixed(0)})`, 'line-muted');
+              }
             }
             doneCount++;
             if (doneCount === interventionLayers.length) {
               setStatus('2D + 3D synthesis complete.', 'success');
             }
           })
-          .catch(err => console.warn('[GLB pipeline]', err));
+          .catch(err => console.warn('[3D pipeline]', err));
         });
       }
     }
@@ -1104,6 +1169,82 @@ function _wireLayerPicker() {
   // Populate layers for the default (first) site on load
   _populateLayerPicker(siteSelect.value);
 }
+
+// ── DREAM / DEMO MODE TOGGLE ─────────────────────────────────────────────────
+function setGenerationMode(mode) {
+  window.MemoryState.isDemoMode = (mode === 'demo');
+  document.getElementById('btn-dream-mode').classList.toggle('active', mode === 'dream');
+  document.getElementById('btn-demo-mode').classList.toggle('active', mode === 'demo');
+  document.getElementById('btn-dream-mode').setAttribute('aria-pressed', mode === 'dream');
+  document.getElementById('btn-demo-mode').setAttribute('aria-pressed', mode === 'demo');
+
+  const statusEl = document.getElementById('comfy-status-indicator');
+  if (statusEl) {
+    statusEl.title = mode === 'demo'
+      ? '⚡ Demo Mode — Blender headless (no GPU needed)'
+      : '✦ Dream Mode — ComfyUI AI generation';
+  }
+}
+window.setGenerationMode = setGenerationMode;
+
+// ── STL LOADER (Demo Mode) ───────────────────────────────────────────────────
+function loadSTLIntoScene(stlUrl, svgX, svgZ, zoneType = '') {
+  if (!threeScene) return;
+  if (typeof THREE.STLLoader === 'undefined') {
+    console.warn('[STL] STLLoader not available');
+    return;
+  }
+
+  const loader = new THREE.STLLoader();
+  loader.load(stlUrl, (geometry) => {
+    // 1. Blender is Z-up; Three.js is Y-up — rotate geometry -90° around X
+    geometry.rotateX(-Math.PI / 2);
+    geometry.computeBoundingBox();
+    const size = geometry.boundingBox.getSize(new THREE.Vector3());
+    // After rotation: size.x≈193mm (park W), size.z≈112mm (park D), size.y≈12.5mm (height)
+
+    // 2. Scale so the STL footprint fills the park rectangle
+    //    PARK_RECT_DEPTH=27.67 (long axis) ↔ 193mm, PARK_RECT_WIDTH=16.79 ↔ 112mm
+    const scale = Math.min(PARK_RECT_DEPTH / size.x, PARK_RECT_WIDTH / size.z) * 1.3;
+    geometry.scale(scale, scale, scale);
+    geometry.computeBoundingBox();
+
+    // 3. Center horizontally and sit on the hardscape surface
+    const bb  = geometry.boundingBox;
+    const cx  = (bb.min.x + bb.max.x) / 2;
+    const cz  = (bb.min.z + bb.max.z) / 2;
+    geometry.translate(-cx, _hardscapeSurfaceY - bb.min.y, -cz);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xBCAAA4, roughness: 0.85, metalness: 0.05,
+      transparent: true, opacity: 0.88,
+    });
+    const mesh = new THREE.Mesh(geometry, mat);
+
+    // 4. Rotate to match the park's real-world diagonal orientation (+90° to correct axis)
+    mesh.rotation.y = PARK_ROTATION_Y + Math.PI / 2;
+    mesh.position.set(PARK_CENTER_X, 0, PARK_CENTER_Z);
+    mesh.castShadow = true;
+    mesh.userData.isIntervention = true;
+
+    threeScene.add(mesh);
+    switchToTab('3d');
+    console.log(`[STL] ${stlUrl} | scale=${scale.toFixed(4)} | raw ${size.x.toFixed(0)}×${size.z.toFixed(0)}×${size.y.toFixed(0)} mm`);
+  }, undefined, err => console.error('[STL] Load error:', err));
+}
+
+let _siteLayersVisible = false;   // start hidden (matches auto-hide on load)
+function toggleVegetation(btn) {
+  if (!threeScene) return;
+  _siteLayersVisible = !_siteLayersVisible;
+  threeScene.traverse(node => {
+    if (SITE_LAYERS_HIDDEN.has(node.userData.rhinoLayer)) {
+      node.visible = _siteLayersVisible;
+    }
+  });
+  btn.textContent = _siteLayersVisible ? 'Hide Site' : 'Show Site';
+}
+window.toggleVegetation = toggleVegetation;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {

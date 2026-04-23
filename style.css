@@ -191,3 +191,41 @@ body.light-mode .narrative-output pre.success {
 body.light-mode #prompt-input {
     color: #111111;
 }
+
+/* ── Dream / Demo mode toggle ── */
+.mode-toggle-wrap {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+.mode-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+}
+.mode-toggle-btn .mode-icon { font-size: 10px; }
+.mode-toggle-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.mode-toggle-btn:hover:not(.active) {
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.06);
+}

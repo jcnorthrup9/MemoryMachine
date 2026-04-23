@@ -1,8 +1,22 @@
 {
   "mcpServers": {
     "rhinoceros3d": {
-      "command": "uvx",
-      "args": ["rhinomcp", "--port", "1999"]
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:3001/mcp"
+      ]
+    },
+    "memory_machine": {
+      "command": "python",
+      "args": ["d:/MemoryMachine/mcp_server.py"]
+    },
+    "blender": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:9876/mcp"
+      ]
     }
   }
 }
