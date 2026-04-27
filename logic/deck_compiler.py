@@ -26,36 +26,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memory Machine // Presentation Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
-            --text-color: #e0e0e0;
-            --accent-glow: #fff4ca;
-            --border-dim: #222;
+            --bg-color: #f4f3ec;
+            --text-color: #08060d;
+            --accent-glow: #08060d;
+            --border-dim: #e5e4e7;
             --trans-speed: 0.4s;
         }
         * { box-sizing: border-box; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; position: relative; }
+        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #fff; border: 1px solid var(--border-dim); display: flex; flex-direction: column; position: relative; }
         .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; z-index: 2; }
-        
+
         .page-side { width: 50%; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 5; padding: 60px; overflow: visible;}
 
-        h1.zine-title { font-size: 2.5rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px; white-space: nowrap; flex-shrink: 0; position: relative; z-index: 20;}
-        h2.page-header { color: #888; font-size: 1rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; word-wrap: break-word; flex-shrink: 0;}
-        
-        .text-wrap { white-space: pre-wrap; font-size: 0.9rem; line-height: 1.4; color: #ccc; text-align: justify; word-wrap: break-word; padding-right: 20px; overflow: hidden;}
-        
+        h1.zine-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 2.5rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #e5e4e7; padding-bottom: 10px; white-space: nowrap; flex-shrink: 0; position: relative; z-index: 20; letter-spacing: 0.04em;}
+        h2.page-header { font-family: 'DM Mono', monospace; font-weight: 500; color: #6b6375; font-size: 1rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; word-wrap: break-word; flex-shrink: 0;}
+
+        .text-wrap { white-space: pre-wrap; font-size: 1rem; line-height: 1.4; color: #6b6375; text-align: justify; word-wrap: break-word; padding-right: 20px; overflow: hidden;}
+
         .spread { opacity: 0; pointer-events: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; display: flex; z-index: 0; transition: opacity var(--trans-speed); }
         .spread.active { opacity: 1; pointer-events: auto; z-index: 10; }
-        
-        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 100; position: relative; }
-        .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
-        .nav-controls button:hover { background: #111; border-color: #666; color: #fff; }
+
+        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #6b6375; background: #f4f3ec; z-index: 100; position: relative; }
+        .nav-controls button { background: none; border: 1px solid #e5e4e7; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: inherit; font-size: 1rem;}
+        .nav-controls button:hover { background: #f4f3ec; border-color: #08060d; color: #08060d; }
 
         .img-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; flex: 1; min-height: 0; justify-content: center; margin-top: 10px; }
-        .img-box { position: relative; width: 100%; border: 1px solid #333; background: #080808; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; flex: 1; min-height: 0; }
-        .img-box.dashed { border: 1px dashed #444; }
+        .img-box { position: relative; width: 100%; border: 1px solid #e5e4e7; background: #fafaf8; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; flex: 1; min-height: 0; }
+        .img-box.dashed { border: 1px dashed #c9c8cc; }
         .img-box img { width: 100%; height: 100%; object-fit: cover; }
     </style>
     <script type="module">
@@ -334,48 +337,11 @@ def build_payload():
 
     system_prompt = get_text_data(os.path.join(BASE_DIR, 'logic', 'prompt.txt'), "[ AGENT PROMPT PENDING ]")
     workflow_body = f"--- SYSTEM DIRECTIVE ---\n{system_prompt}"
-    pipeline_body = (
-        "A visual mapping of the autonomous generative pipeline.\n\n"
-        "The architecture traces a path from Text, to Image, to 3D Space:\n\n"
-        "1. Narrative Data (Text): Visitor reviews and prompts are synthesized into spatial parameters.\n\n"
-        "2. Vision & Diagramming (Image): AI vision traces satellite imagery to generate geometric scripts.\n\n"
-        "3. 2D to 3D Translation (Rhino): Scripts draw 2D boundaries, which are parsed into formal logic.\n\n"
-        "4. Site Intervention (3D): Procedural generation deploys the hallucinatory 3D masterplan."
-    )
-
     bottega_quant = get_text_data(os.path.join(DATA_DIR, 'bottega_massing.csv'), "Element,Instances,DimX,DimY,DimZ,Layer\nLobby,1,40,30,15,01_INTERIOR\nDesk,5,5,3,3,03_FIXTURES")
 
     nakagin_quant = get_text_data(os.path.join(BASE_DIR, 'logic', 'nakagin_generator.py'), "capsule_w = 2.5\ncapsule_l = 4.0\ncapsule_h = 2.5\nwindow_dia = 1.3\ncores = 2\ncapsules = 140")
 
     pershing_quant = get_text_data(os.path.join(DATA_DIR, 'extracted_trees.csv'), "X,Y,Radius\n150.0,200.0,20.0\n180.0,240.0,25.0\n100.0,300.0,18.0\n400.0,800.0,30.0")
-
-    mermaid_chart = """graph LR
-        User((Architect)) -->|Qualitative Prompt| QS[qualitative_search.py]
-        User -->|Selects Site| ADO[autonomous_diagram_orchestrator.py]
-        
-        subgraph Phase1 ["Phase 1: Narrative Data"]
-            Reviews[(Scraped Reviews)] -->|Sentiments| QS
-            QS -->|Extracts Keywords| Params[(Spatial Parameters)]
-        end
-
-        subgraph Phase2 ["Phase 2: AI Vision & Diagramming"]
-            ADO -->|Captures| SatImg[(Satellite Image)]
-            SatImg -->|Canny Edge Map| AVT[ai_vision_tracer.py]
-            AVT -->|Gemini Vision| Script[Rhino Drawing Script]
-        end
-
-        subgraph Phase3 ["Phase 3: 2D to 3D Translation"]
-            Script -. Executes in Rhino .-> Diagram[2D Canvas Space]
-            Diagram -->|Analyzed| RDP[rhino_diagram_parser.py]
-            RDP -->|Maps Zones & Paths| Manifest[(memory_manifest.json)]
-            Params --> Manifest
-        end
-
-        subgraph Phase4 ["Phase 4: Site Intervention"]
-            Manifest -. Read by .-> IE[intervention_engine.py]
-            IE -->|Procedural Generation| Masterplan[3D Rhino Masterplan]
-            Masterplan -->|Exports| Payload[(figma_payload.json)]
-        end"""
 
     bottega_summary = (
         "Bottega Louie is a high-end patisserie and restaurant situated in the historic Brockman Building in Downtown Los Angeles.\n\n"
@@ -425,7 +391,7 @@ def build_payload():
 
     phase1 = {
         "type": "phase_grid_slide",
-        "title": "04 // PHASE 1: DOMESTIC GEOMETRIES",
+        "title": "PHASE 1: DOMESTIC GEOMETRIES",
         "columns": [
             make_phase_col(
                 "TRAILER (1988)", 
@@ -454,7 +420,7 @@ def build_payload():
 
     phase2 = {
         "type": "phase_grid_slide",
-        "title": "05 // PHASE 2: SYNTHETIC TYPOLOGIES",
+        "title": "PHASE 2: SYNTHETIC TYPOLOGIES",
         "columns": [
             make_phase_col(
                 "BOTTEGA LOUIE", 
@@ -473,7 +439,7 @@ def build_payload():
 
     phase3 = {
         "type": "phase_grid_slide",
-        "title": "06 // PHASE 3: OPERATIONAL ASSEMBLAGE",
+        "title": "PHASE 3: OPERATIONAL ASSEMBLAGE",
         "img_flex": "2",
         "text_flex": "1",
         "img_max_width": "65%",
@@ -484,7 +450,7 @@ def build_payload():
             ]),
             make_phase_col("PERSHING // DIAGRAM", "", "", [
                 r"C:\Users\john\MemoryMachine\archive\diagrams\PershingDiagram.jpg", 
-                r"C:\Users\john\MemoryMachine\archive\GIF\ezgif-4207c926a3a4318b.gif"
+                r"C:\Users\john\MemoryMachine\archive\diagrams\diagramGIF.gif"
             ]),
             make_phase_col("PERSHING // SYNTHESIS", "", "", ["", ""])
         ]
@@ -502,7 +468,7 @@ def build_payload():
             },
             {
                 "type": "workflow_slide",
-                "title": "01 // THE MACHINE WORKFLOW",
+                "title": "THE MACHINE WORKFLOW",
                 "steps": [
                     {"title": "TEXT // NARRATIVE", "desc": "Scraping historical archives, visitor reviews, and extracting qualitative spatial parameters."},
                     {"title": "IMAGE // VISION", "desc": "Capturing satellite imagery and employing AI vision tracing to locate physical boundaries."},
@@ -512,18 +478,8 @@ def build_payload():
                 ]
             },
             {
-                "type": "text_slide",
-                "title": "02 // SYSTEM PIPELINE",
-                "body": pipeline_body
-            },
-            {
-                "type": "mermaid_slide",
-                "title": "02 // SYSTEM PIPELINE (DIAGRAM)",
-                "mermaid_code": mermaid_chart
-            },
-            {
                 "type": "text_and_image_slide",
-                "title": "03 // COLLECTIVE MEMORY",
+                "title": "COLLECTIVE MEMORY",
                 "body": "Memory is not a static archive, but an unstable process of encoding, retrieval, and decay; it shifts, collapses, and rewrites itself constantly. In the last decade or so, 'artificial intelligence' (LoRAs/Hallucinations) has been exposed as a reflection of how memory operates, and within this operation are its inherent biases, fractures, and capacity for curiosity and invention.\n\nArchitecture contains memory. Spaces contain memories, old walls are torn down, types of architectural witness marks are left, with tooling marks and bits of material leftovers. Many of these are hidden below the surface, covered by fresh gypsum and spackle, left to only be discovered by the next entity that tears down these walls.\n\nThese collisions of old and new produce moments of dissonance, where architectural time collapses into a single frame.",
                 "right_title": "ARCHITECTURAL PALIMPSEST",
                 "right_grid": make_grid([
@@ -541,7 +497,14 @@ def compile_deck():
     print("\n--- Compiling Presentation Deck ---")
     
     payload = build_payload()
-    
+
+    # Auto-number slide titles sequentially, skipping the title_slide
+    slide_num = 1
+    for slide in payload["slides"]:
+        if slide["type"] != "title_slide":
+            slide["title"] = f"{slide_num:02d} // {slide['title']}"
+            slide_num += 1
+
     # 1. Export JSON for Figma
     os.makedirs(os.path.dirname(FIGMA_OUTPUT), exist_ok=True)
     with open(FIGMA_OUTPUT, 'w', encoding='utf-8') as f:
@@ -564,7 +527,7 @@ def compile_deck():
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px; position: relative; z-index: 20;">{slide["subtitle"]}</h2>
                     {abstract_html}
                 </div>
@@ -573,7 +536,7 @@ def compile_deck():
         elif slide["type"] == "text_slide":
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <div class="text-wrap" style="margin-top: 150px;">{slide["body"]}</div>
                 </div>
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;"></div>
@@ -581,17 +544,17 @@ def compile_deck():
         elif slide["type"] == "workflow_slide":
             steps_html = ""
             for i, step in enumerate(slide["steps"]):
-                arrow = '<div style="display: flex; align-items: center; justify-content: center; padding: 0 15px; color: #666; font-size: 2rem;">&rarr;</div>' if i < len(slide["steps"]) - 1 else ''
+                arrow = '<div style="display: flex; align-items: center; justify-content: center; padding: 0 15px; color: #c9c8cc; font-size: 2rem;">&rarr;</div>' if i < len(slide["steps"]) - 1 else ''
                 steps_html += f'''
-                    <div style="flex: 1; border: 1px solid #333; background: #0a0a0a; padding: 20px; display: flex; flex-direction: column;">
-                        <h3 style="color: var(--accent-glow); margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #222; padding-bottom: 10px;">{step['title']}</h3>
-                        <p style="color: #aaa; font-size: 1rem; line-height: 1.4; margin: 0;">{step['desc']}</p>
+                    <div style="flex: 1; border: 1px solid #e5e4e7; background: #fafaf8; padding: 20px; display: flex; flex-direction: column;">
+                        <h3 style="color: var(--accent-glow); margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 10px;">{step['title']}</h3>
+                        <p style="color: #6b6375; font-size: 1rem; line-height: 1.4; margin: 0;">{step['desc']}</p>
                     </div>
                     {arrow}
                 '''
             slides_html += f'''
                 <div class="page-side left-page" style="width: 100%; padding-right: 60px; padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
                         <div style="display: flex; flex-direction: row; margin-top: 20px; align-items: stretch; height: 350px;">
                             {steps_html}
@@ -603,8 +566,8 @@ def compile_deck():
         elif slide["type"] == "mermaid_slide":
             slides_html += f'''
                 <div class="page-side" style="width: 100%; padding: 40px 60px; flex-direction: column; z-index: 10;">
-                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
-                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #333; background: #080808; padding: 20px; width: 100%;">
+                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #e5e4e7; background: #fafaf8; padding: 20px; width: 100%;">
                         <div class="mermaid" style="width: 100%; height: 100%; display: flex; justify-content: center;">
 {slide["mermaid_code"]}
                         </div>
@@ -614,13 +577,13 @@ def compile_deck():
         elif slide["type"] == "text_and_mermaid_slide":
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <div class="text-wrap" style="margin-top: 150px;">{slide["body"]}</div>
                 </div>
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
-                    <div style="margin-top: 115px; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #333; background: #080808; padding: 20px;">
+                    <div style="margin-top: 115px; flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #e5e4e7; background: #fafaf8; padding: 20px;">
                         <div class="mermaid" style="width: 100%; height: 100%; display: flex; justify-content: center;">
 {slide["mermaid_code"]}
                         </div>
@@ -644,11 +607,11 @@ def compile_deck():
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <div class="text-wrap" style="margin-top: 150px;">{slide["body"]}</div>
                 </div>
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
                     <div class="img-stack" style="margin-top: {stack_margin};">{right_boxes}</div>
                 </div>
@@ -663,15 +626,15 @@ def compile_deck():
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["left_title"]}</h2>
                     <div class="text-wrap" style="margin-top: 115px; overflow: hidden; flex: 1;">{slide["left_body"]}</div>
                 </div>
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
                     <div style="height: 115px; overflow: hidden; display: flex; align-items: flex-start;">
-                        <div class="text-wrap" style="font-family: monospace; color: #00ff66; overflow: hidden; flex: {text_flex}; word-break: break-all;">{slide["right_body"]}</div>
+                        <div class="text-wrap" style="font-family: monospace; color: #08060d; overflow: hidden; flex: {text_flex}; word-break: break-all;">{slide["right_body"]}</div>
                     </div>
                     {right_img_html}
                 </div>
@@ -703,12 +666,12 @@ def compile_deck():
 
             slides_html += f'''
                 <div class="page-side left-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">{slide["title"]}</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["left_title"]}</h2>
                     <div class="img-stack" style="margin-top: 115px;">{left_boxes}</div>
                 </div>
                 <div class="page-side right-page" style="padding-top: 20px; padding-bottom: 20px;">
-                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
+                    <h1 class="zine-title" style="font-size: 1.8rem; visibility: hidden; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 10px;">Spacer</h1>
                     <h2 class="page-header" style="margin-bottom: 10px; margin-top: 0px;">{slide["right_title"]}</h2>
                     <div class="img-stack" style="margin-top: 115px;">{right_boxes}</div>
                 </div>
@@ -737,8 +700,8 @@ def compile_deck():
                                 {img_tag}
                             </div>
                             <div style="flex: {text_flex}; display: flex; flex-direction: column; overflow: hidden; padding-right: 5px;">
-                                <div style="font-size: 0.7rem; color: #ccc; margin-bottom: 8px; line-height: 1.3; text-align: justify; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">{item["desc"]}</div>
-                                <div style="font-size: 0.6rem; color: #555; font-family: monospace; word-break: break-all; overflow-y: hidden;">{item["binary"]}</div>
+                                <div style="font-size: 1rem; color: #6b6375; margin-bottom: 8px; line-height: 1.3; text-align: justify; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;">{item["desc"]}</div>
+                                <div style="font-size: 0.6rem; color: #9ca3af; font-family: monospace; word-break: break-all; overflow-y: hidden;">{item["binary"]}</div>
                             </div>
                         </div>
                         '''
@@ -752,8 +715,8 @@ def compile_deck():
                         '''
                     
                 cols_html += f'''
-                <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid #222; background: #080808; padding: 20px;">
-                    <h2 class="page-header" style="text-align: center; border-bottom: 1px dashed #444; padding-bottom: 10px; margin-bottom: 20px; color: var(--accent-glow);">{col["title"]}</h2>
+                <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid #e5e4e7; background: #fafaf8; padding: 20px;">
+                    <h2 class="page-header" style="text-align: center; border-bottom: 1px dashed #c9c8cc; padding-bottom: 10px; margin-bottom: 20px; color: var(--accent-glow);">{col["title"]}</h2>
                     <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; min-height: 0;">
                         {rows_html}
                     </div>
@@ -762,7 +725,7 @@ def compile_deck():
 
             slides_html += f'''
                 <div class="page-side" style="width: 100%; padding: 40px 60px; flex-direction: column; z-index: 10;">
-                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
+                    <h1 class="zine-title" style="font-size: 2rem; border-bottom: 1px solid #e5e4e7; padding-bottom: 5px; margin-bottom: 30px; text-align: center;">{slide["title"]}</h1>
                     <div style="display: flex; gap: 20px; flex: 1; min-height: 0; width: 100%;">
                         {cols_html}
                     </div>

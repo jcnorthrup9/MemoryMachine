@@ -4,11 +4,17 @@
       "Bash(.venv/Scripts/python.exe logic/site_to_threejs.py)",
       "Bash(.venv/Scripts/python.exe -c \"import duckduckgo_search; print\\(duckduckgo_search.__version__\\)\")",
       "Bash(.venv/Scripts/pip install:*)",
-      "Bash(.venv/Scripts/python.exe logic/diagram_agent.py \"C:\\\\Users\\\\jcnor\\\\MemoryMachine\\\\archive\\\\diagrams\\\\pershing_square_diagram.jpg\" 2>&1)"
+      "Bash(.venv/Scripts/python.exe logic/diagram_agent.py \"C:\\\\Users\\\\jcnor\\\\MemoryMachine\\\\archive\\\\diagrams\\\\pershing_square_diagram.jpg\" 2>&1)",
+      "Read(//c/Users/john/.claude/**)",
+      "Read(//c/Users/john/**)",
+      "mcp__blender__execute_blender_code",
+      "mcp__blender__get_viewport_screenshot",
+      "Bash(python -c ' *)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "rhinoceros3d"
+    "rhinoceros3d",
+    "blender"
   ]
 }
