@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Pershing Metabolizer</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #050505; font-family: 'Helvetica Neue', Arial, sans-serif; color: #eee; }
+  #app { position: fixed; inset: 0; }
+  #ui {
+    position: fixed; top: 18px; left: 18px; width: 260px;
+    background: rgba(10, 10, 12, 0.72); border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 10px; padding: 14px 16px; backdrop-filter: blur(6px);
+  }
+  #ui h1 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #FF8A2B; margin: 0 0 10px; }
+  #ui h2 { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #666; margin: 10px 0 6px; }
+  .phase-btn {
+    display: block; width: 100%; text-align: left; background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08); color: #ddd; padding: 9px 10px; margin-bottom: 6px;
+    border-radius: 6px; font-size: 12px; cursor: pointer; transition: all .15s ease;
+  }
+  .phase-btn:hover { background: rgba(255, 107, 0, 0.14); border-color: #FF6B00; }
+  .phase-btn.active { background: linear-gradient(90deg, #FF6B00, #4D00FF); color: #fff; border-color: transparent; }
+  .layer-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+  }
+  .layer-toggle {
+    width: 32px; height: 18px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05); cursor: pointer; position: relative;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .layer-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; border-radius: 6px;
+    background: #555; transition: transform .2s, background .2s;
+  }
+  .layer-toggle.on { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+  .layer-toggle.on::after { transform: translateX(14px); background: #fff; }
+  .layer-label { font-size: 11px; color: #aaa; }
+  .layer-label em { font-style: normal; display: block; font-size: 9px; color: #555; margin-top: 1px; }
+  #desc { font-size: 11px; line-height: 1.5; color: #9a9a9a; margin-top: 10px; min-height: 48px; }
+  #legend {
+    position: fixed; bottom: 18px; left: 18px; font-size: 10px; color: #888; line-height: 1.7;
+    background: rgba(10, 10, 12, 0.55); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  #legend span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+  #hint { position: fixed; bottom: 18px; right: 18px; font-size: 10px; color: #555; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="ui">
+  <h1>The Pershing Metabolizer</h1>
+
+  <h2>Development Phase</h2>
+  <button class="phase-btn active" data-phase="1">Phase 1 — Transit Activation</button>
+  <button class="phase-btn"        data-phase="2">Phase 2 — Metabolic Expansion</button>
+  <button class="phase-btn"        data-phase="3">Phase 3 — Total Integration</button>
+
+  <h2>Layers</h2>
+  <div class="layer-row">
+    <button class="layer-toggle on" id="tog-excavation"></button>
+    <span class="layer-label">Excavation Cuts
+      <em>Transit + amenity deficit</em></span>
+  </div>
+  <div class="layer-row">
+    <button class="layer-toggle" id="tog-shade"></button>
+    <span class="layer-label">Sun / Shade
+      <em>5 key LA sun conditions · DTLA 36° grid</em></span>
+  </div>
+  <div class="layer-row">
+    <button class="layer-toggle on" id="tog-columns"></button>
+    <span class="layer-label">Structural Columns
+      <em>274 real columns from OBJ</em></span>
+  </div>
+
+  <div id="desc"></div>
+</div>
+
+<div id="legend">
+  <div><span style="background:#FF6B00"></span>Surface deficit scoop</div>
+  <div><span style="background:#4D00FF"></span>Deep transit cut</div>
+  <div><span style="background:#3a3a3a"></span>Inactive plaza</div>
+  <div><span style="background:#1a4a1a"></span>Heavy shade (buildings)</div>
+  <div><span style="background:#8BC34A"></span>Solar exposure</div>
+</div>
+<div id="hint">drag to orbit · scroll to zoom</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+/* =========================================================================
+   PERSHING METABOLIZER — real geometry + layered diagrammatic logic
+   Geometry: real_geometry.json (extracted from Rhino OBJ)
+   Buildings: ../data/building_heights.json (real perimeter heights)
+   ========================================================================= */
+
+const [REAL, BLDG_DATA] = await Promise.all([
+  fetch('./real_geometry.json').then(r => r.json()),
+  fetch('../data/building_heights.json').then(r => r.json()),
+]);
+
+/* ── Site dimensions (real, from OBJ) ─────────────────────────────────── */
+const SITE_WIDTH_FT  = REAL.site.width_ft;   // ~354ft  Olive → Hill (E-W)
+const SITE_LENGTH_FT = REAL.site.length_ft;  // ~602ft  6th → 5th  (N-S)
+
+/* ── Voxel grid ───────────────────────────────────────────────────────── */
+const VOXEL_FT  = 9;
+const NX = Math.ceil(SITE_WIDTH_FT  / VOXEL_FT);
+const NZ = Math.ceil(SITE_LENGTH_FT / VOXEL_FT);
+
+/* ── Excavation constants ─────────────────────────────────────────────── */
+const GARAGE_DEPTH_FT      = 30;
+const MAX_EXCAVATION_FT    = 90;
+const STEP_FT              = 9;
+const COLUMN_CLEARANCE_FT  = 13.5;
+const TRANSIT_FALLOFF_FT   = 37.8;
+const THRESHOLD            = 0.35;
+const MIN_HEIGHT_FT        = 2;
+
+/* ── Metro entrance attractor (site-local coordinates)
+     Transit scoring now pulls toward the metroEntrance only —
+     the tunnel OBJ is diagrammatic; the cut should terrace toward
+     the entrance, not along the full tunnel run.
+     secondary_entrance_anchor stores OBJ-frame (x,z); we use those
+     directly since buildBaseVoxels() works in the same OBJ frame.    ── */
+const METRO_ENTRANCE = {
+  x: REAL.secondary_entrance_anchor.x,
+  y: REAL.secondary_entrance_anchor.z,   // OBJ z → site-local y
+};
+
+/* ── Deficit hotspots (diagrammatic, west / Olive St edge) ──────────── */
+const DEFICIT_HOTSPOTS = [
+  { x: SITE_WIDTH_FT * 0.04, y: SITE_LENGTH_FT * 0.65, strength: 1.0, radius: 67.5 },
+  { x: SITE_WIDTH_FT * 0.04, y: SITE_LENGTH_FT * 0.30, strength: 0.6, radius: 54.0 },
+];
+
+/* ── Sun / shade constants ────────────────────────────────────────────────
+   Latitude: 34.05°N (Downtown LA)
+   Site rotation: DTLA street grid runs 36° west-of-north from true north.
+   Sun azimuths are geographic (from true N, clockwise). To cast shadows
+   into the site-local grid (where +y = site "north" ≈ true NW), we rotate
+   each azimuth by −SITE_ROTATION_DEG before projecting.
+
+   Five conditions weighted by their typical contribution to daily exposure:
+   summer and winter solstices at noon + morning/afternoon flanking times.  ── */
+const SITE_ROTATION_DEG = 36;   // true DTLA grid, not 45° — that was the orthogonalized model assumption
+const DEG = Math.PI / 180;
+
+const SUN_CONDITIONS = [
+  // { altDeg, azDeg (geographic, from N CW), weight, label }
+  { alt: 79.4, az: 180, w: 0.18, label: 'Summer solstice noon'    },
+  { alt: 48.0, az:  90, w: 0.22, label: 'Summer morning (9am)'    },
+  { alt: 48.0, az: 270, w: 0.22, label: 'Summer afternoon (3pm)'  },
+  { alt: 32.5, az: 180, w: 0.18, label: 'Winter solstice noon'    },
+  { alt: 18.0, az: 228, w: 0.20, label: 'Winter afternoon (2pm)'  },
+];
+const TOTAL_WEIGHT = SUN_CONDITIONS.reduce((s, c) => s + c.w, 0);
+
+// Buildings sit on the perimeter; their grid coords (1–28) map linearly
+// onto the real site footprint edges (buildings y=28→5th/north, y=1→6th/south).
+const BLDG_FOOTPRINT_FT = 60;   // assumed shadow-caster half-width (no footprint data yet)
+
+/* ── Phase UI descriptions ───────────────────────────────────────────── */
+const PHASE_DESCRIPTIONS = {
+  1: "Excavation focused along the Metro entrance axis only. The cut terraces down toward the metroEntrance — the tunnel OBJ is a reference diagram, not the target.",
+  2: "Hospitality deficit scoops layer on top of the transit cuts along the west (Olive St) edge.",
+  3: "Full network: transit + deficit excavation combined, with structural jacket damping around the 274 columns.",
+};
+
+/* ── Helpers ─────────────────────────────────────────────────────────── */
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function nearestColumnDist(x, y) {
+  let best = Infinity;
+  for (const c of REAL.column_positions) {
+    const d = Math.hypot(x - c.x, y - c.z);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+function nearestRampDist(x, y) {
+  let best = Infinity;
+  for (const key of ['cluster_a', 'cluster_b']) {
+    const r = REAL.ramp_anchors[key];
+    const dx = Math.max(Math.abs(x - r.x) - r.half_width_ft,  0);
+    const dy = Math.max(Math.abs(y - r.z) - r.half_length_ft, 0);
+    const d = Math.hypot(dx, dy);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/* ── Base voxel grid ──────────────────────────────────────────────────── */
+function buildBaseVoxels() {
+  const voxels = new Array(NX * NZ);
+  for (let gx = 0; gx < NX; gx++) {
+    for (let gy = 0; gy < NZ; gy++) {
+      const wx = (gx + 0.5) * VOXEL_FT;
+      const wy = (gy + 0.5) * VOXEL_FT;
+
+      // Transit: conical falloff from the metroEntrance point, not the full tunnel.
+      // This focuses the cut as terracing toward the entrance corner, matching
+      // the intended design move — the tunnel OBJ stays a diagram backdrop.
+      const entranceDist   = Math.hypot(wx - METRO_ENTRANCE.x, wy - METRO_ENTRANCE.y);
+      const transitInfluence = Math.exp(-entranceDist / TRANSIT_FALLOFF_FT);
+
+      let deficitInfluence = 0;
+      for (const h of DEFICIT_HOTSPOTS) {
+        const d = Math.hypot(wx - h.x, wy - h.y);
+        deficitInfluence += h.strength * Math.exp(-d / h.radius);
+      }
+      deficitInfluence = clamp01(deficitInfluence);
+
+      const colDist = Math.min(nearestColumnDist(wx, wy), nearestRampDist(wx, wy));
+
+      // Metro tunnel depth: still needed as the floor constraint.
+      // Use the deep endpoint since the entrance is near the deep end.
+      const localMetroDepth = REAL.tunnel_endpoints.deep.depth_ft;
+
+      voxels[gx * NZ + gy] = {
+        gx, gy, wx, wy,
+        localMetroDepth, transitInfluence, deficitInfluence, colDist,
+      };
+    }
+  }
+  return voxels;
+}
+
+/* ── Scoring + displacement ───────────────────────────────────────────── */
+function scoreForPhase(v, phase) {
+  if (phase === 1) return v.transitInfluence;
+  if (phase === 2) return clamp01(v.transitInfluence + v.deficitInfluence * 0.6);
+  return clamp01(v.transitInfluence + v.deficitInfluence);
+}
+
+function zForVoxel(v, phase) {
+  const score = scoreForPhase(v, phase);
+  if (score <= THRESHOLD) return { z: 0, score };
+
+  const raw     = -score * MAX_EXCAVATION_FT;
+  let stepped   = -Math.round(Math.abs(raw) / STEP_FT) * STEP_FT;
+  stepped       = Math.max(stepped, -v.localMetroDepth);
+
+  if (phase === 3 && v.colDist < COLUMN_CLEARANCE_FT) {
+    stepped = Math.min(0, stepped * 0.4);
+  }
+  return { z: stepped, score };
+}
+
+/* ── Excavation color ─────────────────────────────────────────────────── */
+const AMBER_A    = new THREE.Color('#FFF4CA');
+const AMBER_B    = new THREE.Color('#FF6B00');
+const VIOLET_A   = new THREE.Color('#4D00FF');
+const VIOLET_B   = new THREE.Color('#0A002F');
+const FLAT_COLOR = new THREE.Color('#3a3a3a');
+
+function excavationColor(v, z, score) {
+  if (score <= THRESHOLD) return FLAT_COLOR.clone();
+  const depthT = clamp01(Math.abs(z) / MAX_EXCAVATION_FT);
+  const amber  = AMBER_A.clone().lerp(AMBER_B, clamp01(v.deficitInfluence));
+  const violet = VIOLET_A.clone().lerp(VIOLET_B, depthT);
+  return amber.lerp(violet, depthT);
+}
+
+/* ── Sun / shade computation ──────────────────────────────────────────────
+   For each perimeter building, each key sun condition casts a rectangular
+   shadow footprint into the site. A voxel is shaded when it falls inside
+   that footprint. Shade score = weighted fraction of conditions in shadow.
+
+   Shadow geometry:
+     - Shadow length  = building height / tan(solar altitude)
+     - Shadow direction (site-local 2D): opposite to sun direction,
+       rotated by −SITE_ROTATION_DEG to convert geographic → site-local.
+     - Shadow footprint = parallelogram with width BLDG_FOOTPRINT_FT.
+
+   Building grid coords (x: 1–28, y: 1–28) mapped to site-local ft:
+     wx_b = ((bx−1)/27) × SITE_WIDTH_FT   (x=1 → Olive/west, x=28 → Hill/east)
+     wy_b = ((by−1)/27) × SITE_LENGTH_FT   (y=1 → 6th/south, y=28 → 5th/north)  ── */
+
+function computeShadeScores(voxels) {
+  const scores = new Float32Array(voxels.length);
+  const buildings = BLDG_DATA.buildings;
+
+  for (const cond of SUN_CONDITIONS) {
+    const altRad      = cond.alt * DEG;
+    const shadowLen   = 1 / Math.tan(altRad);            // multiplied by height per building
+    const siteAzRad   = (cond.az - SITE_ROTATION_DEG) * DEG;
+    // Unit vector from sun → shadow (direction shadow falls on ground)
+    const sdx = -Math.sin(siteAzRad);
+    const sdy = -Math.cos(siteAzRad);
+    // Perpendicular unit vector (for shadow width)
+    const px  = -sdy;
+    const py  =  sdx;
+
+    for (const b of buildings) {
+      const bwx = ((b.x - 1) / 27) * SITE_WIDTH_FT;
+      const bwy = ((b.y - 1) / 27) * SITE_LENGTH_FT;
+      const sl  = b.height_ft * shadowLen;                // actual shadow length (ft)
+      const hw  = BLDG_FOOTPRINT_FT / 2;
+
+      for (let i = 0; i < voxels.length; i++) {
+        const v   = voxels[i];
+        const rx  = v.wx - bwx;
+        const ry  = v.wy - bwy;
+        // Project onto shadow direction
+        const along = rx * sdx + ry * sdy;
+        const perp  = Math.abs(rx * px + ry * py);
+
+        if (along > 0 && along < sl && perp < hw) {
+          scores[i] = Math.min(1, scores[i] + cond.w / TOTAL_WEIGHT);
+        }
+      }
+    }
+  }
+  return scores;
+}
+
+/* ── Scene setup ──────────────────────────────────────────────────────── */
+const container = document.getElementById('app');
+const scene     = new THREE.Scene();
+scene.background = new THREE.Color(0x050505);
+
+const SITE_DIAG_FT        = Math.hypot(SITE_WIDTH_FT, SITE_LENGTH_FT);
+const MAX_ORBIT_DISTANCE  = SITE_DIAG_FT * 3;
+scene.fog = new THREE.Fog(0x050505, SITE_DIAG_FT * 0.6, MAX_ORBIT_DISTANCE * 1.4);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, SITE_DIAG_FT * 6);
+camera.position.set(SITE_LENGTH_FT * 0.55, SITE_LENGTH_FT * 0.5, SITE_LENGTH_FT * 0.85);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping  = true;
+controls.dampingFactor  = 0.08;
+controls.zoomSpeed      = 0.35;
+controls.target.set(0, -GARAGE_DEPTH_FT * 0.5, 0);
+controls.minDistance    = VOXEL_FT * 12;
+controls.maxDistance    = MAX_ORBIT_DISTANCE;
+controls.update();
+
+scene.add(new THREE.AmbientLight(0x606070, 1.1));
+const sun = new THREE.DirectionalLight(0xfff2dd, 1.8);
+sun.position.set(SITE_LENGTH_FT * 0.5, SITE_LENGTH_FT * 0.9, SITE_LENGTH_FT * 0.3);
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x4d00ff, 0.7);
+rim.position.set(-SITE_LENGTH_FT * 0.4, SITE_LENGTH_FT * 0.2, -SITE_LENGTH_FT * 0.6);
+scene.add(rim);
+
+// Site-local (SW-corner origin) → Three.js world (centered at origin)
+function toWorld(wx, wy, y) {
+  return new THREE.Vector3(wx - SITE_WIDTH_FT / 2, y, wy - SITE_LENGTH_FT / 2);
+}
+
+function buildRealGeometry(meshData) {
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(meshData.vertices), 3));
+  geom.setIndex(meshData.faces);
+  geom.computeVertexNormals();
+  return geom;
+}
+
+/* ── Layer 1: Excavation voxels (InstancedMesh) ──────────────────────── */
+// Each voxel is a slab of thickness STEP_FT whose TOP FACE is the new
+// surface level (z). Grade = 0; cuts have negative z. This produces the
+// stepped terracing effect rather than a box that always rises to grade.
+const voxelGeom = new THREE.BoxGeometry(VOXEL_FT * 0.92, 1, VOXEL_FT * 0.92);
+voxelGeom.setAttribute('color', new THREE.Float32BufferAttribute(
+  new Float32Array(voxelGeom.attributes.position.count * 3).fill(1), 3,
+));
+const voxelMat  = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.12 });
+const voxelMesh = new THREE.InstancedMesh(voxelGeom, voxelMat, NX * NZ);
+voxelMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NX * NZ * 3), 3);
+scene.add(voxelMesh);
+
+const baseVoxels = buildBaseVoxels();
+const dummy = new THREE.Object3D();
+
+function applyPhase(phase) {
+  for (let idx = 0; idx < baseVoxels.length; idx++) {
+    const v = baseVoxels[idx];
+    const { z, score } = zForVoxel(v, phase);
+
+    // surfaceY = new ground level at this voxel (0 = grade, negative = cut below grade).
+    // The slab has uniform thickness STEP_FT; its TOP face is at surfaceY.
+    // Inactive cells get a thin MIN_HEIGHT_FT cap sitting at grade.
+    const surfaceY = z;
+    const slabH    = score > THRESHOLD ? STEP_FT : MIN_HEIGHT_FT;
+    const centerY  = surfaceY - slabH / 2;
+
+    const pos = toWorld(v.wx, v.wy, centerY);
+    dummy.position.copy(pos);
+    dummy.scale.set(1, slabH, 1);
+    dummy.updateMatrix();
+    voxelMesh.setMatrixAt(idx, dummy.matrix);
+    voxelMesh.setColorAt(idx, excavationColor(v, z, score));
+  }
+  voxelMesh.instanceMatrix.needsUpdate = true;
+  voxelMesh.instanceColor.needsUpdate  = true;
+}
+
+/* ── Layer 2: Sun / shade overlay ────────────────────────────────────────
+   Flat slabs at y = +0.3ft (just above the inactive plaza surface) colored
+   by weighted shade score. Shown/hidden independently of excavation layer.  */
+const shadeScores = computeShadeScores(baseVoxels);
+
+const SHADE_DARK  = new THREE.Color('#1a4a1a');   // heavy shade from buildings
+const SHADE_LIGHT = new THREE.Color('#8BC34A');   // full solar exposure
+const SHADE_MID   = new THREE.Color('#4CAF50');
+
+const shadeGeom = new THREE.BoxGeometry(VOXEL_FT * 0.88, 0.6, VOXEL_FT * 0.88);
+shadeGeom.setAttribute('color', new THREE.Float32BufferAttribute(
+  new Float32Array(shadeGeom.attributes.position.count * 3).fill(1), 3,
+));
+const shadeMat  = new THREE.MeshStandardMaterial({
+  vertexColors: true, roughness: 0.9, metalness: 0.0,
+  transparent: true, opacity: 0.72,
+});
+const shadeMesh = new THREE.InstancedMesh(shadeGeom, shadeMat, NX * NZ);
+shadeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NX * NZ * 3), 3);
+shadeMesh.visible = false;   // off by default; toggle via UI
+scene.add(shadeMesh);
+
+{
+  const shadeDummy = new THREE.Object3D();
+  for (let i = 0; i < baseVoxels.length; i++) {
+    const v = baseVoxels[i];
+    const s = shadeScores[i];          // 0 = full sun, 1 = always shaded
+    const col = SHADE_LIGHT.clone().lerp(SHADE_DARK, s);
+
+    shadeDummy.position.copy(toWorld(v.wx, v.wy, 0.3));
+    shadeDummy.updateMatrix();
+    shadeMesh.setMatrixAt(i, shadeDummy.matrix);
+    shadeMesh.setColorAt(i, col);
+  }
+  shadeMesh.instanceMatrix.needsUpdate = true;
+  shadeMesh.instanceColor.needsUpdate  = true;
+}
+
+/* ── Layer 3: Structural columns (274 real, from OBJ) ──────────────────── */
+const columnGeom = buildRealGeometry(REAL.column_prototype_mesh);
+const columnMat  = new THREE.MeshStandardMaterial({ color: 0x9a9aa8, roughness: 0.7, metalness: 0.08 });
+const columnMesh = new THREE.InstancedMesh(columnGeom, columnMat, REAL.column_positions.length);
+{
+  const colDummy = new THREE.Object3D();
+  REAL.column_positions.forEach((c, idx) => {
+    colDummy.position.copy(toWorld(c.x, c.z, 0));
+    colDummy.updateMatrix();
+    columnMesh.setMatrixAt(idx, colDummy.matrix);
+  });
+  columnMesh.instanceMatrix.needsUpdate = true;
+}
+scene.add(columnMesh);
+
+// Garage floor wireframe
+const floorPlateGeom = new THREE.WireframeGeometry(new THREE.BoxGeometry(SITE_WIDTH_FT, 1, SITE_LENGTH_FT));
+const floorPlateMat  = new THREE.LineBasicMaterial({ color: 0x4d00ff, transparent: true, opacity: 0.25 });
+const floorPlate     = new THREE.LineSegments(floorPlateGeom, floorPlateMat);
+floorPlate.position.set(0, -GARAGE_DEPTH_FT, 0);
+scene.add(floorPlate);
+
+/* ── Real tunnel, entrance, ramp meshes ─────────────────────────────── */
+const realOffset = toWorld(0, 0, 0);
+
+function placeRealMesh(meshData, material) {
+  const mesh = new THREE.Mesh(buildRealGeometry(meshData), material);
+  mesh.position.copy(realOffset);
+  scene.add(mesh);
+  return mesh;
+}
+
+placeRealMesh(REAL.tunnel_mesh,
+  new THREE.MeshStandardMaterial({ color: 0x003318, emissive: 0x00ff99, emissiveIntensity: 1.6, roughness: 0.3 }));
+
+placeRealMesh(REAL.secondary_entrance_mesh,
+  new THREE.MeshStandardMaterial({ color: 0x331f00, emissive: 0xff8a2b, emissiveIntensity: 1.2, roughness: 0.35 }));
+
+const rampMat = new THREE.MeshStandardMaterial({ color: 0x4a4a55, roughness: 0.8, metalness: 0.05 });
+for (const key of ['cluster_a', 'cluster_b']) {
+  for (const level of REAL.ramp_meshes[key]) placeRealMesh(level, rampMat);
+}
+
+/* ── UI — phase buttons ───────────────────────────────────────────────── */
+let currentPhase = 1;
+const descEl  = document.getElementById('desc');
+const phaseBtns = Array.from(document.querySelectorAll('.phase-btn'));
+
+function setPhase(phase) {
+  currentPhase = phase;
+  phaseBtns.forEach(b => b.classList.toggle('active', Number(b.dataset.phase) === phase));
+  descEl.textContent = PHASE_DESCRIPTIONS[phase];
+  applyPhase(phase);
+}
+phaseBtns.forEach(b => b.addEventListener('click', () => setPhase(Number(b.dataset.phase))));
+setPhase(1);
+
+/* ── UI — layer toggles ───────────────────────────────────────────────── */
+function wireToggle(btnId, onToggle) {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('on');
+    onToggle(btn.classList.contains('on'));
+  });
+}
+
+wireToggle('tog-excavation', on => {
+  voxelMesh.visible  = on;
+  floorPlate.visible = on;
+});
+
+wireToggle('tog-shade', on => {
+  shadeMesh.visible = on;
+});
+
+wireToggle('tog-columns', on => {
+  columnMesh.visible = on;
+});
+
+/* ── Render loop ──────────────────────────────────────────────────────── */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+</body>
+</html>

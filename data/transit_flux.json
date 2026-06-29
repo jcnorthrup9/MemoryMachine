@@ -1,0 +1,8 @@
+{
+  "_meta": "Auto-seeded. metro_node bridged from transit_pavilion in data/pershing_site_context.json.",
+  "metro_node": {
+    "x": 3,
+    "y": 12
+  },
+  "flux_decay": 0.15
+}

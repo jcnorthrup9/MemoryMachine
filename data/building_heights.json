@@ -1,0 +1,71 @@
+{
+  "_meta": "campanile_tower bridged from data/pershing_site_context.json. Perimeter buildings transcribed by the user from Rhino/Google Maps measurements in data/PershingMetabolizer/BuildingHeights.txt (real heights, real addresses). Left-right position along each street frontage is approximated from DTLA address-number ordering (lower number = closer to the Spring/Main baseline), not precisely geocoded -- refine later from the OSM footprints in PershingContext.svg if exact placement matters. Future Solutions Media (365.5ft) was flagged by the user as possibly inaccurate -- double check before trusting this layer for real design decisions. Biltmore Hotel corrected to 170ft (the 52ft source measurement was a mismeasured wing/parapet, not the main tower).",
+  "buildings": [
+    {
+      "label": "campanile_tower",
+      "x": 15,
+      "y": 14,
+      "height_ft": 24.0
+    },
+    {
+      "label": "Cosmo Smoke Shop (312 W 5th St)",
+      "x": 24,
+      "y": 28,
+      "height_ft": 184.54
+    },
+    {
+      "label": "Title Guarantee Building Apartments (411 W 5th St)",
+      "x": 15,
+      "y": 28,
+      "height_ft": 226.02
+    },
+    {
+      "label": "Park Fifth Tower (427 W 5th St)",
+      "x": 6,
+      "y": 28,
+      "height_ft": 249.31
+    },
+    {
+      "label": "Foreign Currency Exchange (406 W 6th St)",
+      "x": 24,
+      "y": 1,
+      "height_ft": 121.19
+    },
+    {
+      "label": "The Heron Building (510 W 6th St)",
+      "x": 15,
+      "y": 1,
+      "height_ft": 164.94
+    },
+    {
+      "label": "Future Solutions Media (800 W 6th St)",
+      "x": 6,
+      "y": 1,
+      "height_ft": 365.5
+    },
+    {
+      "label": "Biltmore Hotel (501 S Olive St)",
+      "x": 1,
+      "y": 22,
+      "height_ft": 170.0
+    },
+    {
+      "label": "Pitchoun! (545 S Olive St)",
+      "x": 1,
+      "y": 8,
+      "height_ft": 62.33
+    },
+    {
+      "label": "Pershing Square Building (448 S Hill St)",
+      "x": 28,
+      "y": 22,
+      "height_ft": 186.5
+    },
+    {
+      "label": "International Jewelry Plaza (550 S Hill St)",
+      "x": 28,
+      "y": 8,
+      "height_ft": 224.4
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "_meta": "Real neighborhood spatial-deficit research (1/2-mile and 1-mile radius asset reports). Each entry's target_volume_cuft assumes a 12ft baseline ceiling height for underground cassettes. Used by the excavation solver to match a puncture zone's volume against a real programmatic need.",
+  "ceiling_height_ft": 12,
+  "_shade_meta": "shade_target_pct applies only to surface-level/open program (green_space, sports_recreation); enrichment_civic entries are enclosed cassette program, so shade is not applicable. Basis and unverified-claim caveats: archive/memoryMachine/LA Shade & Park Standards — Source Links.md",
+  "programs": [
+    {
+      "id": "green_space_park",
+      "label": "Green Space & Park Infrastructure",
+      "category": "green_space",
+      "neighborhood_need": "Very High",
+      "target_sf": 10000,
+      "target_volume_cuft": 120000,
+      "shade_target_pct": 50,
+      "shade_basis": "City of LA Landscape Ordinance No. 170,978 — 50% canopy coverage at 10yr growth, applied by analogy from its parking-lot standard to general hardscape/park surface."
+    },
+    {
+      "id": "community_garden",
+      "label": "Community Garden",
+      "category": "green_space",
+      "neighborhood_need": "Very High",
+      "target_sf": 100,
+      "target_volume_cuft": 1200,
+      "shade_target_pct": 25,
+      "shade_basis": "Perimeter/seating shade only — planting beds need direct sun, so full-canopy standards don't apply; 25% covers edges and rest areas."
+    },
+    {
+      "id": "soccer_field",
+      "label": "Soccer Field",
+      "category": "sports_recreation",
+      "target_sf": 75000,
+      "target_volume_cuft": 900000,
+      "shade_target_pct": 15,
+      "shade_basis": "Sideline/spectator shade only — play surface itself must stay clear, consistent with no standard requiring shade over active field area."
+    },
+    {
+      "id": "public_gym",
+      "label": "Public Gym",
+      "category": "sports_recreation",
+      "target_sf": 25000,
+      "target_volume_cuft": 300000,
+      "shade_target_pct": null,
+      "shade_basis": "Not applicable — enclosed structure, not an open shade surface."
+    },
+    {
+      "id": "skatepark",
+      "label": "Skatepark",
+      "category": "sports_recreation",
+      "target_sf": 15000,
+      "target_volume_cuft": 180000,
+      "shade_target_pct": 30,
+      "shade_basis": "Perimeter shade target; full overhead canopy avoided so cast shadow lines don't create tripping hazards on the skating surface."
+    },
+    {
+      "id": "volleyball_court",
+      "label": "Volleyball Court",
+      "category": "sports_recreation",
+      "target_sf": 4500,
+      "target_volume_cuft": 54000,
+      "shade_target_pct": 15,
+      "shade_basis": "Sideline/spectator shade only, same logic as soccer_field."
+    },
+    {
+      "id": "computer_tech_space",
+      "label": "Computer / Tech Space",
+      "category": "enrichment_civic",
+      "target_sf": 1200,
+      "target_volume_cuft": 14400,
+      "shade_target_pct": null,
+      "shade_basis": "Not applicable — enclosed structure."
+    },
+    {
+      "id": "classrooms_study_rooms",
+      "label": "Classrooms / Study Rooms",
+      "category": "enrichment_civic",
+      "target_sf": 800,
+      "target_volume_cuft": 9600,
+      "shade_target_pct": null,
+      "shade_basis": "Not applicable — enclosed structure."
+    },
+    {
+      "id": "music_practice_space",
+      "label": "Music Practice Space",
+      "category": "enrichment_civic",
+      "target_sf": 300,
+      "target_volume_cuft": 3600,
+      "shade_target_pct": null,
+      "shade_basis": "Not applicable — enclosed structure."
+    },
+    {
+      "id": "arts_crafts_studio",
+      "label": "Arts & Crafts Studio",
+      "category": "enrichment_civic",
+      "target_sf": 1500,
+      "target_volume_cuft": 18000,
+      "shade_target_pct": null,
+      "shade_basis": "Not applicable — enclosed structure."
+    }
+  ]
+}

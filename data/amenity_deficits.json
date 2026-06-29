@@ -1,0 +1,53 @@
+{
+  "_meta": "Real hospitality/amenity data transcribed from D:\\boxy_player\\obsidian\\boxy_player\\PershingContext.md via normalize_amenity_data.py. Replaces the auto-seeded placeholder. See data/PershingMetabolizer/AMENITY_DEFICITS_GUIDE.md for the schema and grid orientation.",
+  "points": [
+    {
+      "x": 1,
+      "y": 22,
+      "label": "Millennium Biltmore Hotel",
+      "source_note": "501 S Olive St, directly west across Olive. 683 rooms, 170ft tall -- largest hospitality source in this dataset.",
+      "hospitality_density": 1.0,
+      "surface_amenity_density": 0.0
+    },
+    {
+      "x": 1,
+      "y": 10,
+      "label": "The Nomad Hotel / Perla LA",
+      "source_note": "649 S Olive St / 400 S Broadway -- large hotel(s) nearby. Dual-address venue; placed south of the Biltmore along the Olive St frontage.",
+      "hospitality_density": 0.7,
+      "surface_amenity_density": 0.0
+    },
+    {
+      "x": 28,
+      "y": 22,
+      "label": "Pershing Square Building (food retail)",
+      "source_note": "448 S Hill St, directly east across Hill. Ground-floor cafe/food retail only.",
+      "hospitality_density": 0.0,
+      "surface_amenity_density": 0.3
+    },
+    {
+      "x": 28,
+      "y": 4,
+      "label": "Subway / Local Fast Food",
+      "source_note": "Along S Hill St corner blocks -- medium food supply, placed near the south end of the Hill St frontage.",
+      "hospitality_density": 0.0,
+      "surface_amenity_density": 0.45
+    },
+    {
+      "x": 55,
+      "y": 50,
+      "label": "Grand Central Market",
+      "source_note": "317 S Broadway, a few blocks NE -- massive food supply hub. Off-site, extrapolated NE beyond the grid.",
+      "hospitality_density": 0.0,
+      "surface_amenity_density": 1.0
+    },
+    {
+      "x": -30,
+      "y": -12,
+      "label": "Bottega Louie",
+      "source_note": "700 S Grand Ave, two blocks W/SW -- high-volume food destination. Off-site, extrapolated WSW beyond the grid.",
+      "hospitality_density": 0.0,
+      "surface_amenity_density": 0.8
+    }
+  ]
+}
