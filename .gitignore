@@ -26,8 +26,9 @@ dist-ssr
 __pycache__/
 cache/
 
-# Ignore environment variables (API Keys)
-.env
+# Ignore environment variables (API Keys) -- *.env also catches sync-conflict
+# copies (.env.example is a template with no real values, still tracked)
+*.env
 
 # Ignore virtual environments
 .venv/
@@ -35,5 +36,29 @@ venv/
 env/
 
 # Ignore generated files
-data/figma_payload.json
 html/presentation_deck.html
+
+# Ignore scraper results, which can be large
+scrapfly-scrapers/tripadvisor-scraper/results/
+scrapfly-scrapers/linkedin-scraper/results/
+scrapfly-scrapers/g2-scraper/results/
+scrapfly-scrapers/youtube-scraper/results/
+
+# Ignore large data files
+data/
+
+# Regenerable derived output -- diagram exports, vector-DB index files,
+# generated 3D assets, and Blender/render test output. Not source, shouldn't
+# live in git history (the generated diagram exports alone already account
+# for multiple GB). outputs/cockpit/ is NOT included here -- blender_cockpit.py
+# actually loads outputs/cockpit/sketch_weights_cache.json at import time.
+archive/diagrams/generated/
+archive/diagrams/generated.zip
+archive/diagrams/generatedDiagramsColor/
+db/
+output/
+outputs/vector_export_test/
+assets/
+
+# Syncthing's own internal folder marker -- never project content
+.stfolder/

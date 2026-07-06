@@ -33,16 +33,16 @@ body {
     border: 1px solid var(--border-dim);
 }
 
-#canvas-container {
+.visual-panel {
     grid-column: 1 / 2;
     grid-row: 1 / 3;
-    background-color: #000;
-    position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
-.terminal-container {
+.terminal-panel {
     grid-column: 2 / 3;
-    grid-row: 1 / 2;
+    grid-row: 1 / 3;
     background-color: #0a0a0a;
     display: flex;
     flex-direction: column;
@@ -51,7 +51,7 @@ body {
 }
 
 .narrative-output {
-    flex-grow: 1;
+    flex: 0 0 30%;
     overflow-y: auto;
     font-size: 0.9rem;
     line-height: 1.5;
@@ -122,4 +122,124 @@ h2.page-header {
     justify-content: center;
     width: 100%;
     height: 100%;
+}
+
+.panel-resizer {
+    height: 6px;
+    min-height: 8px;
+    background-color: rgba(136, 255, 136, 0.4);
+    cursor: ns-resize;
+    margin: 15px 0 0 0;
+    border-radius: 3px;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: background-color 0.2s ease;
+}
+.panel-resizer:hover, .panel-resizer.dragging {
+    background-color: var(--green-accent);
+}
+
+.stack-editor {
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 15px;
+    padding-right: 5px;
+}
+
+.zonal-hud {
+    flex-shrink: 0;
+    margin-top: 15px;
+}
+
+/* ── ZONAL HUD COMPLIANCE COLORS ── */
+/* Default to Layer Identity Colors */
+#hud-SOFT .hud-bar { background-color: #4CAF50; }
+#hud-HARD .hud-bar { background-color: #9E9E9E; }
+#hud-PROG .hud-bar { background-color: #FF9800; }
+#hud-BLUE .hud-bar { background-color: #03A9F4; }
+
+/* Warning State (Under Target) -> Bright Yellow */
+.hud-row.hud-warn .hud-bar { background-color: #FFD700 !important; }
+.hud-row.hud-warn .hud-pct { color: #FFD700; font-weight: bold; }
+
+/* Overage State (Over Target) -> Crimson Red */
+.hud-row.hud-over .hud-bar { background-color: #F44336 !important; }
+.hud-row.hud-over .hud-pct { color: #F44336; font-weight: bold; }
+
+/* ── AABB COLLISION WARNINGS ── */
+.collision-warning {
+    border: 2px dashed #F44336 !important;
+    background-color: rgba(244, 67, 54, 0.15) !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.collision-tooltip {
+    color: #F44336;
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+/* ── LIGHT MODE THEME OVERRIDES ── */
+body.light-mode {
+    --bg-color: #f4f4f4;
+    --text-color: #111111;
+    --border-dim: #cccccc;
+    --accent-glow: #e67e22;
+}
+
+body.light-mode .terminal-panel, 
+body.light-mode .diagram-container, 
+body.light-mode .visual-panel {
+    background-color: #ffffff;
+}
+
+body.light-mode .narrative-output pre {
+    color: #333333;
+}
+
+body.light-mode .narrative-output pre.success {
+    color: var(--green-accent);
+}
+
+body.light-mode #prompt-input {
+    color: #111111;
+}
+
+/* ── Dream / Demo mode toggle ── */
+.mode-toggle-wrap {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+.mode-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.03em;
+}
+.mode-toggle-btn .mode-icon { font-size: 10px; }
+.mode-toggle-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.mode-toggle-btn:hover:not(.active) {
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.06);
 }

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Machine // Digital Palimpsest Midterm</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #e0e0e0;
+            --accent-glow: #fff4ca;
+            --border-dim: #222;
+            --trans-speed: 0.4s;
+        }
+        * { box-sizing: border-box; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; transition: background-color 0.3s; }
+        
+        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; z-index: 2; }
+        .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; opacity: 0; transition: opacity var(--trans-speed) ease-in-out; }
+        .spread.active { display: flex; opacity: 1; z-index: 5; }
+
+        .page-side { width: 50%; height: 100%; position: relative; padding: 60px; display: flex; flex-direction: column; border-right: 1px solid #111; overflow-y: auto; }
+        .right-page { border-right: none; }
+        
+        /* Layout elements from Presentation Deck */
+        h1.zine-title { font-size: 2.2rem; color: var(--accent-glow); margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px; flex-shrink: 0; }
+        h2.page-header { color: #888; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; flex-shrink: 0; }
+        .text-wrap { white-space: pre-wrap; font-size: 0.9rem; line-height: 1.5; color: #ccc; text-align: justify; }
+        .img-stack { display: flex; flex-direction: column; gap: 20px; width: 100%; flex: 1; min-height: 0; justify-content: center; }
+        .img-box { position: relative; width: 100%; border: 1px solid #333; background: #080808; display: flex; align-items: center; justify-content: center; overflow: hidden; flex: 1; }
+        .img-box img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(0.5) contrast(1.2); }
+
+        /* Midterm Glitch Effects */
+        .glitch-mode { animation: flash 0.2s steps(2) infinite; }
+        @keyframes flash { 0% { background: #050505; } 50% { background: #1a1a1a; } 100% { background: #000; } }
+
+        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 100; }
+        .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 15px; cursor: pointer; font-family: inherit; }
+        .nav-controls button:hover { border-color: #555; background: #111; }
+
+        /* Catalog Grid Styling */
+        .catalog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+        .cat-item { aspect-ratio: 1; border: 1px solid #222; background: #0a0a0a; position: relative; }
+        .cat-item:hover { border-color: var(--accent-glow); }
+    </style>
+</head>
+<body>
+    <div class="zine-viewer">
+        <div class="spread-container">
+            
+            <div class="spread active" id="spread-1">
+                <div class="page-side left-page" style="justify-content: center; align-items: center; text-align: center;">
+                    <h1 class="zine-title">MEMORY MACHINE</h1>
+                    <p style="letter-spacing: 5px; font-size: 0.7rem; color: #666;">PALIMPSEST // VERSION 2.1</p>
+                </div>
+                <div class="page-side right-page" style="background: #080808; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 80%; height: 80%; border: 1px solid #222; position: relative;">
+                         <div style="position: absolute; top: 20px; left: 20px; font-size: 0.6rem; color: #444;">DATA_STREAM: ACTIVE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-2">
+                <div class="page-side left-page">
+                    <h2 class="page-header">II // SYSTEM CONTENTS</h2>
+                    <nav style="line-height: 2;">
+                        01. <a href="#" onclick="showSpread(3)">THEORY & LOGIC</a><br>
+                        02. <a href="#" onclick="showSpread(6)">CATALOG ARTIFACTS</a><br>
+                        03. <a href="#" onclick="showSpread(7)">1988: THE TRAILER</a><br>
+                        04. <a href="#" onclick="showSpread(10)">1992: BIRTHDAY</a><br>
+                        05. <a href="#" onclick="showSpread(12)">1994: THE BASIN</a><br>
+                        06. <a href="#" onclick="showSpread(14)">PROCEDURAL GENERATION (NEW)</a><br>
+                        07. <a href="#" onclick="showSpread(18)">MEMORY DRIFT (NEW)</a><br>
+                        08. <a href="#" onclick="showSpread(23)">REFERENCES & END</a>
+                    </nav>
+                </div>
+                <div class="page-side right-page">
+                    <div class="img-box" style="border: none; opacity: 0.3;">[IMAGE: LOGIC FLOW DIAGRAM]</div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-14">
+                <div class="page-side left-page">
+                    <h1 class="zine-title">INPUT DATA</h1>
+                    <h2 class="page-header">The Raw Signal</h2>
+                    <div class="text-wrap">Procedural reconstruction requires three distinct streams of data:
+1. Sensory Recall (The subjective drift)
+2. Photographic Remnant (The fixed anchor)
+3. Typological Normals (The architectural standard)</div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="img-stack">
+                        <div class="img-box"><img src="data:image/jpeg;base64,...(slide_04_img)..."></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-15">
+                <div class="page-side left-page">
+                    <h1 class="zine-title">DECAY VECTORS</h1>
+                    <h2 class="page-header">Point Cloud Entropy</h2>
+                    <div class="text-wrap">As the machine attempts to resolve the image, it introduces translational entropy. Points that cannot be verified by sensory data are allowed to "drift," creating the spatial voids characteristic of the Palimpsest.</div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="img-stack">
+                        <div class="img-box"><img src="data:image/jpeg;base64,...(slide_05_img)..."></div>
+                        <div class="img-box dashed"><p style="font-size: 0.6rem; color: #444;">ANALYZING DRIFT...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-16">
+                <div class="page-side left-page">
+                    <h1 class="zine-title">RESOLUTION</h1>
+                    <h2 class="page-header">Assembly Logic</h2>
+                    <div class="text-wrap">The final architectural form is not a replica, but a resolution of these conflicting data points. It is the solid representation of a fading signal.</div>
+                </div>
+                <div class="page-side right-page">
+                    <div class="img-box"><img src="data:image/jpeg;base64,...(slide_06_img)..."></div>
+                </div>
+            </div>
+
+            <div class="spread" id="spread-23">
+                <div class="page-side left-page">
+                    <h1 class="zine-title">XIX // REFERENCES</h1>
+                    <div class="text-wrap" style="font-size: 0.7rem; color: #888;">
+                        Rossi, A. (1982). The Architecture of the City.<br>
+                        Suh, D. H. (2013). Home Within Home.<br>
+                        Vidler, A. (1992). The Architectural Uncanny.<br>
+                        Machine Intelligence Lab (2025). Latent Space Surveys.
+                    </div>
+                </div>
+                <div class="page-side right-page" style="justify-content: center; align-items: center; background: #000;">
+                    <div style="text-align: center;">
+                        <h1 style="color: var(--accent-glow); font-size: 1rem; letter-spacing: 10px;">END TRANSMISSION</h1>
+                        <p style="font-size: 0.6rem; color: #333; margin-top: 20px;">MEMORY MACHINE // SYSTEM SHUTDOWN</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="zine-footer">
+            <div id="page-indicator">I</div>
+            <div class="nav-controls">
+                <button onclick="prevSpread()">&#9664; PREV</button>
+                <button onclick="nextSpread()">NEXT &#9654;</button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let currentSpread = 1;
+        const totalSpreads = 23;
+        const labels = ["I", "II // SYSTEM", "III", "IV", "V", "VI // CATALOG", "VII // 1988", "VIII", "IX", "X // 1992", "XI", "XII // 1994", "XIII", "XIV // INPUT", "XV // DECAY", "XVI // RESOLVE", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII // END"];
+
+        function showSpread(n, suppressGlitch = false) {
+            if (n < 1 || n > totalSpreads) return;
+
+            // Trigger Midterm Glitch Effect
+            if (!suppressGlitch) {
+                document.body.classList.add('glitch-mode');
+                setTimeout(() => { document.body.classList.remove('glitch-mode'); }, 260);
+            }
+
+            document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+            document.getElementById(`spread-${n}`).classList.add('active');
+            
+            document.getElementById('page-indicator').innerText = labels[n-1] || `PAGE ${n}`;
+            currentSpread = n;
+        }
+
+        function nextSpread() { currentSpread < totalSpreads ? showSpread(currentSpread + 1) : showSpread(1); }
+        function prevSpread() { currentSpread > 1 ? showSpread(currentSpread - 1) : showSpread(totalSpreads); }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSpread();
+            if (e.key === 'ArrowLeft') prevSpread();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+{
+    "spatial_seed": [
+        {
+            "site": "PershingSquare",
+            "layerId": "BOUNDARY",
+            "label": "Site Boundary",
+            "transform": {
+                "x": 0,
+                "y": 0,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "visible": true,
+            "opacity": 1.0,
+            "target_width": 1224,
+            "target_height": 792,
+            "primitive": "box"
+        },
+        {
+            "site": "ParcdelaVillette",
+            "layerId": "STREET",
+            "transform": {
+                "x": -120,
+                "y": -110,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "opacity": 0.85,
+            "target_width": 400,
+            "target_height": 400,
+            "primitive": "box"
+        },
+        {
+            "site": "Schouwburgplein",
+            "layerId": "BOUNDARY",
+            "transform": {
+                "x": 0,
+                "y": 140,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "opacity": 0.85,
+            "target_width": 400,
+            "target_height": 400,
+            "primitive": "box"
+        },
+        {
+            "site": "ParcdelaVillette",
+            "layerId": "WATER_FEATURES",
+            "transform": {
+                "x": -120,
+                "y": 110,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "opacity": 0.85,
+            "target_width": 400,
+            "target_height": 400,
+            "primitive": "disc"
+        },
+        {
+            "site": "Schouwburgplein",
+            "layerId": "SHADE",
+            "transform": {
+                "x": 0,
+                "y": -140,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "opacity": 0.85,
+            "target_width": 400,
+            "target_height": 400,
+            "primitive": "sphere"
+        },
+        {
+            "site": "GardensByTheBay",
+            "layerId": "WATER_FEATURES",
+            "transform": {
+                "x": -120,
+                "y": 110,
+                "scale": 1.0,
+                "rot": 0
+            },
+            "opacity": 0.85,
+            "target_width": 400,
+            "target_height": 400,
+            "primitive": "disc"
+        }
+    ],
+    "geometries": [
+        {
+            "geometry_type": "glb",
+            "glb_url": "/comfy-output/mesh/ComfyUI_00059_.glb",
+            "position": {
+                "x": -120,
+                "y": 0,
+                "z": -110
+            },
+            "footprint_m": {
+                "width": 400,
+                "depth": 400
+            },
+            "height_m": 15.0
+        },
+        {
+            "geometry_type": "glb",
+            "glb_url": "/comfy-output/mesh/ComfyUI_00058_.glb",
+            "position": {
+                "x": -120,
+                "y": 0,
+                "z": 110
+            },
+            "footprint_m": {
+                "width": 400,
+                "depth": 400
+            },
+            "height_m": 15.0
+        },
+        {
+            "geometry_type": "glb",
+            "glb_url": "/comfy-output/mesh/ComfyUI_00057_.glb",
+            "position": {
+                "x": 0,
+                "y": 0,
+                "z": -140
+            },
+            "footprint_m": {
+                "width": 400,
+                "depth": 400
+            },
+            "height_m": 15.0
+        },
+        {
+            "geometry_type": "glb",
+            "glb_url": "/comfy-output/mesh/ComfyUI_00056_.glb",
+            "position": {
+                "x": -120,
+                "y": 0,
+                "z": 110
+            },
+            "footprint_m": {
+                "width": 400,
+                "depth": 400
+            },
+            "height_m": 15.0
+        }
+    ]
+}

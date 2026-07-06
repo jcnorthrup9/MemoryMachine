@@ -1,0 +1,81 @@
+<style>
+  body {
+    font-family: 'Roboto Mono', monospace;
+    background-color: #1a1a1a;
+    color: #ccc;
+    padding: 15px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  h3 {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #fff4ca;
+    text-transform: uppercase;
+    font-size: 14px;
+  }
+  textarea {
+    flex-grow: 1;
+    background-color: #050505;
+    color: #ccc;
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 12px;
+    resize: none;
+    margin-bottom: 15px;
+  }
+  .button-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  button {
+    background-color: #222;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  button:hover {
+    background-color: #333;
+    border-color: #fff4ca;
+  }
+</style>
+
+<h3>Task & Calendar Payload</h3>
+<textarea id="payload" placeholder='[{"task": "My First Task", "priority": "High", "done": false}]'></textarea>
+
+<div class="button-group">
+  <button id="gen-tasks">Generate Todo Board</button>
+  <button id="gen-calendar">Generate Calendar</button>
+</div>
+
+<script>
+  document.getElementById('gen-tasks').onclick = () => {
+    const textarea = document.getElementById('payload');
+    try {
+      const payload = JSON.parse(textarea.value);
+      parent.postMessage({ pluginMessage: { type: 'generate-tasks', payload } }, '*');
+    } catch (e) {
+      alert("Invalid JSON. Please check your input.");
+    }
+  };
+
+  document.getElementById('gen-calendar').onclick = () => {
+    const textarea = document.getElementById('payload');
+    try {
+      const payload = JSON.parse(textarea.value);
+      parent.postMessage({ pluginMessage: { type: 'generate-calendar', payload } }, '*');
+    } catch (e) {
+      alert("Invalid JSON. Please check your input.");
+    }
+  };
+</script>

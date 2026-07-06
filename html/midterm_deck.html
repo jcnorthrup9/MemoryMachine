@@ -1,0 +1,1333 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Machine // Midterm 2026</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #e0e0e0;
+            --accent: #fff4ca;
+            --dim: #1e1e1e;
+            --muted: #555;
+            --border: #222;
+            --green: #88ff88;
+        }
+        body.light-mode {
+            --bg: #d8ecca;
+            --text: #111111;
+            --accent: #3d6b28;
+            --dim: #c4e0b2;
+            --muted: #5a7a4a;
+            --border: #a8c88a;
+            --green: #2d6e2d;
+        }
+        body.light-mode .viewer { background: var(--bg); }
+        body.light-mode #theme-toggle { color: #1a1a1a; border-color: #a8c88a; }
+        body.light-mode p { color: #2a2a2a; }
+        body.light-mode .vignette { color: #2a2a2a; }
+        body.light-mode .case-item p { color: #2a2a2a; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .viewer {
+            width: 96vw;
+            max-width: 1800px;
+            height: 92vh;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spread-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .spread {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        .spread.active { display: flex; }
+
+        /* ── Column system ── */
+        .col {
+            width: 50%;
+            height: 100%;
+            padding: 50px 55px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .col.full {
+            width: 100%;
+            border-right: none;
+            padding: 40px 70px;
+        }
+
+        /* ── Typography ── */
+        .slide-label {
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        h1 {
+            font-size: 1.9rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 28px;
+            letter-spacing: 3px;
+            flex-shrink: 0;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+        h1.hero {
+            font-size: 4rem;
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 10px;
+            letter-spacing: 6px;
+            line-height: 1.05;
+        }
+        h2 {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+            font-weight: normal;
+        }
+        h3 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            font-weight: normal;
+        }
+        p {
+            font-size: 0.88rem;
+            line-height: 1.75;
+            color: #aaa;
+            text-align: justify;
+            text-align-last: left;
+        }
+
+        /* ── Quotes ── */
+        .quote {
+            border-left: 2px solid var(--accent);
+            padding-left: 18px;
+            margin-bottom: 26px;
+            flex-shrink: 0;
+        }
+        .quote-text {
+            font-size: 1.05rem;
+            color: var(--accent);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        .quote-source {
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ── Vignettes ── */
+        .vignette {
+            border-left: 1px solid var(--accent);
+            padding-left: 16px;
+            margin-bottom: 16px;
+            font-size: 0.83rem;
+            color: #aaa;
+            line-height: 1.65;
+            flex-shrink: 0;
+        }
+        .vignette strong { color: var(--text); }
+
+        /* ── Code / JSON ── */
+        pre.json {
+            color: var(--green);
+            font-size: 0.78rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        pre.mono {
+            color: #444;
+            font-size: 0.82rem;
+            line-height: 1.65;
+            white-space: pre-wrap;
+        }
+
+        /* ── Divider ── */
+        .rule {
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            margin: 18px 0;
+            flex-shrink: 0;
+        }
+
+        /* ── Placeholders ── */
+        .ph {
+            border: 1px dashed #252525;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2a2a2a;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 16px;
+            flex-shrink: 0;
+        }
+        .ph.grow { flex: 1; min-height: 0; }
+        .ph.fixed { min-height: 110px; }
+        .ph:has(img) { border: none; background: none; padding: 0; }
+
+        /* ── Three-column phase grid ── */
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            flex: 1;
+            min-height: 0;
+        }
+        .phase-col {
+            display: flex;
+            flex-direction: column;
+            padding: 0 28px;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .phase-col:first-child { padding-left: 0; }
+        .phase-col:last-child { border-right: none; padding-right: 0; }
+
+        /* ── Case study grid ── */
+        .case-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            flex: 1;
+            min-height: 0;
+        }
+        .case-item {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .case-phase-tag {
+            font-size: 0.62rem;
+            letter-spacing: 3px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .case-item .case-phase-tag { font-size: 0.85rem; }
+        .case-item h3 { font-size: 0.62rem; }
+
+        /* ── Checklist ── */
+        .check {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 0.88rem;
+            line-height: 1.65;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+        .check.done { color: #333; }
+        .check .mark { color: var(--accent); flex-shrink: 0; width: 14px; }
+        .check.done .mark { color: #2a2a2a; }
+
+        /* ── Stack header (for phase + case study slides) ── */
+        .slide-header-row {
+            display: flex;
+            align-items: baseline;
+            gap: 24px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .slide-header-row h1 {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            font-size: 1.5rem;
+        }
+
+        /* ── Ghost effect (slide 00) ── */
+        @keyframes ghost-flicker {
+            0%   { opacity:0; filter:blur(6px) grayscale(0.8) contrast(1.2); clip-path:inset(0 0 100% 0); }
+            22%  { opacity:0.42; filter:blur(1px) grayscale(0.6) contrast(1.3); clip-path:inset(0 0 0% 0); }
+            38%  { opacity:0.38; filter:blur(2px) grayscale(0.9) contrast(1.1); }
+            52%  { opacity:0.45; filter:blur(0px) grayscale(0.7) contrast(1.2); }
+            65%  { opacity:0.35; filter:blur(1px) grayscale(0.8) contrast(1.0); }
+            75%  { opacity:0.28; filter:blur(2px) grayscale(0.9) contrast(1.1); }
+            100% { opacity:0;   filter:blur(8px) grayscale(1); }
+        }
+        @keyframes ghost-shift {
+            0%   { transform:translate(0,0) rotate(var(--r)) scale(var(--s)); }
+            25%  { transform:translate(var(--dx1),var(--dy1)) rotate(calc(var(--r) + 1.5deg)) scale(calc(var(--s)*1.02)); }
+            55%  { transform:translate(var(--dx2),var(--dy2)) rotate(calc(var(--r) - 1deg)) scale(var(--s)); }
+            80%  { transform:translate(var(--dx3),var(--dy3)) rotate(calc(var(--r) + 0.8deg)) scale(calc(var(--s)*0.98)); }
+            100% { transform:translate(var(--dx4),var(--dy4)) rotate(var(--r)) scale(var(--s)); }
+        }
+        .ghost-img {
+            position:absolute;
+            width:67%;
+            height:auto;
+            max-width:none;
+            mix-blend-mode:hard-light;
+            pointer-events:none;
+            animation: ghost-flicker var(--dur) ease-in-out forwards,
+                       ghost-shift   var(--dur) ease-in-out forwards;
+        }
+
+        /* ── Footer nav ── */
+        footer {
+            padding: 11px 28px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: var(--bg);
+            flex-shrink: 0;
+            letter-spacing: 1px;
+        }
+        footer button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 18px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        footer button:hover { border-color: #444; background: var(--dim); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                background: 'transparent',
+                primaryColor: '#0a0a0a',
+                primaryBorderColor: '#333',
+                primaryTextColor: '#ccc',
+                lineColor: '#444',
+                fontFamily: 'Courier New',
+                fontSize: '13px',
+                edgeLabelBackground: '#000'
+            }
+        });
+    </script>
+</head>
+<body>
+<div class="viewer">
+    <div class="spread-container">
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 01 · STATEMENT                                              -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread active" id="spread-1">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">00 // STATEMENT</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="justify-content: center;">
+                <h1 class="hero">MEMORY<br>MACHINE</h1>
+                <div class="vignette" style="border-left-width: 2px; font-size: 1.08rem; margin-top: 95px;">
+                    Memory is not a static archive, but an unstable process of encoding, retrieval, and decay; it shifts, collapses and rewrites itself constantly. Because of this, architecture must move beyond a static container and become a dynamic interface embedded in public life. Memory Machine addresses under-utilized public space by converting community reviews into spatial data and reimagining the site as a high-performing park that is natively responsive to its users.
+                </div>
+                <div style="margin-top: auto; font-size: 0.68rem; color: #2a2a2a; letter-spacing: 3px; line-height: 2.2;">
+                    JOHN NORTHRUP<br>
+                    SCI-ARC // THESIS MIDTERM 2026<br>
+                    [ MEM-MACH-v2.1 // SYSTEM ACTIVE ]
+                </div>
+            </div>
+            <div class="col" style="padding: 24px;">
+                <div class="ph grow" id="ghost-frame" style="position:relative; overflow:hidden; border:none;"></div>
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 02 · BACKGROUND                                             -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-2">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+
+                <!-- HEADER BAR -->
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">01 // BACKGROUND</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">"Memory is not a static archive, but an unstable process of encoding, retrieval, and decay."</span>
+                </div>
+
+                <div class="col full" style="flex:1; height:auto; min-height:0;">
+                <div class="case-grid" style="grid-template-rows: repeat(2, 1fr);">
+                    <!-- Row 1 — axos / rhino captures -->
+                    <div class="case-item">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-top-0" src="../archive/render_output/1988/1988_trailer.png"
+                                 style="width:100%; height:100%; object-fit:cover; object-position:center; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-top-1" src="../archive/render_output/bottegaLouieExterior/bottegaExterior.png"
+                                 style="width:100%; height:100%; object-fit:cover; object-position:center; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-top-2" src="../archive/render_output/Nakagin/nakaginRhinoScreenshot.png"
+                                 style="width:100%; height:100%; object-fit:cover; object-position:center; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                    <!-- Row 2 — cycling images -->
+                    <div class="case-item">
+                        <div class="case-phase-tag">Personal Memory // 1988–1994</div>
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-img-0" src="../archive/render_output/1988/1988_trailerWatercolor.png"
+                                 style="width:100%; height:100%; object-fit:cover; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">Urban Site // Bottega Louie</div>
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-img-1" src="../archive/render_output/bottegaLouieExterior/flux2_klein_00088_.png"
+                                 style="width:100%; height:100%; object-fit:cover; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">Precedent // Nakagin Capsule Tower</div>
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img id="bg-img-2" src="../archive/render_output/Nakagin/unused/flux2_klein_00110_.png"
+                                 style="width:100%; height:100%; object-fit:cover; transition:opacity 1.5s ease;">
+                        </div>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+
+            </div><!-- /flex column -->
+        </div><!-- /spread-2 -->
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 03 · MACHINE PIPELINE                                       -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-3">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">02 // MACHINE PIPELINE</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">The Machine Workflow</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0; align-items:center; padding:50px 50px;">
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:28px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:18px; min-height:37px; flex-shrink:0;">Data Harvest</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 20px 0; min-height:170px; flex-shrink:0;">Scrape historical archives, visitor reviews, and spatial coordinates.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">DATA HARVEST</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 H290" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M290,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="0" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="50" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">HISTORICAL</text>
+                                <text x="50" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">ARCHIVES</text>
+
+                                <rect x="120" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="170" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">VISITOR</text>
+                                <text x="170" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">REVIEWS</text>
+
+                                <rect x="240" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="290" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">SPATIAL</text>
+                                <text x="290" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">COORDINATES</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:28px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:18px; min-height:37px; flex-shrink:0;">Spatial Parsing</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 20px 0; min-height:170px; flex-shrink:0;">Extract and parse qualitative and quantitative data using markdown and JSON files.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">SPATIAL PARSING</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 H250" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M250,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="20" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="90" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">QUALITATIVE DATA</text>
+                                <text x="90" y="145" text-anchor="middle" style="fill:var(--muted); font-size:7px;">&#8594; MARKDOWN</text>
+
+                                <rect x="180" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="250" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">QUANTITATIVE DATA</text>
+                                <text x="250" y="145" text-anchor="middle" style="fill:var(--muted); font-size:7px;">&#8594; JSON</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:28px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:18px; min-height:37px; flex-shrink:0;">Generation</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 20px 0; min-height:170px; flex-shrink:0;">Procedurally rebuild the structural massing via python scripts and rhino/blender mcp.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">GENERATION</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 H250" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M250,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="20" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="90" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">PYTHON</text>
+                                <text x="90" y="145" text-anchor="middle" style="fill:var(--text); font-size:7px;">SCRIPTS</text>
+
+                                <rect x="180" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="250" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">RHINO /</text>
+                                <text x="250" y="145" text-anchor="middle" style="fill:var(--text); font-size:7px;">BLENDER MCP</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:28px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:18px; min-height:37px; flex-shrink:0;">Synthesis</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 20px 0; min-height:170px; flex-shrink:0;">Compiles forensic information into Memory Machine database, generates diagrams, compiles spatial data and implements 3D output.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">SYNTHESIS</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 H290" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M130,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M210,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M290,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="15" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="50" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">MM</text>
+                                <text x="50" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">DATABASE</text>
+
+                                <rect x="95" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="130" y="135" text-anchor="middle" style="fill:var(--text); font-size:7px;">DIAGRAMS</text>
+
+                                <rect x="175" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="210" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">SPATIAL</text>
+                                <text x="210" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">DATA</text>
+
+                                <rect x="255" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="290" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">3D</text>
+                                <text x="290" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">OUTPUT</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                </div>
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 04 · REAL OBJECT                                            -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-4">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+
+                <!-- HEADER BAR -->
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">03 // REAL OBJECT</span>
+                </div>
+
+                <div class="col full" style="flex:1; height:auto; min-height:0;">
+                <div class="case-grid">
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 01 // Site Activation</div>
+                        <h3>Site Activation</h3>
+                        <h2>Identify · Measure · Respond</h2>
+                        <div class="ph grow" style="border:none; background:none; padding:0;">
+                            <svg viewBox="0 0 300 330" style="width:100%; height:auto; max-height:100%; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <marker id="arrow-p1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent);"/>
+                                    </marker>
+                                </defs>
+                                <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                    <rect x="70" y="0" width="160" height="54" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="150" y="24" text-anchor="middle" style="fill:var(--accent); font-size:9px; font-weight:bold;">IDENTIFY</text>
+                                    <text x="150" y="40" text-anchor="middle" style="fill:var(--muted); font-size:7px;">DEFICITS + PRIORITY</text>
+
+                                    <rect x="0" y="230" width="140" height="64" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="70" y="256" text-anchor="middle" style="fill:var(--accent); font-size:9px; font-weight:bold;">INGEST</text>
+                                    <text x="70" y="272" text-anchor="middle" style="fill:var(--muted); font-size:7px;">USER + PERF. DATA</text>
+
+                                    <rect x="160" y="230" width="140" height="64" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="230" y="256" text-anchor="middle" style="fill:var(--accent); font-size:9px; font-weight:bold;">EXECUTE</text>
+                                    <text x="230" y="272" text-anchor="middle" style="fill:var(--muted); font-size:7px;">MIN. COST INTERVENTION</text>
+
+                                    <path d="M150,54 L230,230" fill="none" style="stroke:var(--accent); stroke-width:1;" marker-end="url(#arrow-p1)"/>
+                                    <path d="M160,262 L140,262" fill="none" style="stroke:var(--accent); stroke-width:1;" marker-end="url(#arrow-p1)"/>
+                                    <path d="M70,230 L135,56" fill="none" style="stroke:var(--accent); stroke-width:1;" marker-end="url(#arrow-p1)"/>
+
+                                    <path d="M150,294 V314" fill="none" style="stroke:var(--muted); stroke-width:1;" marker-end="url(#arrow-p1)"/>
+                                    <text x="150" y="326" text-anchor="middle" style="fill:var(--muted); font-size:7px;">NEXT PHASE</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: auto; padding-top: 12px; flex-shrink: 0;">Identify site deficits and community priorities. Execute maximum intervention at minimal cost. Ingest user data and performance of the space to inform next phase.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 02 // Programming</div>
+                        <h3>Programming</h3>
+                        <h2>Inject · Layer · Activate</h2>
+                        <div class="ph grow" style="border:none; background:none; padding:0;">
+                            <svg viewBox="0 0 300 265" style="width:100%; height:auto; max-height:100%; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                                <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                    <rect x="70" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                    <text x="150" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">INJECT</text>
+                                    <text x="150" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">FROM MEMORY DATA</text>
+
+                                    <path d="M150,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M45,80 H255" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M45,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M115,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M185,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M255,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                    <rect x="15" y="100" width="60" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="45" y="136" text-anchor="middle" style="fill:var(--text); font-size:7px;">SHADE</text>
+
+                                    <rect x="85" y="100" width="60" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="115" y="136" text-anchor="middle" style="fill:var(--text); font-size:7px;">MARKET</text>
+
+                                    <rect x="155" y="100" width="60" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="185" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">CULTURAL</text>
+                                    <text x="185" y="142" text-anchor="middle" style="fill:var(--text); font-size:7px;">ANCHOR</text>
+
+                                    <rect x="225" y="100" width="60" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="255" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">GREEN</text>
+                                    <text x="255" y="142" text-anchor="middle" style="fill:var(--text); font-size:7px;">INFRA</text>
+
+                                    <path d="M45,165 V185" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M115,165 V185" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M185,165 V185" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M255,165 V185" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M45,185 H255" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M150,185 V205" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                    <rect x="70" y="205" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                    <text x="150" y="226" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">ACTIVATE</text>
+                                    <text x="150" y="243" text-anchor="middle" style="fill:var(--muted); font-size:7px;">RECTIFY DEFICITS</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: auto; padding-top: 12px; flex-shrink: 0;">Inject layered public program informed by neighborhood memory data — shade, market, cultural anchor, green infrastructure — to identify and rectify amenity deficits.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 03 // Connection</div>
+                        <h3>Connection</h3>
+                        <h2>Link · Integrate · Embed</h2>
+                        <div class="ph grow" style="border:none; background:none; padding:0; flex: 0 0 auto; max-height:52%;">
+                            <svg viewBox="0 0 300 180" style="width:100%; height:auto; max-height:100%; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                                <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                    <rect x="5" y="0" width="90" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="50" y="28" text-anchor="middle" style="fill:var(--text); font-size:7px;">TRANSIT</text>
+                                    <text x="50" y="42" text-anchor="middle" style="fill:var(--text); font-size:7px;">INFRASTRUCTURE</text>
+
+                                    <rect x="105" y="0" width="90" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="150" y="28" text-anchor="middle" style="fill:var(--text); font-size:7px;">LOCAL</text>
+                                    <text x="150" y="42" text-anchor="middle" style="fill:var(--text); font-size:7px;">NETWORKS</text>
+
+                                    <rect x="205" y="0" width="90" height="65" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                    <text x="250" y="28" text-anchor="middle" style="fill:var(--text); font-size:7px;">SURROUNDING</text>
+                                    <text x="250" y="42" text-anchor="middle" style="fill:var(--text); font-size:7px;">FABRIC</text>
+
+                                    <path d="M50,65 V95" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M50,95 H250" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M150,65 V115" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                    <path d="M250,65 V95" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                    <rect x="70" y="115" width="160" height="54" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                    <text x="150" y="136" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">INTEGRATE</text>
+                                    <text x="150" y="153" text-anchor="middle" style="fill:var(--muted); font-size:7px;">SITE CONTEXT</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Integrate the site with its urban context: transit infrastructure, local networks, and surrounding fabric.</p>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 05 · SPECIFIC OBJECT — PERSHING SQUARE                     -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-5">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">04 // SPECIFIC OBJECT</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Pershing Square</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="padding-top:28px;">
+                <h2>Los Angeles, CA — Downtown · Est. 1866</h2>
+                <p style="margin-bottom: 14px;">Los Angeles' oldest public park. A site of dense public memory — historically a speaker's corner, political gathering ground, and urban anchor.</p>
+                <div class="rule" style="margin:10px 0;"></div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>THE PROBLEM</strong><br>
+                    The 1994 redesign by Ricardo Legorreta produced a concrete bunker that severs the square from surrounding streets. No shade. No programming. A heat island in one of the hottest urban cores in North America.
+                </div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>THE PARADOX</strong><br>
+                    One of the busiest Metro stations in LA sits directly below — the Red and Purple lines. Thousands of commuters pass through daily, but surface dwell time approaches zero. The infrastructure exists; the activation does not.
+                </div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>WHY THIS SITE</strong><br>
+                    High public memory density. Documented failure. Existing infrastructure to leverage. A site where the three-phase output can be demonstrated concretely — and verified against real conditions.
+                </div>
+                <div style="width:100%; aspect-ratio:4/3; overflow:hidden; flex-shrink:0; margin-top:14px;">
+                    <img src="../assets/precedents/pershing_square_satellite.jpg"
+                         style="width:100%; height:100%; object-fit:cover; object-position:center; border:1px solid var(--border);">
+                </div>
+            </div>
+            <div class="col" style="padding: 28px; justify-content: center; align-items: center;">
+                <img src="../archive/reference_images/PershingSquare/pershing_square_hero_resized.webp"
+                     style="width:100%; height:100%; object-fit:cover; border:1px solid var(--border);">
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 06 · INTERVENTION — THREE PHASES                           -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-6">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">05 // INTERVENTION</span>
+                </div>
+                <div class="col full" style="flex:1; height:auto; min-height:0;">
+                <div class="case-grid">
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 01 // Site Activation</div>
+                        <h2>Identify · Measure · Respond</h2>
+                        <div class="ph grow" style="flex: 0 0 68%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <img id="p05-img-0" src="../archive/reference_images/ViewCapture20260701_093804.png"
+                                 style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;">
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Identify site deficits and community priorities. Execute maximum intervention at minimal cost. Ingest user data and performance of the space to inform next phase.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 02 // Programming</div>
+                        <h2>Inject · Layer · Activate</h2>
+                        <div class="ph grow" style="flex: 0 0 68%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <img id="p05-img-2" src="../archive/diagrams/PershingMetabolizer/flux2_klein_00223_.png"
+                                 style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;">
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Inject layered public program informed by neighborhood memory data — shade, market, cultural anchor, infrastructure to identify and rectify amenity deficits.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 03 // Metro Connection</div>
+                        <h2>Link · Integrate · Embed</h2>
+                        <div class="ph grow" style="flex: 0 0 68%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <img id="p05-img-3" src="../archive/diagrams/PershingMetabolizer/image (5).png"
+                                 style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;">
+                        </div>
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Integrate the site with its urban context: transit infrastructure, local networks, and surrounding fabric.</p>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 07 · APP DEMO                                               -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-7">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">06 // THE APP</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Live System</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="width:35%; flex-shrink:0;">
+                <p style="margin-bottom: 22px;">Memory Machine v1.0 — a full-stack web application. A prompt enters the system, ChromaDB retrieves relevant memory fragments, Gemini synthesizes a spatial proposal, and the output renders in Three.js with a JSON payload ready for Rhino.</p>
+                <div class="rule"></div>
+                <h3 style="margin-top: 16px;">Architecture Stack</h3>
+                <pre class="mono" style="margin-top: 12px; color:#aaa;">FRONTEND
+  ├── index.html + Three.js
+  ├── Mermaid.js  (diagram render)
+  └── Figma plugin  (vector viz)
+
+BACKEND
+  ├── FastAPI  (Python)
+  ├── ChromaDB  (vector store)
+  ├── Gemini API  (synthesis)
+  └── site_data.json  (schema)
+
+GEOMETRY PIPELINE
+  ├── bake_to_rhino.py
+  └── Blender generative nodes</pre>
+                <div class="ph fixed" style="margin-top: auto;">
+                    [ BACKUP: export PDF if live demo unavailable ]
+                </div>
+            </div>
+            <div class="col" style="width:65%; flex-shrink:0; padding: 16px;">
+                <iframe src="../PershingMetabolizer_Prototype/index.html"
+                        style="width:100%; height:100%; border:1px solid var(--border); background:#000;"
+                        allow="cross-origin-isolated"></iframe>
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 08 · CASE STUDIES                                           -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-8">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">07 // CASE STUDIES</span>
+                </div>
+                <div class="col full" style="flex:1; height:auto; min-height:0;">
+                <div class="case-grid">
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 01 // Site Activation</div>
+                        <h3>High Line</h3>
+                        <h2>Diller Scofidio + Renfro · New York · 2009</h2>
+                        <img src="../archive/reference_images/architecture/high_line.png"
+                             style="width:100%; flex:1; min-height:0; object-fit:cover; border:1px solid var(--border);">
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Elevated rail infrastructure converted to linear public park. Infrastructure that passed over the city without engaging it becomes the primary public armature. Transit as activator, not barrier — exactly the inversion Pershing Square requires.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 02 // Programming</div>
+                        <h3>SESC Pompeia</h3>
+                        <h2>Lina Bo Bardi · São Paulo · 1977–86</h2>
+                        <img src="../archive/reference_images/architecture/2.jpg"
+                             style="width:100%; flex:1; min-height:0; object-fit:cover; border:1px solid var(--border);">
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Adaptive reuse of a drum factory as a layered cultural and social center. Industrial memory preserved; democratic public program injected over and through it. A model for activating a dormant site without erasure.</p>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">→ Phase 03 // Connection</div>
+                        <h3>Zeitz MOCA</h3>
+                        <h2>Heatherwick Studio · Cape Town · 2017</h2>
+                        <img src="../archive/precedents/zeitz_mocaa.jpg"
+                             style="width:100%; flex:1; min-height:0; object-fit:cover; border:1px solid var(--border);">
+                        <p style="font-size: 0.8rem; margin-top: 12px; flex-shrink: 0;">Grain silos carved out to create gallery volumes. The existing industrial structure is not erased — it is excavated, punctured to reveal new program. Scars of the original remain as the aesthetic logic. The activation is in the cut.</p>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 09 · FUNDING BREAKDOWN                                      -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-9">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">08 // FUNDING BREAKDOWN</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-family:'Courier New',monospace;">Phase 01 Capital Estimate</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0; overflow:hidden;">
+
+                <!-- PHASE 1 -->
+                <div style="flex:1; padding:20px 24px 20px 50px; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;">
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:1.7rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase;">Phase 1</div>
+                        <div style="font-size:1.2rem; color:var(--muted); letter-spacing:1px; margin-top:2px;">Edge Activation & Digital/Physical Staging</div>
+                        <div style="font-size:1.4rem; color:var(--accent); margin-top:4px;">$1.5M – $3.0M</div>
+                    </div>
+                    <div style="height:1px; background:var(--border); margin-bottom:8px; flex-shrink:0;"></div>
+                    <div style="display:grid; grid-template-columns: 1fr auto auto; gap:0; font-size:1.24rem; flex:1; align-content:start;">
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border);">Line Item</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">Low</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">High</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Edge Demolition (Hill St Wall & Shoring)</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$350K</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$600K</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Landscape, Grading & Shade Overhaul</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$500K</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$900K</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Timber Pavilion Structure</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$400K</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$800K</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Subterranean Prep & Neon Staging</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$150K</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$400K</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Data Harvesting & Archive Infrastructure</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$100K</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$300K</div>
+
+                        <div style="padding:8px 0 0; color:var(--text); font-size:1.3rem; letter-spacing:1px; text-transform:uppercase;">Phase 1 Total</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$1.5M</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$3.0M</div>
+                    </div>
+                </div>
+
+                <!-- PHASE 2 -->
+                <div style="flex:1; padding:20px 24px; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;">
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:1.7rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase;">Phase 2</div>
+                        <div style="font-size:1.2rem; color:var(--muted); letter-spacing:1px; margin-top:2px;">Deficit Programming & Subterranean Retrofitting</div>
+                        <div style="font-size:1.4rem; color:var(--accent); margin-top:4px;">$12.0M – $26.0M</div>
+                    </div>
+                    <div style="height:1px; background:var(--border); margin-bottom:8px; flex-shrink:0;"></div>
+                    <div style="display:grid; grid-template-columns: 1fr auto auto; gap:0; font-size:1.24rem; flex:1; align-content:start;">
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border);">Line Item</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">Low</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">High</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Garage Deck Structural Reinforcement</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$3.5M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$7.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Permanent Deficit Programming</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$4.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$9.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Deep Utility & HVAC Retrofit</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$2.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$4.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Expanded Civic Media & Neon Display Matrix</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$1.5M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$3.5M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Site-Wide Digital Infrastructure</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$1.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$2.5M</div>
+
+                        <div style="padding:8px 0 0; color:var(--text); font-size:1.3rem; letter-spacing:1px; text-transform:uppercase;">Phase 2 Total</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$12.0M</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$26.0M</div>
+                    </div>
+                </div>
+
+                <!-- PHASE 3 -->
+                <div style="flex:1; padding:20px 50px 20px 24px; display:flex; flex-direction:column; overflow:hidden;">
+                    <div style="margin-bottom:8px;">
+                        <div style="font-size:1.7rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase;">Phase 3</div>
+                        <div style="font-size:1.2rem; color:var(--muted); letter-spacing:1px; margin-top:2px;">Heavy Structural Carving & Metro Integration</div>
+                        <div style="font-size:1.4rem; color:var(--accent); margin-top:4px;">$30.0M – $75.0M+</div>
+                    </div>
+                    <div style="height:1px; background:var(--border); margin-bottom:8px; flex-shrink:0;"></div>
+                    <div style="display:grid; grid-template-columns: 1fr auto auto; gap:0; font-size:1.24rem; flex:1; align-content:start;">
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border);">Line Item</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">Low</div>
+                        <div style="color:var(--muted); padding-bottom:6px; border-bottom:1px solid var(--border); text-align:right; padding-left:12px;">High</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Slab Carving & Bulk Excavation</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$8.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$18.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Structural Underpinning & Shoring</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$7.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$16.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Metro Portal Interconnection</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$9.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$22.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">"Memory Machine" Core Build-out</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$4.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$11.0M</div>
+
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--text);">Contingency, Permitting & Legal (30%)</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$2.0M</div>
+                        <div style="padding:7px 0; border-bottom:1px solid var(--border); color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap;">$8.0M</div>
+
+                        <div style="padding:8px 0 0; color:var(--text); font-size:1.3rem; letter-spacing:1px; text-transform:uppercase;">Phase 3 Total</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$30.0M</div>
+                        <div style="padding:8px 0 0; color:var(--accent); text-align:right; padding-left:12px; white-space:nowrap; font-weight:bold;">$75.0M+</div>
+                    </div>
+                </div>
+
+                </div><!-- /slide-body -->
+
+                <!-- GRAND TOTAL -->
+                <div style="flex-shrink:0; padding:12px 50px; border-top:1px solid var(--border); display:flex; align-items:baseline; justify-content:space-between; background:var(--bg);">
+                    <div style=”font-size:0.65rem; letter-spacing:3px; color:var(--muted); text-transform:uppercase;”>Grand Total · Transit-Integrated Park Master Plan</div>
+                    <div style=”font-size:1.1rem; color:var(--accent); letter-spacing:2px; font-weight:bold;”>$43.5M – $104.0M+</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 10 · PROGRAMMING DIAGRAM                                    -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-10">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">08 // PROGRAMMING</span>
+                </div>
+                <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:40px;">
+                    <img src="../archive/diagrams/PershingMetabolizer/programming.png"
+                         style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;">
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /spread-container -->
+
+    <footer>
+        <div id="page-indicator">00 // STATEMENT — 1 of 8</div>
+        <div class="nav-controls">
+            <button onclick="prevSpread()">[ PREV ]</button>
+            <button onclick="nextSpread()">[ NEXT ]</button>
+        </div>
+    </footer>
+</div><!-- /viewer -->
+
+<button id="ghost-contain-btn" onclick="releaseGhosts()" style="position:fixed; top:16px; right:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
+<button id="theme-toggle" onclick="toggleTheme()" style="position:fixed; top:16px; left:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
+
+<script>
+    // ── Theme toggle ────────────────────────────────────────────
+    function toggleTheme() {
+        const btn = document.getElementById('theme-toggle');
+        const isLight = document.body.classList.toggle('light-mode');
+        btn.textContent = isLight ? 'LIGHT' : 'DARK';
+    }
+
+    // ── Navigation ──────────────────────────────────────────────
+    const labels = [
+        "00 // STATEMENT",
+        "01 // BACKGROUND",
+        "02 // MACHINE PIPELINE",
+        "03 // REAL OBJECT",
+        "04 // SPECIFIC OBJECT – PERSHING SQUARE",
+        "05 // INTERVENTION",
+        "06 // THE APP",
+        "07 // CASE STUDIES",
+        "08 // FUNDING BREAKDOWN",
+        "09 // PROGRAMMING",
+    ];
+    const total = labels.length;
+    let current = 1;
+
+    function showSpread(n) {
+        document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('spread-' + n);
+        if (el) el.classList.add('active');
+        document.getElementById('page-indicator').innerText =
+            labels[n - 1] + ' – ' + n + ' of ' + total;
+        current = n;
+        if (n === 1) startGhostEffect(); else stopGhostEffect();
+        if (n === 2) startSlideshows(); else stopSlideshows();
+        if (n === 6) startP05Slideshow(); else stopP05Slideshow();
+    }
+    function nextSpread() { showSpread(current < total ? current + 1 : 1); }
+    function prevSpread() { showSpread(current > 1 ? current - 1 : total); }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSpread();
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevSpread();
+    });
+
+    // ── Ghost effect (slide 00) ─────────────────────────────────
+    const ghostPool = [
+        '../archive/render_output/1988/1988_trailer.png',
+        '../archive/render_output/1988/1988_trailerWatercolor.png',
+        '../archive/render_output/1988/1988_trailerwatercolorInterior2.png',
+        '../archive/render_output/1992/1992_birthday.png',
+        '../archive/render_output/1994/1994_basin.png',
+        '../archive/render_output/bottegaLouieExterior/flux2_klein_00088_.png',
+        '../archive/render_output/bottegaLouieExterior/flux2_klein_00092_.png',
+        '../archive/render_output/bottegaLouieExterior/flux2_klein_00098_.png',
+        '../archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg',
+        '../archive/render_output/bottegaLouieInterior/BottegaInterior02.png',
+        '../archive/render_output/Nakagin/flux2_klein_00122_.png',
+        '../archive/render_output/Nakagin/flux2_klein_00123_.png',
+        '../archive/render_output/Nakagin/ComfyUI_temp_ecvpn_00001_.png',
+        '../archive/render_output/OTjohnsonExterior/flux2_klein_00101_.png',
+        '../archive/render_output/OTjohnsonExterior/flux2_klein_00105_.png',
+        '../archive/render_output/PershingSquare/flux2_klein_00223_.png',
+        '../archive/render_output/oldPrints/front_cover.jpg',
+        '../archive/precedents/neues_museum.jpg',
+        '../archive/precedents/zeitz_mocaa.jpg',
+        '../archive/precedents/aldo_rossi.jpg',
+        '../archive/precedents/dohosuh1.jpg',
+        '../archive/precedents/TheGenbakuDome.jpg',
+        '../archive/reference_images/PershingSquare/Pershing-Square-postcard-1960s.webp',
+        '../archive/reference_images/PershingSquare/0318052rppc-aerial-of-pershing-square-and-biltmore-hotel-2014-102-1-1.webp',
+        '../archive/reference_images/architecture/high_line.png',
+        '../archive/reference_images/architecture/2.jpg',
+        '../archive/reference_images/nakaginCapsuleTower/Nakagin.jpg',
+        '../archive/workflowScreenshots/Screenshot 2026-03-22 154306.png',
+        '../archive/workflowScreenshots/Screenshot 2026-06-27 162651.png',
+        '../archive/reference_images/blade-runner-2049-doomed-city-qwt1xcx6vrg5nea2.jpg',
+    ];
+    const GHOST_MAX = 12;
+    const GHOST_MS  = 3500;
+    let ghostInterval = null;
+    let ghostContained = true;
+
+    function rnd(a, b) { return (Math.random() * (b - a) + a); }
+    function rndPx(range) { return rnd(-range, range).toFixed(1) + 'px'; }
+
+    function injectGhost() {
+        const frame = document.getElementById('ghost-frame');
+        const container = ghostContained ? frame : document.body;
+        if (!container) return;
+        const existing = container.querySelectorAll('.ghost-img');
+        if (existing.length >= GHOST_MAX) existing[0].remove();
+
+        const img = document.createElement('img');
+        img.className = 'ghost-img';
+        img.src = ghostPool[Math.floor(Math.random() * ghostPool.length)];
+
+        if (ghostContained) {
+            img.style.position = 'absolute';
+            img.style.width    = '67%';
+            img.style.top  = rnd(0, 70).toFixed(1) + '%';
+            img.style.left = rnd(-10, 55).toFixed(1) + '%';
+        } else {
+            img.style.position = 'fixed';
+            img.style.width    = rnd(30, 65).toFixed(1) + 'vw';
+            img.style.top  = rnd(-5, 75).toFixed(1) + 'vh';
+            img.style.left = rnd(-10, 70).toFixed(1) + 'vw';
+        }
+
+        img.style.setProperty('--r',   rnd(-7, 7).toFixed(2) + 'deg');
+        img.style.setProperty('--s',   rnd(0.38, 1.1).toFixed(2));
+        img.style.setProperty('--dur', rnd(6000, 12000).toFixed(0) + 'ms');
+        const step = ghostContained ? 12 : 22;
+        let cx = 0, cy = 0;
+        for (let i = 1; i <= 4; i++) {
+            cx += rnd(-step, step); cy += rnd(-step, step);
+            img.style.setProperty(`--dx${i}`, cx.toFixed(1) + 'px');
+            img.style.setProperty(`--dy${i}`, cy.toFixed(1) + 'px');
+        }
+
+        container.appendChild(img);
+        img.addEventListener('animationend', function(e) {
+            if (e.animationName === 'ghost-flicker') img.remove();
+        });
+    }
+
+    // ── Page 05 column 1 cycling ────────────────────────────────
+    const p05Pools = [
+        { id: 'p05-img-0', images: [
+            '../archive/reference_images/ViewCapture20260701_093804.png',
+            '../archive/diagrams/PershingMetabolizer/Access.png',
+            '../archive/diagrams/PershingMetabolizer/Amenities.png',
+            '../archive/diagrams/PershingMetabolizer/Connection.png',
+        ]},
+        { id: 'p05-img-2', images: [
+            '../archive/diagrams/PershingMetabolizer/flux2_klein_00223_.png',
+            '../archive/diagrams/PershingMetabolizer/programming.png',
+            '../archive/diagrams/PershingMetabolizer/ComfyUI_00586_.png',
+        ]},
+        { id: 'p05-img-3', images: [
+            '../archive/diagrams/PershingMetabolizer/image (5).png',
+            '../archive/diagrams/PershingMetabolizer/image (4).png',
+        ]},
+    ];
+    const p05Indices = [0, 0, 0];
+    let p05Intervals = [];
+
+    function startP05Slideshow() {
+        stopP05Slideshow();
+        p05Pools.forEach((col, i) => {
+            p05Indices[i] = 0;
+            const img = document.getElementById(col.id);
+            if (img) img.src = col.images[0];
+            p05Intervals.push(setInterval(() => {
+                p05Indices[i] = (p05Indices[i] + 1) % col.images.length;
+                const el = document.getElementById(col.id);
+                if (!el) return;
+                el.src = col.images[p05Indices[i]];
+            }, 3000));
+        });
+    }
+
+    function stopP05Slideshow() {
+        p05Intervals.forEach(iv => clearInterval(iv));
+        p05Intervals = [];
+    }
+
+    // ── Background slide image cycling ──────────────────────────
+    const bgTopPools = [
+        [
+            '../archive/render_output/1988/1988_trailer.png',
+            '../archive/render_output/1992/1992_birthday.png',
+            '../archive/render_output/1994/1994_basin.png',
+        ],
+        [
+            '../archive/render_output/bottegaLouieExterior/bottegaExterior.png',
+        ],
+        [
+            '../archive/render_output/Nakagin/nakaginRhinoScreenshot.png',
+        ],
+    ];
+    const bgTopIndices = [0, 0, 0];
+
+    const bgPools = [
+        [
+            '../archive/render_output/1988/1988_trailerWatercolor.png',
+            '../archive/render_output/1988/1988_trailerwatercolorInterior2.png',
+            '../archive/render_output/1992/1992_birthday.jpg',
+            '../archive/render_output/1992/1992_birthday2.png',
+            '../archive/render_output/1994/basin_1994.jpg',
+            '../archive/render_output/1994/raccoonLamp.png',
+        ],
+        [
+            '../archive/render_output/bottegaLouieExterior/flux2_klein_00088_.png',
+            '../archive/render_output/bottegaLouieExterior/flux2_klein_00092_.png',
+            '../archive/render_output/bottegaLouieExterior/flux2_klein_00098_.png',
+            '../archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg',
+            '../archive/render_output/bottegaLouieInterior/BottegaInterior02.png',
+        ],
+        [
+            '../archive/render_output/Nakagin/unused/flux2_klein_00110_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00111_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00112_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00113_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00114_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00115_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00116_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00117_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00118_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00119_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00120_.png',
+            '../archive/render_output/Nakagin/unused/flux2_klein_00121_.png',
+            '../archive/render_output/Nakagin/flux2_klein_00122_.png',
+            '../archive/render_output/Nakagin/flux2_klein_00123_.png',
+            '../archive/render_output/Nakagin/ComfyUI_temp_ecvpn_00001_.png',
+        ],
+    ];
+    const bgIndices = [0, 0, 0];
+    let bgIntervals = [];
+
+    function startSlideshows() {
+        stopSlideshows();
+        bgPools.forEach((pool, col) => {
+            bgIndices[col] = 0;
+            const img = document.getElementById('bg-img-' + col);
+            if (img) img.src = pool[0];
+            bgIntervals.push(setInterval(() => {
+                bgIndices[col] = (bgIndices[col] + 1) % pool.length;
+                const el = document.getElementById('bg-img-' + col);
+                if (!el) return;
+                el.style.opacity = '0';
+                setTimeout(() => { el.src = pool[bgIndices[col]]; el.style.opacity = '1'; }, 1500);
+            }, 8000 + col * 600));
+        });
+        bgTopPools.forEach((pool, col) => {
+            if (!pool.length) return;
+            bgTopIndices[col] = 0;
+            const img = document.getElementById('bg-top-' + col);
+            if (img) img.src = pool[0];
+            if (pool.length > 1) {
+                bgIntervals.push(setInterval(() => {
+                    bgTopIndices[col] = (bgTopIndices[col] + 1) % pool.length;
+                    const el = document.getElementById('bg-top-' + col);
+                    if (!el) return;
+                    el.style.opacity = '0';
+                    setTimeout(() => { el.src = pool[bgTopIndices[col]]; el.style.opacity = '1'; }, 1500);
+                }, 9500 + col * 700));
+            }
+        });
+    }
+
+    function stopSlideshows() {
+        bgIntervals.forEach(iv => clearInterval(iv));
+        bgIntervals = [];
+    }
+
+    function startGhostEffect() {
+        stopGhostEffect();
+        injectGhost();
+        ghostInterval = setInterval(injectGhost, GHOST_MS);
+    }
+
+    function stopGhostEffect() {
+        if (ghostInterval) { clearInterval(ghostInterval); ghostInterval = null; }
+        document.querySelectorAll('.ghost-img').forEach(g => g.remove());
+    }
+
+    function releaseGhosts() {
+        ghostContained = false;
+        // Fade out and remove all contained ghosts; new ones will spawn in bleed mode
+        document.querySelectorAll('#ghost-frame .ghost-img').forEach(g => {
+            g.style.transition = 'opacity 1.5s ease-out';
+            g.style.opacity = '0';
+            g.addEventListener('transitionend', () => g.remove(), { once: true });
+        });
+    }
+
+    // Slide 00 is active on load
+    startGhostEffect();
+</script>
+</body>
+</html>

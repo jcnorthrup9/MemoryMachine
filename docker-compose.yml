@@ -1,10 +1,10 @@
-version: '3.8'
-
 services:
-  dev:
+  app:
     build: .
     volumes:
       - .:/app
-    stdin_open: true
-    tty: true
-    command: /bin/bash
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload

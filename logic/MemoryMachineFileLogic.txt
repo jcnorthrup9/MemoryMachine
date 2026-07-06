@@ -1,0 +1,35 @@
+MemoryMachine/
+├── app.py                      # FastAPI Server (The Switchboard)
+├── .env                        # API Keys (GEMINI_API_KEY, etc.)
+├── urban_design_guidelines.md  # Architectural rules & zonal constraints
+├── db/                         # ChromaDB Vector Store (Memory Archive)
+│
+├── data/                       # Core Geometry & Context Data
+│   ├── current_intervention.json # Handshake file for Rhino "Baking"
+│   ├── pershing_site_context.json# Rhino context for 3D viewer
+│   └── ParkSVG/                # Source SVGs for the 2D Remix Engine
+│       ├── PershingSquare.svg
+│       ├── ParcdelaVillette.svg
+│       └── ZaryadyePark.svg
+│
+├── logic/                      # Python "Heavy Lifting" (Backend Logic)
+│   ├── ai_synthesizer.py       # Gemini API calls & Seed generation
+│   ├── urban_engine.py         # Guideline parsing & Zonal grid logic
+│   ├── geometry_engine.py      # Massing & landscape mound generators
+│   └── bake_to_rhino.py        # Script to automate Rhino geometry
+│
+├── static/                     # Frontend Assets (The Browser Side)
+│   ├── style.css               # UI Styling
+│   ├── main.js                 # UI Commander & API Bridge
+│   ├── generated/              # Storage for AI-generated .glb meshes
+│   └── js/                     # Modular Engine Scripts
+│       ├── constants.js        # Global site & layer definitions
+│       ├── state.js            # MemoryState (The App's "Brain")
+│       └── engine2d.js         # SVG Parsing & Clipping Engine
+│
+├── templates/                  # HTML Layouts
+│   └── index.html              # Primary Application UI
+│
+└── archive/                    # Project Documentation & Scrapbooks
+    ├── diagrams/               # AI-generated Mermaid/Spatial diagrams
+    └── html/                   # Digital palimpsest & Zine exports

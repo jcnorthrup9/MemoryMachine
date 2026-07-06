@@ -1,0 +1,16 @@
+{
+  "name": "memory-machine-task-engine",
+  "version": "1.0.0",
+  "description": "Figma plugin for generating task boards and calendars.",
+  "main": "code.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "npm run build -- --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@figma/plugin-typings": "*",
+    "typescript": "*"
+  }
+}

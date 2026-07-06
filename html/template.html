@@ -6,16 +6,16 @@
     <title>Memory Machine // Palimpsest Zine</title>
     <style>
         :root {
-            --bg-color: #050505;
-            --text-color: #e0e0e0;
-            --accent-glow: #fff4ca;
-            --border-dim: #222;
+            --bg-color: #f4f0e6;
+            --text-color: #2a2318;
+            --accent-glow: #8b1a1a;
+            --border-dim: #d1cdc1;
         }
 
         * { box-sizing: border-box; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #000; border: 1px solid var(--border-dim); display: flex; flex-direction: column; }
+        .zine-viewer { width: 96vw; max-width: 1800px; height: 92vh; background-color: #fff; border: 1px solid var(--border-dim); display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
         .spread-container { flex-grow: 1; display: flex; position: relative; overflow: hidden; }
         
         .spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border-dim); z-index: 10; }
@@ -31,7 +31,7 @@
             text-align: justify;
             font-size: 0.85rem;
             line-height: 1.7;
-            color: #bbb;
+            color: #4a3f30;
             height: 100%;
             column-fill: auto;
             overflow: hidden;
@@ -41,23 +41,24 @@
         .text-vessel { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto; padding-right: 15px; }
         .image-vessel { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        .vignette { border-left: 1px solid var(--accent-glow); padding-left: 20px; margin-bottom: 25px; font-size: 0.85em; color: #aaa; text-align: left; line-height: 1.6;}
+        .vignette { border-left: 2px solid var(--accent-glow); padding-left: 20px; margin-bottom: 25px; font-size: 0.85em; color: #4a3f30; text-align: left; line-height: 1.6;}
 
         h1.zine-title { font-size: 3rem; color: var(--accent-glow); margin-bottom: 5px; }
-        h2.page-header { color: #555; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px dashed var(--border-dim); padding-bottom: 10px; margin-bottom: 25px; flex-shrink: 0;}
+        h2.page-header { color: #8b1a1a; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px dashed var(--border-dim); padding-bottom: 10px; margin-bottom: 25px; flex-shrink: 0;}
         
-        pre { margin: 0; font-size: 0.75rem; line-height: 1.5; color: #666; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace;}
-        .json-block { color: #88ff88; text-align: left; font-size: 0.7rem; line-height: 1.4; }
-        .binary-block { color: #444; letter-spacing: 3px; text-align: left; font-size: 0.7rem; line-height: 1.4; }
+        pre { margin: 0; font-size: 0.75rem; line-height: 1.5; color: #4a3f30; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace;}
+        .json-block { color: #206020; text-align: left; font-size: 0.7rem; line-height: 1.4; background: #ede8d8; padding: 10px; border: 1px solid var(--border-dim); }
+        .binary-block { color: #777; letter-spacing: 3px; text-align: left; font-size: 0.7rem; line-height: 1.4; }
 
         .spread { display: none; width: 100%; height: 100%; }
         .spread.active { display: flex; }
 
-        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #444; background: #000; z-index: 20; }
-        .nav-controls button { background: none; border: 1px solid #222; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: 'Courier New', Courier, monospace;}
+        .zine-footer { padding: 15px 30px; border-top: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; font-size: 0.8em; color: #2a2318; background: #f4f0e6; z-index: 20; }
+        .nav-controls button { background: #ede8d8; border: 1px solid #d1cdc1; color: var(--text-color); padding: 5px 20px; cursor: pointer; font-family: 'Courier New', Courier, monospace;}
+        .nav-controls button:hover { background: #e0dcd0; color: #8b1a1a; border-color: #8b1a1a; }
 
-        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; margin: auto 0;}
-        .matrix-item { aspect-ratio: 1; background: #080808; border: 1px solid #222; display: flex; align-items: center; justify-content: center; overflow: hidden;}
+        .matrix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; margin: auto 0; }
+        .matrix-item { aspect-ratio: 1; background: #fff; border: 1px solid #d1cdc1; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 5px;}
         .matrix-item img { width: 100%; height: 100%; object-fit: cover; } 
     </style>
 </head>
@@ -67,13 +68,13 @@
             <div class="spine"></div>
 
             <div class="spread active" id="spread-1">
-                <div class="page-side left-page" style="background-color: #030303;"></div>
+                <div class="page-side left-page" style="background-color: #fff;"></div>
                 <div class="page-side right-page">
                     <div class="image-vessel">
                         <div style="width: 100%;">
                             <h1 class="zine-title">Forensic_Palimpsest</h1>
-                            <div style="letter-spacing: 5px; color: #444; margin-bottom: 40px;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
-                            <img src="../archive/render_output/front_cover.jpg" style="width: 100%; border: 1px solid var(--border-dim); filter: grayscale(100%);">
+                            <div style="letter-spacing: 5px; color: #777; margin-bottom: 40px;">THE MEMORY MACHINE // JOHN C. NORTHRUP II</div>
+                            <img src="../archive/render_output/front_cover.jpg" style="width: 100%; border: 1px solid var(--border-dim); filter: sepia(0.2) contrast(1.05);">
                         </div>
                     </div>
                 </div>
@@ -117,7 +118,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="page-side right-page" style="background-color: #030303;">
+                <div class="page-side right-page" style="background-color: #fff;">
                     <h2 class="page-header">PAGE 06 // Mapping Logic</h2>
                 </div>
             </div>

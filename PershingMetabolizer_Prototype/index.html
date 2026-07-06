@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Pershing Metabolizer</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #d6d1c8; font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; }
+  #app { position: fixed; inset: 0; }
+  #ui {
+    position: fixed; top: 18px; left: 18px; width: 260px;
+    background: rgba(255, 253, 248, 0.88); border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px; padding: 14px 16px; backdrop-filter: blur(6px);
+  }
+  #ui h1 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #c94800; margin: 0 0 10px; }
+  #ui h2 { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #888; margin: 10px 0 6px; }
+  .phase-btn {
+    display: block; width: 100%; text-align: left; background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.12); color: #333; padding: 9px 10px; margin-bottom: 6px;
+    border-radius: 6px; font-size: 12px; cursor: pointer; transition: all .15s ease;
+  }
+  .phase-btn:hover { background: rgba(201, 72, 0, 0.10); border-color: #c94800; }
+  .phase-btn.active { background: linear-gradient(90deg, #c94800, #3300cc); color: #fff; border-color: transparent; }
+  .layer-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+  }
+  .layer-toggle {
+    width: 32px; height: 18px; border-radius: 9px; border: 1px solid rgba(0,0,0,0.18);
+    background: rgba(0,0,0,0.08); cursor: pointer; position: relative;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .layer-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 12px; height: 12px; border-radius: 6px;
+    background: #aaa; transition: transform .2s, background .2s;
+  }
+  .layer-toggle.on { background: #c94800; border-color: #a03800; }
+  .layer-toggle.on::after { transform: translateX(14px); background: #fff; }
+  .layer-row.disabled { opacity: 0.4; pointer-events: none; }
+  .layer-label { font-size: 11px; color: #333; }
+  .layer-label em { font-style: normal; display: block; font-size: 9px; color: #888; margin-top: 1px; }
+  #desc { font-size: 11px; line-height: 1.5; color: #666; margin-top: 10px; min-height: 48px; }
+  #legend {
+    position: fixed; bottom: 18px; left: 18px; font-size: 10px; color: #444; line-height: 1.7;
+    background: rgba(255, 253, 248, 0.82); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.10);
+  }
+  #legend span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+  #hint { position: fixed; bottom: 18px; right: 18px; font-size: 10px; color: #888; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="ui">
+  <h1>The Pershing Metabolizer</h1>
+
+  <h2>Development Phase</h2>
+  <button class="phase-btn active" data-phase="current">Current — Existing Site</button>
+  <button class="phase-btn"        data-phase="1">Phase 1 — Site Activation</button>
+  <button class="phase-btn"        data-phase="2">Phase 2 — Amenity Programming</button>
+  <button class="phase-btn"        data-phase="3">Phase 3 — Transit Connection</button>
+
+  <h2>Layers</h2>
+  <div class="layer-row">
+    <button class="layer-toggle on" id="tog-excavation"></button>
+    <span class="layer-label">Deficit / Transit Heat
+      <em>Transit + amenity deficit</em></span>
+  </div>
+  <div class="layer-row">
+    <button class="layer-toggle" id="tog-shade"></button>
+    <span class="layer-label">Sun / Shade
+      <em>5 key LA sun conditions · DTLA 36° grid</em></span>
+  </div>
+  <div class="layer-row" id="row-tunnel">
+    <button class="layer-toggle on" id="tog-tunnel"></button>
+    <span class="layer-label">Street Tunnel Connector
+      <em>Phase 3 only · real entrance footprint</em></span>
+  </div>
+
+  <div id="desc"></div>
+
+  <h2>Export</h2>
+  <button class="phase-btn" id="export-png">Download PNG (transparent bg)</button>
+</div>
+
+<div id="legend">
+  <div><span style="background:#FF6B00"></span>Amenity deficit heat</div>
+  <div><span style="background:#4D00FF"></span>Transit attractor heat</div>
+  <div><span style="background:#3a3a3a"></span>Inactive plaza</div>
+  <div><span style="background:#1a4a1a"></span>Heavy shade (buildings)</div>
+  <div><span style="background:#8BC34A"></span>Solar exposure</div>
+</div>
+<div id="hint">drag to orbit · scroll to zoom</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+/* =========================================================================
+   PERSHING METABOLIZER — real geometry + layered diagrammatic logic
+   Geometry: real_geometry.json (extracted from Rhino OBJ)
+   Buildings: ../data/building_heights.json (real perimeter heights)
+   ========================================================================= */
+
+const [REAL, BLDG_DATA, CURRENT_STATE] = await Promise.all([
+  fetch('./real_geometry.json').then(r => r.json()),
+  fetch('../data/building_heights.json').then(r => r.json()),
+  fetch('./current_state.json').then(r => r.json()),
+]);
+
+/* ── Site dimensions (real, from OBJ) ─────────────────────────────────── */
+const SITE_WIDTH_FT  = REAL.site.width_ft;   // ~354ft  Olive → Hill (E-W)
+const SITE_LENGTH_FT = REAL.site.length_ft;  // ~602ft  6th → 5th  (N-S)
+
+/* ── Voxel grid ───────────────────────────────────────────────────────── */
+const VOXEL_FT  = 9;
+const NX = Math.ceil(SITE_WIDTH_FT  / VOXEL_FT);
+const NZ = Math.ceil(SITE_LENGTH_FT / VOXEL_FT);
+
+/* ── Excavation constants ─────────────────────────────────────────────── */
+const GARAGE_DEPTH_FT      = 30;
+// DESIGN CHOICE, not measured: the real Metro Entrance object sits ~24-84ft outside
+// the actual site footprint (x: 378-438ft vs site width 354ft -- it's a street-level
+// pavilion, confirmed against secondary_entrance_mesh's own bbox). With the old
+// TRANSIT_FALLOFF_FT=37.8 (inherited from a prior tunnel-segment model), influence
+// at the nearest reachable voxel (~53ft from the entrance) was exp(-53/37.8)=0.245,
+// below THRESHOLD=0.35 -- the attractor produced ZERO cuts anywhere on site; what
+// looked like "transit cuts" was actually the unrelated DEFICIT_HOTSPOTS placeholder.
+// Widened to 150ft so the attractor's pull is actually felt inside the buildable
+// site: at the nearest edge (d=53ft) influence=exp(-53/150)=0.71; it crosses back
+// below THRESHOLD around d=157ft, i.e. the cut reaches roughly 104ft into the site
+// interior from the edge closest to the entrance. That 150ft is a chosen excavation-
+// influence radius (architecturally plausible scale for a transit concourse
+// connection), not derived from any survey or program document -- flag it as such.
+// Strengthened 150 -> 220ft per user request ("make the attractor stronger") -- still a
+// chosen design radius, not survey-derived, but widens both the influence reach and the
+// fraction of in-range voxels that cross THRESHOLD, so more of the site responds and the
+// cut reads deeper near the entrance.
+const TRANSIT_FALLOFF_FT   = 220;
+const THRESHOLD            = 0.35;
+const TILE_HEIGHT_FT       = 2;   // flat heat-map tile thickness for non-excavated tiles
+// Real depth target for the transit attractor ONLY (not the deficit term, which stays
+// a flat heat overlay per the amenities-deficit rework). bottom_depth_ft is the literal
+// base of the Metro Entrance mesh in the OBJ, traced through real_geometry.json.
+const ENTRANCE_BASE_DEPTH_FT = REAL.secondary_entrance_anchor.bottom_depth_ft;
+const STEP_FT               = 9;    // terrace step size for the transit cut
+
+/* ── Metro entrance attractor (site-local coordinates) ─────────────────
+     secondary_entrance_anchor.{x,z} comes straight out of extract_real_geometry.py's
+     mesh_site_local(), the SAME shift (- site_min_x, - site_min_z) applied to every
+     other real object in this file: column_positions (c.x/c.z, see nearestColumnDist)
+     and ramp_anchors (r.x/r.z, see nearestRampDist). None of those are flipped, and
+     the 274 real column positions are independently verified to fall inside the
+     354x602ft site bounds with no flip. So the entrance anchor must be used the same
+     way, unflipped, to stay in the one shared coordinate frame.
+     PLACEHOLDER FLAG: there is no north arrow or street-name label anywhere in the
+     source OBJ or PershingContext.svg, so which physical end of the site (5th St vs
+     6th St) corresponds to z=0 vs z=602 is NOT verified from data — only the internal
+     self-consistency between columns/ramps/entrance is verified. A prior edit guessed
+     "z=27 must be wrong, flip it to be near 5th St" with no evidence; that guess is
+     removed here. If the real-world 5th/6th orientation matters, it needs a surveyed
+     site plan or as-built reference, not inference from this OBJ alone.            ── */
+const METRO_ENTRANCE = {
+  x: REAL.secondary_entrance_anchor.x,
+  y: REAL.secondary_entrance_anchor.z,
+};
+/* ── Deficit hotspots (diagrammatic, west / Olive St edge) ──────────── */
+const DEFICIT_HOTSPOTS = [
+  { x: SITE_WIDTH_FT * 0.04, y: SITE_LENGTH_FT * 0.65, strength: 1.0, radius: 67.5 },
+  { x: SITE_WIDTH_FT * 0.04, y: SITE_LENGTH_FT * 0.30, strength: 0.6, radius: 54.0 },
+];
+
+/* ── Sun / shade constants ────────────────────────────────────────────────
+   Latitude: 34.05°N (Downtown LA)
+   Site rotation: DTLA street grid runs 36° west-of-north from true north.
+   Sun azimuths are geographic (from true N, clockwise). To cast shadows
+   into the site-local grid (where +y = site "north" ≈ true NW), we rotate
+   each azimuth by −SITE_ROTATION_DEG before projecting.
+
+   Five conditions weighted by their typical contribution to daily exposure:
+   summer and winter solstices at noon + morning/afternoon flanking times.  ── */
+const SITE_ROTATION_DEG = 36;   // true DTLA grid, not 45° — that was the orthogonalized model assumption
+const DEG = Math.PI / 180;
+
+const SUN_CONDITIONS = [
+  // { altDeg, azDeg (geographic, from N CW), weight, label }
+  { alt: 79.4, az: 180, w: 0.18, label: 'Summer solstice noon'    },
+  { alt: 48.0, az:  90, w: 0.22, label: 'Summer morning (9am)'    },
+  { alt: 48.0, az: 270, w: 0.22, label: 'Summer afternoon (3pm)'  },
+  { alt: 32.5, az: 180, w: 0.18, label: 'Winter solstice noon'    },
+  { alt: 18.0, az: 228, w: 0.20, label: 'Winter afternoon (2pm)'  },
+];
+const TOTAL_WEIGHT = SUN_CONDITIONS.reduce((s, c) => s + c.w, 0);
+
+// Buildings sit on the perimeter; their grid coords (1–28) map linearly
+// onto the real site footprint edges (buildings y=28→5th/north, y=1→6th/south).
+const BLDG_FOOTPRINT_FT = 60;   // assumed shadow-caster half-width (no footprint data yet)
+
+/* ── Phase UI descriptions ───────────────────────────────────────────── */
+const PHASE_DESCRIPTIONS = {
+  current: "The existing Pershing Square plaza as built today — real trees, pool, retaining walls, and sport court from the as-built Rhino model.",
+  1: "Baseline site — flat plaza at grade, no deficit or transit heat active yet.",
+  2: "Amenity-deficit heat along the west (Olive St) edge.",
+  3: "Deficit heat plus the Metro Entrance transit-attractor — voxels near the entrance pull down toward its real built depth. Street Tunnel Connector layer becomes available, bridging the real gap to the off-site Metro entrance.",
+};
+
+/* ── Helpers ─────────────────────────────────────────────────────────── */
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/* ── Spiral ramp footprints (for transit-cut hard avoidance) ─────────────
+   REAL.ramp_meshes.{cluster_a,cluster_b} are the real spiral ramp level
+   meshes from the OBJ (same site-local frame as everything else here, no
+   offset applied -- consistent with how entranceBBoxSiteLocal() reads
+   secondary_entrance_mesh.vertices directly). Each cluster's footprint is
+   computed as the real XZ bounding box across all its stacked levels. The
+   transit attractor is excluded entirely within RAMP_CLEARANCE_FT of either
+   box -- this is a chosen clearance margin, not a structural tolerance from
+   any drawing. */
+function meshClusterBBox(meshList) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const level of meshList) {
+    const verts = level.vertices;
+    for (let i = 0; i < verts.length; i += 3) {
+      const x = verts[i], z = verts[i + 2];
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+  }
+  return { minX, maxX, minZ, maxZ };
+}
+const RAMP_BBOXES = ['cluster_a', 'cluster_b'].map(k => meshClusterBBox(REAL.ramp_meshes[k]));
+const RAMP_CLEARANCE_FT = 20;   // chosen avoidance margin, not a surveyed tolerance
+
+function distToBBox(x, y, box) {
+  const dx = Math.max(box.minX - x, 0, x - box.maxX);
+  const dz = Math.max(box.minZ - y, 0, y - box.maxZ);
+  return Math.hypot(dx, dz);
+}
+function nearestRampDist(x, y) {
+  let best = Infinity;
+  for (const b of RAMP_BBOXES) {
+    const d = distToBBox(x, y, b);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/* ── Base voxel grid ──────────────────────────────────────────────────── */
+function buildBaseVoxels() {
+  const voxels = new Array(NX * NZ);
+  for (let gx = 0; gx < NX; gx++) {
+    for (let gy = 0; gy < NZ; gy++) {
+      const wx = (gx + 0.5) * VOXEL_FT;
+      const wy = (gy + 0.5) * VOXEL_FT;
+
+      // Transit: conical falloff from the metroEntrance point — proximity-based
+      // heat-map influence, not a depth/terracing target.
+      const entranceDist   = Math.hypot(wx - METRO_ENTRANCE.x, wy - METRO_ENTRANCE.y);
+      const transitInfluence = Math.exp(-entranceDist / TRANSIT_FALLOFF_FT);
+
+      let deficitInfluence = 0;
+      for (const h of DEFICIT_HOTSPOTS) {
+        const d = Math.hypot(wx - h.x, wy - h.y);
+        deficitInfluence += h.strength * Math.exp(-d / h.radius);
+      }
+      deficitInfluence = clamp01(deficitInfluence);
+
+      voxels[gx * NZ + gy] = {
+        gx, gy, wx, wy,
+        transitInfluence, deficitInfluence,
+        rampDist: nearestRampDist(wx, wy),
+      };
+    }
+  }
+  return voxels;
+}
+
+/* ── Scoring (heat map color) ─────────────────────────────────────────────
+   Phase 1 (Site Activation) is the baseline — nothing active yet, voxels
+   read as flat/inactive. Phase 2 (Amenity Programming) introduces the
+   deficit heat only — color only, the deficit term never gets real depth.
+   Phase 3 (Transit Connection) adds the Metro Entrance attractor heat on
+   top; the transit term ALSO drives real z-displacement (see zForVoxel)
+   pulling down toward the entrance's real bottom_depth_ft.              ── */
+function scoreForPhase(v, phase) {
+  if (phase === 1) return 0;
+  if (phase === 2) return v.deficitInfluence;
+  return clamp01(v.transitInfluence + v.deficitInfluence);
+}
+
+/* ── Transit-attractor depth (Phase 3 only) ───────────────────────────────
+   The amenity-deficit term stays a flat heat overlay (no depth). The transit
+   attractor is the one piece of real excavation logic: voxels near the Metro
+   Entrance pull down toward the entrance's actual built depth
+   (ENTRANCE_BASE_DEPTH_FT), scaled by proximity, stepped to STEP_FT. No
+   column-clearance damping -- removed per explicit request; real columns
+   are NOT protected from the cut, so a column can visually sit over an
+   excavated voxel with nothing under it.                                ── */
+function zForVoxel(v, phase) {
+  if (phase !== 3 || v.transitInfluence <= THRESHOLD) return 0;
+  if (v.rampDist < RAMP_CLEARANCE_FT) return 0;   // hard avoidance — never touch the spiral ramps
+  const rawDepth = Math.min(v.transitInfluence * ENTRANCE_BASE_DEPTH_FT, ENTRANCE_BASE_DEPTH_FT);
+  return -Math.round(rawDepth / STEP_FT) * STEP_FT;
+}
+
+/* ── Terrace contact relaxation ───────────────────────────────────────────
+   zForVoxel() scores each voxel independently from raw influence/clearance,
+   which can drop two grid-adjacent voxels several STEP_FT levels apart —
+   e.g. one at -18ft next to one at -45ft — leaving a floating gap with no
+   shared face between them. This pass enforces a max one-STEP_FT slope
+   between any 4-connected neighbor pair that both exist on the grid (ramp-
+   protected voxels are pinned and never moved). Off-grid neighbors are NOT
+   treated as grade/0 -- the grid's east edge is exactly where the real
+   tunnel connector continues at full depth toward the entrance (see the
+   Street Tunnel Connector below), so constraining against an invented 0
+   there would falsely flatten the legitimately deepest voxels. Repeatedly
+   raises over-deep, unsupported voxels up to be flush with a neighboring
+   step until every voxel touches an in-grid neighbor at the same depth or
+   one step away.                                                       ── */
+function relaxDepths(zArr, voxels) {
+  const maxIter = Math.ceil(ENTRANCE_BASE_DEPTH_FT / STEP_FT) + 2;
+  let cur = zArr;
+  for (let iter = 0; iter < maxIter; iter++) {
+    const next = cur.slice();   // double-buffer: read the prior pass only, so a single
+                                 // sweep advances the terrace by exactly one step, not all
+                                 // the way to whatever the scan order reaches first.
+    let changed = false;
+    for (let gx = 0; gx < NX; gx++) {
+      for (let gy = 0; gy < NZ; gy++) {
+        const idx = gx * NZ + gy;
+        if (voxels[idx].rampDist < RAMP_CLEARANCE_FT) continue;   // pinned at grade
+        let maxNeighbor = -Infinity;   // no in-grid neighbor yet found = unconstrained
+        const neighbors = [[gx - 1, gy], [gx + 1, gy], [gx, gy - 1], [gx, gy + 1]];
+        for (const [nx, ny] of neighbors) {
+          if (nx < 0 || nx >= NX || ny < 0 || ny >= NZ) continue;   // off-grid: not a constraint
+          const nz = cur[nx * NZ + ny];
+          if (nz > maxNeighbor) maxNeighbor = nz;
+        }
+        if (maxNeighbor === -Infinity) continue;   // no in-grid neighbors (shouldn't happen on this grid)
+        const floor = maxNeighbor - STEP_FT;
+        if (cur[idx] < floor) {
+          next[idx] = floor;
+          changed = true;
+        }
+      }
+    }
+    cur = next;
+    if (!changed) break;
+  }
+  zArr.set(cur);
+}
+
+/* ── Excavation (heat map) color ─────────────────────────────────────────
+   Amber = amenity-deficit heat, violet = transit-attractor heat. Blended by
+   which influence dominates at this voxel; intensity (vs. flat/inactive
+   color) scales with the combined score. No depth/z term — flat plaza.   ── */
+const AMBER_A    = new THREE.Color('#FFF4CA');
+const AMBER_B    = new THREE.Color('#FF6B00');
+const VIOLET_A   = new THREE.Color('#4D00FF');
+const VIOLET_B   = new THREE.Color('#0A002F');
+const FLAT_COLOR = new THREE.Color('#c2bdb4');   // warm grey, readable on light bg
+
+// Gamma exponent < 1 means boosted >= raw everywhere in (0,1), so every stage
+// below reads as more saturated than the raw influence value would give —
+// never less, at every step.
+const COLOR_GAMMA = 0.45;
+function boost(x) { return Math.pow(clamp01(x), COLOR_GAMMA); }
+
+function excavationColor(v, score) {
+  if (score <= THRESHOLD) return FLAT_COLOR.clone();
+  const amber  = AMBER_A.clone().lerp(AMBER_B, boost(v.deficitInfluence));
+  const violet = VIOLET_A.clone().lerp(VIOLET_B, boost(v.transitInfluence));
+  const totalInfluence = v.transitInfluence + v.deficitInfluence;
+  const violetWeight = totalInfluence > 0 ? clamp01(v.transitInfluence / totalInfluence) : 0;
+  return amber.lerp(violet, violetWeight).lerp(FLAT_COLOR, 1 - boost(score));
+}
+
+/* ── Sun / shade computation ──────────────────────────────────────────────
+   For each perimeter building, each key sun condition casts a rectangular
+   shadow footprint into the site. A voxel is shaded when it falls inside
+   that footprint. Shade score = weighted fraction of conditions in shadow.
+
+   Shadow geometry:
+     - Shadow length  = building height / tan(solar altitude)
+     - Shadow direction (site-local 2D): opposite to sun direction,
+       rotated by −SITE_ROTATION_DEG to convert geographic → site-local.
+     - Shadow footprint = parallelogram with width BLDG_FOOTPRINT_FT.
+
+   Building grid coords (x: 1–28, y: 1–28) mapped to site-local ft:
+     wx_b = ((bx−1)/27) × SITE_WIDTH_FT   (x=1 → Olive/west, x=28 → Hill/east)
+     wy_b = ((by−1)/27) × SITE_LENGTH_FT   (y=1 → 6th/south, y=28 → 5th/north)  ── */
+
+function computeShadeScores(voxels) {
+  const scores = new Float32Array(voxels.length);
+  const buildings = BLDG_DATA.buildings;
+
+  for (const cond of SUN_CONDITIONS) {
+    const altRad      = cond.alt * DEG;
+    const shadowLen   = 1 / Math.tan(altRad);            // multiplied by height per building
+    const siteAzRad   = (cond.az - SITE_ROTATION_DEG) * DEG;
+    // Unit vector from sun → shadow (direction shadow falls on ground)
+    const sdx = -Math.sin(siteAzRad);
+    const sdy = -Math.cos(siteAzRad);
+    // Perpendicular unit vector (for shadow width)
+    const px  = -sdy;
+    const py  =  sdx;
+
+    for (const b of buildings) {
+      const bwx = ((b.x - 1) / 27) * SITE_WIDTH_FT;
+      const bwy = ((b.y - 1) / 27) * SITE_LENGTH_FT;
+      const sl  = b.height_ft * shadowLen;                // actual shadow length (ft)
+      const hw  = BLDG_FOOTPRINT_FT / 2;
+
+      for (let i = 0; i < voxels.length; i++) {
+        const v   = voxels[i];
+        const rx  = v.wx - bwx;
+        const ry  = v.wy - bwy;
+        // Project onto shadow direction
+        const along = rx * sdx + ry * sdy;
+        const perp  = Math.abs(rx * px + ry * py);
+
+        if (along > 0 && along < sl && perp < hw) {
+          scores[i] = Math.min(1, scores[i] + cond.w / TOTAL_WEIGHT);
+        }
+      }
+    }
+  }
+  return scores;
+}
+
+/* ── Scene setup ──────────────────────────────────────────────────────── */
+const container = document.getElementById('app');
+const scene     = new THREE.Scene();
+// No scene.background — canvas renders fully transparent (see renderer's
+// alpha:true + clear color below) and the page's own CSS background
+// (body { background: #d6d1c8 }) shows through behind it. This means the
+// canvas's live framebuffer IS already a correct transparent-background
+// capture at all times — no separate re-render is needed to export one.
+
+const SITE_DIAG_FT        = Math.hypot(SITE_WIDTH_FT, SITE_LENGTH_FT);
+// No fog needed for orthographic — distance doesn't affect apparent size.
+// Keep a very far fog just to clip stray geometry at extreme orbits.
+scene.fog = new THREE.Fog(0xd6d1c8, SITE_DIAG_FT * 8, SITE_DIAG_FT * 14);
+
+// ── Orthographic camera (axonometric) ──────────────────────────────────
+// Orthographic projection = parallel lines stay parallel, no vanishing
+// points. Math is simpler than perspective: frustum is a box defined by
+// left/right/top/bottom extents. Zoom adjusts those extents, not camera
+// distance. The camera angle gives the axonometric look.
+//
+// Initial position: NE corner, elevated — camera looks SW toward the site.
+// This puts Hill St (east) and 5th St (north, where the Metro entrance is)
+// at the "front" of the axo view, matching the 180° rotation from the
+// previous north-up plan (which was looking from the south northward; now
+// we look from the north southward).
+//
+// NOTE: an earlier revision of this comment/formula tried to derive the
+// bearing from Rhino's "renderedAxo" named-view camera numbers, assuming
+// PershingInterventionMidterm.3dm used the same X=East/Y=North/Z=Up
+// convention documented in logic/site_to_threejs.py. That assumption was
+// wrong for this document — it produced a view rotated to the opposite
+// corner. Reverted to the original NE formula below, confirmed by direct
+// visual comparison against a real screenshot of the desired orientation.
+const FRUSTUM_INIT = 1300;   // starting frustum height in ft (L3 / context view)
+const aspect0 = window.innerWidth / window.innerHeight;
+const camera = new THREE.OrthographicCamera(
+  -FRUSTUM_INIT * aspect0 / 2,
+   FRUSTUM_INIT * aspect0 / 2,
+   FRUSTUM_INIT / 2,
+  -FRUSTUM_INIT / 2,
+  -4000, 6000
+);
+// Axonometric angle from NE: x+ = east (Hill St), z+ = north (5th St).
+// Camera sits NE and above, looking toward site center (SW).
+camera.position.set(SITE_WIDTH_FT * 0.9, SITE_LENGTH_FT * 0.7, SITE_LENGTH_FT * 0.9);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setClearColor(0x000000, 0);   // fully transparent — see scene.background note above
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping  = true;
+controls.dampingFactor  = 0.08;
+controls.enableZoom     = false;   // replaced by frustum-based discrete zoom below
+controls.target.set(0, -GARAGE_DEPTH_FT * 0.5, 0);
+controls.update();
+scene.add(new THREE.AmbientLight(0xffffff, 2.2));   // bright even fill, light-mode scene
+const sun = new THREE.DirectionalLight(0xfff5e0, 2.4);
+sun.position.set(SITE_LENGTH_FT * 0.5, SITE_LENGTH_FT * 0.9, SITE_LENGTH_FT * 0.3);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xdde8ff, 0.8);   // cool blue fill from opposite side
+fill.position.set(-SITE_LENGTH_FT * 0.4, SITE_LENGTH_FT * 0.3, -SITE_LENGTH_FT * 0.4);
+scene.add(fill);
+
+// Site-local (SW-corner origin) → Three.js world (centered at origin)
+function toWorld(wx, wy, y) {
+  return new THREE.Vector3(wx - SITE_WIDTH_FT / 2, y, wy - SITE_LENGTH_FT / 2);
+}
+
+function buildRealGeometry(meshData) {
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(meshData.vertices), 3));
+  geom.setIndex(meshData.faces);
+  geom.computeVertexNormals();
+  return geom;
+}
+
+/* ── Layer 1: Amenity/transit heat map (InstancedMesh) ──────────────────
+   Flat tiles at grade — color encodes deficit/transit influence, there is
+   no excavation depth or terracing in this diagram.                     */
+const voxelGeom = new THREE.BoxGeometry(VOXEL_FT, 1, VOXEL_FT);   // full grid pitch — edges meet, no gaps
+voxelGeom.setAttribute('color', new THREE.Float32BufferAttribute(
+  new Float32Array(voxelGeom.attributes.position.count * 3).fill(1), 3,
+));
+const voxelMat  = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.12 });
+const voxelMesh = new THREE.InstancedMesh(voxelGeom, voxelMat, NX * NZ);
+voxelMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NX * NZ * 3), 3);
+scene.add(voxelMesh);
+
+const baseVoxels = buildBaseVoxels();
+const dummy = new THREE.Object3D();
+
+function applyPhase(phase) {
+  let zArr = null;
+  if (phase === 3) {
+    zArr = new Float32Array(baseVoxels.length);
+    for (let idx = 0; idx < baseVoxels.length; idx++) zArr[idx] = zForVoxel(baseVoxels[idx], phase);
+    relaxDepths(zArr, baseVoxels);
+  }
+  for (let idx = 0; idx < baseVoxels.length; idx++) {
+    const v = baseVoxels[idx];
+    const score = scoreForPhase(v, phase);
+    const z = zArr ? zArr[idx] : 0;   // 0 except where the transit attractor cuts (Phase 3)
+    const slabH = z < 0 ? STEP_FT : TILE_HEIGHT_FT;
+    const centerY = z - slabH / 2;
+
+    const pos = toWorld(v.wx, v.wy, centerY);
+    dummy.position.copy(pos);
+    dummy.scale.set(1, slabH, 1);
+    dummy.updateMatrix();
+    voxelMesh.setMatrixAt(idx, dummy.matrix);
+    voxelMesh.setColorAt(idx, excavationColor(v, score));
+  }
+  voxelMesh.instanceMatrix.needsUpdate = true;
+  voxelMesh.instanceColor.needsUpdate  = true;
+}
+/* ── Layer 2: Sun / shade overlay ────────────────────────────────────────
+   Flat slabs at y = +0.3ft (just above the inactive plaza surface) colored
+   by weighted shade score. Shown/hidden independently of excavation layer.  */
+const shadeScores = computeShadeScores(baseVoxels);
+
+const SHADE_DARK  = new THREE.Color('#1a4a1a');   // heavy shade from buildings
+const SHADE_LIGHT = new THREE.Color('#8BC34A');   // full solar exposure
+const SHADE_MID   = new THREE.Color('#4CAF50');
+
+const shadeGeom = new THREE.BoxGeometry(VOXEL_FT * 0.88, 0.6, VOXEL_FT * 0.88);
+shadeGeom.setAttribute('color', new THREE.Float32BufferAttribute(
+  new Float32Array(shadeGeom.attributes.position.count * 3).fill(1), 3,
+));
+const shadeMat  = new THREE.MeshStandardMaterial({
+  vertexColors: true, roughness: 0.9, metalness: 0.0,
+  transparent: true, opacity: 0.72,
+});
+const shadeMesh = new THREE.InstancedMesh(shadeGeom, shadeMat, NX * NZ);
+shadeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NX * NZ * 3), 3);
+shadeMesh.visible = false;   // off by default; toggle via UI
+scene.add(shadeMesh);
+
+{
+  const shadeDummy = new THREE.Object3D();
+  for (let i = 0; i < baseVoxels.length; i++) {
+    const v = baseVoxels[i];
+    const s = shadeScores[i];          // 0 = full sun, 1 = always shaded
+    const col = SHADE_LIGHT.clone().lerp(SHADE_DARK, s);
+
+    shadeDummy.position.copy(toWorld(v.wx, v.wy, 0.3));
+    shadeDummy.updateMatrix();
+    shadeMesh.setMatrixAt(i, shadeDummy.matrix);
+    shadeMesh.setColorAt(i, col);
+  }
+  shadeMesh.instanceMatrix.needsUpdate = true;
+  shadeMesh.instanceColor.needsUpdate  = true;
+}
+
+/* ── Layer 3: Structural columns (274 real, from OBJ) ──────────────────── */
+const columnGeom = buildRealGeometry(REAL.column_prototype_mesh);
+const columnMat  = new THREE.MeshStandardMaterial({ color: 0x9a9aa8, roughness: 0.7, metalness: 0.08 });
+const columnMesh = new THREE.InstancedMesh(columnGeom, columnMat, REAL.column_positions.length);
+{
+  const colDummy = new THREE.Object3D();
+  REAL.column_positions.forEach((c, idx) => {
+    colDummy.position.copy(toWorld(c.x, c.z, 0));
+    colDummy.updateMatrix();
+    columnMesh.setMatrixAt(idx, colDummy.matrix);
+  });
+  columnMesh.instanceMatrix.needsUpdate = true;
+}
+scene.add(columnMesh);
+
+// Three parking level slabs — 10ft per level (30ft total / 3 levels).
+// Footprint follows column extents: x 13→341ft, z 3→599ft.
+const SLAB_W = 328;
+const SLAB_L = 596;
+const LEVEL_DEPTH_FT = GARAGE_DEPTH_FT / 3;
+
+const slabGeom = new THREE.PlaneGeometry(SLAB_W, SLAB_L);
+slabGeom.rotateX(-Math.PI / 2);
+
+const levelColors  = [0x9090b8, 0x7070a0, 0x505088];
+const levelOpacity = [0.18,     0.22,     0.28    ];
+
+const levelGroup = new THREE.Group();
+[1, 2, 3].forEach((lvl, i) => {
+  const slab = new THREE.Mesh(slabGeom, new THREE.MeshStandardMaterial({
+    color: levelColors[i], transparent: true, opacity: levelOpacity[i],
+    roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide,
+  }));
+  slab.position.set(0, -LEVEL_DEPTH_FT * lvl, 0);
+  levelGroup.add(slab);
+
+  const edge = new THREE.LineSegments(
+    new THREE.WireframeGeometry(new THREE.BoxGeometry(SLAB_W, 0.4, SLAB_L)),
+    new THREE.LineBasicMaterial({ color: levelColors[i], transparent: true, opacity: 0.5 }),
+  );
+  edge.position.set(0, -LEVEL_DEPTH_FT * lvl, 0);
+  levelGroup.add(edge);
+});
+scene.add(levelGroup);
+const floorPlate = levelGroup;
+
+/* ── TEMP-ORIENTATION-DEBUG: street labels, per the SVG-confirmed convention
+   (x: 0=Olive/west -> SITE_WIDTH_FT=Hill/east; z: 0=6th/south -> SITE_LENGTH_FT=5th/north,
+   see urban_interference_solver.py). Requested to visually check whether the
+   real_geometry.json / OBJ data's orientation actually matches this. Remove
+   this block once orientation is confirmed/corrected. ───────────────────── */
+function makeTextSprite(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#c94800';
+  ctx.font = 'bold 64px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(80, 20, 1);
+  sprite.renderOrder = 999;
+  return sprite;
+}
+// 2026-07-03: corrected per user's real Rhino model -- the Metro entrance
+// (z~27, near z=0) sits off Hill St at the upper-right/NE corner, so z=0 is
+// 5th St (north) and z=max is 6th St (south). This REVERSES the south=0/
+// north=max assumption inherited from urban_interference_solver.py's SVG-
+// based grid comment, which was only ever verified for the SVG dataset, not
+// this OBJ-derived one -- the two were never cross-checked against each
+// other. Confirm against your Rhino Top view before trusting this for a
+// final drawing.
+const streetLabels = [
+  { text: 'OLIVE ST (x=0)',        pos: toWorld(0, SITE_LENGTH_FT / 2, 40) },
+  { text: 'HILL ST (x=max)',       pos: toWorld(SITE_WIDTH_FT, SITE_LENGTH_FT / 2, 40) },
+  { text: '5TH ST (z=0)',          pos: toWorld(SITE_WIDTH_FT / 2, 0, 40) },
+  { text: '6TH ST (z=max)',        pos: toWorld(SITE_WIDTH_FT / 2, SITE_LENGTH_FT, 40) },
+];
+for (const { text, pos } of streetLabels) {
+  const sprite = makeTextSprite(text);
+  sprite.position.copy(pos);
+  scene.add(sprite);
+}
+window.__DEBUG__ = { scene, camera, THREE, toWorld, SITE_WIDTH_FT, SITE_LENGTH_FT, REAL, streetLabels };
+/* ── END TEMP-ORIENTATION-DEBUG ──────────────────────────────────────── */
+
+/* ── Real tunnel, entrance, ramp meshes ─────────────────────────────── */
+const realOffset = toWorld(0, 0, 0);
+
+function placeRealMesh(meshData, material) {
+  const mesh = new THREE.Mesh(buildRealGeometry(meshData), material);
+  mesh.position.copy(realOffset);
+  scene.add(mesh);
+  return mesh;
+}
+
+placeRealMesh(REAL.tunnel_mesh,
+  new THREE.MeshStandardMaterial({ color: 0x003318, emissive: 0x00ff99, emissiveIntensity: 1.6, roughness: 0.3 }));
+
+placeRealMesh(REAL.secondary_entrance_mesh,
+  new THREE.MeshStandardMaterial({ color: 0x331f00, emissive: 0xff8a2b, emissiveIntensity: 1.2, roughness: 0.35 }));
+
+const rampMat = new THREE.MeshStandardMaterial({ color: 0x4a4a55, roughness: 0.8, metalness: 0.05 });
+for (const key of ['cluster_a', 'cluster_b']) {
+  for (const level of REAL.ramp_meshes[key]) placeRealMesh(level, rampMat);
+}
+
+/* ── Street tunnel connector (Phase 3) ───────────────────────────────────
+   The Metro Entrance object (secondary_entrance_mesh) sits entirely OUTSIDE
+   the site footprint -- it's a street-level pavilion, not inside the park
+   (confirmed: its bbox starts past SITE_WIDTH_FT on the east edge). That
+   real gap is the street the entrance fronts onto. This connector bridges
+   that literal, real-data gap -- every dimension below comes directly from
+   REAL.secondary_entrance_mesh / REAL.secondary_entrance_anchor, scanned
+   live, not pasted constants:
+     - x: from the real site edge (SITE_WIDTH_FT) to the entrance mesh's own
+       nearest face (its min vertex x in site-local coords).
+     - z: spans the entrance mesh's own z extent (its min/max vertex z) --
+       the connector is exactly as wide as the real entrance chamber, not a
+       guessed width.
+     - y (depth): spans the entrance's real top_depth_ft to bottom_depth_ft,
+       so the connector meets the entrance at its actual structural extent.
+   PLACEHOLDER: this assumes a simple rectangular connector volume at a
+   constant depth band. No real street ROW width, utility clearance, or
+   structural connection detail backs that simplification -- and which
+   physical street this actually crosses (Hill St, by position) is not
+   verified against a surveyed plan, only inferred from the entrance's
+   real x-position being east of the site.                              ── */
+function entranceBBoxSiteLocal() {
+  const verts = REAL.secondary_entrance_mesh.vertices;
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (let i = 0; i < verts.length; i += 3) {
+    const x = verts[i], z = verts[i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  return { minX, maxX, minZ, maxZ };
+}
+
+const entranceBBox = entranceBBoxSiteLocal();
+const anchor = REAL.secondary_entrance_anchor;
+
+const TUNNEL_X0 = SITE_WIDTH_FT;          // real site edge (east)
+const TUNNEL_X1 = entranceBBox.minX;      // entrance's real nearest face
+const TUNNEL_Z0 = entranceBBox.minZ;      // entrance's real z extent
+const TUNNEL_Z1 = entranceBBox.maxZ;
+const TUNNEL_TOP_Y    = -anchor.top_depth_ft;     // real, from OBJ
+const TUNNEL_BOTTOM_Y = -anchor.bottom_depth_ft;  // real, from OBJ
+
+const tunnelW = TUNNEL_X1 - TUNNEL_X0;
+const tunnelL = TUNNEL_Z1 - TUNNEL_Z0;
+const tunnelH = TUNNEL_TOP_Y - TUNNEL_BOTTOM_Y;
+const tunnelCenterX = (TUNNEL_X0 + TUNNEL_X1) / 2;
+const tunnelCenterZ = (TUNNEL_Z0 + TUNNEL_Z1) / 2;
+const tunnelCenterY = (TUNNEL_TOP_Y + TUNNEL_BOTTOM_Y) / 2;
+
+const tunnelGroup = new THREE.Group();
+const tunnelBoxGeom = new THREE.BoxGeometry(tunnelW, tunnelH, tunnelL);
+const tunnelMesh = new THREE.Mesh(tunnelBoxGeom, new THREE.MeshStandardMaterial({
+  color: 0x2a2a33, transparent: true, opacity: 0.55, roughness: 0.6, metalness: 0.1,
+}));
+tunnelMesh.position.copy(toWorld(tunnelCenterX, tunnelCenterZ, tunnelCenterY));
+tunnelGroup.add(tunnelMesh);
+
+const tunnelEdges = new THREE.LineSegments(
+  new THREE.WireframeGeometry(tunnelBoxGeom),
+  new THREE.LineBasicMaterial({ color: 0xff8a2b, transparent: true, opacity: 0.7 }),
+);
+tunnelEdges.position.copy(tunnelMesh.position);
+tunnelGroup.add(tunnelEdges);
+
+tunnelGroup.visible = false;   // only shown once Phase 3 is active (see setPhase)
+scene.add(tunnelGroup);
+
+/* ── "Current" phase: real as-built site geometry from PershingCurrentMetabolism.obj
+   (extracted offline by extract_current_state.py, same site-local coordinate frame
+   as real_geometry.json -- verified, not assumed, by checking the converted bbox
+   lands on the known 354.14x602.40ft terrace footprint). ─────────────────────── */
+const currentGroup = new THREE.Group();
+scene.add(currentGroup);
+
+const treeTexLoader = new THREE.TextureLoader();
+const treeTexCache = {};
+function treeTexture(file) {
+  if (!treeTexCache[file]) {
+    const tex = treeTexLoader.load(`../data/PershingMetabolizer/${file}`);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    treeTexCache[file] = tex;
+  }
+  return treeTexCache[file];
+}
+
+// Rebuilds currentGroup's children from a current_state.json payload. Called once on
+// load, then again any time the file watcher (extract_current_state.py --watch) writes
+// a fresh extraction -- see the polling loop below.
+function rebuildCurrentGroup(data) {
+  while (currentGroup.children.length) {
+    const c = currentGroup.children.pop();
+    c.geometry.dispose();
+    if (!c.material.map) c.material.dispose();   // tree materials are shared via treeTexCache
+  }
+
+  if (data.context_mesh.verts.length) {
+    const ctxGeom = new THREE.BufferGeometry();
+    const ctxPos = new Float32Array(data.context_mesh.verts.length * 3);
+    data.context_mesh.verts.forEach((v, i) => {
+      const w = toWorld(v[0], v[2], v[1]);
+      ctxPos[i * 3] = w.x; ctxPos[i * 3 + 1] = w.y; ctxPos[i * 3 + 2] = w.z;
+    });
+    ctxGeom.setAttribute('position', new THREE.BufferAttribute(ctxPos, 3));
+    ctxGeom.setIndex(data.context_mesh.faces.flat());
+    ctxGeom.computeVertexNormals();
+    const ctxMesh = new THREE.Mesh(ctxGeom, new THREE.MeshStandardMaterial({
+      color: 0xb7b0a3, roughness: 0.85, metalness: 0.02, side: THREE.DoubleSide,
+    }));
+    currentGroup.add(ctxMesh);
+  }
+
+  if (data.yellow_mesh.verts.length) {
+    const yGeom = new THREE.BufferGeometry();
+    const yPos = new Float32Array(data.yellow_mesh.verts.length * 3);
+    data.yellow_mesh.verts.forEach((v, i) => {
+      const w = toWorld(v[0], v[2], v[1]);
+      yPos[i * 3] = w.x; yPos[i * 3 + 1] = w.y; yPos[i * 3 + 2] = w.z;
+    });
+    yGeom.setAttribute('position', new THREE.BufferAttribute(yPos, 3));
+    yGeom.setIndex(data.yellow_mesh.faces.flat());
+    yGeom.computeVertexNormals();
+    const yMesh = new THREE.Mesh(yGeom, new THREE.MeshStandardMaterial({
+      color: 0xe8c200, roughness: 0.7, side: THREE.DoubleSide,
+    }));
+    currentGroup.add(yMesh);
+  }
+
+  // Generic auto-discovered item meshes (fountain, walls, plinth, tables, elevators, ...) --
+  // each item is a list of flat-color sub-meshes split by material, keyed by item name.
+  Object.values(data.items || {}).forEach(submeshes => {
+    submeshes.forEach(sm => {
+      if (!sm.verts.length) return;
+      const iGeom = new THREE.BufferGeometry();
+      const iPos = new Float32Array(sm.verts.length * 3);
+      sm.verts.forEach((v, i) => {
+        const w = toWorld(v[0], v[2], v[1]);
+        iPos[i * 3] = w.x; iPos[i * 3 + 1] = w.y; iPos[i * 3 + 2] = w.z;
+      });
+      iGeom.setAttribute('position', new THREE.BufferAttribute(iPos, 3));
+      iGeom.setIndex(sm.faces.flat());
+      iGeom.computeVertexNormals();
+      const iColor = new THREE.Color(sm.color[0], sm.color[1], sm.color[2]);
+      const iMesh = new THREE.Mesh(iGeom, new THREE.MeshStandardMaterial({
+        color: iColor, roughness: 0.8, metalness: 0.02, side: THREE.DoubleSide,
+      }));
+      currentGroup.add(iMesh);
+    });
+  });
+
+  data.trees.forEach(t => {
+    const tex = treeTexture(t.texture);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, depthWrite: true,
+    });
+    const h = t.topHeight - t.baseHeight;
+    const planeGeom = new THREE.PlaneGeometry(t.width, h);
+    const centerY = t.baseHeight + h / 2;
+    const center = toWorld(t.x, t.z, centerY);
+
+    const planeA = new THREE.Mesh(planeGeom, mat);
+    planeA.position.copy(center);
+    currentGroup.add(planeA);
+
+    const planeB = new THREE.Mesh(planeGeom, mat);
+    planeB.position.copy(center);
+    planeB.rotation.y = Math.PI / 2;
+    currentGroup.add(planeB);
+  });
+}
+
+rebuildCurrentGroup(CURRENT_STATE);
+currentGroup.visible = true;
+
+/* ── UI — phase buttons ───────────────────────────────────────────────── */
+let currentPhase = 'current';
+let tunnelToggleOn = true;
+let excavationToggleOn = true;   // tracked independently so phase switches don't fight the toggle
+let shadeToggleOn = false;       // off by default, see tog-shade initial markup
+const descEl  = document.getElementById('desc');
+const phaseBtns = Array.from(document.querySelectorAll('.phase-btn'));
+const tunnelRow = document.getElementById('row-tunnel');
+const tunnelBtn = document.getElementById('tog-tunnel');
+
+// Structural columns are real geometry from the OBJ — always shown, no toggle.
+columnMesh.visible = true;
+
+function setPhase(phase) {
+  currentPhase = phase;
+  phaseBtns.forEach(b => b.classList.toggle('active', b.dataset.phase === String(phase)));
+  descEl.textContent = PHASE_DESCRIPTIONS[phase];
+
+  const isCurrent = phase === 'current';
+  currentGroup.visible = isCurrent;
+  // Voxel tiles stay on for Current too — flat/untinted, same as Phase 1's baseline
+  // (no deficit/transit heat to show outside the phased diagram).
+  voxelMesh.visible  = excavationToggleOn;
+  floorPlate.visible = excavationToggleOn;
+  shadeMesh.visible  = !isCurrent && shadeToggleOn;
+
+  applyPhase(isCurrent ? 1 : phase);
+
+  const tunnelAvailable = phase === 3;
+  tunnelRow.classList.toggle('disabled', !tunnelAvailable);
+  tunnelGroup.visible = tunnelAvailable && tunnelToggleOn;
+}
+phaseBtns.forEach(b => b.addEventListener('click', () => {
+  const p = b.dataset.phase === 'current' ? 'current' : Number(b.dataset.phase);
+  setPhase(p);
+}));
+setPhase('current');
+
+/* ── Export — transparent-background PNG of just the 3D geometry ─────────
+   The canvas is ALREADY transparent at all times (no scene.background, see
+   above), with the page's CSS background showing through behind it — so the
+   live framebuffer IS a correct transparent-background capture already.
+   No re-render or compositing needed; this just reads back the exact frame
+   that's currently on screen.                                            */
+const PHASE_FILE_LABELS = { current: 'current', 1: 'phase1', 2: 'phase2', 3: 'phase3' };
+document.getElementById('export-png').addEventListener('click', () => {
+  const dataURL = renderer.domElement.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = `pershing-metabolizer-${PHASE_FILE_LABELS[currentPhase]}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+/* ── UI — layer toggles ───────────────────────────────────────────────── */
+function wireToggle(btnId, onToggle) {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('on');
+    onToggle(btn.classList.contains('on'));
+  });
+}
+
+wireToggle('tog-tunnel', on => {
+  tunnelToggleOn = on;
+  tunnelGroup.visible = (currentPhase === 3) && tunnelToggleOn;
+});
+
+wireToggle('tog-excavation', on => {
+  excavationToggleOn = on;
+  voxelMesh.visible  = on;
+  floorPlate.visible = on;
+});
+
+wireToggle('tog-shade', on => {
+  shadeToggleOn = on;
+  shadeMesh.visible = (currentPhase !== 'current') && on;
+});
+
+
+/* ── Discrete zoom levels (orthographic frustum-based) ────────────────────
+   For OrthographicCamera zoom = adjusting the frustum box size (ft).
+   Larger frustumSize = more scene visible = zoomed out.
+   Four stops: close detail → full site → block context → aerial.
+   Simpler math than perspective: no distance/FOV interaction.              */
+const FRUSTUM_SIZES = [
+  350,    // L1 — close detail, excavation steps legible
+  750,    // L2 — full site fits the screen
+  1300,   // L3 — site + immediate block context  ← default start
+  2600,   // L4 — neighbourhood aerial overview
+];
+
+let zoomIdx    = 2;   // start at L3 (one step zoomed-out from full site)
+let frustumTarget = FRUSTUM_SIZES[zoomIdx];
+
+function setFrustum(size) {
+  const asp   = window.innerWidth / window.innerHeight;
+  camera.left   = -size * asp / 2;
+  camera.right  =  size * asp / 2;
+  camera.top    =  size / 2;
+  camera.bottom = -size / 2;
+  camera.updateProjectionMatrix();
+}
+
+function tickZoom() {
+  const cur  = camera.top * 2;   // current frustum height
+  const next = THREE.MathUtils.lerp(cur, frustumTarget, 0.1);
+  if (Math.abs(next - cur) > 0.05) setFrustum(next);
+}
+
+function stepZoom(dir) {   // dir: +1 = out, -1 = in
+  zoomIdx = Math.max(0, Math.min(FRUSTUM_SIZES.length - 1, zoomIdx + dir));
+  frustumTarget = FRUSTUM_SIZES[zoomIdx];
+}
+
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  stepZoom(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
+
+/* ── Render loop ──────────────────────────────────────────────────────── */
+window.addEventListener('resize', () => {
+  const asp  = window.innerWidth / window.innerHeight;
+  const size = camera.top * 2;   // current frustum height
+  camera.left   = -size * asp / 2;
+  camera.right  =  size * asp / 2;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  tickZoom();
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+// Frustum already set to FRUSTUM_INIT (L3) at camera construction above.
+</script>
+</body>
+</html>

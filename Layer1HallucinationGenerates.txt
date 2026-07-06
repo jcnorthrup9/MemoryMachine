@@ -1,0 +1,17 @@
+# Layer 1: Hallucination (Generates the 'Vibe' and massing)
+def generate_massing(entry_data):
+    # LLM interprets "Craftsman-style, 3 bedroom" 
+    # and places generic bounding boxes.
+    pass
+
+# Layer 2: Constraints (Applies the 'JSON' accuracy)
+def apply_constraints(site_dimensions):
+    # Snaps the boxes to a 1-acre grid and 
+    # places the ponding basin at specific coordinates.
+    pass
+
+# Layer 3: Asset Population (The 'Catalog')
+def populate_assets(asset_list):
+    # Searches your library for "90s_lampshade" 
+    # or "horse_corral_fence" and links them to the scene.
+    pass

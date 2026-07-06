@@ -1,0 +1,44 @@
+[
+  {
+    "x": 29,
+    "y": 11,
+    "volatility": 0.09999999999999998,
+    "source": "Pershing Square Purple Campanile"
+  },
+  {
+    "x": 12,
+    "y": 11,
+    "volatility": 0.09999999999999998,
+    "source": "Bottega Louie Marble Floor"
+  },
+  {
+    "x": 27,
+    "y": 18,
+    "volatility": 0.09999999999999998,
+    "source": "O.T. Johnson Lobby"
+  },
+  {
+    "x": 7,
+    "y": 17,
+    "volatility": 0.15000000000000002,
+    "source": "Zaryadye Park"
+  },
+  {
+    "x": 17,
+    "y": 10,
+    "volatility": 0.15000000000000002,
+    "source": "queens gardens/bridge"
+  },
+  {
+    "x": 7,
+    "y": 17,
+    "volatility": 0.15000000000000002,
+    "source": "Zaryadye Park"
+  },
+  {
+    "x": 29,
+    "y": 9,
+    "volatility": 0.15000000000000002,
+    "source": "exit()"
+  }
+]

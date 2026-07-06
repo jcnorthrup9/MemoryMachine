@@ -1,0 +1,16 @@
+User Input:
+
+the area of the negative space inside of the boundary line that is not defined by another element (greenspace, water, etc, automatically gets calculated in as hardscape) so if there are other hardscape elements in the composition, the the "blank space" is added to the hardscape total
+
+the elements should be booleaned from one another, so that if one layer is overlapping another, the priority element will cut into the lower element's total area
+
+ie, if a statue or water fountain is sitting on top of a swatch of greenspace, its difference would be calculated
+	if a greenspace covers 100% of the ground and the fountain covers 20% we dont get 120%, we get greenspace=80% and fountain=20%
+
+Gemini Logic Critique:
+
+1. Critique of Rule 1: The "Blank Space = Hardscape" Default
+The Logic: If the bounding box of Pershing Square is 100,000 sq ft, and the user drops a 20,000 sq ft lawn (SOFT) and a 10,000 sq ft fountain (BLUE), the remaining 70,000 sq ft of "blank" space automatically becomes HARD. The Consequence: This creates a fantastic "game mechanic" for the generative engine. An empty canvas will now start at 100% Hardscape. Because your rules dictate Hardscape must be between 40–60%, an empty or poorly designed board will instantly trigger a HUD warning. It actively forces both the AI and the human user to carve away the concrete by injecting nature and program to achieve compliance. This perfectly mirrors real-world urban planning.
+
+2. Critique of Rule 2: Z-Index Priority (Boolean Overlap)
+The Logic: If a statue (PROG) is dropped on top of a lawn (SOFT), the statue's footprint is subtracted from the lawn's area. The Technical Reality: Doing complex mathematical polygon clipping (boolean intersections of rotated, irregular SVG paths) in real-time Javascript as a user drags a slider is incredibly computationally expensive. The Solution: To achieve 100% accurate boolean overlap without crashing the browser, we will build a Hidden Pixel-Buffer Canvas in state.js. Behind the scenes, the app will paint the layers exactly as they appear on screen (strictly clipped to the boundary line), using flat colors (Red for PROG, Blue for BLUE, Green for SOFT). It will then instantly count the visible pixels. Because the browser's paint engine naturally handles the overlapping (things drawn last cover things drawn first), we get perfect boolean math with zero complex trigonometry!

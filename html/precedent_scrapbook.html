@@ -31,13 +31,18 @@ body {
 
 /* ── Cover header ── */
 .cover {
-  max-width: 900px;
-  margin: 0 auto 3rem;
+  width: 8.5in;
+  height: 11in;
+  margin: 0 auto 2rem;
   background: var(--paper);
   border: 2px solid var(--ink);
-  padding: 2.5rem 3rem;
+  padding: 4rem 4rem;
   position: relative;
   box-shadow: 4px 4px 0 rgba(0,0,0,0.25);
+  page-break-after: always;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
 }
 .cover::before {
   content: '';
@@ -48,25 +53,27 @@ body {
 .cover-label {
   font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase;
   color: var(--faint); margin-bottom: 0.4rem;
+  margin-top: auto;
 }
 .cover-title {
   font-family: 'Special Elite', cursive;
-  font-size: 2.4rem; line-height: 1.1;
+  font-size: 3.5rem; line-height: 1.1;
   letter-spacing: 0.04em; color: var(--ink);
 }
 .cover-subtitle {
-  margin-top: 0.6rem; font-size: 0.85rem; color: var(--ink2);
+  margin-top: 1rem; font-size: 1rem; color: var(--ink2);
   border-top: 1px solid var(--rule); padding-top: 0.5rem; margin-top: 0.8rem;
 }
 .cover-meta {
   display: flex; gap: 2rem; flex-wrap: wrap;
-  margin-top: 1rem; font-size: 0.72rem; color: var(--faint);
+  margin-top: 1.5rem; font-size: 0.8rem; color: var(--faint);
   letter-spacing: 0.1em;
+  margin-bottom: auto;
 }
 .stamp-classified {
-  position: absolute; top: 1.8rem; right: 2rem;
+  position: absolute; top: 3rem; right: 3rem;
   font-family: 'Special Elite', cursive;
-  font-size: 1.1rem; color: var(--red);
+  font-size: 1.5rem; color: var(--red);
   border: 2px solid var(--red); padding: 0.2rem 0.6rem;
   transform: rotate(-4deg); opacity: 0.6;
   letter-spacing: 0.12em;
@@ -74,17 +81,23 @@ body {
 
 /* ── Dossier card ── */
 .dossier-grid {
-  max-width: 900px; margin: 0 auto;
-  display: grid; grid-template-columns: 1fr; gap: 3rem;
+  width: 8.5in; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 2rem;
 }
 
 .card {
+  width: 8.5in;
+  height: 11in;
   background: var(--paper);
   border: 1.5px solid var(--ink2);
   padding: 0;
   box-shadow: 3px 5px 0 rgba(0,0,0,0.20);
   position: relative;
-  page-break-inside: avoid;
+  page-break-after: always;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .card::after {
   content: '';
@@ -96,79 +109,87 @@ body {
 .card-header {
   background: var(--paper2);
   border-bottom: 1.5px solid var(--ink2);
-  padding: 1rem 1.4rem 0.8rem;
+  padding: 1.5rem 2rem 1.2rem;
   display: flex; align-items: baseline; gap: 1rem;
 }
 .card-number {
-  font-size: 0.65rem; color: var(--faint);
+  font-size: 0.8rem; color: var(--faint);
   letter-spacing: 0.25em; white-space: nowrap;
 }
 .card-name {
   font-family: 'Special Elite', cursive;
-  font-size: 1.45rem; color: var(--ink);
+  font-size: 1.8rem; color: var(--ink);
   line-height: 1.1;
 }
 .card-location {
-  font-size: 0.72rem; color: var(--faint);
+  font-size: 0.85rem; color: var(--faint);
   letter-spacing: 0.08em; margin-left: auto; white-space: nowrap;
 }
 
 .card-body {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 0;
+  flex-grow: 1;
 }
 
 /* ── Polaroid image ── */
 .polaroid-wrap {
-  padding: 1.2rem 0.8rem 0.8rem 1.2rem;
+  padding: 2.5rem 1.5rem 1.5rem 2.5rem;
   display: flex; flex-direction: column; align-items: center;
   gap: 0.5rem;
 }
 .polaroid {
   background: #fff;
-  padding: 6px 6px 28px;
+  padding: 10px 10px 40px;
   box-shadow: 2px 3px 8px rgba(0,0,0,0.28);
-  width: 160px;
+  width: 220px;
 }
 .polaroid img {
-  display: block; width: 148px; height: 110px;
+  display: block; width: 200px; height: 150px;
   object-fit: cover; filter: sepia(0.18) contrast(1.05);
 }
 .polaroid-missing {
-  width: 148px; height: 110px;
+  width: 200px; height: 150px;
   background: #ccc8bc;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.6rem; color: #888; text-align: center;
+  font-size: 0.7rem; color: #888; text-align: center;
   letter-spacing: 0.06em; line-height: 1.4;
 }
 .polaroid-caption {
-  font-size: 0.6rem; color: var(--faint); text-align: center;
+  font-size: 0.75rem; color: var(--faint); text-align: center;
   letter-spacing: 0.05em; margin-top: 2px;
   font-style: italic;
 }
 
 .card-tag {
   display: inline-block;
-  font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase;
+  font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase;
   background: var(--ink); color: var(--paper);
-  padding: 0.15rem 0.45rem; margin-top: 0.4rem;
+  padding: 0.2rem 0.5rem; margin-top: 0.5rem;
 }
 
 /* ── Text columns ── */
 .card-text {
-  padding: 1.2rem 1.4rem 1.2rem 0.8rem;
+  padding: 2.5rem 3rem 2.5rem 1.5rem;
   border-left: 1.5px solid var(--rule);
 }
 
 .section-label {
-  font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase;
+  font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase;
   color: var(--faint); border-bottom: 1px solid var(--rule);
   padding-bottom: 0.2rem; margin-bottom: 0.5rem;
+  margin-top: 1rem;
+  font-weight: bold;
+  font-family: 'Special Elite', cursive;
+}
+
+.section-label:first-child {
+  margin-top: 0;
 }
 
 .wiki-blurb {
-  font-size: 0.8rem; line-height: 1.65;
+  font-size: 0.95rem; line-height: 1.65;
   color: var(--ink2); margin-bottom: 1.1rem;
 }
 .wiki-blurb em { font-style: italic; }
@@ -177,7 +198,7 @@ body {
   list-style: none; padding: 0;
 }
 .reviews-list li {
-  font-size: 0.76rem; line-height: 1.55;
+  font-size: 0.9rem; line-height: 1.55;
   color: var(--ink); padding: 0.3rem 0 0.3rem 1.1rem;
   border-bottom: 1px dotted var(--rule);
   position: relative;
@@ -210,6 +231,25 @@ body {
 }
 .toc-list li a:hover { text-decoration: underline; color: var(--red); }
 .toc-num { color: var(--faint); margin-right: 0.2rem; }
+
+@page {
+  size: letter portrait;
+  margin: 0.5in;
+}
+
+@media print {
+  body {
+    background: none;
+    padding: 0;
+  }
+  .cover, .card {
+    box-shadow: none;
+    border: 1px solid var(--ink2);
+  }
+  .footer {
+    display: none;
+  }
+}
 </style>
 </head>
 <body>
@@ -223,7 +263,7 @@ body {
       relevance to the redesign of Pershing Square, Downtown Los Angeles.
     </div>
     <div class="cover-meta">
-      <span>COMPILED: 28 Mar 2026</span>
+      <span>COMPILED: 16 Apr 2026</span>
       <span>CORPUS: 10 SITES</span>
       <span>SOURCE: Wikipedia · DuckDuckGo · Gemini Synthesis</span>
       <span>PROJECT: MEMORY MACHINE v2</span>
@@ -477,7 +517,7 @@ Time magazine included Zaryadye Park on its 2018 list of the “World's Greatest
   </div>
 
   <div class="footer">
-    MEMORY MACHINE — AUTOMATED PRECEDENT DOSSIER — 28 Mar 2026 — FOR DESIGN RESEARCH PURPOSES ONLY
+    MEMORY MACHINE — AUTOMATED PRECEDENT DOSSIER — 16 Apr 2026 — FOR DESIGN RESEARCH PURPOSES ONLY
   </div>
 
 </body>

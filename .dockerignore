@@ -1,11 +1,34 @@
-# Ignore virtual environments
+# Python environments (all variants)
 .venv/
+.venv-1/
 venv/
 env/
 
-# Ignore Node.js modules
-node_modules/
-
-# Ignore git history and API keys
+# Git and secrets
 .git/
 .env
+
+# Node
+node_modules/
+
+# Large asset/data folders not needed at runtime (volume mount supplies these)
+archive/
+assets/
+pdf/
+data/PershingMetabolizer/OBJ/
+db/
+cache/
+output/
+outputs/
+models/
+
+# Large prototype data files
+PershingMetabolizer_Prototype/current_state.json
+PershingMetabolizer_Prototype/real_geometry.json
+
+# Syncthing conflict files
+*.sync-conflict-*
+
+# Python cache
+__pycache__/
+*.pyc

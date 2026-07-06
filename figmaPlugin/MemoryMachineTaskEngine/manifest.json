@@ -1,0 +1,9 @@
+{
+  "name": "Memory Machine Task Engine",
+  "id": "1398457109847320843",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "editorType": ["figma"],
+  "permissions": ["fileSystem"],
+  "networkAccess": { "allowedDomains": ["none"] }
+}

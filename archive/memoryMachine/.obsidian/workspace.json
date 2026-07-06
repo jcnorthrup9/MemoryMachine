@@ -1,0 +1,232 @@
+{
+  "main": {
+    "id": "2649d3a14fed9ab2",
+    "type": "split",
+    "children": [
+      {
+        "id": "0a7708ca6e09ea35",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b0b44b500e31c5b1",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "53279aa81b986afa",
+    "type": "split",
+    "children": [
+      {
+        "id": "92a317c3717a0b49",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0b2560aefeee0a69",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": true
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "51aad26e2bf3822c",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "6bb247e21956e0ad",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "2a47349bc3edc939",
+    "type": "split",
+    "children": [
+      {
+        "id": "3a5096e89e121167",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ee8daeff42296aa5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for aldo_rossi"
+            }
+          },
+          {
+            "id": "e41511489d58395a",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from aldo_rossi"
+            }
+          },
+          {
+            "id": "405146b182e10eab",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "5573709dd8fbb82b",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "1be8af8cd94525c7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "precedents/aldo_rossi.jpg",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of aldo_rossi"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "b0b44b500e31c5b1",
+  "lastOpenFiles": [
+    "PROTOTYPE_REFACTOR_PLAN.md",
+    "GEMINI_CONTEXT.md",
+    "villette_analysis.md",
+    "CHANGELOG.md",
+    "TODO_Metabolizer_Logic_Rethink.md",
+    "HANDOFF_07042026_PIPELINE_STATUS.md",
+    "Design Plan - Surface Typologies & Agency Sliders.md",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.b2f2773d42b0",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.ad6e0c0c1bda",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.1b35e80f3112",
+    "HANDOFF_07032026_PIPELINE_STATUS.md",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.11c4d723a397",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.c56c2bf687de",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.97cc23084cbf",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.e208d1754b47",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.f5e2b1e01560",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.22ccf93ba675",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md.tmp.43868.012c6e92fa3e",
+    "TODO_ThesisFinal_Pipeline_Blueprint.md",
+    "TODO_ThesisFinal_LiveJurorInteraction.md",
+    "TODO_Metabolizer_NextSteps_20260629.md",
+    "rhino_mcp_status.md",
+    "PershingMetabolizer Prototype - Code Architecture & Logic.md",
+    "Claude_Project_Understanding_Summary_20260629.md",
+    "Refactoring Plan - PershingMetabolizer Prototype.md",
+    "TODO_Midterm_Slideshow.md",
+    "LA Shade & Park Standards — Source Links.md",
+    "Vault Conventions.md",
+    "rhino_forensic_plan.md",
+    "rhino_precedent_pass.md",
+    "nakagin_parsed_data.md",
+    "MemoryMachineForensicPalimpse.md",
+    "urban_design_guidelinesOLD.md",
+    "DIAGRAM_RULES.md",
+    "CLAUDE_TODO.md",
+    "test_log.md",
+    "render_output/1988_trailerWatercolor.png",
+    "render_output/PershingSquare/flux2_klein_00163_.png",
+    "render_output/OTjohnsonExterior/flux2_klein_00101_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00083_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00082_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00080_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00081_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00079_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00078_.png",
+    "render_output/bottegaLouieInterior/unused/flux2_klein_00077_.png",
+    "Untitled.canvas"
+  ]
+}

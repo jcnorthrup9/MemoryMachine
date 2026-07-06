@@ -1,0 +1,70 @@
+Memory Machine — Thesis-Final Pipeline: Status & Next Steps
+=============================================================
+*Last updated: 2026-07-03. Written for sharing with Gemini and for picking this back up later — not a permanent spec, a snapshot.*
+
+Context: Gemini drafted a 7-section implementation blueprint (`TODO_ThesisFinal_Pipeline_Blueprint.md`, archived at `archive/memoryMachine/`) for rebuilding Memory Machine as a universal, portable site-intervention pipeline (not hardcoded to Pershing Square). This document summarizes what's been built and verified against that blueprint, and what's left.
+
+## What's been decided (architecture, locked)
+
+- **No hard deadline.** ~2 months total runway; an earlier self-imposed "Monday" milestone was not a real instructor deadline — just move fast.
+- **Local-only Unity for now.** Networked multi-device juror interaction (phones/tablets joining live) is a stretch goal for later, not blocking the core build. Input-event schema is kept transport-agnostic so it can be added later without a rewrite.
+- **Ollama** is the confirmed local-LLM platform for Section 7 (live juror chat), chosen to avoid API costs during a live presentation. Hardware (either the user's home or school PC, both with 64GB RAM and a modern GPU) comfortably fits 7B–14B models. Not started yet.
+- **Grid is derived, not hardcoded.** The 27ft Pershing column grid is read from real Rhino-exported geometry (SVG plan/elevation + OBJ), using one known reference dimension as a calibration constant — not baked in, so the pipeline can point at a different site.
+- **Columns stay as existing structure.** The old "4–5ft keep-out-zone" constraint (don't excavate near columns) was explicitly cut. The parking garage's column grid is now the *organizing framework* for the design, not an obstacle.
+- **Clean diagrams always export.** The DXF/SVG/PNG "clean line" pipeline (Section 6) runs on every render, and will keep doing so once the Blender high-fidelity/eroded pass matures — that pass adds its own output folder, it doesn't replace this one.
+- **Pre-Blender geometry is deliberately "clean"** (no erosion) for Sections 1–3/6, so bugs in slicing/export logic can't be confused with bugs in a weathering pass. Erosion is a separate, later stage (Section 4), now rehearsed.
+
+## What's been built and verified (this session)
+
+### Phase 1 — Universal Site Ingestion (Section 1)
+- **`structural_grid_analyzer.py`** — extracted and generalized from the old `urban_interference_solver.py`. Reads column/slab geometry from a Rhino SVG plan-view export, derives real column spacing via clustering + median (not hardcoded), also derives garage depth from elevation SVGs. Layer names and cluster tolerance are now parameters, not fixed strings — portable to a different site's export.
+- **`extract_real_geometry.py`** (OBJ ingestion) — also generalized: the OBJ object-name mapping (which named group is the tunnel, columns, etc.) is now a parameter, not hardcoded, verified byte-identical output for Pershing before/after the refactor.
+- Both ingestion paths (SVG-derived and OBJ-derived) independently agree on site dimensions (~354 × 602 ft) and column count (274) — cross-validated, not just asserted.
+
+### Phase 2 — Terracing Engine ("Metabolizer v2") (Section 3)
+- **`terracing_engine.py`** — headless Python port of the canyon-terracing math that used to live only in client-side JS (`PershingMetabolizer_Prototype/index.html`). Verified **byte-for-byte identical** to a standalone Node.js re-implementation of the original JS, across all 2,680 voxels on real Pershing data.
+- Column keep-out-zone logic confirmed absent (per the locked decision above) — only the spiral parking ramps are a hard excavation-avoidance zone, since those are real physical voids, not columns.
+- Added the Botanical Attractor Module's depth-level tagging (Level 0 / -1 / -2 / -3), which didn't exist anywhere before.
+- **Bug found and fixed (2026-07-03):** voxels were originally modeled as solid "shafts" running from grade down to each voxel's own depth — meaning every voxel's *top* face sat at grade, and the only surface near a voxel's real depth faced *downward* (invisible from above). Rebuilt so every voxel runs from its own top (grade, or its excavation depth) down to a shared floor reference — now every terrace step has a real, upward-facing tread surface, which is what per-level surface conditions (shade canopy / planters / structural sub-vaults) actually need to attach to.
+
+### Phase 3 — Vector Export Engine (Section 6)
+- **`vector_export.py`** — builds an actual 3D solid from the terracing engine's output plus the real static context (columns, tunnel, secondary entrance, ramps), then does **true mesh-plane intersection** for section/plan cuts (not a voxel-grid approximation), and a real **ray-cast hidden-line-removal** pass for the axonometric view (silhouette + crease + boundary edge detection, embreex-accelerated — full HLR on a 552k-face mesh in ~1.5s).
+- Exports to **DXF + SVG + PNG** together (PNG via matplotlib, sharing the same layer/color scheme as the SVG writer — added per user request for a quick visual reference alongside the CAD deliverables).
+- Layer scheme: `LAYER_01_CUT`, `LAYER_02_PROJECTION` (currently empty — needs real hidden-line visibility logic for background-beyond-cut geometry), `LAYER_03_BOTANICAL` (empty — no planting geometry generated yet), `LAYER_04_GRID` (column reference points), `LAYER_05_LABELS` (street names).
+- Elevation tags (`EL. -10'-0"` etc.) on every plan level; named levels: SURFACE / LEVEL 1 / LEVEL 2 / LEVEL 3-METRO. Total garage depth (30ft) is real/measured; the 3-equal-levels split is still a diagrammatic assumption inherited from the old prototype, not surveyed.
+- **Orientation bug found and fixed:** an unverified assumption (which street is which end of the site) had been carried over from a different, separately-derived dataset without cross-checking. Corrected against the real Rhino model, verified via exact screen-projection math, not eyeballing. Confirmed the site's own grid runs ~36° off true north by design (not a bug) — so plan/axo drawings export in **both** page-layout orientations (`_5thup` / `_6thup`) since "which end is up" is a layout choice, not a geometric fact.
+- Axonometric camera direction tuned per user feedback (verified numerically each time, not by repeated screenshotting) to put Hill St / the Metro entrance in the desired frame position.
+
+### Blender bridge — Line Art rehearsal (Section 4/6 crossover)
+- **`blender_lineart_export.py`** — imports the clean site OBJ (`up_axis='Z', forward_axis='Y'` required, or Blender silently rotates it wrong), runs Blender's own Grease Pencil Line Art (a second, independent hidden-line-removal algorithm from the Python one), exports to SVG.
+- Real bug found (not a GPU/headless limitation, despite first appearances): manually building a Grease Pencil object + Line Art modifier reliably bakes to **zero strokes** in any environment. Fix: use Blender's dedicated `LINEART_OBJECT`/`SCENE`/`COLLECTION` presets instead, and size the camera's `ortho_scale` from the mesh's bounding box projected into **camera space**, not world-space dimensions.
+- Verified working both headless and in a live BlenderMCP-connected session; cross-validated visually against the Python HLR axo (same terrace/entrance/tunnel silhouette from two independent algorithms).
+
+### Blender bridge — Erosion/weathering rehearsal (Section 4)
+- **`blender_erosion_pass.py`** / **`blender_erosion_render.py`** — exports the site as a *named* multi-part OBJ (terrace / columns / tunnel / entrance / ramps as separate Blender objects, via `vector_export.py`'s `build_named_scene()`), so erosion can target the terrace only, leaving real existing structure clean/unweathered.
+- Subdivides the terrace, applies a Displace modifier driven by turbulent noise, plus a weathered-concrete shader material (noise → ColorRamp → Base Color, patchy dark staining mixed with a lighter weathered gray).
+- Iterated from a too-subtle first pass to a convincing "30-year weathered" look per direct feedback (stronger displacement + real material variation, not just geometry). Verified via real EEVEE renders, including a 4K (3840×2160) final check.
+
+### Sketch weight ingestion (Phase 2 extension, per a Gemini handoff)
+- **`sketch_weight_mapper.py`** — lets the designer draw an intentional layout (SVG or raster image) that biases the terracing engine, instead of (or alongside) the automated proximity/data-driven excavation. SVG parsed via `svgpathtools` (real bezier curves — the existing regex SVG parser only handles straight Rhino CAD polylines, wrong tool for a freehand sketch); image ingestion via PIL, prefers the alpha channel over luminance thresholding when present.
+- Scoped to **plan sketches only** this round — a section sketch would mean directly overriding z-depth along a cutline (the engine is a 2.5D heightfield, one z per (x,y) column, not a true 3D volume), a different mechanism than a blendable weight. Deferred as a separate future feature.
+- Blend is **additive** (`terracing_engine.py`'s `_effective_influence()`: `transit_influence + alpha*sketch_weight`, clamped), chosen deliberately over two other options (soft multiplicative gate / hard mask) so the sketch can *create* real excavation somewhere the Metro-proximity data alone never would — not just edit or restrict the data's own proposal. `alpha` defaults sketch-dominant (0.75).
+- **Caught and fixed a real bug via testing:** the first version used a weighted *average* (`alpha*sketch + (1-alpha)*transit`) instead of addition, which silently dampened data-driven excavation almost to zero everywhere the sketch was blank — i.e. everywhere except the sketch itself — wiping out all 424 originally-excavated cells. Fixed to literal addition; re-verified all 424 original cells unchanged (zero depth difference) after adding a test sketch, plus 119 new cells added elsewhere.
+- Visual proof: a plan render shows two independent excavated regions — the original entrance-driven gap, and a new S-curve-shaped gap matching a synthetic test sketch exactly, in a corner of the site the data alone would never touch. Archived at `archive/diagrams/PershingMetabolizer/sketch_ingestion_test_20260703/`.
+- Coordinate convention (sketch assumed to cover the full site bounds, no vertical flip) is explicitly flagged **unverified** in the module — no real designer sketch exists yet to confirm orientation against, and this project has hit real axis-flip bugs more than once already.
+
+## What's still open / not started
+
+- **Section 2 (data ingestion):** amenity-deficit data is still a placeholder/diagrammatic stub (2 hardcoded hotspot points) — no real scraped/surveyed dataset feeding the terracing engine yet.
+- **Section 4 remainder:** erosion currently applies uniformly across the whole terrace. Next natural step is varying intensity/character by the Botanical Attractor Module's per-level tag (deep canyon vs. surface should weather differently), plus actual organic vegetative growth (not just concrete weathering) and mesh decimation for Unity real-time performance.
+- **Section 5 (Unity sandbox):** not started at all. Local-only decided; networked juror devices deferred.
+- **Section 6 remainder:** the "AI-Ready Lineart Rasterizer" (high-contrast raster conditioning images for future ControlNet/LoRA use) hasn't been built. `LAYER_02_PROJECTION` (background-beyond-cut geometry) and `LAYER_03_BOTANICAL` (planting geometry) are real, intentional gaps in the vector export — both need actual content, not just an empty layer.
+- **Section 7 (live juror LLM governance):** not started. Ollama + hardware confirmed, but no chat interface, no JSON-schema-constrained parsing, no architectural weight matrix / agency dials, no saturation logic yet.
+- **Minor known bug:** the standalone headless Line Art script occasionally emits one numerically-degenerate coordinate (~10⁷ magnitude) in its SVG export that the live-session export didn't have — doesn't affect correctness, just cosmetic if something auto-fits a viewer to the SVG bounding box. Not isolated yet.
+- **Garage level split (10ft × 3):** still a diagrammatic assumption, not surveyed real per-level slab data — flagged, not fixed.
+- **Sketch ingestion has no real test case yet.** Both SVG and image paths are verified against synthetic sketches drawn by Claude, not an actual designer sketch — the coordinate/orientation convention needs confirming against a real one, and there's no UI/workflow yet for actually producing and feeding in a sketch during design (right now it's a Python function call, not something the user would use standalone).
+- **Section-sketch depth override** (direct z-profile drawing along a cutline) — deferred, a different mechanism than the plan-sketch weight map.
+
+## Suggested next step
+
+Given erosion is now visually convincing, the "clean" export pipeline is solid end-to-end, and sketch ingestion now works (on synthetic test data), the most natural next moves are: (a) test sketch ingestion against a real hand-drawn sketch to confirm the orientation convention, (b) vary erosion by depth level (ties Section 3's botanical tagging to Section 4's material work, closing a loop that's already half-built), or (c) start Section 2's real data ingestion so the terracing engine responds to actual site data instead of placeholder hotspots. All three are more load-bearing for the final thesis than Sections 5/7 (Unity, live LLM chat), which can reasonably wait.
