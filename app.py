@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -7,6 +7,13 @@ import xml.etree.ElementTree as ET
 import sys
 import asyncio
 
+# Windows' default console codepage (cp1252) can't encode the emoji used in
+# a few startup log lines below, crashing the process before it can even
+# report the real error. Force UTF-8 stdout so those prints (and any
+# future ones) never take the whole app down over a log message.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # --- MODULAR LOGIC IMPORTS ---
 from logic.geometry_engine import build_geometries
 from logic.urban_engine import GuidelineManager, remix_layers, guideline_manager
@@ -14,12 +21,29 @@ from logic.ai_synthesizer import (
     generate_spatial_seed, generate_mermaid_diagram
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
+from logic.pershing_api import (
+    RebuildParams, BakeGrids, get_config as pershing_get_config, rebuild as pershing_rebuild,
+    get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
+    bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
+)
+from logic import pershing_blender
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
 
 app = FastAPI(title="Memory Machine API")
+
+# Dev-only CORS: the React/Vite frontend runs on its own dev-server port
+# (5173) and calls this API cross-origin. Local single-user tool, no auth
+# boundary to protect yet -- tighten this before any real deployment.
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- AI & DB INITIALIZATION ---
 AI_ENABLED = False
@@ -67,6 +91,23 @@ app.mount("/models", StaticFiles(directory="models"), name="models")
 comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
 if os.path.exists(comfy_output_dir):
     app.mount("/comfy-output", StaticFiles(directory=comfy_output_dir), name="comfy-output")
+
+# Static real-world context (columns/tunnel/secondary_entrance/ramps) for
+# the Pershing viewport -- same site_named.obj blender_cockpit.py's
+# import_static_context() loads once for visual reference; it does not
+# participate in the live TerracingEngine rebuild.
+pershing_context_dir = os.path.join(BASE_DIR, "outputs", "vector_export_test")
+if os.path.exists(pershing_context_dir):
+    app.mount("/pershing-context", StaticFiles(directory=pershing_context_dir), name="pershing-context")
+
+# Serves whatever sketch photo is currently active (uploaded or pre-existing)
+# so the frontend's paint canvas can load it as an <img> background.
+app.mount("/pershing-sketch", StaticFiles(directory=PERSHING_SKETCH_DIR), name="pershing-sketch")
+
+# Serves OBJs produced by the headless-Blender "build" tier (see
+# logic/pershing_blender.py) -- distinct from /pershing-context, which
+# serves the one static, unchanging reference OBJ.
+app.mount("/blender-headless-output", StaticFiles(directory=pershing_blender.OUTPUT_DIR), name="blender-headless-output")
 
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
@@ -459,6 +500,57 @@ async def comfy_render(payload: ComfyRenderPayload):
         "image_path": img_path,
         "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
     }
+
+
+@app.get("/api/pershing/config")
+async def pershing_config():
+    return pershing_get_config()
+
+
+@app.post("/api/pershing/rebuild")
+async def pershing_rebuild_route(params: RebuildParams):
+    return pershing_rebuild(params)
+
+
+@app.get("/api/pershing/sketch")
+async def pershing_sketch_info():
+    return pershing_get_sketch_info()
+
+
+@app.post("/api/pershing/sketch/upload")
+async def pershing_sketch_upload(file: UploadFile = File(...)):
+    content = await file.read()
+    return pershing_save_uploaded_sketch(file.filename, content)
+
+
+@app.post("/api/pershing/bake")
+async def pershing_bake_route(grids: BakeGrids):
+    return pershing_bake(grids)
+
+
+@app.post("/api/pershing/blender-build")
+async def pershing_blender_build_route(payload: dict, lineart: bool = False):
+    """Kicks off the headless-Blender "build" tier (see
+    logic/pershing_blender.py) on whatever rebuild result the frontend
+    currently has on screen -- payload is exactly the JSON /rebuild already
+    returned, passed straight through, so the built OBJ is guaranteed to
+    match what's visible, not a server-side recomputation that could drift
+    from it. Returns immediately; the browser polls the job-status route
+    below rather than blocking this request on the Blender subprocess.
+
+    lineart is a query param (?lineart=true), not a body field -- keeps the
+    POST body exactly the raw rebuild-result dict, unpolluted, since it's
+    forwarded straight through to Blender as the input JSON."""
+    job_id = pershing_blender.start_build_job(payload, lineart=lineart)
+    return {"job_id": job_id, "status": "queued"}
+
+
+@app.get("/api/pershing/blender-build/{job_id}")
+async def pershing_blender_build_status(job_id: str):
+    job = pershing_blender.get_job(job_id)
+    if job is None:
+        return JSONResponse(status_code=404, content={"error": "unknown job_id"})
+    return job
 
 
 if __name__ == "__main__":

@@ -62,23 +62,46 @@ def mesh_for(name, obj_faces, global_verts, recenter_xz=False, recenter_y_to_top
 
 
 def parse_obj(obj_path):
-    """Parse an OBJ into per-named-group vertex/face tables plus the flat global vertex list."""
+    """Parse an OBJ into per-named-group vertex/face tables plus the flat global vertex list.
+
+    Also tracks `g` (layer) vs `o` (object) distinctly via obj_group, which
+    maps each named object to whichever `g` layer most recently preceded it
+    (None for a top-level `g` itself, or an object with no enclosing g at
+    all). Added 2026-07-08: PershingCurrentMetabolism.obj exports real Rhino
+    layer names as `g` groups (e.g. "g STRUC__Columns" containing many
+    "o object_N" per-instance objects within it) -- OBJ has no true nested-
+    group syntax, so this is inferred purely from line order (every `o`
+    belongs to the most recently seen `g`), not real hierarchy, but that's
+    exactly how Rhino's own "layers as OBJ groups" export writes it.
+    """
     global_verts = []          # 1-based via index+1
     obj_vstart = {}            # name -> first global vertex index (1-based)
     obj_vcount = {}            # name -> count of vertices
     obj_faces = {}             # name -> list of [global_idx,...] (0-based after conversion)
+    obj_group = {}             # name -> enclosing g layer name, or None
     order = []
 
     cur = None
+    cur_group = None
     with open(obj_path, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            if line.startswith("o ") or line.startswith("g "):
+            if line.startswith("g "):
+                cur_group = line[2:].strip()
+                cur = cur_group
+                if cur not in obj_vstart:
+                    order.append(cur)
+                    obj_vstart[cur] = None
+                    obj_vcount[cur] = 0
+                    obj_faces[cur] = []
+                    obj_group[cur] = None
+            elif line.startswith("o "):
                 cur = line[2:].strip()
                 if cur not in obj_vstart:
                     order.append(cur)
                     obj_vstart[cur] = None
                     obj_vcount[cur] = 0
                     obj_faces[cur] = []
+                obj_group[cur] = cur_group
             elif line.startswith("v "):
                 parts = line.split()
                 x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
@@ -96,7 +119,7 @@ def parse_obj(obj_path):
                     obj_faces[cur].append(idxs)
 
     print(f"Parsed {len(global_verts)} total vertices, {len(order)} named objects.")
-    return global_verts, obj_vstart, obj_vcount, obj_faces, order
+    return global_verts, obj_vstart, obj_vcount, obj_faces, order, obj_group
 
 
 def extract_real_geometry(
@@ -131,6 +154,15 @@ def extract_real_geometry(
     # the real ~354x602ft). Defaults to reusing the terrace-derived origin
     # when that mapping is still trustworthy.
     column_site_origin=None,
+    # Fallback grade reference (raw OBJ Y) for when column extraction finds
+    # nothing usable at all (heuristic mismatch, not a real absence of
+    # columns -- see column_vertex_count_range's docstring above). grade_y
+    # is a physical constant of the site (every real column's shared top
+    # elevation) -- added 2026-07-08 rather than fixing the heuristic
+    # itself, since a known-good value already exists from a prior
+    # successful run and re-deriving it isn't required every time the
+    # heuristic happens to miss. Ignored when column extraction succeeds.
+    grade_y_override=None,
 ):
     """
     Extract site geometry from `obj_path` using the given object-name mapping
@@ -138,7 +170,7 @@ def extract_real_geometry(
     mapping args are the only site-specific inputs; everything below is
     generic OBJ-group extraction/derivation.
     """
-    global_verts, obj_vstart, obj_vcount, obj_faces, order = parse_obj(obj_path)
+    global_verts, obj_vstart, obj_vcount, obj_faces, order, _obj_group = parse_obj(obj_path)
     terrace_names = set(terrace_names)
 
     # --- Site footprint from the terrace slabs (real rectangle, real OBJ-space) ---
@@ -163,7 +195,7 @@ def extract_real_geometry(
         # grade Z value, both matched exactly).
         col_origin_x, col_origin_z = column_site_origin if column_site_origin else (site_min_x, site_min_z)
 
-        c_verts, c_vstart, c_vcount, c_faces, c_order = parse_obj(column_obj_path)
+        c_verts, c_vstart, c_vcount, c_faces, c_order, _c_group = parse_obj(column_obj_path)
         column_names = [n for n in c_order if c_vstart.get(n) is not None and len(c_faces[n]) > 0]
 
         column_mesh = mesh_for(column_names[0], c_faces, c_verts, recenter_xz=True, recenter_y_to_top=True)
@@ -209,9 +241,22 @@ def extract_real_geometry(
 
     # --- Grade reference: every real column shares the exact same top_y --
     # that's the real, unambiguous grade plane. Every depth below is
-    # expressed relative to it (positive = below grade). ---
-    grade_y = column_positions[0]["top_y"]
-    assert all(abs(c["top_y"] - grade_y) < 1e-3 for c in column_positions), "columns not coplanar"
+    # expressed relative to it (positive = below grade). Falls back to an
+    # explicit override when column extraction found nothing usable --
+    # see grade_y_override's docstring above.
+    if column_positions:
+        grade_y = column_positions[0]["top_y"]
+        assert all(abs(c["top_y"] - grade_y) < 1e-3 for c in column_positions), "columns not coplanar"
+    elif grade_y_override is not None:
+        grade_y = grade_y_override
+        print(f"[extract] no column_positions matched (heuristic mismatch, not a real absence of "
+              f"columns) -- using grade_y_override={grade_y}")
+    else:
+        raise ValueError(
+            "No column_positions extracted and no grade_y_override given -- cannot establish a "
+            "grade reference. Either fix the column-matching heuristic (column_vertex_count_range "
+            "/ column_obj_path) or pass a known-good grade_y_override."
+        )
 
     def depth_below_grade(abs_y):
         return grade_y - abs_y
@@ -327,6 +372,163 @@ def extract_real_geometry(
     size_kb = os.path.getsize(out_path) / 1024
     print(f"\nWrote {out_path} ({size_kb:.1f} KB)")
     return out
+
+
+def extract_positions_from_layered_obj(
+    obj_path,
+    column_layer="STRUC__Columns",
+    boundary_layer="BOUNDARY",
+    entrance_layer="metroConnection",
+    ramp_layer="CIRC__Ramps",
+):
+    """
+    Extract position/depth facts (deliberately NOT mesh geometry) from an
+    OBJ exported with "layers as OBJ groups" checked (e.g.
+    PershingCurrentMetabolism.obj) -- real Rhino layer names as `g` groups,
+    each containing the real per-instance `o` objects on that layer.
+
+    Added 2026-07-08 specifically because extract_real_geometry()'s vertex-
+    count heuristic (column_vertex_count_range) finds zero columns in the
+    current grid-base OBJ, and its hardcoded secondary_entrance_name=
+    "object_2" mapping is stale (see PIPELINE_STATUS_AND_NEXT_STEPS.md).
+    Reading by real layer name sidesteps both: STRUC__Columns/BOUNDARY/
+    metroConnection/CIRC__Ramps are the same names already used throughout
+    this project's Rhino MCP work and structural_grid_analyzer.py's SVG
+    parsing, not a guess.
+
+    Deliberately position/depth-only, not mesh geometry: most groups in
+    this specific export (metroConnection, CIRC__Ramps, BOUNDARY -- every
+    layer checked except metroTunnel's "metro_station_box") have vertices
+    but zero faces (Rhino exported them as trim curves, not triangulated
+    mesh, for whatever object types those are) -- fine for centroid/bbox
+    math, useless for mesh_for()'s face-driven vertex walk (mesh_for only
+    collects a vertex at all when it's referenced by a face). Mesh fields
+    (tunnel_mesh, secondary_entrance_mesh, ramp_meshes, column_prototype_mesh)
+    still come from extract_real_geometry()'s existing OBJ path, which
+    already extracts those correctly -- this function only replaces the
+    position/depth facts that path gets wrong.
+
+    Ramp clustering: no name-based cluster distinction exists in this
+    export (unlike the old ramp_cluster_a/b name-tuple convention), so the
+    layer's objects are split into two spatial clusters at the largest gap
+    in their sorted x-centroids -- confirmed 2026-07-08 against real data
+    to cleanly separate two x-value pairs (0ft within a cluster, ~190ft
+    between clusters), not an approximation that needs tuning.
+
+    Returns a dict: site (width_ft/length_ft), grade_y_raw, column_positions,
+    secondary_entrance_anchor, ramp_anchors -- same shapes as
+    extract_real_geometry()'s equivalent fields, in the same site-local
+    (BOUNDARY min corner) origin.
+    """
+    global_verts, obj_vstart, obj_vcount, obj_faces, order, obj_group = parse_obj(obj_path)
+
+    def verts_of(name):
+        start = obj_vstart[name]
+        count = obj_vcount[name]
+        return global_verts[start - 1: start - 1 + count]
+
+    members = {}  # group_name -> [object names directly in it]
+    for name, g in obj_group.items():
+        if g is not None and name != g:
+            members.setdefault(g, []).append(name)
+
+    # --- Site extent from BOUNDARY -- same real curve
+    # structural_grid_analyzer.py's SVG path already reads, just via OBJ
+    # export instead of SVG export. ---
+    boundary_objs = members.get(boundary_layer, [])
+    if not boundary_objs:
+        raise ValueError(f"no objects found under g {boundary_layer!r}")
+    boundary_verts = [v for name in boundary_objs for v in verts_of(name)]
+    site_min_x = min(v[0] for v in boundary_verts)
+    site_max_x = max(v[0] for v in boundary_verts)
+    site_min_z = min(v[2] for v in boundary_verts)
+    site_max_z = max(v[2] for v in boundary_verts)
+    site_width_ft = site_max_x - site_min_x
+    site_length_ft = site_max_z - site_min_z
+
+    # --- Columns: one centroid + top_y per object in column_layer. ---
+    column_objs = members.get(column_layer, [])
+    if not column_objs:
+        raise ValueError(f"no objects found under g {column_layer!r}")
+    column_positions = []
+    for name in column_objs:
+        vs = verts_of(name)
+        cx = sum(v[0] for v in vs) / len(vs)
+        cz = sum(v[2] for v in vs) / len(vs)
+        top_y = max(v[1] for v in vs)
+        column_positions.append({"x": cx - site_min_x, "z": cz - site_min_z, "top_y": top_y})
+
+    # --- Grade reference: same real, unambiguous shared-top_y check
+    # extract_real_geometry() uses, just actually succeeding here since
+    # column_positions is real this time. ---
+    grade_y = column_positions[0]["top_y"]
+    assert all(abs(c["top_y"] - grade_y) < 1e-3 for c in column_positions), \
+        f"columns not coplanar in g {column_layer!r} -- real grade reference unreliable"
+
+    def depth_below_grade(abs_y):
+        return grade_y - abs_y
+
+    # --- Entrance anchor: single object's centroid + full y-range. ---
+    entrance_objs = members.get(entrance_layer, [])
+    if not entrance_objs:
+        raise ValueError(f"no objects found under g {entrance_layer!r}")
+    if len(entrance_objs) > 1:
+        print(f"[extract] {len(entrance_objs)} objects found under g {entrance_layer!r}, "
+              f"expected one -- using all of them combined.")
+    entrance_verts = [v for name in entrance_objs for v in verts_of(name)]
+    secondary_entrance_anchor = {
+        "x": sum(v[0] for v in entrance_verts) / len(entrance_verts) - site_min_x,
+        "z": sum(v[2] for v in entrance_verts) / len(entrance_verts) - site_min_z,
+        "top_depth_ft": round(depth_below_grade(max(v[1] for v in entrance_verts)), 2),
+        "bottom_depth_ft": round(depth_below_grade(min(v[1] for v in entrance_verts)), 2),
+    }
+
+    # --- Ramps: cluster this layer's objects into two groups by x-position
+    # (see docstring above for why -- no name-based distinction available). ---
+    ramp_objs = members.get(ramp_layer, [])
+    ramp_anchors = {}
+    if ramp_objs:
+        ramp_centroids = [(name, sum(v[0] for v in verts_of(name)) / obj_vcount[name], verts_of(name))
+                           for name in ramp_objs]
+        ramp_centroids.sort(key=lambda t: t[1])
+        xs = [t[1] for t in ramp_centroids]
+        gaps = [(xs[i + 1] - xs[i], i) for i in range(len(xs) - 1)]
+        if gaps:
+            _, split_i = max(gaps)
+            cluster_a, cluster_b = ramp_centroids[:split_i + 1], ramp_centroids[split_i + 1:]
+        else:
+            cluster_a, cluster_b = ramp_centroids, []
+
+        def anchor_from(cluster):
+            verts = [v for _, _, vs in cluster for v in vs]
+            xs_ = [v[0] for v in verts]
+            zs_ = [v[2] for v in verts]
+            ys_ = [v[1] for v in verts]
+            return {
+                "x": (min(xs_) + max(xs_)) / 2 - site_min_x,
+                "z": (min(zs_) + max(zs_)) / 2 - site_min_z,
+                "half_width_ft": (max(xs_) - min(xs_)) / 2,
+                "half_length_ft": (max(zs_) - min(zs_)) / 2,
+                "top_depth_ft": round(depth_below_grade(max(ys_)), 2),
+                "bottom_depth_ft": round(depth_below_grade(min(ys_)), 2),
+            }
+
+        if cluster_a:
+            ramp_anchors["cluster_a"] = anchor_from(cluster_a)
+        if cluster_b:
+            ramp_anchors["cluster_b"] = anchor_from(cluster_b)
+
+    print(f"[extract] layered OBJ: {len(column_positions)} columns, "
+          f"site {site_width_ft:.2f}x{site_length_ft:.2f}ft, "
+          f"entrance anchor {secondary_entrance_anchor}, {len(ramp_anchors)} ramp clusters")
+
+    return {
+        "site": {"width_ft": round(site_width_ft, 2), "length_ft": round(site_length_ft, 2)},
+        "grade_y_raw": grade_y,
+        "column_positions": [{"x": c["x"], "z": c["z"]} for c in column_positions],
+        "secondary_entrance_anchor": secondary_entrance_anchor,
+        "ramp_anchors": ramp_anchors,
+    }
 
 
 if __name__ == "__main__":

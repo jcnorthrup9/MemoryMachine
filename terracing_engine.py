@@ -14,10 +14,10 @@ concern (a data *layer*, not excavation geometry) and is not ported here.
 
 Column keep-out-zone logic is intentionally absent: per project decision,
 real columns are NOT protected from the cut -- a column can sit over an
-excavated voxel with nothing under it. Only ramp voids (physical structural
-voids, not columns) are a hard excavation-avoidance zone, since digging
-through a ramp void is not "digging past existing structure," it is digging
-into a hole that is already there.
+excavated voxel with nothing under it. Ramp-void avoidance (an earlier hard
+exclusion zone around the spiral ramps) was removed 2026-07-06 -- per
+project decision, the canyon can now cut through/near ramp zones too, same
+as everywhere else.
 """
 import math
 from dataclasses import dataclass, field
@@ -35,7 +35,6 @@ class Voxel:
     wy: float
     transit_influence: float
     deficit_influence: float
-    ramp_dist: float
     sketch_weight: float = 0.0
     is_hardscape: bool = False
     is_water_shade: bool = False
@@ -67,15 +66,14 @@ class TerracingEngine:
     Computes a stepped excavation depth field over a site's structural
     footprint, driven by a transit-attractor anchor (real, from
     real_geometry.json) and amenity-deficit hotspots (placeholder pending
-    Section 2). Site dimensions, column positions, and ramp-void bounding
-    boxes all come from real_geometry (see extract_real_geometry.py) --
-    nothing here is Pershing-specific beyond the values already baked into
-    that JSON.
+    Section 2). Site dimensions and column positions come from
+    real_geometry (see extract_real_geometry.py) -- nothing here is
+    Pershing-specific beyond the values already baked into that JSON.
     """
 
     def __init__(self, real_geometry, deficit_hotspots=None, voxel_ft=9.0,
                  transit_falloff_ft=220.0, threshold=0.35, step_ft=9.0,
-                 ramp_clearance_ft=20.0, max_canyon_depth_ft=None,
+                 max_canyon_depth_ft=None,
                  level_depth_thresholds_ft=DEFAULT_LEVEL_DEPTH_THRESHOLDS_FT,
                  sketch_weights=None, sketch_alpha=0.75, hardscape_regions=None,
                  water_shade_regions=None, greenscape_regions=None, amenity_resting_regions=None):
@@ -84,7 +82,6 @@ class TerracingEngine:
         self.transit_falloff_ft = transit_falloff_ft
         self.threshold = threshold
         self.step_ft = step_ft
-        self.ramp_clearance_ft = ramp_clearance_ft
         # Hard structural cap on general canyon excavation, independent of
         # entrance_base_depth_ft (below) -- per 2026-07-05 finding, the real
         # columns are only 30ft tall (real_geometry["column_height_ft"]) and
@@ -109,12 +106,8 @@ class TerracingEngine:
         # dicts, e.g. straight from sketch_weight_mapper.build_hardscape_regions().
         # Unlike sketch_weights (additive, can CREATE excavation), a hardscape
         # region is a hard veto -- "protect this, no matter what the transit/
-        # deficit/sketch score says" -- structurally the same mechanic as
-        # ramp_dist below (a real physical void the canyon must never touch),
-        # just designer-drawn instead of physically real. Deliberately NOT
-        # folded into the additive sketch_weight stack; see _z_for_voxel /
-        # _relax_depths, both of which already have a ramp-style override
-        # check that this reuses rather than duplicates.
+        # deficit/sketch score says". Deliberately NOT folded into the
+        # additive sketch_weight stack; see _z_for_voxel / _relax_depths.
         self.hardscape_regions = hardscape_regions or []
         # Programmatic Typology Mixing Engine inputs (New Feature Directives
         # section 4): same {"mask": (nx, nz) bool grid} OR-list shape as
@@ -141,8 +134,6 @@ class TerracingEngine:
         # (a real transit tunnel, not open canyon void).
         self.entrance_base_depth_ft = anchor["bottom_depth_ft"]
 
-        self.ramp_bboxes = [self._ramp_bbox(a) for a in real_geometry["ramp_anchors"].values()]
-
         if deficit_hotspots is None:
             deficit_hotspots = [
                 {
@@ -156,24 +147,6 @@ class TerracingEngine:
         self.deficit_hotspots = deficit_hotspots
 
         self.voxels = self._build_base_voxels()
-
-    @staticmethod
-    def _ramp_bbox(anchor):
-        return {
-            "min_x": anchor["x"] - anchor["half_width_ft"],
-            "max_x": anchor["x"] + anchor["half_width_ft"],
-            "min_z": anchor["z"] - anchor["half_length_ft"],
-            "max_z": anchor["z"] + anchor["half_length_ft"],
-        }
-
-    @staticmethod
-    def _dist_to_bbox(x, y, box):
-        dx = max(box["min_x"] - x, 0.0, x - box["max_x"])
-        dz = max(box["min_z"] - y, 0.0, y - box["max_z"])
-        return math.hypot(dx, dz)
-
-    def _nearest_ramp_dist(self, x, y):
-        return min((self._dist_to_bbox(x, y, b) for b in self.ramp_bboxes), default=float("inf"))
 
     def _build_base_voxels(self):
         voxels = []
@@ -205,7 +178,6 @@ class TerracingEngine:
                     gx=gx, gy=gy, wx=wx, wy=wy,
                     transit_influence=transit_influence,
                     deficit_influence=deficit_influence,
-                    ramp_dist=self._nearest_ramp_dist(wx, wy),
                     sketch_weight=sketch_weight,
                     is_hardscape=is_hardscape,
                     is_water_shade=is_water_shade,
@@ -249,8 +221,6 @@ class TerracingEngine:
     def _z_for_voxel(self, v, phase):
         if phase != 3 or self._effective_influence(v) <= self.threshold:
             return 0.0
-        if v.ramp_dist < self.ramp_clearance_ft:
-            return 0.0  # hard avoidance -- never touch the spiral ramp voids
         if v.is_hardscape:
             return 0.0  # designer-protected region -- veto wins regardless of score
         raw_depth = self._effective_influence(v) * self.max_canyon_depth_ft
@@ -271,8 +241,8 @@ class TerracingEngine:
             for gx in range(nx):
                 for gy in range(nz):
                     i = idx(gx, gy)
-                    if flat[i].ramp_dist < self.ramp_clearance_ft or flat[i].is_hardscape:
-                        continue  # pinned at grade -- physical void or designer-protected region
+                    if flat[i].is_hardscape:
+                        continue  # pinned at grade -- designer-protected region
                     max_neighbor = None
                     for ngx, ngy in ((gx - 1, gy), (gx + 1, gy), (gx, gy - 1), (gx, gy + 1)):
                         if 0 <= ngx < nx and 0 <= ngy < nz:
@@ -381,7 +351,14 @@ class StructuralElement:
     x2/y2/z2/radius_ft are optional: set together, they mean "instance a real
     cylinder between (x,y,z_top) and (x2,y2,z2)" -- struts, tie-rods, and knee
     braces are true two-point diagonals, not a single rotated box guessing at
-    the angle (see Hyper-Realistic Structural Connections supplement)."""
+    the angle (see Hyper-Realistic Structural Connections supplement).
+
+    scale_y is optional and only meaningful for box-shaped kinds: None (the
+    default, used by every existing kind) means "scale both plan axes by
+    `scale` uniformly," the original behavior. Set it alongside `scale` only
+    when a kind genuinely needs an independent width vs. depth (e.g.
+    BuildingMassEngine's rectangular footprints) -- everything else keeps
+    scaling isotropically."""
     kind: str
     x_ft: float
     y_ft: float
@@ -393,6 +370,7 @@ class StructuralElement:
     y2_ft: float = None
     z2_ft: float = None
     radius_ft: float = None
+    scale_y: float = None
 
 
 class StructuralFramingEngine:
@@ -690,6 +668,17 @@ class StructuralFramingEngine:
         }
 
 
+TREE_TRUNK_HEIGHT_FT = 8.0
+TREE_TRUNK_RADIUS_FT = 0.4
+TREE_CANOPY_HEIGHT_FT = 10.0
+TREE_CANOPY_RADIUS_FT = 6.0
+# A 9ft voxel is far denser than real tree spacing -- thin placement to
+# roughly one tree per TREE_GRID_SPACING cells along each axis via a
+# deterministic grid-modulo check (not randomness), so the same params
+# always produce the same layout.
+TREE_GRID_SPACING = 3
+
+
 class TypologyAssetEngine:
     """
     Programmatic Typology Mixing Engine (New Feature Directives section 4).
@@ -762,5 +751,82 @@ class TypologyAssetEngine:
                     specs.append(StructuralElement("fountain", v.wx, v.wy, v.z_ft, 3.0))
         return specs
 
+    def tree_specs(self):
+        """
+        Trees on greenscape cells -- reuses the same is_greenscape mask
+        driving the frontend's grass-cap ground layer, so trees only show
+        up where grass has already been painted. Hybrid asset strategy
+        Tier 1: a plain cylinder trunk + hex-prism canopy stand-in (fits
+        the existing kind-dispatch paths with zero new geometry code),
+        swappable for a real tree model/GLB later without touching this
+        placement logic.
+        """
+        specs = []
+        for row in self.te.voxels:
+            for v in row:
+                if not v.is_greenscape:
+                    continue
+                if v.gx % TREE_GRID_SPACING != 0 or v.gy % TREE_GRID_SPACING != 0:
+                    continue
+                trunk_top = v.z_ft + TREE_TRUNK_HEIGHT_FT
+                specs.append(StructuralElement(
+                    "tree_trunk", v.wx, v.wy, trunk_top, TREE_TRUNK_HEIGHT_FT,
+                    radius_ft=TREE_TRUNK_RADIUS_FT))
+                canopy_center = trunk_top + TREE_CANOPY_HEIGHT_FT / 2
+                specs.append(StructuralElement(
+                    "tree_canopy", v.wx, v.wy, canopy_center, TREE_CANOPY_HEIGHT_FT,
+                    radius_ft=TREE_CANOPY_RADIUS_FT))
+        return specs
+
     def run(self):
-        return self.grotto_specs() + self.sanctuary_specs()
+        return self.grotto_specs() + self.sanctuary_specs() + self.tree_specs()
+
+
+class BuildingMassEngine:
+    """
+    Programmatic building-massing layer for surface-intervention planning
+    (establishing structures on the site over time) -- purely user-
+    parameterized, NOT read from data/building_heights.json: that file is
+    off-site context (real-world buildings around Pershing Square, e.g. the
+    Biltmore Hotel) in an abstract coordinate frame that doesn't correspond
+    to real_geometry.json's site-feet frame, so it's not usable as an
+    on-site massing input without a remap effort this pipeline has no other
+    need for.
+
+    v1 is single-box massing per footprint, not per-story architectural
+    detail -- appropriate for iterating layout/placement before committing
+    to real building form. Emits the same "building_mass" StructuralElement
+    kind for every building so it fits the existing kind-lookup-table
+    triple with just the one new StructuralElement.scale_y field (see that
+    dataclass) rather than any new instancing/export machinery -- same
+    hybrid-strategy reasoning as TypologyAssetEngine.tree_specs(): cheap box
+    now, swappable for a real/generated model later without touching this
+    placement logic.
+    """
+
+    def __init__(self, buildings):
+        """buildings: list of dicts, each {x_ft, y_ft, width_ft, depth_ft,
+        height_ft, setback_ft=0.0}. x_ft/y_ft is the footprint's real-feet
+        origin (not center), snapped to the nearest STRUCTURAL_BAY_FT grid
+        line -- same convention StructuralFramingEngine._column_grid() uses
+        for real columns -- so massing reads as intentional, bay-aligned
+        architecture rather than an arbitrary floating box."""
+        self.buildings = buildings
+
+    @staticmethod
+    def _snap(v):
+        return round(v / STRUCTURAL_BAY_FT) * STRUCTURAL_BAY_FT
+
+    def run(self):
+        specs = []
+        for b in self.buildings:
+            setback = b.get("setback_ft", 0.0)
+            width = max(b["width_ft"] - 2 * setback, 1.0)
+            depth = max(b["depth_ft"] - 2 * setback, 1.0)
+            height = b["height_ft"]
+            ox, oy = self._snap(b["x_ft"]), self._snap(b["y_ft"])
+            cx, cy = ox + width / 2, oy + depth / 2
+            spec = StructuralElement("building_mass", cx, cy, height, height, scale=width)
+            spec.scale_y = depth
+            specs.append(spec)
+        return specs
