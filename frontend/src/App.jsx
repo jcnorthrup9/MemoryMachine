@@ -6,7 +6,9 @@ import ParamPanel from './components/ParamPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
 import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
-import { getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus } from './api.js';
+import {
+  getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus, growNetwork as growNetworkApi,
+} from './api.js';
 
 const BLENDER_POLL_MS = 1500;
 
@@ -19,6 +21,12 @@ const DEFAULT_PARAMS = {
   use_real_amenity_data: false,
   use_real_foot_traffic_data: false,
   buildings: [],
+};
+
+const DEFAULT_NETWORK_PARAMS = {
+  motivator_weights: { shade: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0 },
+  step_ft: 15.0,
+  max_iterations: 300,
 };
 
 function timeNow() {
@@ -35,6 +43,9 @@ export default function App() {
   const [blenderBuild, setBlenderBuild] = useState({ status: 'idle', objUrl: null, svgUrl: null, error: null, durationS: null });
   const [lineartEnabled, setLineartEnabled] = useState(false);
   const [showLineArt, setShowLineArt] = useState(false);
+  const [networkParams, setNetworkParams] = useState(DEFAULT_NETWORK_PARAMS);
+  const [networkData, setNetworkData] = useState(null);
+  const [growingNetwork, setGrowingNetwork] = useState(false);
   const blenderPollRef = useRef(null);
 
   const log = useCallback((text, level = 'info') => {
@@ -130,6 +141,28 @@ export default function App() {
 
   useEffect(() => stopBlenderPoll, [stopBlenderPoll]);
 
+  // Space Colonization circulation network -- explicit action, NOT part of
+  // the live rebuild loop below (a real iterative growth simulation, even
+  // though it runs well under a second at this grid size, has no reason to
+  // regrow on every trivial slider tweak the way voxel terracing does).
+  // Grows against whatever terrain params are currently set, synchronous
+  // (see logic/pershing_api.py's grow_network() docstring) -- no polling
+  // needed, unlike the Blender build tier above.
+  const handleGrowNetwork = useCallback(async () => {
+    setGrowingNetwork(true);
+    try {
+      const result = await growNetworkApi(params, networkParams);
+      setNetworkData(result);
+      log(
+        `network grown: nodes=${result.node_count} edges=${result.network.length - (result.kind_counts.lookout_point ?? 0)} lookouts=${result.kind_counts.lookout_point ?? 0} unconsumed=${result.attractors_unconsumed}`,
+      );
+    } catch (err) {
+      log(String(err), 'error');
+    } finally {
+      setGrowingNetwork(false);
+    }
+  }, [params, networkParams, log]);
+
   // Live rebuild, debounced -- mirrors Blender's update=_on_X_update
   // callbacks (every param change triggers a rebuild), but batched behind
   // a short delay since each change here is a network round-trip to the
@@ -155,6 +188,7 @@ export default function App() {
           {config ? (
             <Viewport
               data={data}
+              networkSpecs={networkData?.network}
               siteWidthFt={config.site_width_ft}
               siteLengthFt={config.site_length_ft}
               voxelFt={config.voxel_ft}
@@ -185,6 +219,11 @@ export default function App() {
           onBuildInBlender={handleBuildInBlender}
           lineartEnabled={lineartEnabled}
           onLineartEnabledChange={setLineartEnabled}
+          networkParams={networkParams}
+          onNetworkParamsChange={setNetworkParams}
+          onGrowNetwork={handleGrowNetwork}
+          growingNetwork={growingNetwork}
+          networkResult={networkData}
         />
       </div>
       {paintCategory && (
@@ -192,9 +231,13 @@ export default function App() {
           config={config}
           initialCategory={paintCategory}
           onClose={() => setPaintCategory(null)}
+          // Just triggers the rebuild -- closing the overlay is now
+          // PaintOverlay's own call (closeAfterBake), since auto-bake while
+          // painting (2026-07-10) must rebuild WITHOUT closing, and this
+          // single onBaked prop is shared by both the explicit Bake button
+          // and the auto-bake path.
           onBaked={async () => {
             await doRebuild(params);
-            setPaintCategory(null);
           }}
           log={log}
         />

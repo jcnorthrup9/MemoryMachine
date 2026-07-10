@@ -21,7 +21,16 @@ match architectural/DXF convention. real_geometry.json's meshes are Y-up
 is converted via (x, y_obj, z_obj) -> (x, z_obj, y_obj) on load.
 """
 import numpy as np
-import trimesh
+
+# trimesh is a lazy, per-function import (2026-07-09 cut-sheet flatten
+# supplement) -- only the mesh-building/cutting functions below actually
+# need it (_mesh_from_real, build_terraced_solid, build_combined_mesh,
+# build_named_scene, mirror_mesh_y); the DXF/SVG/PNG export primitives and
+# the real_slab_plan_layers flatten (both pure 2D, no mesh construction)
+# don't. blender_cockpit.py's own docstring already flags trimesh as a real
+# friction point ("Deliberately does NOT import vector_export.py -- that
+# module needs trimesh") -- same reasoning sketch_weight_mapper.py/
+# amenity_deficit.py already use for their own heavier optional imports.
 
 LAYER_CUT = "LAYER_01_CUT"
 LAYER_PROJECTION = "LAYER_02_PROJECTION"
@@ -80,6 +89,7 @@ def _obj_to_site(flat_verts):
 
 
 def _mesh_from_real(mesh_dict):
+    import trimesh
     verts = _obj_to_site(mesh_dict["vertices"])
     faces = np.array(mesh_dict["faces"], dtype=int).reshape(-1, 3)
     return trimesh.Trimesh(vertices=verts, faces=faces, process=False)
@@ -131,6 +141,7 @@ def build_terraced_solid(engine, voxels, floor_margin_ft=10.0):
     surface at grade, so only vertical shaft walls were ever visible from
     an oblique angle, never real flat treads looking down from above.
     """
+    import trimesh
     parts = []
     vf = engine.voxel_ft
     floor_z = -(engine.max_canyon_depth_ft + floor_margin_ft)
@@ -151,6 +162,7 @@ def build_terraced_solid(engine, voxels, floor_margin_ft=10.0):
 
 
 def build_combined_mesh(real_geometry, engine, voxels):
+    import trimesh
     context = build_context_meshes(real_geometry)
     terrace = build_terraced_solid(engine, voxels)
     all_meshes = [terrace, context["tunnel"], context["secondary_entrance"], context["metro_connector"]]
@@ -170,6 +182,7 @@ def build_named_scene(real_geometry, engine, voxels):
     only sees one object); exporting a Scene preserves per-part names as
     separate Blender objects on import.
     """
+    import trimesh
     context = build_context_meshes(real_geometry)
     terrace = build_terraced_solid(engine, voxels)
     scene = trimesh.Scene()
@@ -192,6 +205,7 @@ def mirror_mesh_y(mesh, site_length_ft):
     axo_label_points mirror_y) -- section/plan cuts don't need this, they
     have their own post-projection mirror_y in export_dxf/export_svg.
     """
+    import trimesh
     verts = mesh.vertices.copy()
     verts[:, 1] = site_length_ft - verts[:, 1]
     faces = mesh.faces[:, ::-1]
@@ -391,6 +405,91 @@ def path3d_to_2d_segments(path3d):
 def grid_layer_points(real_geometry):
     """LAYER_04_GRID reference points: real column centers, (x, y_length)."""
     return [(c["x"], c["z"]) for c in real_geometry["column_positions"]]
+
+
+def _order_quad_corners_xy(corners_xy):
+    """Sort 4 (x, y) corners by angle around their own centroid so they trace
+    a proper non-crossing loop -- same fix as Viewport.jsx's
+    orderQuadCorners, needed for the same reason: Rhino's real per-plate
+    corner order (real_slabs[i]["top_corners_ft"], see the real-slab-graph
+    supplement) is a raster/grid order, not a boundary loop, and using it
+    directly would draw a crossed/bowtie polygon."""
+    cx = sum(p[0] for p in corners_xy) / len(corners_xy)
+    cy = sum(p[1] for p in corners_xy) / len(corners_xy)
+    import math as _math
+    return sorted(corners_xy, key=lambda p: _math.atan2(p[1] - cy, p[0] - cx))
+
+
+def _circle_polyline(cx, cy, radius, segments=16):
+    import math as _math
+    pts = [
+        (cx + radius * _math.cos(2 * _math.pi * i / segments),
+         cy + radius * _math.sin(2 * _math.pi * i / segments))
+        for i in range(segments)
+    ]
+    return pts + [pts[0]]
+
+
+def real_slab_plan_layers(real_geometry):
+    """Flattened structural plan of the REAL slabs/columns (2026-07-09
+    cut-sheet flatten supplement) -- one DXF/SVG layer per real level
+    ("SLABS_L1"/"SLABS_L2"/"SLABS_L3", each holding that level's real
+    floor_slab + ramp_slab footprints as closed polygons, plan-projected --
+    dropping z is exact for footprint purposes even for the tilted ramp_slab
+    plates, since their tilt is purely vertical/length-plane, never in-plan,
+    same fact build_column_slab_graph relies on) plus one "COLUMNS" layer
+    (real per-column circles at real diameter, not centroid points like the
+    older grid_layer_points above).
+
+    This is a real quantity/schedule drawing, not a CNC nesting layout --
+    cast concrete slabs and existing columns are the wrong scale to "nest"
+    on a stock sheet; a labeled plan is what a contractor actually uses for
+    these two material families. True nested cut-layouts for the smaller
+    shop-fabricated kinds (steel plates, timber members) are a separate,
+    later step once their real fabrication method is decided (per the plan
+    doc).
+
+    Returns (layers, labels) ready for export_dxf/export_svg/export_png.
+    """
+    layers = {}
+    labels = []
+
+    for slab in real_geometry.get("real_slabs", []):
+        layer_name = f"SLABS_{slab['level']}"
+        corners_xy = _order_quad_corners_xy([(c[0], c[1]) for c in slab["top_corners_ft"]])
+        polygon = corners_xy + [corners_xy[0]]
+        layers.setdefault(layer_name, []).append(polygon)
+        cx = sum(p[0] for p in corners_xy) / len(corners_xy)
+        cy = sum(p[1] for p in corners_xy) / len(corners_xy)
+        tag = "RAMP" if slab["kind"] == "ramp_slab" else "SLAB"
+        labels.append((
+            f"{slab['parent']} [{tag}] {slab['area_ft2']:.0f}sf x {slab['thickness_ft']*12:.0f}\"",
+            (cx, cy),
+        ))
+
+    columns = real_geometry.get("real_columns", [])
+    if columns:
+        layers["COLUMNS"] = [_circle_polyline(c["x"], c["z"], c["diameter_ft"] / 2) for c in columns]
+        labels.append((
+            f"{len(columns)} real columns, {columns[0]['diameter_ft']:.2f}ft dia typ.",
+            (columns[0]["x"], columns[0]["z"]),
+        ))
+
+    return layers, labels
+
+
+def export_real_slab_plan(real_geometry, out_path, fmt="dxf", mirror_y=False):
+    """Convenience wrapper: real_slab_plan_layers() -> export_dxf/svg/png.
+    fmt: "dxf", "svg", or "png"."""
+    layers, labels = real_slab_plan_layers(real_geometry)
+    title = "Real Slab/Column Plan -- Pershing Metabolizer"
+    if fmt == "dxf":
+        return export_dxf(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    if fmt == "svg":
+        return export_svg(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    if fmt == "png":
+        return export_png(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    raise ValueError(f"unknown fmt {fmt!r}, expected dxf/svg/png")
 
 
 def format_elevation_ft(z_ft):

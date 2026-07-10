@@ -13,6 +13,27 @@ import * as THREE from 'three';
 
 export const GHOST_COLOR = '#8f9aa6';
 
+// Ghosted-mode outline (2026-07-10): a thin grey/black fringe around every
+// shape so translucent geometry stays legible instead of dissolving into an
+// indistinct gray haze. Standard "inverted hull" technique -- a second copy
+// of the same geometry/instance data, scaled up a few percent, BackSide
+// only (so just the silhouette fringe shows, not a solid duplicate), flat
+// unlit color. Works uniformly across every rendering shape in this scene
+// (raw instancedMesh, drei Instances, custom BufferGeometry, a loaded OBJ
+// scene graph) since it only needs "the same shape again, slightly bigger" --
+// there's no single generic "outline any child" primitive to lean on
+// instead, so each component adds its own outline pass using these shared
+// constants/helper rather than reinventing the color/scale per call site.
+export const OUTLINE_COLOR = '#2a2e33';
+export const OUTLINE_SCALE = 1.04;
+
+export function outlineMaterialProps() {
+  return {
+    color: OUTLINE_COLOR, side: THREE.BackSide, roughness: 1, metalness: 0,
+    transparent: false, depthWrite: true,
+  };
+}
+
 export const SHADING_MODES = [
   { key: 'colored', label: 'COLORED' },
   { key: 'ghosted', label: 'GHOSTED' },

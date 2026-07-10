@@ -22,7 +22,8 @@ from logic.ai_synthesizer import (
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 from logic.pershing_api import (
-    RebuildParams, BakeGrids, get_config as pershing_get_config, rebuild as pershing_rebuild,
+    RebuildParams, BakeGrids, GrowNetworkRequest, get_config as pershing_get_config,
+    rebuild as pershing_rebuild, grow_network as pershing_grow_network,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
     bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
 )
@@ -34,13 +35,24 @@ SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
 
 app = FastAPI(title="Memory Machine API")
 
-# Dev-only CORS: the React/Vite frontend runs on its own dev-server port
-# (5173) and calls this API cross-origin. Local single-user tool, no auth
-# boundary to protect yet -- tighten this before any real deployment.
+# Dev-only CORS: the React/Vite frontend runs on its own dev-server port and
+# calls this API cross-origin. Local single-user tool, no auth boundary to
+# protect yet -- tighten this before any real deployment.
+#
+# Regex, not a fixed ["...:5173"] allowlist (2026-07-09 fix): Vite picks the
+# next free port whenever 5173 is already taken (e.g. a second dev server, a
+# stray process from an earlier session) -- with a hardcoded single-port
+# allowlist that silently mismatches origin, every fetch to this API gets
+# CORS-blocked, an unhandled rejection crashes whichever component made the
+# request (StaticContextGroup's OBJ fetch, in the reported case), and that
+# takes the whole WebGLRenderer down with it ("shows for a second then goes
+# black"). Matching any localhost/127.0.0.1 port keeps the same dev-only
+# security posture (still not a real origin allowlist) while not depending
+# on exactly one port being free.
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -510,6 +522,15 @@ async def pershing_config():
 @app.post("/api/pershing/rebuild")
 async def pershing_rebuild_route(params: RebuildParams):
     return pershing_rebuild(params)
+
+
+@app.post("/api/pershing/grow-network")
+async def pershing_grow_network_route(payload: GrowNetworkRequest):
+    """Grows the Space Colonization pedestrian circulation network against
+    whatever terrain params the frontend currently has set -- synchronous
+    (see grow_network()'s own docstring for why this doesn't need the
+    async job-polling pattern the Blender build tier below uses)."""
+    return pershing_grow_network(payload)
 
 
 @app.get("/api/pershing/sketch")

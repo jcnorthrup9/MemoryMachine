@@ -40,14 +40,27 @@ const BLENDER_BUILD_LABEL = {
 
 const AMENITY_KINDS = ['water_plane', 'water_cascade_block', 'misting_line', 'bench_assembly', 'restroom_pod', 'fountain'];
 
+const MOTIVATOR_LABELS = [
+  ['shade', 'Shade'], ['water', 'Water'], ['rest', 'Rest'],
+  ['foot_traffic', 'Foot Traffic'], ['deficit', 'Deficit'],
+];
+
 export default function ParamPanel({
   config, params, onParamsChange, onPaint, onRebuild, slabHarvestTons, kindCounts, usedRealAmenityData,
   usedRealFootTrafficData, circulationVoxelCount, rebuilding, blenderBuild, onBuildInBlender,
-  lineartEnabled, onLineartEnabledChange,
+  lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange, onGrowNetwork,
+  growingNetwork, networkResult,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
   const [newBuilding, setNewBuilding] = useState(NEW_BUILDING_DEFAULTS);
+
+  const setNetworkWeight = (key) => (value) =>
+    onNetworkParamsChange({
+      ...networkParams,
+      motivator_weights: { ...networkParams.motivator_weights, [key]: value },
+    });
+  const setNetworkField = (key) => (value) => onNetworkParamsChange({ ...networkParams, [key]: value });
 
   const addBuilding = () => {
     onParamsChange({ ...params, buildings: [...params.buildings, newBuilding] });
@@ -280,6 +293,55 @@ export default function ParamPanel({
         )}
         {blenderBuild?.status === 'error' && (
           <div className="font-mono-sm text-[11px] text-error break-words">{blenderBuild.error}</div>
+        )}
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Circulation Network (Space Colonization)
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Grows a real pedestrian network outward from the Metro entrance toward weighted motivators --
+          explicit action, separate from the live rebuild loop above (a real growth simulation, not
+          instant per-voxel math).
+        </p>
+        {MOTIVATOR_LABELS.map(([key, label]) => (
+          <Slider
+            key={key}
+            label={label}
+            value={networkParams.motivator_weights[key]}
+            min={0}
+            max={2}
+            step={0.1}
+            onChange={setNetworkWeight(key)}
+          />
+        ))}
+        <Slider
+          label="Step (ft)"
+          value={networkParams.step_ft}
+          min={6}
+          max={30}
+          step={1}
+          onChange={setNetworkField('step_ft')}
+        />
+        <button
+          onClick={onGrowNetwork}
+          disabled={growingNetwork || !onGrowNetwork}
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          {growingNetwork ? 'Growing...' : 'Grow Network'}
+        </button>
+        {networkResult && (
+          <div className="font-mono-sm text-[11px] text-on-surface-variant space-y-1">
+            <div>nodes: <span className="text-accent">{networkResult.node_count}</span></div>
+            <div>
+              edges: <span className="text-accent">
+                {networkResult.network.length - (networkResult.kind_counts.lookout_point ?? 0)}
+              </span>
+            </div>
+            <div>lookouts: <span className="text-accent">{networkResult.kind_counts.lookout_point ?? 0}</span></div>
+            <div>attractors unconsumed: <span className="text-accent">{networkResult.attractors_unconsumed}</span></div>
+          </div>
         )}
       </div>
 

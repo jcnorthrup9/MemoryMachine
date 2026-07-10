@@ -62,3 +62,17 @@ export async function getBlenderBuildStatus(jobId) {
   if (!res.ok) throw new Error(`blender build status fetch failed: ${res.status}`);
   return res.json();
 }
+
+// Grows the Space Colonization pedestrian circulation network against the
+// given terrain params -- synchronous (see logic/pershing_api.py's
+// grow_network() docstring for why this doesn't need the blender-build
+// tier's async job-polling pattern).
+export async function growNetwork(rebuildParams, networkParams) {
+  const res = await fetch('/api/pershing/grow-network', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild: rebuildParams, network: networkParams }),
+  });
+  if (!res.ok) throw new Error(`grow network failed: ${res.status}`);
+  return res.json();
+}

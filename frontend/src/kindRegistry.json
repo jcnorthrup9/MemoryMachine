@@ -1,0 +1,53 @@
+{
+  "_meta": "Single source of truth for every StructuralElement kind's plan-footprint dims, viewport color, geometry shape, and material family (2026-07-10 consolidation pass). Previously duplicated by hand across terracing_engine.py (MATERIAL_FAMILY/CUT_SHEET_PROTOTYPE_DIMS_FT), blender_cockpit.py (_PROTOTYPE_DIMS_FT/_VERTICAL_CYLINDER_KINDS/_HEX_KINDS), and Viewport.jsx (PROTOTYPE_DIMS_FT/KIND_COLOR/VERTICAL_CYLINDER_KINDS/HEX_KINDS) -- three independently-maintained copies that had already drifted (e.g. blender_cockpit.py never picked up circulation_network.py's footpath/ramp/escalator kinds or the typology tree/building_mass kinds). All three now load this file instead of hardcoding their own table. shape: 'box' (dims_ft = [x,y] plan footprint, real height always comes from the spec itself), 'vertical_cylinder' (single-point, endpoint derived as z_top-height -> z_top), 'hex' (single-point hex prism), 'two_point' (no dims_ft -- geometry comes from radius_ft + the spec's own x2/y2/z2_ft, detected at runtime whenever x2_ft is not None), or 'real' (not a procedural StructuralElement at all -- real Rhino geometry with its own dedicated render path: real_slabs/real_columns).",
+  "kinds": {
+    "concrete_floor_block": { "shape": "box", "dims_ft": [9.0, 9.0], "color": "#8a8580", "material_family": "cast_concrete" },
+    "concrete_retaining_block": { "shape": "box", "dims_ft": [3.0, 3.0], "color": "#8a8580", "material_family": "cast_concrete" },
+    "steel_collar_sleeve": { "shape": "box", "dims_ft": [2.0, 2.0], "color": "#9aa3ad", "material_family": "structural_steel" },
+    "gusset_plate": { "shape": "box", "dims_ft": [1.5, 0.1], "color": "#9aa3ad", "material_family": "structural_steel" },
+    "steel_strap_band": { "shape": "box", "dims_ft": [2.2, 0.15], "color": "#9aa3ad", "material_family": "structural_steel" },
+    "footing_shoe": { "shape": "box", "dims_ft": [1.3, 1.3], "color": "#9aa3ad", "material_family": "structural_steel" },
+    "glulam_post": { "shape": "box", "dims_ft": [1.0, 1.0], "color": "#8a6d4a", "material_family": "engineered_timber" },
+    "water_plane": { "shape": "box", "dims_ft": [8.0, 8.0], "color": "#26d9ff", "material_family": "amenity_fixture" },
+    "water_cascade_block": { "shape": "box", "dims_ft": [4.0, 1.5], "color": "#26d9ff", "material_family": "amenity_fixture" },
+    "misting_line": { "shape": "box", "dims_ft": [0.15, 0.15], "color": "#26d9ff", "material_family": "amenity_fixture" },
+    "bench_assembly": { "shape": "box", "dims_ft": [6.0, 2.0], "color": "#ff8c26", "material_family": "amenity_fixture" },
+    "restroom_pod": { "shape": "box", "dims_ft": [10.0, 8.0], "color": "#ff8c26", "material_family": "amenity_fixture" },
+    "fountain": { "shape": "box", "dims_ft": [4.0, 4.0], "color": "#ff8c26", "material_family": "amenity_fixture" },
+    "building_mass": { "shape": "box", "dims_ft": [1.0, 1.0], "color": "#b8b0a3", "material_family": "tbd_massing", "note": "unit footprint -- real width/depth ride on scale/scale_y instead, since building footprints vary per instance" },
+    "lookout_point": { "shape": "box", "dims_ft": [12.0, 12.0], "color": "#ff3fa0", "material_family": "structural_steel" },
+
+    "steel_bolt": { "shape": "vertical_cylinder", "color": "#9aa3ad", "material_family": "structural_steel" },
+    "bolt_flange_plate": { "shape": "vertical_cylinder", "color": "#9aa3ad", "material_family": "structural_steel" },
+    "tree_trunk": { "shape": "vertical_cylinder", "color": "#5a4530", "material_family": "vegetation" },
+
+    "steel_turnbuckle": { "shape": "hex", "color": "#c4cdd6", "material_family": "structural_steel" },
+    "tree_canopy": { "shape": "hex", "color": "#3a8a3f", "material_family": "vegetation" },
+
+    "steel_strut": { "shape": "two_point", "color": "#9aa3ad", "material_family": "structural_steel" },
+    "steel_tie_rod": { "shape": "two_point", "color": "#9aa3ad", "material_family": "structural_steel" },
+    "knee_brace": { "shape": "two_point", "color": "#8a6d4a", "material_family": "engineered_timber" },
+    "timber_beam": { "shape": "two_point", "color": "#8a6d4a", "material_family": "engineered_timber" },
+    "footpath": { "shape": "two_point", "color": "#d9c9a3", "material_family": "cast_concrete" },
+    "footpath_bridge": { "shape": "two_point", "color": "#e8a23c", "material_family": "structural_steel" },
+    "ramp": { "shape": "two_point", "color": "#c9b083", "material_family": "cast_concrete" },
+    "ramp_bridge": { "shape": "two_point", "color": "#e8a23c", "material_family": "structural_steel" },
+    "escalator": { "shape": "two_point", "color": "#4fa6d9", "material_family": "mechanical_equipment" },
+    "escalator_bridge": { "shape": "two_point", "color": "#e8600c", "material_family": "mechanical_equipment" },
+
+    "floor_slab": { "shape": "real", "color": "#c9c2b3", "material_family": "existing_structure" },
+    "ramp_slab": { "shape": "real", "color": "#e8a23c", "material_family": "existing_structure" },
+    "real_column": { "shape": "real", "color": "#5f7d95", "material_family": "existing_structure" }
+  },
+  "material_families": {
+    "cast_concrete": { "fabrication_method": "cast-in-place" },
+    "structural_steel": { "fabrication_method": "milled/welded" },
+    "engineered_timber": { "fabrication_method": "milled" },
+    "amenity_fixture": { "fabrication_method": "purchased/prefab" },
+    "mechanical_equipment": { "fabrication_method": "purchased equipment" },
+    "vegetation": { "fabrication_method": "planted" },
+    "tbd_massing": { "fabrication_method": "TBD" },
+    "existing_structure": { "fabrication_method": "as-built (no fabrication)" }
+  },
+  "cut_sheet_families": ["cast_concrete", "structural_steel", "engineered_timber", "amenity_fixture", "mechanical_equipment", "tbd_massing"]
+}

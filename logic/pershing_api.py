@@ -23,7 +23,7 @@ if BASE_DIR not in sys.path:
 
 from terracing_engine import (  # noqa: E402
     TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, BuildingMassEngine,
-    STRUCTURAL_BAY_FT)
+    STRUCTURAL_BAY_FT, build_cut_sheet_manifest, slab_key)
 # sketch_weight_mapper.py's find_latest_sketch is pure os.listdir/getmtime --
 # safe to import here even though the rest of that module needs PIL/
 # svgpathtools (those imports are local to the functions that need them,
@@ -37,9 +37,18 @@ from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # n
 # since both modules define a same-named find_latest_csv().
 from foot_traffic import (  # noqa: E402
     load_foot_traffic_hotspots_from_csv, find_latest_csv as find_latest_foot_traffic_csv)
+from circulation_network import CirculationNetworkEngine  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights_cache.json")
+# All 5 painted grids, written by THIS module's own bake() (2026-07-10
+# persistence supplement) -- SKETCH_CACHE_PATH above is a different,
+# externally-produced bootstrap (a Blender-side precompute script writes
+# only {"weights", "hardscape_mask"}; this app never wrote to it, so
+# painting in the web app was previously lost on every backend restart).
+# Kept as a separate file rather than repurposing SKETCH_CACHE_PATH's
+# schema, since other tools may still read that one in its original shape.
+PAINT_STATE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "web_paint_state.json")
 SKETCH_DIR = os.path.join(BASE_DIR, "data", "sketches")
 os.makedirs(SKETCH_DIR, exist_ok=True)
 
@@ -67,20 +76,33 @@ AMENITY_CSV_PATH = find_latest_csv()
 # of what the frontend's toggle is set to.
 FOOT_TRAFFIC_CSV_PATH = find_latest_foot_traffic_csv()
 
-# Same bootstrap pattern as blender_cockpit.py: start from the precomputed
-# sketch cache if one exists, empty grids otherwise.
-if os.path.exists(SKETCH_CACHE_PATH):
+# Bootstrap all 5 grids: prefer this app's own saved state (PAINT_STATE_PATH,
+# written by bake() below every time you paint+bake) if one exists -- that's
+# real prior work, more recent than anything else. Otherwise fall back to
+# the older precomputed-sketch-cache bootstrap (blender_cockpit.py's pattern,
+# weights/hardscape only) for a first-ever run, empty grids if neither exists.
+if os.path.exists(PAINT_STATE_PATH):
+    with open(PAINT_STATE_PATH) as f:
+        _paint_state = json.load(f)
+    SKETCH_WEIGHTS = _paint_state["canyon"]
+    HARDSCAPE_MASK = _paint_state["hardscape"]
+    WATER_SHADE_MASK = _paint_state["water_shade"]
+    GREENSCAPE_MASK = _paint_state["greenscape"]
+    AMENITY_RESTING_MASK = _paint_state["amenity_resting"]
+elif os.path.exists(SKETCH_CACHE_PATH):
     with open(SKETCH_CACHE_PATH) as f:
         _cache = json.load(f)
     SKETCH_WEIGHTS = _cache["weights"]
     HARDSCAPE_MASK = _cache.get("hardscape_mask") or _empty_mask(NX, NZ)
+    WATER_SHADE_MASK = _empty_mask(NX, NZ)
+    GREENSCAPE_MASK = _empty_mask(NX, NZ)
+    AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
 else:
     SKETCH_WEIGHTS = _empty_mask(NX, NZ)
     HARDSCAPE_MASK = _empty_mask(NX, NZ)
-
-WATER_SHADE_MASK = _empty_mask(NX, NZ)
-GREENSCAPE_MASK = _empty_mask(NX, NZ)
-AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
+    WATER_SHADE_MASK = _empty_mask(NX, NZ)
+    GREENSCAPE_MASK = _empty_mask(NX, NZ)
+    AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
 
 # The sketch image the paint canvas displays as its background -- starts
 # as whatever's already in data/sketches/ (same lookup blender_cockpit.py
@@ -132,17 +154,37 @@ class BakeGrids(BaseModel):
     amenity_resting: list[list[bool]]
 
 
+def _save_paint_state():
+    """Persist all 5 live grids to PAINT_STATE_PATH (2026-07-10 persistence
+    supplement) so a backend restart doesn't lose painted work -- previously
+    bake() only updated the in-memory globals, never written anywhere.
+    Write-to-temp-then-rename so a crash/kill mid-write can't leave a
+    truncated, unreadable state file behind (os.replace is atomic on both
+    Windows and POSIX)."""
+    os.makedirs(os.path.dirname(PAINT_STATE_PATH), exist_ok=True)
+    state = {
+        "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water_shade": WATER_SHADE_MASK,
+        "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK,
+    }
+    tmp_path = PAINT_STATE_PATH + ".tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(state, f)
+    os.replace(tmp_path, PAINT_STATE_PATH)
+
+
 def bake(grids: BakeGrids):
-    """Overwrite the five live grids from a completed paint session. Does
-    NOT trigger a rebuild itself -- the frontend calls /rebuild right
-    after, reusing its existing rebuild path rather than duplicating it
-    here with a second copy of the current slider params."""
+    """Overwrite the five live grids from a completed paint session and
+    persist them (see _save_paint_state). Does NOT trigger a rebuild itself
+    -- the frontend calls /rebuild right after, reusing its existing
+    rebuild path rather than duplicating it here with a second copy of the
+    current slider params."""
     global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
     SKETCH_WEIGHTS = grids.canyon
     HARDSCAPE_MASK = grids.hardscape
     WATER_SHADE_MASK = grids.water_shade
     GREENSCAPE_MASK = grids.greenscape
     AMENITY_RESTING_MASK = grids.amenity_resting
+    _save_paint_state()
     return {
         "status": "ok",
         "counts": {
@@ -197,21 +239,50 @@ def get_config():
     }
 
 
-def rebuild(params: RebuildParams):
+def _serialize_specs(specs):
+    """Shared StructuralElement -> JSON dict shape, used by both rebuild()'s
+    "structural" key and grow_network()'s "network" key -- keeping this in
+    one place means the two response payloads can never silently drift
+    apart in which fields they expose."""
+    return [
+        {
+            "kind": s.kind, "x_ft": s.x_ft, "y_ft": s.y_ft, "z_top_ft": s.z_top_ft,
+            "height_ft": s.height_ft, "scale": s.scale, "rotation_deg": s.rotation_deg,
+            "x2_ft": s.x2_ft, "y2_ft": s.y2_ft, "z2_ft": s.z2_ft, "radius_ft": s.radius_ft,
+            "scale_y": s.scale_y,
+            "column_id": s.column_id, "column_id2": s.column_id2, "slab_id": s.slab_id,
+        }
+        for s in specs
+    ]
+
+
+def _run_pipeline(params: RebuildParams):
     """
     Same math blender_cockpit.rebuild_all() runs, minus the bpy mesh build
-    -- returns JSON voxels + structural/typology specs for the frontend to
-    render however it likes (Three.js instancing, etc). Returns every
-    voxel (not just excavated ones) -- see build_terrace_mesh's
-    floor_z-referenced height, which is always positive: the unexcavated
-    majority of the site is a real base slab the canyon cuts into, not
-    empty space, so it can't be filtered out.
+    -- builds the TerracingEngine/StructuralFramingEngine/TypologyAssetEngine/
+    BuildingMassEngine stack from RebuildParams. Shared by rebuild() and
+    grow_network(), which both need the identical terrain-shaping setup
+    (the grown network must reflect whatever canyon/amenity state is
+    currently on screen, not a separately-derived copy of it) -- extracted
+    here specifically so the two can't silently drift out of sync.
 
-    hardscape_regions is applied unconditionally now -- there's no
-    separate "protect hardscape" toggle anymore (removed 2026-07-06):
-    with painting as the only way to mark a hardscape zone, painting one
-    already means "protect this," so a second switch to also enable that
-    protection was redundant, dead-looking UI.
+    hardscape_regions is applied unconditionally -- there's no separate
+    "protect hardscape" toggle anymore (removed 2026-07-06): with painting
+    as the only way to mark a hardscape zone, painting one already means
+    "protect this," so a second switch to also enable that protection was
+    redundant, dead-looking UI.
+
+    Returns (engine, voxels, typology_specs, all_specs, meta) -- voxels is
+    the flat, already-classified list engine.run() returns (every voxel,
+    not just excavated ones: an unexcavated voxel still gets a solid block
+    built from floor_z up to grade, so the un-cut majority of the site
+    reads as a real base slab the canyon is cut INTO, not a disconnected
+    floating island of excavated cells -- an earlier version filtered
+    these out as a payload-size optimization, which silently dropped that
+    entire base slab from the web viewport). typology_specs is
+    TypologyAssetEngine's own output alone (grow_network() needs these
+    positions as circulation-network attractors, separate from the full
+    all_specs list rebuild() renders).
     """
     hardscape_regions = [{"mask": HARDSCAPE_MASK}]
     transit_falloff_ft = params.canyon_width * STRUCTURAL_BAY_FT
@@ -249,22 +320,35 @@ def rebuild(params: RebuildParams):
     result = structural.run()
 
     typology = TypologyAssetEngine(REAL_GEOMETRY, engine)
+    typology_specs = typology.run()
     buildings = BuildingMassEngine([b.model_dump() for b in params.buildings]).run()
-    all_specs = result["harvested_blocks"] + result["structural"] + typology.run() + buildings
+    all_specs = result["harvested_blocks"] + result["structural"] + typology_specs + buildings
+
+    meta = {
+        "max_canyon_depth_ft": max_canyon_depth_ft,
+        "used_real_amenity_data": deficit_hotspots is not None,
+        "used_real_foot_traffic_data": foot_traffic_hotspots is not None,
+        "slab_harvest_tons": result["slab_harvest_tons"],
+        # Real-slab-driven remaining/removed cells (2026-07-09 real-slab-
+        # driven harvest supplement) -- depends on this rebuild's live
+        # excavation params, unlike real_slabs/real_columns below which are
+        # fixed geometry, so this is recomputed every call, not passed
+        # through from REAL_GEOMETRY as-is.
+        "real_slab_fragments": structural.real_slab_fragments(),
+    }
+    return engine, voxels, typology_specs, all_specs, meta
+
+
+def rebuild(params: RebuildParams):
+    """Returns JSON voxels + structural/typology specs for the frontend to
+    render however it likes (Three.js instancing, etc)."""
+    engine, voxels, typology_specs, all_specs, meta = _run_pipeline(params)
 
     kind_counts = {}
     for s in all_specs:
         kind_counts[s.kind] = kind_counts.get(s.kind, 0) + 1
 
     return {
-        # Every voxel, not just excavated ones -- mirrors
-        # blender_cockpit.py's build_terrace_mesh exactly: an unexcavated
-        # voxel (z_ft == 0) still gets a solid block built from floor_z up
-        # to grade, so the un-cut majority of the site reads as a real
-        # base slab the canyon is cut INTO, not a disconnected floating
-        # island of excavated cells. An earlier version filtered these out
-        # as a payload-size optimization, which silently dropped that
-        # entire base slab from the web viewport.
         "voxels": [
             {
                 "gx": v.gx, "gy": v.gy, "z_ft": v.z_ft, "level": v.level, "typology": v.typology,
@@ -272,19 +356,92 @@ def rebuild(params: RebuildParams):
             }
             for v in voxels
         ],
-        "structural": [
-            {
-                "kind": s.kind, "x_ft": s.x_ft, "y_ft": s.y_ft, "z_top_ft": s.z_top_ft,
-                "height_ft": s.height_ft, "scale": s.scale, "rotation_deg": s.rotation_deg,
-                "x2_ft": s.x2_ft, "y2_ft": s.y2_ft, "z2_ft": s.z2_ft, "radius_ft": s.radius_ft,
-                "scale_y": s.scale_y,
-            }
-            for s in all_specs
-        ],
+        "structural": _serialize_specs(all_specs),
         "kind_counts": kind_counts,
-        "used_real_amenity_data": deficit_hotspots is not None,
-        "used_real_foot_traffic_data": foot_traffic_hotspots is not None,
-        "slab_harvest_tons": result["slab_harvest_tons"],
-        "max_canyon_depth_ft": max_canyon_depth_ft,
+        "used_real_amenity_data": meta["used_real_amenity_data"],
+        "used_real_foot_traffic_data": meta["used_real_foot_traffic_data"],
+        "slab_harvest_tons": meta["slab_harvest_tons"],
+        "max_canyon_depth_ft": meta["max_canyon_depth_ft"],
         "voxel_ft": VOXEL_FT,
+        # Real slab/column solids extracted directly from live Rhino (2026-07-09
+        # real-slab-graph supplement, see plan doc) -- fixed geometry, doesn't
+        # depend on excavation params, so just passed through from REAL_GEOMETRY
+        # as-is rather than recomputed per rebuild.
+        # `key` added per entry (2026-07-09) so the frontend can look up
+        # real_slab_fragments[slab.key] directly -- reconstructing
+        # slab_key()'s f"{parent}_{z_top_ft}" string in JS would silently
+        # mismatch Python's float formatting (JSON -20.0 parses to the JS
+        # number -20, and `${-20}` stringifies to "-20" not "-20.0").
+        "real_slabs": [{**s, "key": slab_key(s)} for s in REAL_GEOMETRY.get("real_slabs", [])],
+        "real_columns": REAL_GEOMETRY.get("real_columns", []),
+        # Per-slab remaining (not-yet-excavated) fragment cells, keyed by the
+        # same slab_key() string as each real_slabs entry's `key` above --
+        # only remaining/removed_count sent (not the full "slab" sub-dict
+        # real_slab_fragments() also returns, since the frontend already has
+        # that from real_slabs above).
+        "real_slab_fragments": {
+            key: {"remaining": [[wx, wy] for _, _, wx, wy in entry["remaining"]],
+                  "removed_count": entry["removed_count"]}
+            for key, entry in meta["real_slab_fragments"].items()
+        },
+        # Material-categorized cut sheet (2026-07-09 cut-sheet supplement) --
+        # flattens all_specs (this rebuild's actual procedural elements) plus
+        # the real slabs/columns into count/area/volume/linear-length per
+        # kind, grouped by material family. Recomputed every rebuild since
+        # all_specs depends on the live excavation/shoring params.
+        "cut_sheet": build_cut_sheet_manifest(
+            all_specs, REAL_GEOMETRY.get("real_slabs", []), REAL_GEOMETRY.get("real_columns", [])),
+    }
+
+
+class NetworkParams(BaseModel):
+    motivator_weights: dict[str, float] = {
+        "shade": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+    }
+    step_ft: float = 15.0
+    max_iterations: int = 300
+
+
+class GrowNetworkRequest(BaseModel):
+    rebuild: RebuildParams = RebuildParams()
+    network: NetworkParams = NetworkParams()
+
+
+def grow_network(payload: GrowNetworkRequest):
+    """
+    Grows a Space Colonization pedestrian circulation network from the
+    real Metro entrance on top of whatever canyon/amenity state
+    payload.rebuild describes -- runs the exact same _run_pipeline() setup
+    rebuild() uses so the network reflects the current terrain, not a
+    separately-derived snapshot.
+
+    Synchronous, not an async job like the headless-Blender build tier --
+    that pattern exists specifically because a `--background` Blender
+    subprocess launch has real, unavoidable multi-second startup cost;
+    this is pure in-process Python+numpy over this site's 40x67 voxel
+    grid, designed to finish well under a second, so it mirrors rebuild()'s
+    own existing synchronous pattern instead of introducing job-polling
+    machinery for an operation with no external process and no meaningful
+    blocking risk.
+    """
+    engine, _voxels, typology_specs, _all_specs, _meta = _run_pipeline(payload.rebuild)
+
+    net = CirculationNetworkEngine(
+        REAL_GEOMETRY, engine, typology_specs,
+        motivator_weights=payload.network.motivator_weights,
+        step_ft=payload.network.step_ft,
+        max_iterations=payload.network.max_iterations,
+    )
+    specs = net.run()
+
+    kind_counts = {}
+    for s in specs:
+        kind_counts[s.kind] = kind_counts.get(s.kind, 0) + 1
+
+    return {
+        "network": _serialize_specs(specs),
+        "kind_counts": kind_counts,
+        "node_count": len(net.nodes),
+        "attractor_count": len(net.attractors),
+        "attractors_unconsumed": sum(1 for a in net.attractors if not a.consumed),
     }

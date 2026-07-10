@@ -66,7 +66,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from terracing_engine import (  # noqa: E402
-    TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, STRUCTURAL_BAY_FT)
+    TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, STRUCTURAL_BAY_FT, KIND_REGISTRY)
 # amenity_deficit.py only needs the stdlib csv module -- unlike
 # sketch_weight_mapper.py (PIL/svgpathtools), safe to import directly in
 # Blender's bundled Python, no precompute-cache step needed.
@@ -123,34 +123,31 @@ STRUCTURAL_COLLECTION_NAME = "mm_structural_frame"
 # by reusing the same technique build_terrace_mesh already uses for voxels:
 # concatenate every instance of a kind into ONE bmesh/object per kind, same
 # pattern, same speed.
+#
+# Derived from KIND_REGISTRY (2026-07-10 consolidation pass -- terracing_
+# engine.py's shared import of frontend/src/kindRegistry.json), replacing a
+# hand-maintained copy that had independently drifted from Viewport.jsx's:
+# it never picked up circulation_network.py's footpath/ramp/escalator kinds
+# or the typology tree_trunk/tree_canopy/building_mass kinds, which meant
+# build_structural_meshes (below, iterates _ALL_STRUCT_KINDS rather than
+# whatever's actually in a given rebuild's specs) silently dropped those
+# kinds' meshes in this Blender-side tool even though the live web app
+# rendered them fine. Deriving from the shared registry fixes that gap.
 _PROTOTYPE_DIMS_FT = {
-    "concrete_floor_block": (9.0, 9.0, 8.0 / 12.0),
-    "concrete_retaining_block": (3.0, 3.0, 8.0 / 12.0),
-    "steel_collar_sleeve": (2.0, 2.0, 1.0),
-    "gusset_plate": (1.5, 0.1, 1.5),
-    "steel_strap_band": (2.2, 0.15, 1.0),
-    "footing_shoe": (1.3, 1.3, 1.0),
-    "glulam_post": (1.0, 1.0, 1.0),
-    # Programmatic Typology Mixing Engine (New Feature Directives section 4)
-    # -- GROTTO/SANCTUARY furnishing kinds, see TypologyAssetEngine.
-    "water_plane": (8.0, 8.0, 0.2),
-    "water_cascade_block": (4.0, 1.5, 1.0),
-    "misting_line": (0.15, 0.15, 1.0),
-    "bench_assembly": (6.0, 2.0, 1.5),
-    "restroom_pod": (10.0, 8.0, 8.0),
-    "fountain": (4.0, 4.0, 3.0),
+    kind: tuple(entry["dims_ft"]) for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "box"
 }
 # Two-point kinds are detected at runtime (spec.x2_ft is not None); these
 # sets are only for the remaining single-point non-box kinds.
-_VERTICAL_CYLINDER_KINDS = {"steel_bolt", "bolt_flange_plate"}
-_HEX_KINDS = {"steel_turnbuckle"}
+_VERTICAL_CYLINDER_KINDS = {
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "vertical_cylinder"
+}
+_HEX_KINDS = {kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "hex"}
 # Every kind that can ever appear -- iterated even when a given rebuild
 # produces zero of a kind, so switching STEEL <-> WOOD (or dropping a
 # connection condition) correctly empties that kind's mesh instead of
 # leaving stale geometry from the last rebuild.
-_ALL_STRUCT_KINDS = (
-    tuple(_PROTOTYPE_DIMS_FT) + tuple(_VERTICAL_CYLINDER_KINDS) + tuple(_HEX_KINDS)
-    + ("steel_strut", "steel_tie_rod", "knee_brace", "timber_beam")
+_ALL_STRUCT_KINDS = tuple(
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] != "real"
 )
 
 _BOX_FACES = ((0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7))
@@ -257,7 +254,7 @@ def build_structural_meshes(coll, specs):
                 p1 = (spec.x_ft, spec.y_ft, spec.z_top_ft)
                 _add_cylinder(bm, p0, p1, spec.radius_ft or 0.2)
             else:
-                base_sx, base_sy, _ = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0))
+                base_sx, base_sy = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0))
                 size = (base_sx * spec.scale, base_sy * spec.scale, spec.height_ft)
                 center = (spec.x_ft, spec.y_ft, spec.z_top_ft - spec.height_ft / 2)
                 _add_rotated_box(bm, center, size, _rotation_for(spec))

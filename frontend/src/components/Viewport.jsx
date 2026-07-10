@@ -4,69 +4,47 @@ import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCame
 import * as THREE from 'three';
 import StaticContext from './StaticContext.jsx';
 import BlenderBuild from './BlenderBuild.jsx';
-import { materialProps, SHADING_MODES } from '../shading.js';
+import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES } from '../shading.js';
+import KIND_REGISTRY from '../kindRegistry.json';
 
-// Plan-footprint dims (feet) per box-shaped StructuralElement.kind --
-// mirrors blender_cockpit.py's _PROTOTYPE_DIMS_FT exactly. Cylinder/hex
-// kinds don't use this map -- their geometry comes from spec.radius_ft
-// (and, for two-point kinds, x2/y2/z2_ft) instead; see
-// CylinderInstances/HexInstances below, which mirror
-// blender_cockpit.py's _add_cylinder/_add_hex_prism and the
-// x2_ft-is-not-None / _HEX_KINDS / _VERTICAL_CYLINDER_KINDS branching in
+// Rounds an instance count up to the next power of 2 (min 8) -- 2026-07-10,
+// paired with the count-in-key remount fix above each <Instances> block.
+// Keying strictly on the raw count (the correctness fix) means EVERY
+// change in a kind's instance count forces a full remount (fresh GPU
+// buffer allocation) even for a change of 1 -- correct, but means dragging
+// a slider that grows a kind by one instance per tick remounts every tick.
+// Keying on this padded capacity instead only remounts when the count
+// crosses a power-of-2 boundary (O(log n) remounts as a count grows, same
+// standard growth strategy dynamic arrays use), while `range` (passed
+// separately, always the exact count) keeps the rendered instance count
+// exact regardless of the padded buffer size -- never over-renders.
+function paddedCapacity(count) {
+  if (count <= 0) return 0;
+  return Math.max(8, 2 ** Math.ceil(Math.log2(count)));
+}
+
+// Derived from the shared kind registry (2026-07-10 consolidation pass --
+// see kindRegistry.json's own _meta for why this replaced independently
+// hand-maintained copies of these same tables here, in terracing_engine.py,
+// and in blender_cockpit.py). Cylinder/hex kinds don't use PROTOTYPE_DIMS_FT
+// -- their geometry comes from spec.radius_ft (and, for two-point kinds,
+// x2/y2/z2_ft) instead; see CylinderInstances/HexInstances below, which
+// mirror blender_cockpit.py's _add_cylinder/_add_hex_prism and the
+// x2_ft-is-not-None / HEX_KINDS / VERTICAL_CYLINDER_KINDS branching in its
 // build_structural_meshes.
-const PROTOTYPE_DIMS_FT = {
-  concrete_floor_block: [9.0, 9.0],
-  concrete_retaining_block: [3.0, 3.0],
-  steel_collar_sleeve: [2.0, 2.0],
-  gusset_plate: [1.5, 0.1],
-  steel_strap_band: [2.2, 0.15],
-  footing_shoe: [1.3, 1.3],
-  glulam_post: [1.0, 1.0],
-  water_plane: [8.0, 8.0],
-  water_cascade_block: [4.0, 1.5],
-  misting_line: [0.15, 0.15],
-  bench_assembly: [6.0, 2.0],
-  restroom_pod: [10.0, 8.0],
-  fountain: [4.0, 4.0],
-  // Unit footprint -- BuildingMassEngine passes real width/depth directly
-  // via scale/scale_y rather than a fixed prototype size like every other
-  // box kind here, since building footprints vary per instance.
-  building_mass: [1.0, 1.0],
-};
-
-const VERTICAL_CYLINDER_KINDS = new Set(['steel_bolt', 'bolt_flange_plate', 'tree_trunk']);
-const HEX_KINDS = new Set(['steel_turnbuckle', 'tree_canopy']);
-
+const PROTOTYPE_DIMS_FT = Object.fromEntries(
+  Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'box').map(([k, v]) => [k, v.dims_ft]),
+);
+const VERTICAL_CYLINDER_KINDS = new Set(
+  Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'vertical_cylinder').map(([k]) => k),
+);
+const HEX_KINDS = new Set(
+  Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'hex').map(([k]) => k),
+);
 // Per-kind tint -- roughly matches the paint-category tints already
 // established for Water/Shade (cyan) and Amenity/Resting (orange) so the
 // same semantic colors carry through from painting to rendered assets.
-const KIND_COLOR = {
-  concrete_floor_block: '#8a8580',
-  concrete_retaining_block: '#8a8580',
-  steel_collar_sleeve: '#9aa3ad',
-  gusset_plate: '#9aa3ad',
-  steel_strap_band: '#9aa3ad',
-  footing_shoe: '#9aa3ad',
-  steel_bolt: '#9aa3ad',
-  bolt_flange_plate: '#9aa3ad',
-  steel_strut: '#9aa3ad',
-  steel_tie_rod: '#9aa3ad',
-  steel_turnbuckle: '#c4cdd6',
-  glulam_post: '#8a6d4a',
-  knee_brace: '#8a6d4a',
-  timber_beam: '#8a6d4a',
-  water_plane: '#26d9ff',
-  water_cascade_block: '#26d9ff',
-  misting_line: '#26d9ff',
-  bench_assembly: '#ff8c26',
-  restroom_pod: '#ff8c26',
-  fountain: '#ff8c26',
-  tree_trunk: '#5a4530',
-  tree_canopy: '#3a8a3f',
-  building_mass: '#b8b0a3',
-};
-
-const LEVEL_COLOR = ['#c2bdb4', '#7d9bb0', '#4d6b80', '#2a3f4d']; // grade -> deeper
+const KIND_COLOR = Object.fromEntries(Object.entries(KIND_REGISTRY.kinds).map(([k, v]) => [k, v.color]));
 
 // Site (x, y_ft, z_ft) -> Three.js (X, Y-up, Z). Real-feet Z (up) maps
 // straight to Three Y; real site "y" (length axis) needs a mirror
@@ -173,84 +151,6 @@ function ViewCamera({ view, center, siteWidthFt, siteLengthFt }) {
   );
 }
 
-// One instancedMesh PER LEVEL, each with a plain uniform material color --
-// NOT a single instancedMesh using setColorAt()/instanceColor (which is
-// what this originally used). instanceColor reliably renders solid black
-// specifically when viewed through a true OrthographicCamera aligned
-// exactly along an axis (confirmed empirically 2026-07-06 while building
-// the Front/Side elevation presets: reproduced with old and new lighting,
-// with and without tone mapping, with MeshBasicMaterial instead of
-// MeshStandardMaterial, and with side:DoubleSide -- the ONLY change that
-// fixed it was dropping instanceColor for a plain material.color, which
-// is exactly the pattern BoxInstances/CylinderInstances/StructuralInstances
-// below already use and which never showed this bug). Grouping by level
-// (max 4 distinct values, LEVEL_COLOR.length) keeps this just as cheap as
-// the single-mesh version.
-function TerraceVoxels({ voxels, voxelFt, siteLengthFt, maxCanyonDepthFt, shadingMode }) {
-  // Mirrors blender_cockpit.py's build_terrace_mesh: floor_z = -(max_canyon_depth_ft + 10.0),
-  // NOT a fixed constant -- every voxel, excavated or not, gets a solid
-  // block from this floor up to its own top, so the unexcavated majority
-  // of the site reads as a real base slab the canyon cuts into.
-  const floorZ = -(maxCanyonDepthFt + 10.0);
-  const useLevelColors = shadingMode === 'colored' || !shadingMode;
-
-  const byLevel = useMemo(() => {
-    const map = {};
-    for (const v of voxels) {
-      const levelIdx = useLevelColors ? Math.min(-v.level, LEVEL_COLOR.length - 1) : 0;
-      (map[levelIdx] ||= []).push(v);
-    }
-    return map;
-  }, [voxels, useLevelColors]);
-
-  if (voxels.length === 0) return null;
-
-  return (
-    <>
-      {Object.entries(byLevel).map(([levelIdx, items]) => (
-        <TerraceLevelGroup
-          key={levelIdx}
-          items={items}
-          voxelFt={voxelFt}
-          siteLengthFt={siteLengthFt}
-          floorZ={floorZ}
-          shadingMode={shadingMode}
-          color={useLevelColors ? LEVEL_COLOR[levelIdx] : '#c2bdb4'}
-        />
-      ))}
-    </>
-  );
-}
-
-function TerraceLevelGroup({ items, voxelFt, siteLengthFt, floorZ, shadingMode, color }) {
-  const meshRef = useRef();
-
-  useLayoutEffect(() => {
-    if (!meshRef.current) return;
-    const dummy = new THREE.Object3D();
-    items.forEach((v, i) => {
-      const height = v.z_ft - floorZ;
-      const cx = v.gx * voxelFt + voxelFt / 2;
-      const cy = v.gy * voxelFt + voxelFt / 2;
-      const cz = v.z_ft - height / 2;
-      const [x, y, z] = toThree(cx, cy, cz, siteLengthFt);
-      dummy.position.set(x, y, z);
-      dummy.scale.set(voxelFt, height, voxelFt);
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt, floorZ]);
-
-  const mat = materialProps(shadingMode, color);
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial {...mat} />
-    </instancedMesh>
-  );
-}
-
 // Thin colored cap on top of each greenscape-painted voxel's own terrain
 // height (v.z_ft, the same top-surface value TerraceLevelGroup builds its
 // block up to) -- NOT a flat plane at z=0, since the terrain isn't flat
@@ -266,6 +166,8 @@ const GREENSCAPE_THICKNESS_FT = 0.5;
 
 function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
+  const outlineRef = useRef();
+  const ghosted = shadingMode === 'ghosted';
   const items = useMemo(() => voxels.filter((v) => v.is_greenscape), [voxels]);
 
   useLayoutEffect(() => {
@@ -280,18 +182,32 @@ function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
       dummy.scale.set(voxelFt, GREENSCAPE_THICKNESS_FT, voxelFt);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
+      if (outlineRef.current) {
+        dummy.scale.set(voxelFt * OUTLINE_SCALE, GREENSCAPE_THICKNESS_FT * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
+        dummy.updateMatrix();
+        outlineRef.current.setMatrixAt(i, dummy.matrix);
+      }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt]);
+    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
+  }, [items, voxelFt, siteLengthFt, ghosted]);
 
   if (items.length === 0) return null;
 
   const mat = materialProps(shadingMode, GREENSCAPE_COLOR);
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial {...mat} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial {...mat} />
+      </instancedMesh>
+      {ghosted && (
+        <instancedMesh ref={outlineRef} args={[undefined, undefined, items.length]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+        </instancedMesh>
+      )}
+    </>
   );
 }
 
@@ -306,6 +222,8 @@ const CIRCULATION_THICKNESS_FT = 0.5;
 
 function CirculationSurface({ voxels, voxelFt, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
+  const outlineRef = useRef();
+  const ghosted = shadingMode === 'ghosted';
   const items = useMemo(() => voxels.filter((v) => v.typology === 'CIRCULATION'), [voxels]);
 
   useLayoutEffect(() => {
@@ -320,22 +238,291 @@ function CirculationSurface({ voxels, voxelFt, siteLengthFt, shadingMode }) {
       dummy.scale.set(voxelFt, CIRCULATION_THICKNESS_FT, voxelFt);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
+      if (outlineRef.current) {
+        dummy.scale.set(voxelFt * OUTLINE_SCALE, CIRCULATION_THICKNESS_FT * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
+        dummy.updateMatrix();
+        outlineRef.current.setMatrixAt(i, dummy.matrix);
+      }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt]);
+    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
+  }, [items, voxelFt, siteLengthFt, ghosted]);
 
   if (items.length === 0) return null;
 
   const mat = materialProps(shadingMode, CIRCULATION_COLOR);
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial {...mat} />
-    </instancedMesh>
+    <>
+      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial {...mat} />
+      </instancedMesh>
+      {ghosted && (
+        <instancedMesh ref={outlineRef} args={[undefined, undefined, items.length]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+        </instancedMesh>
+      )}
+    </>
+  );
+}
+
+// Real column solids, extracted directly from the live Rhino STRUC__Columns
+// Breps (2026-07-09 real-slab-graph supplement) -- NOT a procedural
+// placeholder, real per-column position/diameter/top/bottom. Same two-point
+// cylinder construction as CylinderInstances' strut/tie-rod path, kept as
+// its own component (rather than folding into that one) since real_columns
+// is a distinct data source (data.real_columns, not data.structural) with
+// its own fixed color so it reads as "real structure" against the
+// procedural framing.
+const REAL_COLUMN_COLOR = KIND_REGISTRY.kinds.real_column.color;
+
+// key={<count>} on every drei <Instances> block below (2026-07-10 fix): drei
+// allocates the underlying InstancedMesh's GPU buffer ONCE, sized for
+// whatever `limit` was at first mount. Unlike a raw <instancedMesh
+// args={[,,count]}> (R3F specially reconstructs the object whenever `args`
+// changes), `limit` is just a regular prop to drei's component -- if a
+// LATER render passes a bigger `limit` without the component actually
+// remounting, the buffer does NOT grow, and instances beyond the original
+// allocation corrupt whatever GPU memory follows it (reproduced: increasing
+// Canyon Depth while staying in STEEL mode grew steel_collar_sleeve's count
+// without changing its `key={kind}`, producing huge garbled triangles in
+// the live render -- switching material_mode "fixed" it only because it
+// changes the whole kind-set, forcing every block to remount anyway).
+// Keying on the count forces a real remount (fresh, correctly-sized buffer)
+// every time an already-mounted kind's instance count changes at all.
+function RealColumns({ columns, siteLengthFt, shadingMode }) {
+  const items = useMemo(
+    () => columns.map((c) => ({
+      p0: toThree(c.x, c.z, c.bottom_ft, siteLengthFt),
+      p1: toThree(c.x, c.z, c.top_ft, siteLengthFt),
+      radius: c.diameter_ft / 2,
+    })),
+    [columns, siteLengthFt],
+  );
+
+  if (items.length === 0) return null;
+
+  const ghosted = shadingMode === 'ghosted';
+  const mat = materialProps(shadingMode, REAL_COLUMN_COLOR);
+  const frames = items.map(({ p0, p1, radius }, i) => {
+    const a = new THREE.Vector3(...p0);
+    const b = new THREE.Vector3(...p1);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const length = dir.length();
+    if (length < 1e-6) return null;
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return { key: i, position: mid.toArray(), quaternion: quat.toArray(), radius, length };
+  }).filter(Boolean);
+
+  return (
+    <>
+      <Instances key={paddedCapacity(frames.length)} limit={paddedCapacity(frames.length)} range={frames.length}>
+        <cylinderGeometry args={[1, 1, 1, 12]} />
+        <meshStandardMaterial {...mat} />
+        {frames.map(({ key, position, quaternion, radius, length }) => (
+          <Instance key={key} position={position} quaternion={quaternion} scale={[radius, length, radius]} />
+        ))}
+      </Instances>
+      {ghosted && (
+        <Instances key={`outline-${paddedCapacity(frames.length)}`} limit={paddedCapacity(frames.length)} range={frames.length}>
+          <cylinderGeometry args={[1, 1, 1, 12]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {frames.map(({ key, position, quaternion, radius, length }) => (
+            <Instance
+              key={key}
+              position={position}
+              quaternion={quaternion}
+              scale={[radius * OUTLINE_SCALE, length * OUTLINE_SCALE, radius * OUTLINE_SCALE]}
+            />
+          ))}
+        </Instances>
+      )}
+    </>
+  );
+}
+
+// Real slab/ramp plates, extracted directly from the live Rhino
+// STRUC__Slabs Breps (2026-07-09 real-slab-graph supplement) -- each entry
+// is one real planar top face (real_slab_plates.json's per-face-pair
+// extraction, NOT a bounding-box guess -- see plan doc for why bounding
+// boxes mis-measured these as one fake 11ft-thick block). top_corners_ft
+// carries the TRUE per-corner 3D position (real elevation per corner), so
+// ramp_slab's ~1.7deg tilt renders as a real sloped plate, not a flat
+// approximation -- the bottom face is offset straight down in world Z by
+// thickness_ft (not along the tilted normal), a deliberate simplification:
+// at this tilt (cos(1.7deg) > 0.9995) the difference is sub-1/8" over a
+// 1ft-thick plate, not worth a full oriented-normal extrusion.
+const SLAB_KIND_COLOR = { floor_slab: KIND_REGISTRY.kinds.floor_slab.color, ramp_slab: KIND_REGISTRY.kinds.ramp_slab.color };
+
+// Rhino's Brep.Vertices order for a planar face is NOT guaranteed to trace
+// a boundary loop (empirically a raster/grid order for these box faces --
+// e.g. (xmin,ymin),(xmin,ymax),(xmax,ymin),(xmax,ymax) -- which would
+// triangulate into a crossed/bowtie quad if used directly). Sorting by
+// angle around the quad's own centroid (in plan x/y; z tags along per-corner
+// unchanged) produces a correct non-crossing loop regardless of source
+// order, since these are always simple convex rectangles in plan.
+function orderQuadCorners(corners) {
+  const cx = corners.reduce((s, c) => s + c[0], 0) / corners.length;
+  const cy = corners.reduce((s, c) => s + c[1], 0) / corners.length;
+  return [...corners].sort(
+    (a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx),
+  );
+}
+
+// top(0,1,2,3) / bottom(4,5,6,7), matching the same corner order on both
+// faces (bottom is just top shifted down), so side faces simply connect
+// corresponding index pairs -- both diagonals of the top/bottom quads are
+// triangulated the same consistent way. Shared by RealSlabPlate's main and
+// outline geometry (the outline is a separate BufferGeometry with its own
+// pre-scaled vertices, not a `scale` prop on the mesh -- these verts are
+// already in real Three.js world coordinates far from the origin, so a
+// naive object-level `scale` would expand away from world (0,0,0) instead
+// of around the slab's own center, visibly shifting the outline off the
+// real slab instead of growing around it).
+const SLAB_PLATE_INDICES = [
+  0, 1, 2, 0, 2, 3,       // top
+  4, 6, 5, 4, 7, 6,       // bottom (reversed winding)
+  0, 4, 1, 1, 4, 5,       // side 0-1
+  1, 5, 2, 2, 5, 6,       // side 1-2
+  2, 6, 3, 3, 6, 7,       // side 2-3
+  3, 7, 0, 0, 7, 4,       // side 3-0
+];
+
+function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
+  const ghosted = shadingMode === 'ghosted';
+
+  const { geometry, outlineGeometry } = useMemo(() => {
+    const ordered = orderQuadCorners(slab.top_corners_ft);
+    const top = ordered.map(([x, y, z]) => toThree(x, y, z, siteLengthFt));
+    const bottom = top.map(([x, y, z]) => [x, y - slab.thickness_ft, z]);
+    const corners = [...top, ...bottom];
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(corners.flat(), 3));
+    geo.setIndex(SLAB_PLATE_INDICES);
+    geo.computeVertexNormals();
+
+    let outlineGeo = null;
+    if (ghosted) {
+      const cx = corners.reduce((s, c) => s + c[0], 0) / corners.length;
+      const cy = corners.reduce((s, c) => s + c[1], 0) / corners.length;
+      const cz = corners.reduce((s, c) => s + c[2], 0) / corners.length;
+      const scaled = corners.map(([x, y, z]) => [
+        cx + (x - cx) * OUTLINE_SCALE,
+        cy + (y - cy) * OUTLINE_SCALE,
+        cz + (z - cz) * OUTLINE_SCALE,
+      ]);
+      outlineGeo = new THREE.BufferGeometry();
+      outlineGeo.setAttribute('position', new THREE.Float32BufferAttribute(scaled.flat(), 3));
+      outlineGeo.setIndex(SLAB_PLATE_INDICES);
+      outlineGeo.computeVertexNormals();
+    }
+    return { geometry: geo, outlineGeometry: outlineGeo };
+  }, [slab, siteLengthFt, ghosted]);
+
+  const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  return (
+    <>
+      <mesh geometry={geometry}>
+        <meshStandardMaterial {...mat} side={THREE.DoubleSide} />
+      </mesh>
+      {ghosted && outlineGeometry && (
+        <mesh geometry={outlineGeometry}>
+          <meshStandardMaterial {...outlineMaterialProps()} />
+        </mesh>
+      )}
+    </>
+  );
+}
+
+// One small box per real slab cell that hasn't been excavated away yet
+// (2026-07-09 real-slab-driven harvest supplement) -- the "hole" a real
+// floor_slab shows once the dig reaches it is just the gap where a fragment
+// stopped being instanced, same box-instancing pattern TerraceVoxels/
+// GreenscapeGround already use elsewhere in this file. Only floor_slab uses
+// this (flat, so every fragment shares one z_top_ft) -- ramp_slab keeps
+// rendering as the single intact tilted RealSlabPlate below; fragmenting a
+// tilted plate needs per-fragment elevation interpolation along its slope,
+// deferred (see plan doc).
+function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode }) {
+  const meshRef = useRef();
+  const outlineRef = useRef();
+  const ghosted = shadingMode === 'ghosted';
+
+  useLayoutEffect(() => {
+    if (!meshRef.current || remaining.length === 0) return;
+    const dummy = new THREE.Object3D();
+    const cz = slab.z_top_ft - slab.thickness_ft / 2;
+    remaining.forEach(([wx, wy], i) => {
+      const [x, y, z] = toThree(wx, wy, cz, siteLengthFt);
+      dummy.position.set(x, y, z);
+      dummy.scale.set(voxelFt, slab.thickness_ft, voxelFt);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+      if (outlineRef.current) {
+        dummy.scale.set(voxelFt * OUTLINE_SCALE, slab.thickness_ft * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
+        dummy.updateMatrix();
+        outlineRef.current.setMatrixAt(i, dummy.matrix);
+      }
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
+  }, [remaining, voxelFt, slab, siteLengthFt, ghosted]);
+
+  if (remaining.length === 0) return null;
+
+  const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  return (
+    <>
+      <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial {...mat} />
+      </instancedMesh>
+      {ghosted && (
+        <instancedMesh ref={outlineRef} args={[undefined, undefined, remaining.length]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+        </instancedMesh>
+      )}
+    </>
+  );
+}
+
+function RealSlabs({ slabs, fragments, voxelFt, siteLengthFt, shadingMode }) {
+  if (!slabs || slabs.length === 0) return null;
+  return (
+    <>
+      {slabs.map((slab) => {
+        if (slab.kind === 'floor_slab') {
+          const remaining = fragments?.[slab.key]?.remaining ?? [];
+          return (
+            <RealSlabFragments
+              key={slab.key}
+              slab={slab}
+              remaining={remaining}
+              voxelFt={voxelFt}
+              siteLengthFt={siteLengthFt}
+              shadingMode={shadingMode}
+            />
+          );
+        }
+        return (
+          <RealSlabPlate
+            key={slab.key}
+            slab={slab}
+            siteLengthFt={siteLengthFt}
+            shadingMode={shadingMode}
+          />
+        );
+      })}
+    </>
   );
 }
 
 function BoxInstances({ specs, siteLengthFt, shadingMode }) {
+  const ghosted = shadingMode === 'ghosted';
   const byKind = useMemo(() => {
     const map = {};
     for (const s of specs) {
@@ -345,35 +532,48 @@ function BoxInstances({ specs, siteLengthFt, shadingMode }) {
     return map;
   }, [specs]);
 
+  // Fallback footprint (1,1) matches blender_cockpit.py's
+  // _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0)) for any kind not in the map.
+  const frameFor = (kind, s) => {
+    const [sx, sy] = PROTOTYPE_DIMS_FT[kind] || [1.0, 1.0];
+    const [x, y, z] = toThree(s.x_ft, s.y_ft, s.z_top_ft - s.height_ft / 2, siteLengthFt);
+    // Only gusset_plate still gets a rotated-box treatment (faced along the
+    // strut's bearing angle, about the vertical axis) -- mirrors
+    // blender_cockpit.py's _rotation_for. Sign flipped because toThree's
+    // y -> L-y mirror (matching Blender's own axo mirror) is a genuine
+    // reflection, and a reflection reverses in-plane rotational handedness
+    // around the vertical axis.
+    const rotY = kind === 'gusset_plate' ? -(s.rotation_deg * Math.PI) / 180 : 0;
+    // scale_y is only set for kinds needing an independent width vs. depth
+    // (currently just building_mass) -- null everywhere else, falling back
+    // to the original uniform `scale` behavior.
+    return { position: [x, y, z], rotation: [0, rotY, 0], sx: sx * s.scale, sy: sy * (s.scale_y ?? s.scale), sz: s.height_ft };
+  };
+
   return (
     <>
       {Object.entries(byKind).map(([kind, items]) => (
-        <Instances key={kind} limit={items.length} range={items.length}>
+        <Instances key={`${kind}-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
           {items.map((s, i) => {
-            // Fallback footprint (1,1) matches blender_cockpit.py's
-            // _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0)) for any kind
-            // not in the map.
-            const [sx, sy] = PROTOTYPE_DIMS_FT[kind] || [1.0, 1.0];
-            const [x, y, z] = toThree(s.x_ft, s.y_ft, s.z_top_ft - s.height_ft / 2, siteLengthFt);
-            // Only gusset_plate still gets a rotated-box treatment
-            // (faced along the strut's bearing angle, about the vertical
-            // axis) -- mirrors blender_cockpit.py's _rotation_for. Sign
-            // flipped because toThree's y -> L-y mirror (matching
-            // Blender's own axo mirror) is a genuine reflection, and a
-            // reflection reverses in-plane rotational handedness around
-            // the vertical axis.
-            const rotY = kind === 'gusset_plate' ? -(s.rotation_deg * Math.PI) / 180 : 0;
-            // scale_y is only set for kinds needing an independent width vs.
-            // depth (currently just building_mass) -- null everywhere else,
-            // falling back to the original uniform `scale` behavior.
+            const f = frameFor(kind, s);
+            return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.sx, f.sz, f.sy]} />;
+          })}
+        </Instances>
+      ))}
+      {ghosted && Object.entries(byKind).map(([kind, items]) => (
+        <Instances key={`${kind}-outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {items.map((s, i) => {
+            const f = frameFor(kind, s);
             return (
               <Instance
                 key={i}
-                position={[x, y, z]}
-                rotation={[0, rotY, 0]}
-                scale={[sx * s.scale, s.height_ft, sy * (s.scale_y ?? s.scale)]}
+                position={f.position}
+                rotation={f.rotation}
+                scale={[f.sx * OUTLINE_SCALE, f.sz * OUTLINE_SCALE, f.sy * OUTLINE_SCALE]}
               />
             );
           })}
@@ -391,6 +591,7 @@ function BoxInstances({ specs, siteLengthFt, shadingMode }) {
 // One unit cylinder (radius=1, height=1) scaled/rotated per instance --
 // same trick TerraceVoxels/BoxInstances use for boxes.
 function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
+  const ghosted = shadingMode === 'ghosted';
   const grouped = useMemo(() => {
     const map = {};
     for (const s of specs) {
@@ -409,32 +610,40 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
     return map;
   }, [specs, siteLengthFt]);
 
+  const framesFor = (items) => items.map(({ p0, p1, radius }) => {
+    const a = new THREE.Vector3(...p0);
+    const b = new THREE.Vector3(...p1);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const length = dir.length();
+    if (length < 1e-6) return null;
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return { position: mid.toArray(), quaternion: quat.toArray(), radius, length };
+  }).filter(Boolean);
+
   return (
     <>
       {Object.entries(grouped).map(([kind, items]) => (
-        <Instances key={kind} limit={items.length} range={items.length}>
+        <Instances key={`${kind}-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
           <cylinderGeometry args={[1, 1, 1, 8]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
-          {items.map(({ p0, p1, radius }, i) => {
-            const a = new THREE.Vector3(...p0);
-            const b = new THREE.Vector3(...p1);
-            const mid = a.clone().add(b).multiplyScalar(0.5);
-            const dir = b.clone().sub(a);
-            const length = dir.length();
-            if (length < 1e-6) return null;
-            const quat = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 1, 0),
-              dir.normalize(),
-            );
-            return (
-              <Instance
-                key={i}
-                position={mid.toArray()}
-                quaternion={quat.toArray()}
-                scale={[radius, length, radius]}
-              />
-            );
-          })}
+          {framesFor(items).map(({ position, quaternion, radius, length }, i) => (
+            <Instance key={i} position={position} quaternion={quaternion} scale={[radius, length, radius]} />
+          ))}
+        </Instances>
+      ))}
+      {ghosted && Object.entries(grouped).map(([kind, items]) => (
+        <Instances key={`${kind}-outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+          <cylinderGeometry args={[1, 1, 1, 8]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {framesFor(items).map(({ position, quaternion, radius, length }, i) => (
+            <Instance
+              key={i}
+              position={position}
+              quaternion={quaternion}
+              scale={[radius * OUTLINE_SCALE, length * OUTLINE_SCALE, radius * OUTLINE_SCALE]}
+            />
+          ))}
         </Instances>
       ))}
     </>
@@ -452,23 +661,41 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
     [specs],
   );
   if (items.length === 0) return null;
+
+  const ghosted = shadingMode === 'ghosted';
+  const frameFor = (s) => {
+    const [x, y, z] = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
+    return { position: [x, y, z], rotation: [0, -(s.rotation_deg * Math.PI) / 180, 0], radius: s.radius_ft || 0.3 };
+  };
+
   return (
-    <Instances limit={items.length} range={items.length}>
-      <cylinderGeometry args={[1, 1, 1, 6]} />
-      <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.steel_turnbuckle)} />
-      {items.map((s, i) => {
-        const [x, y, z] = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
-        const radius = s.radius_ft || 0.3;
-        return (
-          <Instance
-            key={i}
-            position={[x, y, z]}
-            rotation={[0, -(s.rotation_deg * Math.PI) / 180, 0]}
-            scale={[radius, s.height_ft, radius]}
-          />
-        );
-      })}
-    </Instances>
+    <>
+      <Instances key={paddedCapacity(items.length)} limit={paddedCapacity(items.length)} range={items.length}>
+        <cylinderGeometry args={[1, 1, 1, 6]} />
+        <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.steel_turnbuckle)} />
+        {items.map((s, i) => {
+          const f = frameFor(s);
+          return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.radius, s.height_ft, f.radius]} />;
+        })}
+      </Instances>
+      {ghosted && (
+        <Instances key={`outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+          <cylinderGeometry args={[1, 1, 1, 6]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {items.map((s, i) => {
+            const f = frameFor(s);
+            return (
+              <Instance
+                key={i}
+                position={f.position}
+                rotation={f.rotation}
+                scale={[f.radius * OUTLINE_SCALE, s.height_ft * OUTLINE_SCALE, f.radius * OUTLINE_SCALE]}
+              />
+            );
+          })}
+        </Instances>
+      )}
+    </>
   );
 }
 
@@ -519,7 +746,9 @@ function StreetLabels({ siteWidthFt, siteLengthFt }) {
   );
 }
 
-export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl, onShowLineArt }) {
+export default function Viewport({
+  data, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl, onShowLineArt,
+}) {
   const [shadingMode, setShadingMode] = useState('colored');
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
@@ -550,7 +779,7 @@ export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, ble
   }, [viewMode]);
 
   return (
-    <div className="flex-1 relative rigid-grid-bg bg-background">
+    <div className="flex-1 relative bg-background">
       <Canvas
         ref={canvasRef}
         gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
@@ -574,13 +803,16 @@ export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, ble
         ) : (
           <>
             {data && (
-              <TerraceVoxels
-                voxels={data.voxels}
+              <RealSlabs
+                slabs={data.real_slabs}
+                fragments={data.real_slab_fragments}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
-                maxCanyonDepthFt={data.max_canyon_depth_ft}
                 shadingMode={shadingMode}
               />
+            )}
+            {data && (
+              <RealColumns columns={data.real_columns} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
             )}
             {data && (
               <StructuralInstances specs={data.structural} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
@@ -601,11 +833,13 @@ export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, ble
                 shadingMode={shadingMode}
               />
             )}
+            {networkSpecs && (
+              <StructuralInstances specs={networkSpecs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+            )}
           </>
         )}
         <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
-        <gridHelper args={[Math.max(siteWidthFt, siteLengthFt) * 1.4, 40, '#3a3a3a', '#262626']} />
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
         <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">

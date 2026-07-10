@@ -19,8 +19,27 @@ exclusion zone around the spiral ramps) was removed 2026-07-06 -- per
 project decision, the canyon can now cut through/near ramp zones too, same
 as everywhere else.
 """
+import json
 import math
+import os
 from dataclasses import dataclass, field
+
+# Shared kind registry (2026-07-10 consolidation pass) -- single source of
+# truth for every element kind's plan-footprint dims, viewport color, shape
+# category, and material family, replacing three independently hand-
+# maintained copies (this module's own MATERIAL_FAMILY/CUT_SHEET_
+# PROTOTYPE_DIMS_FT, blender_cockpit.py's _PROTOTYPE_DIMS_FT/
+# _VERTICAL_CYLINDER_KINDS/_HEX_KINDS, and Viewport.jsx's PROTOTYPE_DIMS_FT/
+# KIND_COLOR/VERTICAL_CYLINDER_KINDS/HEX_KINDS) that had already drifted --
+# blender_cockpit.py never picked up circulation_network.py's footpath/ramp/
+# escalator kinds or the typology tree/building_mass kinds. Lives under
+# frontend/src/ so Vite can import it directly as a build-time JSON asset;
+# Python has no such restriction, so this module (and blender_cockpit.py)
+# just read the same file from disk.
+_KIND_REGISTRY_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "kindRegistry.json")
+with open(_KIND_REGISTRY_PATH) as _f:
+    KIND_REGISTRY = json.load(_f)
 
 
 def clamp01(v):
@@ -62,6 +81,18 @@ DEFAULT_DEFICIT_HOTSPOTS = [
 # two points are just a stand-in near a plausible plaza entry so the
 # CIRCULATION classification has something non-trivial to show before real
 # data exists.
+#
+# The first point stands in for real Metro ridership at the site's actual
+# station entrance (real_geometry["secondary_entrance_anchor"]) -- checked
+# 2026-07-09 whether a real station-level boarding count could replace this:
+# Metro's own ArcGIS ridership portal requires SSO login, the public
+# Streets-for-All alternative dashboard (ridership.streetsforall.org) is
+# line-level only (no per-station breakdown), and LACMTA's public GitHub
+# open-data repo has no ridership dataset at all. No real number is
+# publicly accessible right now -- do not treat this strength value as a
+# real ridership figure. Once a real number is obtained (direct Metro
+# contact/public-records request), it drops in via foot_traffic.py's CSV
+# path with zero code changes.
 DEFAULT_FOOT_TRAFFIC_HOTSPOTS = [
     {"x_frac": 0.5, "y_frac": 0.08, "strength": 1.0, "radius_ft": 60.0},
     {"x_frac": 0.5, "y_frac": 0.92, "strength": 0.7, "radius_ft": 60.0},
@@ -360,7 +391,6 @@ class TerracingEngine:
 # Normal-weight structural concrete, lb/ft^3 -- standard engineering value,
 # used for the Slab Harvest tonnage readout below.
 CONCRETE_UNIT_WEIGHT_PCF = 150.0
-SLAB_THICKNESS_IN = 8.0
 STRUCTURAL_BAY_FT = 27.0
 RETAINING_BLOCK_THICKNESS_FT = 8.0 / 12.0  # diamond wire-sawn plate, not a solid cube
 RUNNING_BOND_STAGGER_FT = 1.5              # half a 3ft block width, alternating courses
@@ -407,7 +437,17 @@ class StructuralElement:
     `scale` uniformly," the original behavior. Set it alongside `scale` only
     when a kind genuinely needs an independent width vs. depth (e.g.
     BuildingMassEngine's rectangular footprints) -- everything else keeps
-    scaling isotropically."""
+    scaling isotropically.
+
+    column_id/column_id2/slab_id (added 2026-07-09, real-slab-graph
+    supplement): which real column(s) (real_geometry["real_columns"][i]["id"])
+    and real floor slab (real_geometry["real_slabs"][i]["parent"]) this
+    element is actually attached to -- column_id2 only set for two-column
+    members (struts/tie-rods bridging a pair). None for elements that aren't
+    part of the column/slab load path (bolts, gussets, amenities, etc --
+    those inherit their parent member's attachment implicitly, not tagged
+    separately, per the plan's decision to tag the load-bearing members
+    themselves rather than every piece of hardware)."""
     kind: str
     x_ft: float
     y_ft: float
@@ -420,6 +460,198 @@ class StructuralElement:
     z2_ft: float = None
     radius_ft: float = None
     scale_y: float = None
+    column_id: str = None
+    column_id2: str = None
+    slab_id: str = None
+
+
+def slab_key(slab):
+    """Unique identifier for one real slab PLATE, not one real Rhino object --
+    a single object (e.g. "L2_east_slab") can yield multiple real_slabs
+    entries (two flat landings + one connecting ramp, see the real-slab-
+    graph supplement), all sharing the same `parent` name. z_top_ft
+    disambiguates them (each real plate sits at its own real elevation).
+    Used everywhere a specific plate needs to be referenced (the column<->
+    slab graph, framing's slab_id tagging, real_slab_fragments, harvested
+    salvage) -- fixed 2026-07-09 after finding build_column_slab_graph and
+    slabs_by_parent were both keying on bare `parent`, silently merging a
+    west/east object's two distinct floor_slab landings into one entry."""
+    return f"{slab['parent']}_{slab['z_top_ft']}"
+
+
+def build_column_slab_graph(real_geometry):
+    """
+    Link each real column (real_geometry["real_columns"]) to the real
+    floor_slab(s) (real_geometry["real_slabs"], kind == "floor_slab") whose
+    plan footprint contains it, and the inverse. ramp_slab plates connect
+    between levels and don't bear columns, so they're excluded here.
+
+    Footprints are plain axis-aligned rectangles in plan (confirmed directly
+    against the live Rhino model 2026-07-09: even the tilted ramp_slab plates
+    only tilt vertically -- real per-corner z varies, x/y don't -- so a
+    min/max corner test on just the x/y components is exact, not an
+    approximation).
+
+    Returns (column_to_slabs, slab_to_columns):
+      column_to_slabs: column id -> [slab_key(slab), ...]
+      slab_to_columns: slab_key(slab) -> [column id, ...]
+    """
+    columns = real_geometry.get("real_columns", [])
+    floor_slabs = [s for s in real_geometry.get("real_slabs", []) if s["kind"] == "floor_slab"]
+
+    column_to_slabs = {}
+    slab_to_columns = {slab_key(s): [] for s in floor_slabs}
+
+    for col in columns:
+        cx, cz = col["x"], col["z"]
+        hits = []
+        for slab in floor_slabs:
+            xs = [c[0] for c in slab["top_corners_ft"]]
+            zs = [c[1] for c in slab["top_corners_ft"]]
+            if min(xs) <= cx <= max(xs) and min(zs) <= cz <= max(zs):
+                hits.append(slab_key(slab))
+                slab_to_columns[slab_key(slab)].append(col["id"])
+        column_to_slabs[col["id"]] = hits
+
+    return column_to_slabs, slab_to_columns
+
+
+def _nearest_slab_for_z(column_to_slabs, slabs_by_key, col_id, z_ft, tolerance_ft=2.0):
+    """Among the floor slabs a given column actually passes through, find the
+    one whose real elevation is closest to z_ft (an excavation level's
+    absolute height) -- e.g. a column exposed at level 2 should tag the real
+    slab whose z_top_ft is ~-20ft, not just any slab the column happens to
+    pierce. Returns None if the nearest is farther than tolerance_ft away
+    (real slabs are spaced 10ft apart here, so 2ft is a generous margin for
+    floating point, not a guess that could pick the wrong level)."""
+    candidates = column_to_slabs.get(col_id, [])
+    if not candidates:
+        return None
+    best_name, best_dist = None, float("inf")
+    for name in candidates:
+        slab = slabs_by_key.get(name)
+        if slab is None:
+            continue
+        dist = abs(slab["z_top_ft"] - z_ft)
+        if dist < best_dist:
+            best_name, best_dist = name, dist
+    return best_name if best_dist <= tolerance_ft else None
+
+
+# Material family / fabrication method / cut-sheet dims per element kind,
+# all derived from KIND_REGISTRY (2026-07-10 consolidation pass -- see that
+# constant's own comment above for why this replaced three hand-maintained
+# copies). Names are deliberately provisional -- "fill these in later as
+# you develop the assets" was the explicit instruction, so edit
+# kindRegistry.json's material_family values, not this derivation code.
+MATERIAL_FAMILY = {kind: entry["material_family"] for kind, entry in KIND_REGISTRY["kinds"].items()}
+FABRICATION_METHOD = {
+    family: entry["fabrication_method"] for family, entry in KIND_REGISTRY["material_families"].items()
+}
+# Families actually worth putting on a fabrication cut sheet -- vegetation
+# and existing as-built structure are real quantities but not something a
+# shop drawing gets cut for, so they're reported separately, not mixed into
+# the same manifest rows.
+CUT_SHEET_MATERIAL_FAMILIES = set(KIND_REGISTRY["cut_sheet_families"])
+
+
+def material_family_for(kind):
+    """Falls back to "unclassified" (not a crash) for any kind not yet
+    added to kindRegistry.json -- a new kind should show up on the cut
+    sheet as something needing categorization, not silently disappear or
+    break the manifest."""
+    return MATERIAL_FAMILY.get(kind, "unclassified")
+
+
+def fabrication_method_for(family):
+    return FABRICATION_METHOD.get(family, "TBD")
+
+
+# Plan-footprint dims (feet) per box-shaped kind -- real height always comes
+# from the spec itself, not here (same convention the registry documents).
+# Read once, server-side, purely for the cut-sheet quantity takeoff below.
+CUT_SHEET_PROTOTYPE_DIMS_FT = {
+    kind: tuple(entry["dims_ft"]) for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "box"
+}
+# Kinds whose real quantity is a run length (two-point cylinders), not a
+# plan-footprint box -- detected structurally too (spec.x2_ft is not None),
+# this set is just for kinds that are ALWAYS two-point even if a given specs
+# list is empty, so the manifest still lists a zero row for them.
+CUT_SHEET_LINEAR_KINDS = {
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "two_point"
+}
+
+
+def build_cut_sheet_manifest(all_specs, real_slabs=None, real_columns=None):
+    """Flattens every StructuralElement plus the real slab/column solids into
+    one material-categorized manifest: count, plan area, volume, and/or
+    linear run length per kind, grouped under the family's cut-sheet bucket.
+    real_slabs/real_columns get their own "existing_structure" section
+    (real, as-built quantities, not a fabrication line item) rather than
+    being mixed into CUT_SHEET_MATERIAL_FAMILIES -- see MATERIAL_FAMILY's
+    docstring above for why.
+
+    Returns {"families": {family: {"kinds": {kind: {...}}, "total_count":
+    int, "total_volume_ft3": float}}, "existing_structure": {...}}.
+    """
+    per_kind = {}
+
+    def _bucket(kind):
+        return per_kind.setdefault(kind, {"count": 0, "area_ft2": 0.0, "volume_ft3": 0.0, "linear_ft": 0.0})
+
+    for s in all_specs:
+        b = _bucket(s.kind)
+        b["count"] += 1
+        if s.x2_ft is not None or s.kind in CUT_SHEET_LINEAR_KINDS:
+            if s.x2_ft is not None:
+                length = math.dist((s.x_ft, s.y_ft, s.z_top_ft), (s.x2_ft, s.y2_ft, s.z2_ft))
+                b["linear_ft"] += length
+        else:
+            dims = CUT_SHEET_PROTOTYPE_DIMS_FT.get(s.kind)
+            if dims:
+                sx = dims[0] * s.scale
+                sy = dims[1] * (s.scale_y if s.scale_y is not None else s.scale)
+                area = sx * sy
+                b["area_ft2"] += area
+                b["volume_ft3"] += area * max(s.height_ft, 0.0)
+
+    families = {}
+    for kind, qty in per_kind.items():
+        family = material_family_for(kind)
+        if family not in CUT_SHEET_MATERIAL_FAMILIES:
+            continue  # vegetation/tbd_massing/existing_structure/unclassified reported separately
+        fam = families.setdefault(family, {
+            "fabrication_method": fabrication_method_for(family),
+            "kinds": {}, "total_count": 0, "total_volume_ft3": 0.0, "total_linear_ft": 0.0,
+        })
+        fam["kinds"][kind] = qty
+        fam["total_count"] += qty["count"]
+        fam["total_volume_ft3"] += qty["volume_ft3"]
+        fam["total_linear_ft"] += qty["linear_ft"]
+
+    existing = {"floor_slab": {"count": 0, "area_ft2": 0.0, "volume_ft3": 0.0},
+                "ramp_slab": {"count": 0, "area_ft2": 0.0, "volume_ft3": 0.0},
+                "column": {"count": 0, "volume_ft3": 0.0}}
+    for slab in (real_slabs or []):
+        b = existing.setdefault(slab["kind"], {"count": 0, "area_ft2": 0.0, "volume_ft3": 0.0})
+        b["count"] += 1
+        b["area_ft2"] += slab["area_ft2"]
+        b["volume_ft3"] += slab["area_ft2"] * slab["thickness_ft"]
+    for col in (real_columns or []):
+        b = existing["column"]
+        b["count"] += 1
+        radius = col["diameter_ft"] / 2.0
+        height = col["top_ft"] - col["bottom_ft"]
+        b["volume_ft3"] += math.pi * radius * radius * height
+
+    return {
+        "families": families,
+        "existing_structure": existing,
+        "not_fabricated": {
+            kind: qty for kind, qty in per_kind.items()
+            if material_family_for(kind) == "vegetation"
+        },
+    }
 
 
 class StructuralFramingEngine:
@@ -446,6 +678,13 @@ class StructuralFramingEngine:
         self.shoring_density = shoring_density
         self.voxel_ft = terracing_engine.voxel_ft
         self.step_ft = terracing_engine.step_ft
+        # Real column<->slab assembly graph (2026-07-09 real-slab-graph
+        # supplement) -- only populated when real_geometry actually has the
+        # real_columns/real_slabs arrays (extracted straight from live Rhino,
+        # see plan doc); harmless empty dicts otherwise, so older
+        # real_geometry.json snapshots without these fields still work.
+        self.column_to_slabs, self.slab_to_columns = build_column_slab_graph(real_geometry)
+        self.slabs_by_key = {slab_key(s): s for s in real_geometry.get("real_slabs", [])}
 
     def _voxel_at(self, gx, gy):
         if 0 <= gx < self.te.nx and 0 <= gy < self.te.nz:
@@ -455,35 +694,105 @@ class StructuralFramingEngine:
     def _levels_breached(self, v):
         return round(-v.z_ft / self.step_ft) if v.z_ft < 0 else 0
 
+    def real_slab_fragments(self):
+        """Classifies every voxel cell within each real slab's real
+        footprint as still-remaining (excavation hasn't reached that slab's
+        real elevation there yet) or removed (it has) -- 2026-07-09 real-
+        slab-driven harvest supplement, replacing the old voxel-generic
+        slab_harvest_tons/harvested_block_specs math below. Footprint
+        containment uses the same axis-aligned min/max simplification
+        build_column_slab_graph already relies on (the new SURFACE slab's
+        ~0.4deg rotation is negligible at voxel-grid resolution). Each
+        slab's own z_top_ft is tested independently, so stacked slabs at the
+        same XY (e.g. L1/L2/L3_center) each correctly read remaining/removed
+        based on how deep the real excavation actually reached, not on each
+        other.
+
+        Returns {slab_key: {"slab": slab_dict, "remaining": [(gx,gy,wx,wy),...],
+        "removed_count": int}}.
+        """
+        nx, nz = self.te.nx, self.te.nz
+        result = {}
+        for slab in self.rg.get("real_slabs", []):
+            xs = [c[0] for c in slab["top_corners_ft"]]
+            ys = [c[1] for c in slab["top_corners_ft"]]
+            x_min, x_max = min(xs), max(xs)
+            y_min, y_max = min(ys), max(ys)
+            remaining = []
+            removed = []
+            for gx in range(nx):
+                for gy in range(nz):
+                    v = self.te.voxels[gx][gy]
+                    if not (x_min <= v.wx <= x_max and y_min <= v.wy <= y_max):
+                        continue
+                    # A cell is only "removed" if it's genuinely excavated
+                    # (v.z_ft < 0) AND that cut reached at or below this
+                    # slab's real elevation -- v.z_ft < 0 alone isn't
+                    # redundant here: real_geometry's new SURFACE slab sits
+                    # at z_top_ft=+0.25 (just above the v.z_ft==0 "untouched"
+                    # reference), so the old `v.z_ft <= slab["z_top_ft"]`
+                    # test alone was true for EVERY untouched cell (0 <=
+                    # 0.25), marking nearly the whole site "removed" by
+                    # default regardless of painting -- confirmed live
+                    # 2026-07-09 (2613/2680 cells reported removed with only
+                    # 917 actually excavated). Below-grade slabs (negative
+                    # z_top_ft) are unaffected either way, since a cut can't
+                    # satisfy z_ft <= a negative number without already
+                    # being < 0.
+                    if v.z_ft < 0 and v.z_ft <= slab["z_top_ft"]:
+                        removed.append((gx, gy, v.wx, v.wy))
+                    else:
+                        remaining.append((gx, gy, v.wx, v.wy))
+            result[slab_key(slab)] = {
+                "slab": slab, "remaining": remaining, "removed": removed, "removed_count": len(removed),
+            }
+        return result
+
     def slab_harvest_tons(self):
-        """Closed-loop harvest calc: for every real excavated voxel, the
-        slab that used to occupy its 9'x9' footprint at each breached level
-        is gone -- sum those real removed volumes (at an 8" slab thickness)
-        and convert to tons. A direct function of whatever TerracingEngine
-        actually excavated, not a synthetic bay count."""
+        """Real-slab-driven harvest calc (2026-07-09, replaces the old
+        voxel-generic version): for every real slab, the real footprint area
+        that's been excavated past that slab's real elevation is gone --
+        sum those real removed volumes (real per-slab thickness, not a
+        flat 8" guess) and convert to tons."""
         voxel_area_ft2 = self.voxel_ft * self.voxel_ft
         total_ft3 = 0.0
-        for row in self.te.voxels:
-            for v in row:
-                levels = self._levels_breached(v)
-                if levels:
-                    total_ft3 += voxel_area_ft2 * (SLAB_THICKNESS_IN / 12.0) * levels
+        for entry in self.real_slab_fragments().values():
+            total_ft3 += entry["removed_count"] * voxel_area_ft2 * entry["slab"]["thickness_ft"]
         return total_ft3 * CONCRETE_UNIT_WEIGHT_PCF / 2000.0
 
     def harvested_block_specs(self):
         """Salvaged concrete re-instanced as clean, sharp diamond wire-sawn
-        blocks (9'x9'x8" floor plates, 3'x3'x8" retaining-wall plates) at the
-        real excavation boundary: a floor plate at every voxel that is a true
-        local floor (no neighbor is deeper), and coursed plates stacked up
-        every real exposed retaining-wall face (a neighbor shallower than
-        this voxel, including the site edge, which reads as grade). Alternate
-        courses are staggered sideways along the wall's own run (running
-        bond) so the stack reads as a real coursed crib-wall, not a column of
-        identical blocks -- per New Feature Directives / Concrete Loop
-        supplement."""
+        blocks: real-slab-driven floor plates (2026-07-09, replacing the old
+        voxel-generic version) plus voxel-driven retaining-wall plates
+        (unchanged -- no real retaining-wall geometry exists yet to tie
+        those to).
+
+        Floor blocks: one `concrete_floor_block` per real slab cell that's
+        actually been excavated past that slab's real elevation
+        (real_slab_fragments' "removed" cells), at that slab's real
+        thickness and tagged slab_id -- not a generic "local floor" guess at
+        every voxel regardless of whether a real slab was ever there
+        (voxels outside every real slab's real footprint, e.g. near the
+        tunnel gap, correctly emit nothing now).
+
+        Retaining-wall blocks: coursed plates stacked up every real exposed
+        retaining-wall face (a neighbor shallower than this voxel, including
+        the site edge, which reads as grade). Alternate courses are
+        staggered sideways along the wall's own run (running bond) so the
+        stack reads as a real coursed crib-wall, not a column of identical
+        blocks -- per New Feature Directives / Concrete Loop supplement.
+        """
         specs = []
         nx, nz = self.te.nx, self.te.nz
         block_t = RETAINING_BLOCK_THICKNESS_FT
+
+        for entry in self.real_slab_fragments().values():
+            slab = entry["slab"]
+            sid = slab_key(slab)
+            for gx, gy, wx, wy in entry["removed"]:
+                specs.append(StructuralElement(
+                    "concrete_floor_block", wx, wy, slab["z_top_ft"], slab["thickness_ft"], slab_id=sid))
+
         for gx in range(nx):
             for gy in range(nz):
                 v = self.te.voxels[gx][gy]
@@ -493,10 +802,6 @@ class StructuralFramingEngine:
                 for ngx, ngy in ((gx - 1, gy), (gx + 1, gy), (gx, gy - 1), (gx, gy + 1)):
                     nv = self._voxel_at(ngx, ngy)
                     neighbor_zs.append((ngx, ngy, nv.z_ft if nv is not None else 0.0))
-
-                if all(v.z_ft <= nz_val for _, _, nz_val in neighbor_zs):
-                    specs.append(StructuralElement(
-                        "concrete_floor_block", v.wx, v.wy, v.z_ft, SLAB_THICKNESS_IN / 12.0))
 
                 for ngx, ngy, nz_val in neighbor_zs:
                     if nz_val <= v.z_ft:
@@ -517,15 +822,49 @@ class StructuralFramingEngine:
         return specs
 
     def _column_grid(self):
-        """Real column_positions indexed by their real 27ft grid cell, so
-        adjacency (for horizontal struts / X-bracing) is a simple dict
-        lookup rather than a distance search."""
+        """Real columns indexed by their real 27ft grid cell, so adjacency
+        (for horizontal struts / X-bracing) is a simple dict lookup rather
+        than a distance search.
+
+        Prefers real_columns (real id + real diameter/top/bottom, extracted
+        straight from the live Rhino STRUC__Columns Breps -- 2026-07-09 real-
+        slab-graph supplement) over the older column_positions (points only,
+        no id, no way to look up which real slab a column bears on). Falls
+        back to column_positions with a synthetic id when real_columns is
+        absent, so this keeps working against older real_geometry.json
+        snapshots -- just without slab_id/column_id tagging downstream."""
         grid = {}
-        for col in self.rg["column_positions"]:
-            gx = round(col["x"] / STRUCTURAL_BAY_FT)
-            gy = round(col["z"] / STRUCTURAL_BAY_FT)
-            grid[(gx, gy)] = col
+        columns = self.rg.get("real_columns")
+        if columns:
+            for col in columns:
+                gx = round(col["x"] / STRUCTURAL_BAY_FT)
+                gy = round(col["z"] / STRUCTURAL_BAY_FT)
+                grid[(gx, gy)] = col
+        else:
+            for col in self.rg["column_positions"]:
+                gx = round(col["x"] / STRUCTURAL_BAY_FT)
+                gy = round(col["z"] / STRUCTURAL_BAY_FT)
+                grid[(gx, gy)] = {**col, "id": f"{gx}_{gy}"}
         return grid
+
+    def _anchored_z(self, col_id, lvl):
+        """Real slab elevations (10ft spacing, e.g. -10/-20/-30) don't line
+        up with the voxel grid's excavation-level spacing (9ft, matching
+        voxel_ft) -- collars/struts placed at the raw voxel-derived height
+        therefore floated near, but not exactly at, the real slab they're
+        conceptually attached to (2026-07-09 fix, user-reported: horizontal
+        bracing wasn't visually anchored into the real slab it should
+        terminate at). When a real slab actually matches this column/level
+        (via _nearest_slab_for_z's tolerance), snap to that slab's real
+        z_top_ft instead of the voxel-derived height, so the geometry
+        visually terminates AT the real slab, not near it; otherwise (no
+        real slab exists at this particular excavation level) fall back to
+        the voxel z unchanged. Returns (z_ft, slab_id_or_None)."""
+        z = -lvl * self.step_ft
+        slab_id = _nearest_slab_for_z(self.column_to_slabs, self.slabs_by_key, col_id, z)
+        if slab_id is not None:
+            return self.slabs_by_key[slab_id]["z_top_ft"], slab_id
+        return z, None
 
     def steel_frame_specs(self):
         """STEEL mode -- Industrial Sleeve & Strut System: only real columns
@@ -557,10 +896,11 @@ class StructuralFramingEngine:
             exposure[key] = levels
 
             for lvl in range(levels):
-                z = -lvl * self.step_ft
+                z, slab_id = self._anchored_z(col["id"], lvl)
                 specs.append(StructuralElement(
                     "steel_collar_sleeve", col["x"], col["z"], z + COLLAR_EXTENSION_FT,
-                    self.step_ft + 2 * COLLAR_EXTENSION_FT, scale=self.shoring_density))
+                    self.step_ft + 2 * COLLAR_EXTENSION_FT, scale=self.shoring_density,
+                    column_id=col["id"], slab_id=slab_id))
                 collar_r = 0.75 * self.shoring_density + COLLAR_FLANGE_OFFSET_FT
                 for b in range(COLLAR_BOLT_COUNT):
                     ang = 2 * math.pi * b / COLLAR_BOLT_COUNT
@@ -576,7 +916,8 @@ class StructuralFramingEngine:
                     if other is None:
                         continue
                     e = StructuralElement("steel_tie_rod", col["x"], col["z"], top_z, 0.0,
-                                          radius_ft=TIE_ROD_RADIUS_FT)
+                                          radius_ft=TIE_ROD_RADIUS_FT,
+                                          column_id=col["id"], column_id2=other["id"])
                     e.x2_ft, e.y2_ft, e.z2_ft = other["x"], other["z"], bottom_z
                     specs.append(e)
                     mx, my, mz = (col["x"] + other["x"]) / 2, (col["z"] + other["z"]) / 2, (top_z + bottom_z) / 2
@@ -594,8 +935,10 @@ class StructuralFramingEngine:
                 strut_r = STRUT_PIPE_RADIUS_FT * self.shoring_density
                 bearing = math.degrees(math.atan2(other["z"] - col["z"], other["x"] - col["x"]))
                 for lvl in range(shared_levels):
-                    z = -lvl * self.step_ft
-                    e = StructuralElement("steel_strut", col["x"], col["z"], z, 0.0, radius_ft=strut_r)
+                    z, slab_id = self._anchored_z(col["id"], lvl)
+                    e = StructuralElement("steel_strut", col["x"], col["z"], z, 0.0, radius_ft=strut_r,
+                                          column_id=col["id"], column_id2=other["id"],
+                                          slab_id=slab_id)
                     e.x2_ft, e.y2_ft, e.z2_ft = other["x"], other["z"], z
                     specs.append(e)
                     for px, py in ((col["x"], col["z"]), (other["x"], other["z"])):

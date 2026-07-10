@@ -16,11 +16,15 @@ const CATEGORIES = [
 ];
 const BOOLEAN_THRESHOLD = 0.4;
 
-// sketch_weight_mapper.py's calibrated convention (verified 2026-07-04
-// against a real hand-labeled sketch): flip_x=True, flip_y=True, standard
-// top-down row order -- real_x = (1 - col/w) * W, real_y = (1 - row/h) * L.
-// Inverted here (real feet -> pixel) to sample the painted canvas per
-// engine grid-cell instead of per-pixel.
+// X is NOT flipped (real_x = col/w * W) -- Y still is (real_y = (1 - row/h) * L).
+// Fixed 2026-07-10: this previously mirrored X the same way sketch_weight_mapper.py's
+// flip_x=True does (inherited from that module's photo-labeling convention, which
+// applies to a different ingestion path), but that's inconsistent with how
+// Viewport.jsx's toThree() places real x on screen (it doesn't mirror X at all) --
+// confirmed empirically by tracing a mark drawn near the canvas's left edge through
+// to its rendered 3D position: with the old flip it landed on the 3D view's RIGHT
+// side, exactly the "flipped along the long axis" symptom reported. Y's own
+// round-trip was independently confirmed already consistent, so only X changes here.
 function sampleGrid(imageData, w, h, nx, nz, siteWidthFt, siteLengthFt) {
   const cellWpx = w / nx;
   const cellHpx = h / nz;
@@ -28,7 +32,7 @@ function sampleGrid(imageData, w, h, nx, nz, siteWidthFt, siteLengthFt) {
   for (let gx = 0; gx < nx; gx++) {
     const row = [];
     const realX = (gx + 0.5) * (siteWidthFt / nx);
-    const colCenter = w * (1 - realX / siteWidthFt);
+    const colCenter = w * (realX / siteWidthFt);
     const c0 = Math.max(0, Math.floor(colCenter - cellWpx / 2));
     const c1 = Math.min(w, Math.ceil(colCenter + cellWpx / 2));
     for (let gy = 0; gy < nz; gy++) {
@@ -155,15 +159,69 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
     return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   }, []);
 
+  // closeAfterBake: the explicit "Bake Painted Sketch" button closes the
+  // overlay afterward (original behavior); auto-bake-while-painting (see
+  // scheduleAutoBake / handlePointerUp below) must NOT close it -- the user
+  // is still actively painting, closing mid-stroke would be disruptive.
+  // onBaked itself only triggers the parent rebuild now (App.jsx no longer
+  // closes the overlay there), so this function fully owns whether the
+  // overlay closes.
+  const handleBake = useCallback(async (closeAfterBake = false) => {
+    if (!imgSize) return;
+    setBaking(true);
+    try {
+      const { w, h } = imgSize;
+      const { nx, nz, site_width_ft: W, site_length_ft: L } = config;
+      const grids = {};
+      for (const c of CATEGORIES) {
+        const layer = layersRef.current[c.key];
+        const data = layer.getContext('2d').getImageData(0, 0, w, h);
+        const grid = sampleGrid(data, w, h, nx, nz, W, L);
+        grids[c.key] = c.key === 'canyon' ? grid : grid.map((row) => row.map((v) => v > BOOLEAN_THRESHOLD));
+      }
+      const result = await bakePaint(grids);
+      log?.(`baked: ${JSON.stringify(result.counts)}`);
+      await onBaked?.();
+      if (closeAfterBake) onClose?.();
+    } catch (err) {
+      log?.(String(err), 'error');
+    } finally {
+      setBaking(false);
+    }
+  }, [imgSize, config, log, onBaked, onClose]);
+
+  // Auto-bake while painting (2026-07-10): the canyon-excavation real-slab
+  // removal previously only updated on an explicit "Bake Painted Sketch"
+  // click, which read as "painting doesn't do anything by default" --
+  // debounce a bake 600ms after the last stroke ends (handlePointerUp),
+  // canceling if a new stroke starts first (handlePointerDown), so it fires
+  // once per pause in painting rather than on every pointer-move.
+  const autoBakeTimerRef = useRef(null);
+  const cancelAutoBake = useCallback(() => {
+    if (autoBakeTimerRef.current) {
+      clearTimeout(autoBakeTimerRef.current);
+      autoBakeTimerRef.current = null;
+    }
+  }, []);
+  const scheduleAutoBake = useCallback(() => {
+    cancelAutoBake();
+    autoBakeTimerRef.current = setTimeout(() => {
+      autoBakeTimerRef.current = null;
+      handleBake(false);
+    }, 600);
+  }, [cancelAutoBake, handleBake]);
+  useEffect(() => cancelAutoBake, [cancelAutoBake]); // clear pending timer on unmount
+
   const handlePointerDown = useCallback(
     (e) => {
+      cancelAutoBake(); // still actively painting -- don't bake mid-stroke
       paintingRef.current = true;
       const p = canvasPoint(e);
       lastPtRef.current = p;
       stamp(p.x, p.y);
       composite();
     },
-    [canvasPoint, stamp, composite],
+    [canvasPoint, stamp, composite, cancelAutoBake],
   );
 
   const handlePointerMove = useCallback(
@@ -184,9 +242,11 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
   );
 
   const handlePointerUp = useCallback(() => {
+    if (!paintingRef.current) return;
     paintingRef.current = false;
     lastPtRef.current = null;
-  }, []);
+    scheduleAutoBake();
+  }, [scheduleAutoBake]);
 
   const handleClear = useCallback(() => {
     const layer = layersRef.current[category];
@@ -215,29 +275,6 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
     },
     [log],
   );
-
-  const handleBake = useCallback(async () => {
-    if (!imgSize) return;
-    setBaking(true);
-    try {
-      const { w, h } = imgSize;
-      const { nx, nz, site_width_ft: W, site_length_ft: L } = config;
-      const grids = {};
-      for (const c of CATEGORIES) {
-        const layer = layersRef.current[c.key];
-        const data = layer.getContext('2d').getImageData(0, 0, w, h);
-        const grid = sampleGrid(data, w, h, nx, nz, W, L);
-        grids[c.key] = c.key === 'canyon' ? grid : grid.map((row) => row.map((v) => v > BOOLEAN_THRESHOLD));
-      }
-      const result = await bakePaint(grids);
-      log?.(`baked: ${JSON.stringify(result.counts)}`);
-      await onBaked?.();
-    } catch (err) {
-      log?.(String(err), 'error');
-    } finally {
-      setBaking(false);
-    }
-  }, [imgSize, config, log, onBaked]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
@@ -334,7 +371,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
             </button>
 
             <button
-              onClick={handleBake}
+              onClick={() => handleBake(true)}
               disabled={baking || !imgSize}
               className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
             >
