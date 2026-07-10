@@ -17,6 +17,7 @@ const DEFAULT_PARAMS = {
   material_mode: 'STEEL',
   shoring_density: 1.0,
   use_real_amenity_data: false,
+  use_real_foot_traffic_data: false,
   buildings: [],
 };
 
@@ -68,6 +69,9 @@ export default function App() {
         // as blender_cockpit.py's mm_use_real_amenity_data default.
         if (c.amenity_csv) {
           setParams((prev) => ({ ...prev, use_real_amenity_data: true }));
+        }
+        if (c.foot_traffic_csv) {
+          setParams((prev) => ({ ...prev, use_real_foot_traffic_data: true }));
         }
       })
       .catch((err) => log(String(err), 'error'));
@@ -174,6 +178,8 @@ export default function App() {
           slabHarvestTons={data?.slab_harvest_tons}
           kindCounts={data?.kind_counts}
           usedRealAmenityData={data?.used_real_amenity_data}
+          usedRealFootTrafficData={data?.used_real_foot_traffic_data}
+          circulationVoxelCount={data?.voxels?.filter((v) => v.typology === 'CIRCULATION').length ?? 0}
           rebuilding={rebuilding}
           blenderBuild={blenderBuild}
           onBuildInBlender={handleBuildInBlender}

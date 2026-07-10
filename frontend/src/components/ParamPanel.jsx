@@ -42,7 +42,8 @@ const AMENITY_KINDS = ['water_plane', 'water_cascade_block', 'misting_line', 'be
 
 export default function ParamPanel({
   config, params, onParamsChange, onPaint, onRebuild, slabHarvestTons, kindCounts, usedRealAmenityData,
-  rebuilding, blenderBuild, onBuildInBlender, lineartEnabled, onLineartEnabledChange,
+  usedRealFootTrafficData, circulationVoxelCount, rebuilding, blenderBuild, onBuildInBlender,
+  lineartEnabled, onLineartEnabledChange,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
@@ -196,6 +197,40 @@ export default function ParamPanel({
           <span className="text-accent">
             {AMENITY_KINDS.reduce((sum, k) => sum + (kindCounts?.[k] ?? 0), 0)}
           </span>
+        </div>
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Foot Traffic / Circulation
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Stage 1: classifies painted Hardscape cells as Circulation where foot-traffic influence is
+          high enough -- no path/bridge network yet, that's a separate later pass.
+        </p>
+        <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer">
+          <input
+            type="checkbox"
+            checked={params.use_real_foot_traffic_data}
+            disabled={!config?.foot_traffic_csv}
+            onChange={(e) => set('use_real_foot_traffic_data')(e.target.checked)}
+            className="accent-accent"
+          />
+          Use Real Foot Traffic Data
+        </label>
+        <div className="font-mono-sm text-[11px] text-on-surface-variant">
+          {config?.foot_traffic_csv ? `csv: ${config.foot_traffic_csv}` : 'no foot traffic CSV found -- using placeholder'}
+        </div>
+        <div className="font-mono-sm text-[11px] text-on-surface-variant">
+          {usedRealFootTrafficData === false && params.use_real_foot_traffic_data
+            ? 'placeholder in use (no CSV)'
+            : usedRealFootTrafficData === true
+              ? 'real foot traffic data in use'
+              : null}
+        </div>
+        <div className="font-mono-sm text-mono-sm text-on-surface-variant">
+          Circulation cells:{' '}
+          <span className="text-accent">{circulationVoxelCount ?? 0}</span>
         </div>
       </div>
 

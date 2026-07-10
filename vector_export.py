@@ -38,15 +38,22 @@ LAYER_COLORS = {
 }
 
 # Street-edge labels for plan/axo views, in this module's site-local (x, y)
-# frame. Corrected 2026-07-03 against the real Rhino model (previously
-# inherited an unverified south=z0/north=zmax assumption from a different,
-# separately-derived SVG dataset -- confirmed backwards for this OBJ-derived
-# data: the Metro entrance is at the NE corner, off Hill St, near 5th St).
+# frame. Re-corrected 2026-07-09: the 2026-07-03 assignment below (5TH
+# ST=y0) was itself derived from the metroConnection object's position at
+# the time, which was later found (2026-07-08/09) to be a stale, pre-fix
+# snapshot -- once the real Z-axis sign bug was fixed and the entrance
+# position was re-verified multiple independent ways against live Rhino
+# data (see PIPELINE_STATUS_AND_NEXT_STEPS.md's 2026-07-08/09 entries),
+# the entrance/tunnel land at y-MAX, not y0. User confirmed directly
+# (2026-07-09): the real Metro entrance/connector is at the 5th & Hill
+# corner, so 5TH ST is the ymax edge, not y0 -- swapped from the 07-03
+# assignment accordingly. HILL ST=xmax was never in question (X was
+# unaffected by the Z-axis bug, confirmed separately).
 STREET_LABELS = [
     ("OLIVE ST", "x0"),
     ("HILL ST", "xmax"),
-    ("5TH ST", "y0"),
-    ("6TH ST", "ymax"),
+    ("5TH ST", "ymax"),
+    ("6TH ST", "y0"),
 ]
 
 
@@ -96,6 +103,7 @@ def build_context_meshes(real_geometry):
 
     meshes["tunnel"] = _mesh_from_real(real_geometry["tunnel_mesh"])
     meshes["secondary_entrance"] = _mesh_from_real(real_geometry["secondary_entrance_mesh"])
+    meshes["metro_connector"] = _mesh_from_real(real_geometry["metro_connector_mesh"])
 
     ramps = []
     for cluster in real_geometry["ramp_meshes"].values():
@@ -145,7 +153,7 @@ def build_terraced_solid(engine, voxels, floor_margin_ft=10.0):
 def build_combined_mesh(real_geometry, engine, voxels):
     context = build_context_meshes(real_geometry)
     terrace = build_terraced_solid(engine, voxels)
-    all_meshes = [terrace, context["tunnel"], context["secondary_entrance"]]
+    all_meshes = [terrace, context["tunnel"], context["secondary_entrance"], context["metro_connector"]]
     all_meshes.extend(context["columns"])
     all_meshes.extend(context["ramps"])
     return trimesh.util.concatenate(all_meshes)
@@ -168,6 +176,7 @@ def build_named_scene(real_geometry, engine, voxels):
     scene.add_geometry(terrace, node_name="terrace", geom_name="terrace")
     scene.add_geometry(context["tunnel"], node_name="tunnel", geom_name="tunnel")
     scene.add_geometry(context["secondary_entrance"], node_name="secondary_entrance", geom_name="secondary_entrance")
+    scene.add_geometry(context["metro_connector"], node_name="metro_connector", geom_name="metro_connector")
     scene.add_geometry(trimesh.util.concatenate(context["columns"]), node_name="columns", geom_name="columns")
     scene.add_geometry(trimesh.util.concatenate(context["ramps"]), node_name="ramps", geom_name="ramps")
     return scene

@@ -29,12 +29,14 @@ function StaticContextGroup({ siteLengthFt, shadingMode }) {
       });
       group.add(child);
     }
-    // Real (x, y, z_up) -> Three (X, Y_up, y-L) -- same transform as
-    // Viewport.jsx's toThree(x, y, z, L) = [x, z, y - L] applied per-point
-    // (the y -> L-y term is the same axo-camera Y-mirror
-    // blender_cockpit.py's setup_axo_view applies to columns/tunnel/
-    // secondary_entrance/ramps, so the tunnel entrance reads at the top
-    // of the frame instead of the bottom), expressed as one whole-group
+    // Real (x, y, z_up) -> Three (X, Y_up, L-y) -- same transform as
+    // Viewport.jsx's toThree(x, y, z, L) = [x, z, L - y] applied per-point
+    // (fixed 2026-07-09 alongside toThree -- this matrix had the same
+    // shift-instead-of-mirror bug: swapping Rhino's Y/Z axes to build a
+    // Y-up Three.js frame reverses handedness, and a plain shift doesn't
+    // restore it, so every static-context object was a left-handed mirror
+    // image of the real Rhino layout along this one axis. See toThree's
+    // own comment for the full derivation), expressed as one whole-group
     // matrix instead of per-vertex to avoid re-deriving rotation+
     // translation composition by hand -- built explicitly and verified
     // against the live render rather than assumed.
@@ -42,7 +44,7 @@ function StaticContextGroup({ siteLengthFt, shadingMode }) {
     m.set(
       1, 0, 0, 0,
       0, 0, 1, 0,
-      0, 1, 0, -siteLengthFt,
+      0, -1, 0, siteLengthFt,
       0, 0, 0, 1,
     );
     group.matrixAutoUpdate = false;

@@ -35,6 +35,7 @@ class Voxel:
     wy: float
     transit_influence: float
     deficit_influence: float
+    foot_traffic_influence: float = 0.0
     sketch_weight: float = 0.0
     is_hardscape: bool = False
     is_water_shade: bool = False
@@ -55,6 +56,17 @@ DEFAULT_DEFICIT_HOTSPOTS = [
     {"x_frac": 0.04, "y_frac": 0.30, "strength": 0.6, "radius_ft": 54.0},
 ]
 
+# Same shape and same "diagrammatic placeholder, not real data" status as
+# DEFAULT_DEFICIT_HOTSPOTS above -- pending real foot-traffic data (survey
+# counters, mobility export, etc.) via foot_traffic.py's CSV loader. These
+# two points are just a stand-in near a plausible plaza entry so the
+# CIRCULATION classification has something non-trivial to show before real
+# data exists.
+DEFAULT_FOOT_TRAFFIC_HOTSPOTS = [
+    {"x_frac": 0.5, "y_frac": 0.08, "strength": 1.0, "radius_ft": 60.0},
+    {"x_frac": 0.5, "y_frac": 0.92, "strength": 0.7, "radius_ft": 60.0},
+]
+
 # Depth-below-grade thresholds (ft) for the Botanical Attractor Module's
 # level tagging (Section 3): Level 0 = surface/shade canopy zone, -1 =
 # terraced planters, -2/-3 = deep canyon / structural sub-vault zone.
@@ -71,12 +83,13 @@ class TerracingEngine:
     Pershing-specific beyond the values already baked into that JSON.
     """
 
-    def __init__(self, real_geometry, deficit_hotspots=None, voxel_ft=9.0,
+    def __init__(self, real_geometry, deficit_hotspots=None, foot_traffic_hotspots=None, voxel_ft=9.0,
                  transit_falloff_ft=220.0, threshold=0.35, step_ft=9.0,
                  max_canyon_depth_ft=None,
                  level_depth_thresholds_ft=DEFAULT_LEVEL_DEPTH_THRESHOLDS_FT,
                  sketch_weights=None, sketch_alpha=0.75, hardscape_regions=None,
-                 water_shade_regions=None, greenscape_regions=None, amenity_resting_regions=None):
+                 water_shade_regions=None, greenscape_regions=None, amenity_resting_regions=None,
+                 circulation_threshold=0.35):
         self.real_geometry = real_geometry
         self.voxel_ft = voxel_ft
         self.transit_falloff_ft = transit_falloff_ft
@@ -118,6 +131,11 @@ class TerracingEngine:
         self.water_shade_regions = water_shade_regions or []
         self.greenscape_regions = greenscape_regions or []
         self.amenity_resting_regions = amenity_resting_regions or []
+        # Threshold for _classify_typology's CIRCULATION check below --
+        # independent of self.threshold (which gates excavation depth)
+        # despite sharing the same default value; unverifiable/cosmetic
+        # until real foot-traffic data exists (see DEFAULT_FOOT_TRAFFIC_HOTSPOTS).
+        self.circulation_threshold = circulation_threshold
 
         self.site_width_ft = real_geometry["site"]["width_ft"]
         self.site_length_ft = real_geometry["site"]["length_ft"]
@@ -146,6 +164,18 @@ class TerracingEngine:
             ]
         self.deficit_hotspots = deficit_hotspots
 
+        if foot_traffic_hotspots is None:
+            foot_traffic_hotspots = [
+                {
+                    "x": h["x_frac"] * self.site_width_ft,
+                    "y": h["y_frac"] * self.site_length_ft,
+                    "strength": h["strength"],
+                    "radius": h["radius_ft"],
+                }
+                for h in DEFAULT_FOOT_TRAFFIC_HOTSPOTS
+            ]
+        self.foot_traffic_hotspots = foot_traffic_hotspots
+
         self.voxels = self._build_base_voxels()
 
     def _build_base_voxels(self):
@@ -165,6 +195,18 @@ class TerracingEngine:
                     deficit_influence += h["strength"] * math.exp(-d / h["radius"])
                 deficit_influence = clamp01(deficit_influence)
 
+                # Independent of deficit_influence -- a separate real-data
+                # channel (foot traffic vs. amenity deficit), not folded
+                # together despite the identical summed-falloff shape. Not
+                # used anywhere in the excavation-depth math (_effective_influence/
+                # _z_for_voxel/score_for_phase); it only feeds
+                # _classify_typology's CIRCULATION check below.
+                foot_traffic_influence = 0.0
+                for h in self.foot_traffic_hotspots:
+                    d = math.hypot(wx - h["x"], wy - h["y"])
+                    foot_traffic_influence += h["strength"] * math.exp(-d / h["radius"])
+                foot_traffic_influence = clamp01(foot_traffic_influence)
+
                 sketch_weight = 0.0
                 if self.sketch_weights is not None:
                     sketch_weight = float(self.sketch_weights[gx][gy])
@@ -178,6 +220,7 @@ class TerracingEngine:
                     gx=gx, gy=gy, wx=wx, wy=wy,
                     transit_influence=transit_influence,
                     deficit_influence=deficit_influence,
+                    foot_traffic_influence=foot_traffic_influence,
                     sketch_weight=sketch_weight,
                     is_hardscape=is_hardscape,
                     is_water_shade=is_water_shade,
@@ -272,12 +315,18 @@ class TerracingEngine:
         is a post-process classification over the already-computed terrace,
         not a new input to the depth formula). SANCTUARY is paint-only --
         Greenscape and Amenity/Resting can both sit at grade, unrelated to
-        excavation depth.
+        excavation depth. CIRCULATION is checked last, after GROTTO/
+        SANCTUARY -- existing classifications win outright if a cell
+        happens to be painted both ways, no new priority system needed
+        (foot-traffic data driving CIRCULATION is independent of the
+        water_shade/greenscape/amenity_resting masks the other two read).
         """
         if v.z_ft < 0 and v.is_water_shade:
             return "GROTTO"
         if v.is_greenscape and v.is_amenity_resting:
             return "SANCTUARY"
+        if v.is_hardscape and v.foot_traffic_influence >= self.circulation_threshold:
+            return "CIRCULATION"
         return None
 
     def _tag_levels(self, v):

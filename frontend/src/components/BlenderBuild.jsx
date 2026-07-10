@@ -31,15 +31,17 @@ function BlenderBuildGroup({ objUrl, siteLengthFt, shadingMode }) {
       });
       g.add(child);
     }
-    // real (x, y, z_up) -> Three (X, Y_up=z, Z=y-L) -- identical to
-    // StaticContext.jsx's matrix and Viewport.jsx's toThree(), expressed
+    // real (x, y, z_up) -> Three (X, Y_up=z, Z=L-y) -- identical to
+    // StaticContext.jsx's matrix and Viewport.jsx's toThree() (fixed
+    // 2026-07-09 alongside both, same shift-instead-of-mirror handedness
+    // bug -- see toThree's own comment for the full derivation), expressed
     // as one whole-group matrix for the same reason StaticContext.jsx
     // does: avoids re-deriving rotation+translation composition by hand.
     const m = new THREE.Matrix4();
     m.set(
       1, 0, 0, 0,
       0, 0, 1, 0,
-      0, 1, 0, -siteLengthFt,
+      0, -1, 0, siteLengthFt,
       0, 0, 0, 1,
     );
     g.matrixAutoUpdate = false;

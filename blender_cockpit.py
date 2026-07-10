@@ -509,7 +509,7 @@ def _set_paint_view(active):
     if canvas_obj is None or paint_cam is None:
         return
     canvas_obj.hide_set(not active)
-    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "ramps"):
+    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "metro_connector", "ramps"):
         obj = bpy.data.objects.get(name)
         if obj is not None:
             obj.hide_set(active)
@@ -704,7 +704,7 @@ def setup_axo_view(real_geometry):
     u, v = _axo_basis(AXO_VIEW_DIR)
 
     mirror = mathutils.Matrix(((1, 0, 0, 0), (0, -1, 0, L), (0, 0, 1, 0), (0, 0, 0, 1)))
-    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "ramps"):
+    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "metro_connector", "ramps"):
         obj = bpy.data.objects.get(name)
         if obj is not None:
             obj.matrix_world = mirror

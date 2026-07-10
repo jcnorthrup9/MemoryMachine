@@ -1,6 +1,6 @@
 import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCamera } from '@react-three/drei';
+import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCamera, Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import StaticContext from './StaticContext.jsx';
 import BlenderBuild from './BlenderBuild.jsx';
@@ -69,17 +69,26 @@ const KIND_COLOR = {
 const LEVEL_COLOR = ['#c2bdb4', '#7d9bb0', '#4d6b80', '#2a3f4d']; // grade -> deeper
 
 // Site (x, y_ft, z_ft) -> Three.js (X, Y-up, Z). Real-feet Z (up) maps
-// straight to Three Y; real site "y" (length axis) gets the SAME Y-mirror
-// (y -> siteLengthFt - y) blender_cockpit.py's setup_axo_view applies to
-// every object (terrace, columns, tunnel, secondary_entrance, ramps)
-// before its axo camera renders them -- without it, "top of screen" here
-// doesn't match Blender's already-validated convention. Confirmed via
-// real_geometry.json: the entrance/tunnel sit at real y=36.29ft, near one
-// end of the 602.4ft site -- without the mirror they land close to this
-// scene's camera (bottom of frame) instead of far from it (top), which is
-// exactly the flip the user reported.
+// straight to Three Y; real site "y" (length axis) needs a mirror
+// (y -> siteLengthFt - y), NOT a plain shift -- fixed 2026-07-09, this
+// function's own code previously read `y - siteLengthFt` (a shift, order-
+// preserving) despite this very comment already documenting the intended
+// formula as `siteLengthFt - y` (a mirror) and blender_cockpit.py's
+// setup_axo_view already correctly implementing that same mirror
+// (`mathutils.Matrix(((1,0,0,0),(0,-1,0,L),...))`, note the -1). The
+// mismatch was a real bug, not just a stale comment: swapping Rhino's Y
+// (length) and Z (vertical) axes to build a Y-up Three.js frame reverses
+// handedness (a single-axis transposition is an odd permutation), and
+// restoring right-handedness requires negating exactly one of the two
+// swapped axes -- a plain shift doesn't do that, so every object in this
+// scene was a left-handed mirror image of the real Rhino layout along
+// this one axis. Confirmed against live Rhino data: the metroConnection
+// entrance (2026-07-09 Z-axis-sign-bug fix) sits near Rhino's own Y-max,
+// which a native Rhino Top view renders near the TOP of screen -- the old
+// shift put it near the BOTTOM instead, exactly the "looks mirrored/
+// upside-down" symptom reported after adding the Plan-view street labels.
 function toThree(x, y, z, siteLengthFt) {
-  return [x, z, y - siteLengthFt];
+  return [x, z, siteLengthFt - y];
 }
 
 // Generous vertical extent estimate for framing Front/Side elevations --
@@ -286,6 +295,46 @@ function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
   );
 }
 
+// Same one-InstancedMesh-of-filtered-voxels pattern as GreenscapeGround,
+// filtered by v.typology === 'CIRCULATION' (server-classified: hardscape
+// cells where the foot-traffic influence field crosses circulation_threshold
+// -- see terracing_engine.py's _classify_typology) instead of a raw boolean
+// mask. Gives HARDSCAPE_MASK its first visual identity in this viewport --
+// previously invisible, only ever an excavation veto.
+const CIRCULATION_COLOR = '#8a8378';
+const CIRCULATION_THICKNESS_FT = 0.5;
+
+function CirculationSurface({ voxels, voxelFt, siteLengthFt, shadingMode }) {
+  const meshRef = useRef();
+  const items = useMemo(() => voxels.filter((v) => v.typology === 'CIRCULATION'), [voxels]);
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    const dummy = new THREE.Object3D();
+    items.forEach((v, i) => {
+      const cx = v.gx * voxelFt + voxelFt / 2;
+      const cy = v.gy * voxelFt + voxelFt / 2;
+      const cz = v.z_ft + CIRCULATION_THICKNESS_FT / 2;
+      const [x, y, z] = toThree(cx, cy, cz, siteLengthFt);
+      dummy.position.set(x, y, z);
+      dummy.scale.set(voxelFt, CIRCULATION_THICKNESS_FT, voxelFt);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [items, voxelFt, siteLengthFt]);
+
+  if (items.length === 0) return null;
+
+  const mat = materialProps(shadingMode, CIRCULATION_COLOR);
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial {...mat} />
+    </instancedMesh>
+  );
+}
+
 function BoxInstances({ specs, siteLengthFt, shadingMode }) {
   const byKind = useMemo(() => {
     const map = {};
@@ -433,12 +482,52 @@ function StructuralInstances({ specs, siteLengthFt, shadingMode }) {
   );
 }
 
+// TEMPORARY orientation-verification aid (2026-07-09) -- not a permanent
+// feature, remove once orientation is confirmed against real Rhino/street
+// data. Mirrors vector_export.py's STREET_LABELS/street_label_points()
+// (OLIVE ST=x0, HILL ST=xmax, 5TH ST=ymax, 6TH ST=y0 in that module's
+// site-local plan convention, whose "y" is this project's length axis --
+// re-corrected 2026-07-09, see that module's own comment for why the
+// 07-03 assignment had 5TH/6TH backwards) -- same edge-midpoint
+// positions, just rendered in the live viewport instead of the offline
+// DXF/SVG export. Billboard-wrapped so each label stays readable from
+// every view mode (perspective/axo/plan/front/side), not just a top-down
+// read.
+const STREET_LABEL_MARGIN_FT = 30;
+const STREET_LABEL_HEIGHT_FT = 8;
+
+function StreetLabels({ siteWidthFt, siteLengthFt }) {
+  const labels = [
+    { text: 'OLIVE ST', x: -STREET_LABEL_MARGIN_FT, len: siteLengthFt / 2 },
+    { text: 'HILL ST', x: siteWidthFt + STREET_LABEL_MARGIN_FT, len: siteLengthFt / 2 },
+    { text: '6TH ST', x: siteWidthFt / 2, len: -STREET_LABEL_MARGIN_FT },
+    { text: '5TH ST', x: siteWidthFt / 2, len: siteLengthFt + STREET_LABEL_MARGIN_FT },
+  ];
+  return (
+    <>
+      {labels.map(({ text, x, len }) => {
+        const [px, py, pz] = toThree(x, len, STREET_LABEL_HEIGHT_FT, siteLengthFt);
+        return (
+          <Billboard key={text} position={[px, py, pz]}>
+            <Text fontSize={16} color="#39ff88" anchorX="center" anchorY="middle" outlineWidth={0.6} outlineColor="#000000">
+              {text}
+            </Text>
+          </Billboard>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl, onShowLineArt }) {
   const [shadingMode, setShadingMode] = useState('colored');
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
   const canvasRef = useRef(null);
-  const center = [siteWidthFt / 2, 0, -siteLengthFt / 2];
+  // toThree()'s Z range is now [0, siteLengthFt] (fixed 2026-07-09, see
+  // toThree's own comment) -- center must sit at the midpoint of THAT
+  // range, not the old (buggy) [-siteLengthFt, 0] range's midpoint.
+  const center = [siteWidthFt / 2, 0, siteLengthFt / 2];
   // Toggle only actually swaps the layer once a build exists -- with no
   // blenderObjUrl yet, always fall back to the live instanced view rather
   // than rendering nothing.
@@ -504,9 +593,18 @@ export default function Viewport({ data, siteWidthFt, siteLengthFt, voxelFt, ble
                 shadingMode={shadingMode}
               />
             )}
+            {data && (
+              <CirculationSurface
+                voxels={data.voxels}
+                voxelFt={voxelFt}
+                siteLengthFt={siteLengthFt}
+                shadingMode={shadingMode}
+              />
+            )}
           </>
         )}
         <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
         <gridHelper args={[Math.max(siteWidthFt, siteLengthFt) * 1.4, 40, '#3a3a3a', '#262626']} />
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">

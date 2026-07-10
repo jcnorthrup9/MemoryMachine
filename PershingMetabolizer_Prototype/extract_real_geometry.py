@@ -14,6 +14,32 @@ import json
 import os
 
 
+def _make_box_mesh(xmin, xmax, ymin, ymax, zmin, zmax):
+    """Crude 24-vertex/12-triangle axis-aligned box, matching the flat
+    {"vertices": [...], "faces": [...]} convention every mesh field in
+    real_geometry.json already uses (tunnel_mesh, secondary_entrance_mesh,
+    ramp_meshes, column_prototype_mesh). Hard normals (4 unique verts per
+    face) -- winding doesn't matter for visibility, frontend/src/shading.js
+    sets side: THREE.DoubleSide on every material mode. Lives here (not in
+    build_real_geometry.py, which also uses it) since it's fundamentally a
+    geometry-construction utility, same category as mesh_for() below."""
+    faces_corners = [
+        [(xmin, ymin, zmin), (xmin, ymin, zmax), (xmin, ymax, zmax), (xmin, ymax, zmin)],  # -X
+        [(xmax, ymin, zmin), (xmax, ymax, zmin), (xmax, ymax, zmax), (xmax, ymin, zmax)],  # +X
+        [(xmin, ymin, zmin), (xmax, ymin, zmin), (xmax, ymin, zmax), (xmin, ymin, zmax)],  # -Y (deep)
+        [(xmin, ymax, zmin), (xmin, ymax, zmax), (xmax, ymax, zmax), (xmax, ymax, zmin)],  # +Y (shallow)
+        [(xmin, ymin, zmin), (xmin, ymax, zmin), (xmax, ymax, zmin), (xmax, ymin, zmin)],  # -Z
+        [(xmin, ymin, zmax), (xmax, ymin, zmax), (xmax, ymax, zmax), (xmin, ymax, zmax)],  # +Z
+    ]
+    vertices, faces = [], []
+    for quad in faces_corners:
+        base = len(vertices) // 3
+        for (x, y, z) in quad:
+            vertices.extend([x, y, z])
+        faces.extend([base, base + 1, base + 2, base, base + 2, base + 3])
+    return {"vertices": vertices, "faces": faces}
+
+
 def mesh_for(name, obj_faces, global_verts, recenter_xz=False, recenter_y_to_top=False):
     """Build a compact local-indexed mesh (verts + triangle faces) for one object."""
     faces = obj_faces[name]
@@ -419,6 +445,27 @@ def extract_positions_from_layered_obj(
     secondary_entrance_anchor, ramp_anchors -- same shapes as
     extract_real_geometry()'s equivalent fields, in the same site-local
     (BOUNDARY min corner) origin.
+
+    Z-axis sign, fixed 2026-07-09: Rhino's OBJ exporter (up_axis='Z',
+    forward_axis='Y', used throughout this project) converts Rhino's
+    right-handed Z-up WCS to OBJ's Y-up convention via OBJ_x=Rhino_x,
+    OBJ_y=Rhino_z (unchanged), OBJ_z=-Rhino_y (NEGATED -- required to
+    preserve right-handedness when swapping two axes; confirmed directly
+    by comparing metroTunnel's live-Rhino-queried Y range against its raw
+    OBJ Z-column values). Every z-axis site-local value below is therefore
+    computed as `site_max_z - v[2]`, NOT `v[2] - site_min_z` -- taking
+    min() of a negated axis anchors the origin at the WRONG end of the
+    site. Proven with real numbers: metroConnection's live-Rhino bbox
+    converts to site_local_z=566.11 via the correct formula (matching the
+    independently-trusted, SVG-derived secondary_entrance_anchor.z=566.267
+    to 0.15ft) vs. 36.29 via the old, backwards formula -- an exact
+    mirror (602.4 - 566.11 = 36.29), not a rounding difference. This bug
+    predates today but was masked: SVG (unaffected, different coordinate
+    source) wins secondary_entrance_anchor.x/z in the final merged output,
+    and ramp_anchors happens to sit almost exactly at the site's Z-midpoint
+    (a mirror-invariant point), so its output was accidentally close to
+    correct. X is NOT negated (OBJ_x=Rhino_x directly, confirmed
+    separately) -- only Z needs this treatment.
     """
     global_verts, obj_vstart, obj_vcount, obj_faces, order, obj_group = parse_obj(obj_path)
 
@@ -456,7 +503,7 @@ def extract_positions_from_layered_obj(
         cx = sum(v[0] for v in vs) / len(vs)
         cz = sum(v[2] for v in vs) / len(vs)
         top_y = max(v[1] for v in vs)
-        column_positions.append({"x": cx - site_min_x, "z": cz - site_min_z, "top_y": top_y})
+        column_positions.append({"x": cx - site_min_x, "z": site_max_z - cz, "top_y": top_y})
 
     # --- Grade reference: same real, unambiguous shared-top_y check
     # extract_real_geometry() uses, just actually succeeding here since
@@ -478,7 +525,7 @@ def extract_positions_from_layered_obj(
     entrance_verts = [v for name in entrance_objs for v in verts_of(name)]
     secondary_entrance_anchor = {
         "x": sum(v[0] for v in entrance_verts) / len(entrance_verts) - site_min_x,
-        "z": sum(v[2] for v in entrance_verts) / len(entrance_verts) - site_min_z,
+        "z": site_max_z - sum(v[2] for v in entrance_verts) / len(entrance_verts),
         "top_depth_ft": round(depth_below_grade(max(v[1] for v in entrance_verts)), 2),
         "bottom_depth_ft": round(depth_below_grade(min(v[1] for v in entrance_verts)), 2),
     }
@@ -506,7 +553,7 @@ def extract_positions_from_layered_obj(
             ys_ = [v[1] for v in verts]
             return {
                 "x": (min(xs_) + max(xs_)) / 2 - site_min_x,
-                "z": (min(zs_) + max(zs_)) / 2 - site_min_z,
+                "z": site_max_z - (min(zs_) + max(zs_)) / 2,
                 "half_width_ft": (max(xs_) - min(xs_)) / 2,
                 "half_length_ft": (max(zs_) - min(zs_)) / 2,
                 "top_depth_ft": round(depth_below_grade(max(ys_)), 2),
@@ -529,6 +576,128 @@ def extract_positions_from_layered_obj(
         "secondary_entrance_anchor": secondary_entrance_anchor,
         "ramp_anchors": ramp_anchors,
     }
+
+
+def extract_meshes_from_layered_obj(
+    obj_path,
+    boundary_layer="BOUNDARY",
+    tunnel_group="metroTunnel",
+    entrance_group="metroConnection",
+):
+    """
+    Extract REAL mesh geometry (not just position facts, unlike
+    extract_positions_from_layered_obj above) for tunnel_mesh and
+    secondary_entrance_mesh directly from an OBJ exported with "layers as
+    OBJ groups" (e.g. PershingCurrentMetabolism.obj).
+
+    Added 2026-07-09 after confirming this export now has real triangulated
+    face data for the Metro tunnel/station-box (g metroTunnel -> o
+    metro_station_box, 196 real faces) -- previously absent, which is why
+    this project fell back to a much older grid-base OBJ (June 28) for
+    mesh geometry while using this file only for position/depth facts.
+    That fallback is now stale: build_real_geometry.py used to patch the
+    old mesh's position/depth with translate/rescale hacks to match the
+    freshly-verified secondary_entrance_anchor (see PIPELINE_STATUS_AND_
+    NEXT_STEPS.md's 2026-07-08/09 entries) -- fixing where a stale mesh
+    displayed, not what geometry it should have been in the first place.
+    Extracting directly from the same file/object the anchor itself comes
+    from sidesteps that class of bug entirely, and happened to catch a
+    small additional error in one of those patches (it assumed
+    depth_ft = -y, but the real convention used everywhere else in this
+    file is depth_ft = grade_y_raw - y, and grade_y_raw is ~3.73, not 0).
+
+    metroConnection (o object_1) still has no face data (Rhino exported it
+    as an Extrusion, not a triangulated mesh) but its 24 vertices form a
+    perfect axis-aligned box (confirmed: exactly 2 unique values per axis),
+    so its mesh is reconstructed via _make_box_mesh from that box's own
+    real bounding box.
+
+    Returns site-local (BOUNDARY min-corner-origin), OBJ-vertex-order
+    ({"vertices": flat x,y,z,..., "faces": flat tri-index ints}) mesh dicts
+    -- the same convention every mesh field in real_geometry.json already
+    uses (matches mesh_for()'s own uncentered output, just offset by
+    site_min_x/site_min_z instead of left in raw Rhino-export coordinates).
+
+    Z-axis sign, fixed 2026-07-09: same bug and same fix as
+    extract_positions_from_layered_obj's docstring describes in full --
+    OBJ_z is a NEGATED Rhino Y, so site-local Z must be `site_max_z - v[2]`,
+    not `v[2] - site_min_z`. For tunnel_mesh specifically (a real,
+    asymmetric triangulated mesh, not a symmetric box) this negation is a
+    genuine mirror and inverts triangle winding/normals, so each face's
+    vertex order is reversed to compensate -- same principle
+    vector_export.py's own mirror_mesh_y() already applies for exactly
+    this reason (see its docstring).
+    """
+    global_verts, obj_vstart, obj_vcount, obj_faces, order, obj_group = parse_obj(obj_path)
+
+    def verts_of(name):
+        start = obj_vstart[name]
+        count = obj_vcount[name]
+        return global_verts[start - 1: start - 1 + count]
+
+    members = {}
+    for name, g in obj_group.items():
+        if g is not None and name != g:
+            members.setdefault(g, []).append(name)
+
+    boundary_objs = members.get(boundary_layer, [])
+    if not boundary_objs:
+        raise ValueError(f"no objects found under g {boundary_layer!r}")
+    boundary_verts = [v for name in boundary_objs for v in verts_of(name)]
+    site_min_x = min(v[0] for v in boundary_verts)
+    site_max_z = max(v[2] for v in boundary_verts)
+
+    def _offset_flat(flat_verts):
+        out = []
+        for i in range(0, len(flat_verts), 3):
+            out.extend([flat_verts[i] - site_min_x, flat_verts[i + 1], site_max_z - flat_verts[i + 2]])
+        return out
+
+    def _reverse_winding(flat_faces):
+        # Z-mirror inverts triangle winding -- swap the last two indices of
+        # each triangle (a b c -> a c b) to restore outward-facing normals.
+        out = list(flat_faces)
+        for i in range(0, len(out), 3):
+            out[i + 1], out[i + 2] = out[i + 2], out[i + 1]
+        return out
+
+    # --- Tunnel: real triangulated mesh, wherever its faces actually live
+    # -- the enclosing g group itself, or (as in this export) a single
+    # nested o sub-object, since OBJ has no true nested-group syntax and
+    # Rhino's own "layers as OBJ groups" export writes real per-instance
+    # object names underneath each layer's g line (see parse_obj's
+    # docstring). ---
+    tunnel_face_owner = tunnel_group if obj_faces.get(tunnel_group) else next(
+        (n for n, g in obj_group.items() if g == tunnel_group and obj_faces.get(n)), None)
+    if tunnel_face_owner is None:
+        raise ValueError(f"no face data found for g {tunnel_group!r} or any object under it")
+    tunnel_raw = mesh_for(tunnel_face_owner, obj_faces, global_verts)
+    tunnel_mesh = {
+        "vertices": _offset_flat(tunnel_raw["vertices"]),
+        "faces": _reverse_winding(tunnel_raw["faces"]),
+    }
+
+    # --- Entrance: no face data (Extrusion, not a mesh) -- reconstruct a
+    # box from its own real bounding box instead of borrowing a stale,
+    # differently-positioned/sized placeholder from another file. ---
+    entrance_objs = members.get(entrance_group, [])
+    if not entrance_objs:
+        raise ValueError(f"no objects found under g {entrance_group!r}")
+    entrance_verts = [v for name in entrance_objs for v in verts_of(name)]
+    ex = [v[0] for v in entrance_verts]
+    ey = [v[1] for v in entrance_verts]
+    ez = [v[2] for v in entrance_verts]
+    secondary_entrance_mesh = _make_box_mesh(
+        min(ex) - site_min_x, max(ex) - site_min_x,
+        min(ey), max(ey),
+        site_max_z - max(ez), site_max_z - min(ez),
+    )
+
+    print(f"[extract] layered-OBJ meshes: tunnel_mesh from {tunnel_face_owner!r} "
+          f"({len(tunnel_raw['faces']) // 3} real tris), secondary_entrance_mesh "
+          f"reconstructed as a box from {entrance_group!r}'s own real bbox")
+
+    return {"tunnel_mesh": tunnel_mesh, "secondary_entrance_mesh": secondary_entrance_mesh}
 
 
 if __name__ == "__main__":

@@ -32,6 +32,11 @@ from sketch_weight_mapper import find_latest_sketch  # noqa: E402
 # amenity_deficit.py only needs the stdlib csv module -- same reasoning as
 # above, safe to import directly at module level.
 from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # noqa: E402
+# foot_traffic.py mirrors amenity_deficit.py's CSV contract exactly, for a
+# separate real-data channel (foot traffic vs. amenity deficit) -- aliased
+# since both modules define a same-named find_latest_csv().
+from foot_traffic import (  # noqa: E402
+    load_foot_traffic_hotspots_from_csv, find_latest_csv as find_latest_foot_traffic_csv)
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights_cache.json")
@@ -55,6 +60,12 @@ NX_BAYS = max(1, round(REAL_GEOMETRY["site"]["width_ft"] / STRUCTURAL_BAY_FT))
 # TerracingEngine's own DEFAULT_DEFICIT_HOTSPOTS placeholder regardless of
 # what the frontend's toggle is set to.
 AMENITY_CSV_PATH = find_latest_csv()
+
+# Same lookup, separate real-data channel -- None if
+# data/foot_traffic_survey/ has no CSV yet, in which case rebuild() stays on
+# TerracingEngine's own DEFAULT_FOOT_TRAFFIC_HOTSPOTS placeholder regardless
+# of what the frontend's toggle is set to.
+FOOT_TRAFFIC_CSV_PATH = find_latest_foot_traffic_csv()
 
 # Same bootstrap pattern as blender_cockpit.py: start from the precomputed
 # sketch cache if one exists, empty grids otherwise.
@@ -163,6 +174,7 @@ class RebuildParams(BaseModel):
     material_mode: str = "STEEL"
     shoring_density: float = 1.0
     use_real_amenity_data: bool = AMENITY_CSV_PATH is not None
+    use_real_foot_traffic_data: bool = FOOT_TRAFFIC_CSV_PATH is not None
     buildings: list[BuildingSpec] = []
 
 
@@ -181,6 +193,7 @@ def get_config():
         # CSV found" label, so the React toggle can show the same status
         # instead of just silently no-op'ing when no CSV exists yet.
         "amenity_csv": os.path.basename(AMENITY_CSV_PATH) if AMENITY_CSV_PATH else None,
+        "foot_traffic_csv": os.path.basename(FOOT_TRAFFIC_CSV_PATH) if FOOT_TRAFFIC_CSV_PATH else None,
     }
 
 
@@ -213,6 +226,12 @@ def rebuild(params: RebuildParams):
         deficit_hotspots = load_deficit_hotspots_from_csv(
             AMENITY_CSV_PATH, REAL_GEOMETRY["site"]["width_ft"], REAL_GEOMETRY["site"]["length_ft"])
 
+    # Same conditional-load pattern, separate real-data channel.
+    foot_traffic_hotspots = None
+    if params.use_real_foot_traffic_data and FOOT_TRAFFIC_CSV_PATH:
+        foot_traffic_hotspots = load_foot_traffic_hotspots_from_csv(
+            FOOT_TRAFFIC_CSV_PATH, REAL_GEOMETRY["site"]["width_ft"], REAL_GEOMETRY["site"]["length_ft"])
+
     engine = TerracingEngine(
         REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=params.sketch_alpha,
         hardscape_regions=hardscape_regions,
@@ -221,6 +240,7 @@ def rebuild(params: RebuildParams):
         greenscape_regions=[{"mask": GREENSCAPE_MASK}],
         amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}],
         deficit_hotspots=deficit_hotspots,
+        foot_traffic_hotspots=foot_traffic_hotspots,
     )
     voxels = engine.run(phase=3)
 
@@ -263,6 +283,7 @@ def rebuild(params: RebuildParams):
         ],
         "kind_counts": kind_counts,
         "used_real_amenity_data": deficit_hotspots is not None,
+        "used_real_foot_traffic_data": foot_traffic_hotspots is not None,
         "slab_harvest_tons": result["slab_harvest_tons"],
         "max_canyon_depth_ft": max_canyon_depth_ft,
         "voxel_ft": VOXEL_FT,
