@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Header from './components/Header.jsx';
-import Sidebar from './components/Sidebar.jsx';
 import Viewport from './components/Viewport.jsx';
 import ParamPanel from './components/ParamPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
@@ -8,9 +7,11 @@ import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
 import DiagramInputPanel from './components/DiagramInputPanel.jsx';
 import JurorChatBar from './components/JurorChatBar.jsx';
+import ArchivePanel from './components/ArchivePanel.jsx';
+import DiagnosticsPanel from './components/DiagnosticsPanel.jsx';
 import {
   getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus, growNetwork as growNetworkApi,
-  jurorChat as jurorChatApi,
+  jurorChat as jurorChatApi, getProgramZones,
 } from './api.js';
 
 const BLENDER_POLL_MS = 1500;
@@ -37,7 +38,9 @@ function timeNow() {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('RECONSTRUCT');
   const [config, setConfig] = useState(null);
+  const [programZones, setProgramZones] = useState(null);
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [data, setData] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
@@ -90,6 +93,22 @@ export default function App() {
         if (c.foot_traffic_csv) {
           setParams((prev) => ({ ...prev, use_real_foot_traffic_data: true }));
         }
+      })
+      .catch((err) => log(String(err), 'error'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Bay-grid program placement -- fetched once on load, same as config.
+  // Recomputes server-side against whatever masks are currently painted/
+  // imported (see get_program_zones()'s docstring); re-fetching after every
+  // bake()/rebuild() so it always reflects the latest paint state is a
+  // natural follow-up, not done here to keep this pass's scope to "does the
+  // pipeline work end-to-end at all."
+  useEffect(() => {
+    getProgramZones()
+      .then((z) => {
+        setProgramZones(z);
+        log(`program zones loaded: ${z.zones.length} programs placed`);
       })
       .catch((err) => log(String(err), 'error'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -345,56 +364,141 @@ export default function App() {
     [config, params, networkParams, data, networkData, log, applyJurorAction],
   );
 
+  // Save/recall a build iteration -- shared by two surfaces: RECONSTRUCT's
+  // toolbar (a client-side-only JSON file download/upload) and the ARCHIVE
+  // tab (the same snapshot persisted server-side so it survives a reload).
+  // Both work the same way: everything needed to restore the exact
+  // on-screen state (params/buildings, the full rebuild result, network
+  // result, program zones) is already sitting in this component's own
+  // state, so this is a snapshot-and-restore of that state, not a re-run of
+  // the generation pipeline against saved inputs. That matters because
+  // painted masks (GREENSCAPE_MASK etc., live server-side state) can drift
+  // between save and load -- restoring by re-running rebuild() against
+  // saved params could silently produce a DIFFERENT build if the masks
+  // have since changed, defeating the point of "recall exactly what I saved."
+  const buildSnapshot = useCallback(() => {
+    if (!data) return null;
+    return {
+      schema: 'memory-machine-build-v1',
+      saved_at: new Date().toISOString(),
+      config: config && {
+        site_width_ft: config.site_width_ft, site_length_ft: config.site_length_ft, voxel_ft: config.voxel_ft,
+      },
+      params,
+      network_params: networkParams,
+      data,
+      network_data: networkData,
+      program_zones: programZones,
+    };
+  }, [config, params, networkParams, data, networkData, programZones]);
+
+  const restoreSnapshot = useCallback(
+    (snapshot) => {
+      if (!snapshot.data) throw new Error("missing 'data' field -- not a valid build snapshot");
+      if (snapshot.params) setParams(snapshot.params);
+      if (snapshot.network_params) setNetworkParams(snapshot.network_params);
+      setData(snapshot.data);
+      setNetworkData(snapshot.network_data ?? null);
+      setProgramZones(snapshot.program_zones ?? null);
+    },
+    [],
+  );
+
+  const handleSaveBuild = useCallback(() => {
+    const snapshot = buildSnapshot();
+    if (!snapshot) return;
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `memory-machine-build-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    log(`build saved: ${a.download}`);
+  }, [buildSnapshot, log]);
+
+  const handleLoadBuild = useCallback(
+    (file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const snapshot = JSON.parse(reader.result);
+          restoreSnapshot(snapshot);
+          log(`build loaded: saved ${snapshot.saved_at || 'unknown time'}`);
+        } catch (err) {
+          log(`build load failed: ${String(err)}`, 'error');
+        }
+      };
+      reader.onerror = () => log(`build load failed: could not read file`, 'error');
+      reader.readAsText(file);
+    },
+    [log, restoreSnapshot],
+  );
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header />
+      <Header activeTab={activeTab} onSelectTab={setActiveTab} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {config ? (
-            <Viewport
-              data={data}
-              networkSpecs={networkData?.network}
-              siteWidthFt={config.site_width_ft}
-              siteLengthFt={config.site_length_ft}
-              voxelFt={config.voxel_ft}
-              blenderObjUrl={blenderBuild.status === 'done' ? blenderBuild.objUrl : null}
-              blenderSvgUrl={blenderBuild.status === 'done' ? blenderBuild.svgUrl : null}
-              onShowLineArt={() => setShowLineArt(true)}
-              onExportVectorView={handleExportVectorView}
-              exportingVectorView={exportingVectorView}
+        {activeTab === 'RECONSTRUCT' && (
+          <>
+            <main className="flex-1 flex flex-col overflow-hidden">
+              {config ? (
+                <Viewport
+                  data={data}
+                  programZones={programZones?.zones}
+                  bayFt={programZones?.bay_ft}
+                  networkSpecs={networkData?.network}
+                  siteWidthFt={config.site_width_ft}
+                  siteLengthFt={config.site_length_ft}
+                  voxelFt={config.voxel_ft}
+                  blenderObjUrl={blenderBuild.status === 'done' ? blenderBuild.objUrl : null}
+                  blenderSvgUrl={blenderBuild.status === 'done' ? blenderBuild.svgUrl : null}
+                  onShowLineArt={() => setShowLineArt(true)}
+                  onExportVectorView={handleExportVectorView}
+                  exportingVectorView={exportingVectorView}
+                  onSaveBuild={handleSaveBuild}
+                  onLoadBuild={handleLoadBuild}
+                  canSaveBuild={!!data}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center font-mono-sm text-on-surface-variant">
+                  loading config...
+                </div>
+              )}
+              <JurorChatBar onSend={handleJurorChat} />
+              <LogPanel entries={logs} />
+            </main>
+            <ParamPanel
+              config={config}
+              params={params}
+              onParamsChange={setParams}
+              onPaint={(category) => setPaintCategory(category)}
+              onOpenDiagramInput={() => setShowDiagramInput(true)}
+              onRebuild={() => doRebuild(params)}
+              slabHarvestTons={data?.slab_harvest_tons}
+              kindCounts={data?.kind_counts}
+              usedRealAmenityData={data?.used_real_amenity_data}
+              usedRealFootTrafficData={data?.used_real_foot_traffic_data}
+              circulationVoxelCount={data?.voxels?.filter((v) => v.typology === 'CIRCULATION').length ?? 0}
+              rebuilding={rebuilding}
+              blenderBuild={blenderBuild}
+              onBuildInBlender={handleBuildInBlender}
+              lineartEnabled={lineartEnabled}
+              onLineartEnabledChange={setLineartEnabled}
+              networkParams={networkParams}
+              onNetworkParamsChange={setNetworkParams}
+              onGrowNetwork={handleGrowNetwork}
+              growingNetwork={growingNetwork}
+              networkResult={networkData}
             />
-          ) : (
-            <div className="flex-1 flex items-center justify-center font-mono-sm text-on-surface-variant">
-              loading config...
-            </div>
-          )}
-          <JurorChatBar onSend={handleJurorChat} />
-          <LogPanel entries={logs} />
-        </main>
-        <ParamPanel
-          config={config}
-          params={params}
-          onParamsChange={setParams}
-          onPaint={(category) => setPaintCategory(category)}
-          onOpenDiagramInput={() => setShowDiagramInput(true)}
-          onRebuild={() => doRebuild(params)}
-          slabHarvestTons={data?.slab_harvest_tons}
-          kindCounts={data?.kind_counts}
-          usedRealAmenityData={data?.used_real_amenity_data}
-          usedRealFootTrafficData={data?.used_real_foot_traffic_data}
-          circulationVoxelCount={data?.voxels?.filter((v) => v.typology === 'CIRCULATION').length ?? 0}
-          rebuilding={rebuilding}
-          blenderBuild={blenderBuild}
-          onBuildInBlender={handleBuildInBlender}
-          lineartEnabled={lineartEnabled}
-          onLineartEnabledChange={setLineartEnabled}
-          networkParams={networkParams}
-          onNetworkParamsChange={setNetworkParams}
-          onGrowNetwork={handleGrowNetwork}
-          growingNetwork={growingNetwork}
-          networkResult={networkData}
-        />
+          </>
+        )}
+        {activeTab === 'ARCHIVE' && (
+          <ArchivePanel getSnapshot={buildSnapshot} onRestoreSnapshot={restoreSnapshot} canSave={!!data} log={log} />
+        )}
+        {activeTab === 'DIAGNOSTICS' && (
+          <DiagnosticsPanel config={config} data={data} networkData={networkData} programZones={programZones} />
+        )}
       </div>
       {paintCategory && (
         <PaintOverlay

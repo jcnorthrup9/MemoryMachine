@@ -121,3 +121,44 @@ export async function previewLegacyImport(filename) {
   if (!res.ok) throw new Error(`legacy diagram preview failed: ${res.status}`);
   return res.json();
 }
+
+// Bay-grid program placement (logic/program_placement.py): which 27ft bays
+// each NEEDED/Suggested program from data/program_requirements.json claimed,
+// against whatever masks are currently painted/imported. Recomputed server-
+// side on every call -- no params needed, unlike rebuild()'s slider state.
+export async function getProgramZones() {
+  const res = await fetch('/api/pershing/program-zones');
+  if (!res.ok) throw new Error(`program zones fetch failed: ${res.status}`);
+  return res.json();
+}
+
+// ARCHIVE tab -- server-side persisted build snapshots (outputs/pershing_archive/),
+// distinct from App.jsx's client-side-only "Save Build" file download. Same
+// memory-machine-build-v1 snapshot shape either way.
+export async function saveToArchive(snapshot, label) {
+  const res = await fetch('/api/pershing/archive', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label, snapshot }),
+  });
+  if (!res.ok) throw new Error(`archive save failed: ${res.status}`);
+  return res.json();
+}
+
+export async function listArchive() {
+  const res = await fetch('/api/pershing/archive');
+  if (!res.ok) throw new Error(`archive list fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getArchivedBuild(filename) {
+  const res = await fetch(`/api/pershing/archive/${encodeURIComponent(filename)}`);
+  if (!res.ok) throw new Error(`archived build fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteArchivedBuild(filename) {
+  const res = await fetch(`/api/pershing/archive/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`archived build delete failed: ${res.status}`);
+  return res.json();
+}

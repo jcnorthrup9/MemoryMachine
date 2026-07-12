@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -27,6 +27,11 @@ from logic.pershing_api import (
     juror_chat as pershing_juror_chat,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
     bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
+    get_bay_grid as pershing_get_bay_grid, get_program_zones as pershing_get_program_zones,
+    ArchiveSaveRequest, save_build_to_archive as pershing_save_build_to_archive,
+    list_archived_builds as pershing_list_archived_builds,
+    get_archived_build as pershing_get_archived_build,
+    delete_archived_build as pershing_delete_archived_build,
 )
 from logic import pershing_blender
 from logic.legacy_diagram_bridge import (
@@ -530,6 +535,49 @@ async def comfy_render(payload: ComfyRenderPayload):
 @app.get("/api/pershing/config")
 async def pershing_config():
     return pershing_get_config()
+
+
+@app.get("/api/pershing/bay-grid")
+async def pershing_bay_grid_route():
+    """27ft structural bay grid + per-bay placement signals (painted/imported
+    masks primary, transit/deficit secondary) -- see get_bay_grid()'s
+    docstring. Consumed by the frontend's program-placement layer and by
+    logic/program_placement.py directly (not over HTTP) when run offline."""
+    return pershing_get_bay_grid()
+
+
+@app.get("/api/pershing/program-zones")
+async def pershing_program_zones_route():
+    """Bay-grid program placement (data/program_requirements.json's
+    NEEDED/Suggested items packed onto the bay grid) -- see
+    get_program_zones()'s docstring."""
+    return pershing_get_program_zones()
+
+
+@app.post("/api/pershing/archive")
+async def pershing_archive_save_route(payload: ArchiveSaveRequest):
+    """ARCHIVE tab: persist a build snapshot server-side (outputs/pershing_archive/)
+    -- see save_build_to_archive()'s docstring for how this differs from the
+    client-side-only "Save Build" download."""
+    return pershing_save_build_to_archive(payload)
+
+
+@app.get("/api/pershing/archive")
+async def pershing_archive_list_route():
+    return pershing_list_archived_builds()
+
+
+@app.get("/api/pershing/archive/{filename}")
+async def pershing_archive_get_route(filename: str):
+    try:
+        return pershing_get_archived_build(filename)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/api/pershing/archive/{filename}")
+async def pershing_archive_delete_route(filename: str):
+    return pershing_delete_archived_build(filename)
 
 
 @app.post("/api/pershing/rebuild")

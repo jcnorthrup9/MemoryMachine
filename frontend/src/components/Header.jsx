@@ -1,4 +1,6 @@
-export default function Header() {
+const TABS = ['RECONSTRUCT', 'ARCHIVE', 'DIAGNOSTICS'];
+
+export default function Header({ activeTab, onSelectTab }) {
   return (
     <header className="bg-background text-primary border-b border-border flex justify-between items-center w-full px-container h-16 z-50 shrink-0">
       <div className="flex items-center gap-4">
@@ -6,18 +8,25 @@ export default function Header() {
           MEMORY_MACHINE
         </span>
         <div className="h-4 w-[1px] bg-border mx-2" />
-        <span className="font-mono-sm text-mono-sm text-on-surface-variant">PERSHING_METABOLIZER</span>
+        <div className="flex flex-col leading-none">
+          <span className="font-headline-md text-headline-md leading-none">PERSHING_SQ</span>
+          <span className="font-mono-label text-mono-label text-accent uppercase mt-1">PERSHING_METABOLIZER</span>
+        </div>
       </div>
       <nav className="hidden md:flex gap-6 h-full items-center">
-        <a className="text-accent font-bold font-mono-sm text-mono-sm h-full flex items-center border-b-2 border-accent" href="#">
-          RECONSTRUCT
-        </a>
-        <a className="text-on-surface-variant font-mono-sm text-mono-sm h-full flex items-center border-b-2 border-transparent hover:text-accent transition-colors" href="#">
-          ARCHIVE
-        </a>
-        <a className="text-on-surface-variant font-mono-sm text-mono-sm h-full flex items-center border-b-2 border-transparent hover:text-accent transition-colors" href="#">
-          DIAGNOSTICS
-        </a>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => onSelectTab(tab)}
+            className={`font-mono-sm text-mono-sm h-full flex items-center border-b-2 transition-colors ${
+              activeTab === tab
+                ? 'text-accent font-bold border-accent'
+                : 'text-on-surface-variant border-transparent hover:text-accent'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </nav>
     </header>
   );

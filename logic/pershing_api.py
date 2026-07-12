@@ -25,7 +25,8 @@ if BASE_DIR not in sys.path:
 
 from terracing_engine import (  # noqa: E402
     TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, BuildingMassEngine,
-    STRUCTURAL_BAY_FT, build_cut_sheet_manifest, slab_key)
+    STRUCTURAL_BAY_FT, build_cut_sheet_manifest, slab_key,
+    build_bay_grid, aggregate_grid_to_bays, voxel_attr_grid)
 # sketch_weight_mapper.py's find_latest_sketch is pure os.listdir/getmtime --
 # safe to import here even though the rest of that module needs PIL/
 # svgpathtools (those imports are local to the functions that need them,
@@ -34,6 +35,7 @@ from sketch_weight_mapper import find_latest_sketch  # noqa: E402
 # amenity_deficit.py only needs the stdlib csv module -- same reasoning as
 # above, safe to import directly at module level.
 from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # noqa: E402
+from logic.program_placement import load_programs, place_programs  # noqa: E402
 # foot_traffic.py mirrors amenity_deficit.py's CSV contract exactly, for a
 # separate real-data channel (foot traffic vs. amenity deficit) -- aliased
 # since both modules define a same-named find_latest_csv().
@@ -57,6 +59,13 @@ SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights
 PAINT_STATE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "web_paint_state.json")
 SKETCH_DIR = os.path.join(BASE_DIR, "data", "sketches")
 os.makedirs(SKETCH_DIR, exist_ok=True)
+# Server-side build archive (2026-07-12, ARCHIVE tab) -- distinct from
+# App.jsx's client-side "Save Build" download: same snapshot schema
+# (memory-machine-build-v1), but persisted here so it survives a page
+# reload/different machine and can be browsed as a real gallery instead of
+# just a one-off file download.
+ARCHIVE_DIR = os.path.join(BASE_DIR, "outputs", "pershing_archive")
+os.makedirs(ARCHIVE_DIR, exist_ok=True)
 
 with open(REAL_GEOMETRY_PATH) as f:
     REAL_GEOMETRY = json.load(f)
@@ -390,6 +399,73 @@ def _run_pipeline(params: RebuildParams):
     return engine, voxels, typology_specs, all_specs, meta
 
 
+def get_bay_grid():
+    """
+    Returns the 27ft structural bay grid (build_bay_grid(), previously only
+    an ephemeral private dict inside StructuralFramingEngine._column_grid())
+    plus per-bay aggregated placement signals, for logic/program_placement.py
+    (or any future consumer) to build on without re-deriving bay geometry or
+    re-running the terracing pipeline itself.
+
+    Two signal tiers, both aggregated from voxel resolution up to bay
+    resolution (aggregate_grid_to_bays): the PRIMARY signal is whatever the
+    designer has actually painted or imported via either live ingestion
+    channel (GREENSCAPE_MASK/HARDSCAPE_MASK/AMENITY_RESTING_MASK/WATER_MASK
+    -- see bake()/legacy_diagram_bridge.py), since that's real, already-
+    expressed design intent; the SECONDARY signal is the existing
+    transit/deficit fields from TerracingEngine, meant as a tie-breaker when
+    a site (or region of one) has no painted/imported intent yet.
+
+    Uses default RebuildParams() rather than whatever sliders the frontend
+    currently has set: the primary signal doesn't depend on slider state at
+    all, and the secondary tie-breaker only needs to be roughly current, not
+    pixel-perfect against live sliders -- rebuild() remains the source of
+    truth for that.
+    """
+    bay_cells, nx_bays, nz_bays = build_bay_grid(REAL_GEOMETRY)
+    engine, voxels, _typology_specs, _all_specs, _meta = _run_pipeline(RebuildParams())
+
+    greenscape_bay = aggregate_grid_to_bays(GREENSCAPE_MASK, nx_bays, nz_bays)
+    hardscape_bay = aggregate_grid_to_bays(HARDSCAPE_MASK, nx_bays, nz_bays)
+    amenity_resting_bay = aggregate_grid_to_bays(AMENITY_RESTING_MASK, nx_bays, nz_bays)
+    water_bay = aggregate_grid_to_bays(WATER_MASK, nx_bays, nz_bays)
+    transit_bay = aggregate_grid_to_bays(voxel_attr_grid(voxels, engine.nx, engine.nz, "transit_influence"),
+                                          nx_bays, nz_bays)
+    deficit_bay = aggregate_grid_to_bays(voxel_attr_grid(voxels, engine.nx, engine.nz, "deficit_influence"),
+                                          nx_bays, nz_bays)
+
+    bays = [
+        {
+            "gx": gx, "gy": gy, "x_ft": cell.x_ft, "z_ft": cell.z_ft,
+            "column_id": cell.column_id, "is_buildable": cell.is_buildable,
+            "greenscape": greenscape_bay[gx][gy], "hardscape": hardscape_bay[gx][gy],
+            "amenity_resting": amenity_resting_bay[gx][gy], "water": water_bay[gx][gy],
+            "transit_influence": transit_bay[gx][gy], "deficit_influence": deficit_bay[gx][gy],
+        }
+        for (gx, gy), cell in bay_cells.items()
+    ]
+
+    return {"nx_bays": nx_bays, "nz_bays": nz_bays, "bay_ft": STRUCTURAL_BAY_FT, "bays": bays}
+
+
+def get_program_zones():
+    """
+    Runs logic/program_placement.py's greedy region-growing bin-packing
+    algorithm against the live bay grid (get_bay_grid()) and
+    data/program_requirements.json's NEEDED/Suggested programs (Optional --
+    the two Health Care items -- excluded by default, same as
+    load_programs()'s own default), returning one zone per program: which
+    bays it claimed, achieved vs. target square footage, and whether it was
+    fully satisfied.
+
+    Recomputed on every call rather than cached -- reflects whatever masks
+    are currently painted/imported, same as get_bay_grid() itself.
+    """
+    bay_grid = get_bay_grid()
+    programs = load_programs()
+    return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs)}
+
+
 def rebuild(params: RebuildParams):
     """Returns JSON voxels + structural/typology specs for the frontend to
     render however it likes (Three.js instancing, etc)."""
@@ -517,3 +593,87 @@ def juror_chat(payload: JurorChatRequest):
     site_facts = get_config()
     context = {**site_facts, **payload.context}
     return juror_chat_agent.chat(payload.message, context)
+
+
+class ArchiveSaveRequest(BaseModel):
+    """The frontend's own memory-machine-build-v1 snapshot object (see
+    App.jsx's buildSnapshot()), forwarded here verbatim plus an optional
+    user-supplied label. Loosely typed (dict) since this endpoint just
+    persists whatever the frontend already assembled -- same reasoning as
+    JurorChatRequest.context above -- rather than re-validating a shape
+    only the frontend needs to keep consistent with its own restore logic."""
+    label: str = ""
+    snapshot: dict
+
+
+def _safe_archive_path(filename):
+    """basename()-guard a client-supplied filename against the archive dir --
+    same pattern as save_uploaded_sketch()/legacy_diagram_bridge.preview_import()
+    elsewhere in this file, never trust a client-supplied filename as a path."""
+    safe_name = os.path.basename(filename)
+    if not safe_name:
+        raise ValueError("empty filename")
+    return os.path.join(ARCHIVE_DIR, safe_name)
+
+
+def save_build_to_archive(payload: ArchiveSaveRequest):
+    """Persist a build snapshot to ARCHIVE_DIR. Filename is a sortable
+    millisecond timestamp plus a slugified label (ASCII alnum/dash/underscore
+    only, same reasoning as _safe_archive_path's basename guard -- the label
+    is free user text and must not become a path/traversal vector), so
+    list_archived_builds() can sort by filename alone without re-parsing
+    every file's saved_at."""
+    label = payload.label.strip()
+    slug = "".join(c if c.isalnum() else "-" for c in label).strip("-")[:60] or "build"
+    filename = f"{int(time.time() * 1000)}_{slug}.json"
+    record = {**payload.snapshot, "label": label}
+    _atomic_write_json(os.path.join(ARCHIVE_DIR, filename), record)
+    return {"filename": filename, "saved_at": record.get("saved_at"), "label": label}
+
+
+def list_archived_builds():
+    """Lightweight summary per archived build -- deliberately does NOT
+    return each file's full geometry (voxels/structural arrays can be a few
+    hundred KB each; a gallery listing doesn't need them, only
+    get_archived_build() below does, on actual load)."""
+    entries = []
+    for fname in sorted(os.listdir(ARCHIVE_DIR), reverse=True):
+        if not fname.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(ARCHIVE_DIR, fname)) as f:
+                record = json.load(f)
+        except (OSError, ValueError):
+            continue  # skip unreadable/corrupt entries rather than failing the whole list
+        data = record.get("data") or {}
+        params = record.get("params") or {}
+        program_zones = record.get("program_zones") or {}
+        entries.append({
+            "filename": fname,
+            "saved_at": record.get("saved_at"),
+            "label": record.get("label", ""),
+            "material_mode": params.get("material_mode"),
+            "slab_harvest_tons": data.get("slab_harvest_tons"),
+            "instance_count": sum(data.get("kind_counts", {}).values()),
+            "program_zone_count": len(program_zones.get("zones", [])),
+        })
+    return entries
+
+
+def get_archived_build(filename):
+    """Full snapshot JSON for one archived build, in the exact shape a
+    locally-saved-then-loaded file already has -- App.jsx's
+    handleLoadFromArchive() feeds this straight into the same
+    restoreSnapshot() helper handleLoadBuild() (client-side file) uses."""
+    path = _safe_archive_path(filename)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"no such archived build: {filename}")
+    with open(path) as f:
+        return json.load(f)
+
+
+def delete_archived_build(filename):
+    path = _safe_archive_path(filename)
+    if os.path.exists(path):
+        os.remove(path)
+    return {"status": "ok"}

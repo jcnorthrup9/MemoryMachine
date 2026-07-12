@@ -439,6 +439,118 @@ FOOTING_SHOE_HEIGHT_FT = 1.0
 
 
 @dataclass
+class BayCell:
+    """One cell of the 27ft structural bay grid -- coarser than
+    TerracingEngine's voxel grid (STRUCTURAL_BAY_FT == 3 * the default 9ft
+    voxel_ft, the same 3-voxels-per-bay relationship circulation_network.py
+    calls BUCKET_VOXELS). Built by build_bay_grid() below, which extracts
+    what used to be StructuralFramingEngine._column_grid()'s private,
+    on-demand, sparse (column-occupied bays only) dict into a real, reusable,
+    densely-populated structure -- every bay in the site gets an entry, not
+    just the ones a real column happens to round into -- so callers (e.g.
+    logic/program_placement.py's bay-grid placement engine) can walk the
+    whole site without re-deriving bay geometry themselves."""
+    gx: int
+    gy: int
+    x_ft: float  # bay center, real_geometry's x axis (site width)
+    z_ft: float  # bay center, real_geometry's z axis (site length) -- matches
+                 # real_columns' own "x"/"z" naming, not TerracingEngine's wx/wy
+    column_id: str = None
+    is_buildable: bool = True  # False if a real column occupies this bay
+
+
+def build_bay_grid(real_geometry):
+    """
+    Returns (grid, nx_bays, nz_bays): a dense dict of every (gx, gy) bay in
+    the site's structural grid -> BayCell, keyed the same way
+    StructuralFramingEngine._column_grid() keys its own private dict
+    (round(col_x / STRUCTURAL_BAY_FT)). nz_bays is computed here for the
+    first time -- previously only NX_BAYS existed anywhere in the codebase
+    (an ad hoc scalar in logic/pershing_api.py/blender_cockpit.py, for UI
+    slider bounds only), with no equivalent depth-axis count.
+
+    Real columns that round to a bay index just outside [0, nx_bays) /
+    [0, nz_bays) (the site's own dimensions aren't always an exact multiple
+    of STRUCTURAL_BAY_FT) are clamped into range rather than dropped, so
+    every real column still marks some bay non-buildable.
+    """
+    width_ft = real_geometry["site"]["width_ft"]
+    length_ft = real_geometry["site"]["length_ft"]
+    nx_bays = max(1, round(width_ft / STRUCTURAL_BAY_FT))
+    nz_bays = max(1, round(length_ft / STRUCTURAL_BAY_FT))
+
+    grid = {}
+    for gx in range(nx_bays):
+        for gy in range(nz_bays):
+            grid[(gx, gy)] = BayCell(
+                gx=gx, gy=gy,
+                x_ft=(gx + 0.5) * STRUCTURAL_BAY_FT,
+                z_ft=(gy + 0.5) * STRUCTURAL_BAY_FT,
+            )
+
+    columns = real_geometry.get("real_columns") or real_geometry.get("column_positions") or []
+    for col in columns:
+        gx = min(max(round(col["x"] / STRUCTURAL_BAY_FT), 0), nx_bays - 1)
+        gy = min(max(round(col["z"] / STRUCTURAL_BAY_FT), 0), nz_bays - 1)
+        cell = grid[(gx, gy)]
+        cell.column_id = col.get("id", f"{gx}_{gy}")
+        cell.is_buildable = False
+
+    return grid, nx_bays, nz_bays
+
+
+def voxel_attr_grid(voxels, nx, nz, attr):
+    """Build a dense (nx, nz) list-of-lists from a flat Voxel list (as
+    returned by TerracingEngine._flat_voxels()/run()), reading one numeric
+    or bool attribute per cell. Feeds aggregate_grid_to_bays below -- that
+    function needs a dense nx*nz grid, but TerracingEngine only exposes a
+    flat list of Voxel objects with their own .gx/.gy indices."""
+    out = [[0.0] * nz for _ in range(nx)]
+    for v in voxels:
+        out[v.gx][v.gy] = getattr(v, attr)
+    return out
+
+
+def aggregate_grid_to_bays(grid, nx_bays, nz_bays, bays_per_side=3):
+    """
+    Downsample a dense (nx, nz) voxel-resolution grid (list-of-lists of bool
+    or float, TerracingEngine's own gx/gy indexing -- either a raw painted
+    mask like GREENSCAPE_MASK, or voxel_attr_grid()'s output) into a coarser
+    (nx_bays, nz_bays) grid of per-bay averages, by averaging each bay's
+    bays_per_side x bays_per_side block of voxels. bays_per_side=3 is the
+    real relationship at this site's default voxel_ft=9.0 (STRUCTURAL_BAY_FT
+    / voxel_ft == 3, see circulation_network.py's BUCKET_VOXELS) -- pass a
+    different value only if voxel_ft is overridden elsewhere.
+
+    A bool grid averages to a 0..1 "true fraction" per bay; a float grid
+    (e.g. transit_influence/deficit_influence) averages to a plain mean.
+    Voxel indices that fall outside the source grid's own bounds (site
+    dimensions aren't always an exact multiple of bays_per_side * voxel_ft)
+    are skipped, not zero-padded, so a partial edge bay's average isn't
+    dragged down by phantom cells.
+    """
+    nx = len(grid)
+    nz = len(grid[0]) if nx else 0
+    out = [[0.0] * nz_bays for _ in range(nx_bays)]
+    for bx in range(nx_bays):
+        for bz in range(nz_bays):
+            total = 0.0
+            count = 0
+            for dx in range(bays_per_side):
+                gx = bx * bays_per_side + dx
+                if gx >= nx:
+                    continue
+                for dz in range(bays_per_side):
+                    gz = bz * bays_per_side + dz
+                    if gz >= nz:
+                        continue
+                    total += float(grid[gx][gz])
+                    count += 1
+            out[bx][bz] = total / count if count else 0.0
+    return out
+
+
+@dataclass
 class StructuralElement:
     """One procedurally-placed structural/salvage instance -- kind selects
     which prototype mesh blender_cockpit.py instances (linked mesh data, not

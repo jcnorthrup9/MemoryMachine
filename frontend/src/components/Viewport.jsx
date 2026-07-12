@@ -4,7 +4,7 @@ import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCame
 import * as THREE from 'three';
 import StaticContext from './StaticContext.jsx';
 import BlenderBuild from './BlenderBuild.jsx';
-import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES } from '../shading.js';
+import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES, showsOutline, castsShadows } from '../shading.js';
 import KIND_REGISTRY from '../kindRegistry.json';
 
 // Rounds an instance count up to the next power of 2 (min 8) -- 2026-07-10,
@@ -175,10 +175,25 @@ function ViewCamera({ view, center, siteWidthFt, siteLengthFt }) {
 // the primary element's JSX type, the mode flag driving that branch MUST
 // be added to this dependency array, or it will silently break exactly the
 // way RealSlabFragments did.
+// 2026-07-12 fix ("voxel grid gets too cluttered"): CategoryGroundCap draws
+// one box per matching voxel cell -- painted greenscape/shade/circulation
+// cells can number in the hundreds, so this is the densest per-voxel
+// tessellation in the scene. In Wireframe mode a naive `materialProps` call
+// would draw true wireframe edges on every one of those boxes (a fine
+// repeated grid, not a useful line drawing); in Ghosted mode the per-box
+// outline pass added the same clutter as a fringe around every cell.
+//
+// Fix, corrected 2026-07-12 (an earlier version of this fix over-corrected
+// -- forcing 'colored' unconditionally also discarded Ghosted's translucent
+// grey and Arctic's flat-white material for this layer, not just the
+// clutter): only Wireframe's true-line style is swapped for a plain solid
+// fill (`fillMode` below); Ghosted/Arctic/Colored still get their real
+// per-mode material via materialProps, unchanged -- the ONLY thing this
+// component permanently opts out of is the outline instancedMesh pass
+// (removed entirely below, not conditionally gated), since that's the part
+// that was actually cluttered.
 function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterFn, color, thicknessFt }) {
   const meshRef = useRef();
-  const outlineRef = useRef();
-  const ghosted = shadingMode === 'ghosted';
   const items = useMemo(() => voxels.filter(filterFn), [voxels, filterFn]);
 
   useLayoutEffect(() => {
@@ -193,32 +208,22 @@ function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterF
       dummy.scale.set(voxelFt, thicknessFt, voxelFt);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
-      if (outlineRef.current) {
-        dummy.scale.set(voxelFt * OUTLINE_SCALE, thicknessFt * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
-        dummy.updateMatrix();
-        outlineRef.current.setMatrixAt(i, dummy.matrix);
-      }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt, ghosted, thicknessFt]);
+  }, [items, voxelFt, siteLengthFt, thicknessFt]);
 
   if (items.length === 0) return null;
 
-  const mat = materialProps(shadingMode, color);
+  // Wireframe's true-line style swapped for a solid fill (see component
+  // comment above); Ghosted/Arctic/Colored keep their real per-mode material.
+  const fillMode = shadingMode === 'wireframe' ? 'colored' : shadingMode;
+  const mat = materialProps(fillMode, color);
+  const shadows = castsShadows(shadingMode);
   return (
-    <>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial {...mat} />
-      </instancedMesh>
-      {ghosted && (
-        <instancedMesh ref={outlineRef} args={[undefined, undefined, items.length]}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial {...outlineMaterialProps()} />
-        </instancedMesh>
-      )}
-    </>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]} castShadow={shadows} receiveShadow={shadows}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial {...mat} />
+    </instancedMesh>
   );
 }
 
@@ -297,7 +302,8 @@ function RealColumns({ columns, siteLengthFt, shadingMode }) {
 
   if (items.length === 0) return null;
 
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
   const mat = materialProps(shadingMode, REAL_COLUMN_COLOR);
   const frames = items.map(({ p0, p1, radius }, i) => {
     const a = new THREE.Vector3(...p0);
@@ -316,8 +322,8 @@ function RealColumns({ columns, siteLengthFt, shadingMode }) {
         key={paddedCapacity(frames.length)}
         limit={paddedCapacity(frames.length)}
         range={frames.length}
-        castShadow
-        receiveShadow
+        castShadow={shadows}
+        receiveShadow={shadows}
       >
         <cylinderGeometry args={[1, 1, 1, 12]} />
         <meshStandardMaterial {...mat} />
@@ -391,7 +397,7 @@ const SLAB_PLATE_INDICES = [
 ];
 
 function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
   const wireframe = shadingMode === 'wireframe';
 
   const { geometry, outlineGeometry, edgesGeometry } = useMemo(() => {
@@ -434,6 +440,7 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
   }, [slab, siteLengthFt, ghosted, wireframe]);
 
   const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  const shadows = castsShadows(shadingMode);
 
   if (wireframe && edgesGeometry) {
     return (
@@ -445,7 +452,7 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
 
   return (
     <>
-      <mesh geometry={geometry} castShadow receiveShadow>
+      <mesh geometry={geometry} castShadow={shadows} receiveShadow={shadows}>
         <meshStandardMaterial {...mat} side={THREE.DoubleSide} />
       </mesh>
       {ghosted && outlineGeometry && (
@@ -466,63 +473,19 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
 // rendering as the single intact tilted RealSlabPlate below; fragmenting a
 // tilted plate needs per-fragment elevation interpolation along its slope,
 // deferred (see plan doc).
-// The 12 edges of an axis-aligned box (2026-07-10 wireframe fix), as
-// corner-index pairs -- corner i has x=cx+(i&1?hx:-hx), y=cy+(i&2?hy:-hy),
-// z=cz+(i&4?hz:-hz). Used to build a real edges-only wireframe for
-// RealSlabFragments' many small instanced boxes: unlike RealSlabPlate
-// (one mesh, so THREE.EdgesGeometry works directly), Three.js has no clean
-// way to instance edge-only line geometry the way it instances solid
-// meshes, so wireframe mode here builds ONE flat, non-instanced
-// LineSegments geometry containing every fragment's true 12 edges
-// (24 verts each) instead -- still cheap (wireframe mode only, and this is
-// a handful of thousand line segments at most, well within a modern GPU's
-// line-rendering budget) and correctly excludes each box face's internal
-// triangulation diagonal, same fix as RealSlabPlate's EdgesGeometry.
-const BOX_EDGE_CORNER_PAIRS = [
-  [0, 1], [2, 3], [4, 5], [6, 7], // x-direction edges
-  [0, 2], [1, 3], [4, 6], [5, 7], // y-direction edges
-  [0, 4], [1, 5], [2, 6], [3, 7], // z-direction edges
-];
 
-function boxEdgeVerts(cx, cy, cz, hx, hy, hz) {
-  const corners = [];
-  for (let i = 0; i < 8; i++) {
-    corners.push([
-      cx + (i & 1 ? hx : -hx),
-      cy + (i & 2 ? hy : -hy),
-      cz + (i & 4 ? hz : -hz),
-    ]);
-  }
-  const verts = [];
-  for (const [a, b] of BOX_EDGE_CORNER_PAIRS) {
-    verts.push(...corners[a], ...corners[b]);
-  }
-  return verts;
-}
-
+// 2026-07-12 fix ("voxel grid gets too cluttered"): like CategoryGroundCap
+// above, this is a dense per-voxel tessellation (one box per surviving real
+// slab cell, potentially thousands before the canyon cuts through). Both
+// the true-wireframe edge geometry this used to build for Wireframe mode
+// and the per-box outline pass Ghosted mode used to add are dropped
+// entirely -- corrected 2026-07-12 (an earlier version forced 'colored'
+// unconditionally, which also discarded Ghosted's grey/Arctic's white
+// material for this layer, not just the clutter): only Wireframe's true-line
+// style is swapped for a solid fill; Ghosted/Arctic/Colored keep their real
+// per-mode material via materialProps, unchanged.
 function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
-  const outlineRef = useRef();
-  const ghosted = shadingMode === 'ghosted';
-  const wireframe = shadingMode === 'wireframe';
-
-  const wireframeGeometry = useMemo(() => {
-    if (!wireframe || remaining.length === 0) return null;
-    const cz = slab.z_top_ft - slab.thickness_ft / 2;
-    const hx = voxelFt / 2, hy = slab.thickness_ft / 2, hz = voxelFt / 2;
-    const verts = [];
-    for (const [wx, wy] of remaining) {
-      const [x, y, z] = toThree(wx, wy, cz, siteLengthFt);
-      // toThree's y/z axis remap (see its own comment) means the box's
-      // world-space half-extents along Three's (X,Y,Z) are (hx,hy,hz) in
-      // that same order -- no swap needed, it already only permutes/mirrors
-      // axes, never scales them differently.
-      verts.push(...boxEdgeVerts(x, y, z, hx, hy, hz));
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-    return geo;
-  }, [wireframe, remaining, voxelFt, slab, siteLengthFt]);
 
   useLayoutEffect(() => {
     if (!meshRef.current || remaining.length === 0) return;
@@ -534,59 +497,39 @@ function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode
       dummy.scale.set(voxelFt, slab.thickness_ft, voxelFt);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
-      if (outlineRef.current) {
-        dummy.scale.set(voxelFt * OUTLINE_SCALE, slab.thickness_ft * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
-        dummy.updateMatrix();
-        outlineRef.current.setMatrixAt(i, dummy.matrix);
-      }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
-    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
-    // `wireframe` must be a dependency here even though nothing inside this
-    // effect body reads it (2026-07-11 fix): the JSX below returns a plain
-    // <lineSegments> instead of <instancedMesh> while wireframe is true, so
-    // toggling wireframe off unmounts/remounts a BRAND NEW instancedMesh
-    // (fresh meshRef.current, matrices unset). Without wireframe in this
-    // array, React sees `remaining`/`voxelFt`/`slab`/`siteLengthFt`/`ghosted`
-    // all unchanged across that mode switch and skips rerunning the effect,
-    // leaving the new mesh's instance matrices at their default (identity/
-    // zero) transform -- every fragment then renders at a degenerate
-    // position, reading as "the slabs disappeared" when returning to
-    // colored/ghosted mode from wireframe.
-  }, [remaining, voxelFt, slab, siteLengthFt, ghosted, wireframe]);
+  }, [remaining, voxelFt, slab, siteLengthFt]);
 
   if (remaining.length === 0) return null;
 
-  if (wireframe && wireframeGeometry) {
-    return (
-      <lineSegments geometry={wireframeGeometry}>
-        <lineBasicMaterial color={SLAB_KIND_COLOR[slab.kind] || '#aaaaaa'} />
-      </lineSegments>
-    );
-  }
-
-  const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  const fillMode = shadingMode === 'wireframe' ? 'colored' : shadingMode;
+  const mat = materialProps(fillMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  const shadows = castsShadows(shadingMode);
   return (
-    <>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]} castShadow receiveShadow>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial {...mat} />
-      </instancedMesh>
-      {ghosted && (
-        <instancedMesh ref={outlineRef} args={[undefined, undefined, remaining.length]}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial {...outlineMaterialProps()} />
-        </instancedMesh>
-      )}
-    </>
+    <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]} castShadow={shadows} receiveShadow={shadows}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial {...mat} />
+    </instancedMesh>
   );
 }
 
-function RealSlabs({ slabs, fragments, voxelFt, siteLengthFt, shadingMode }) {
+// Top-slab toggle (2026-07-12, user request): "the top slab" is just
+// whichever real slab sits at the highest z_top_ft -- in the current
+// real_geometry.json that's "new_grade_slab" (z_top_ft=0.25, the new plaza-
+// grade deck), sitting above every L1/L2/L3 parking-structure slab below it
+// (all z_top_ft <= 0). Computed generically off the live data (max
+// z_top_ft) rather than hardcoding the "new_grade_slab" parent name, so it
+// still tracks correctly if the Rhino source ever renames/re-levels it.
+// Hiding it is what lets the terracing/voxel cuts underneath actually be
+// seen instead of being capped by the intact surface slab.
+function RealSlabs({ slabs, fragments, voxelFt, siteLengthFt, shadingMode, showTopSlab }) {
   if (!slabs || slabs.length === 0) return null;
+  const topZ = Math.max(...slabs.map((s) => s.z_top_ft));
   return (
     <>
       {slabs.map((slab) => {
+        if (!showTopSlab && slab.z_top_ft === topZ) return null;
         if (slab.kind === 'floor_slab') {
           const remaining = fragments?.[slab.key]?.remaining ?? [];
           return (
@@ -619,7 +562,8 @@ function RealSlabs({ slabs, fragments, voxelFt, siteLengthFt, shadingMode }) {
 const SALVAGE_KINDS = new Set(['concrete_floor_block', 'concrete_retaining_block']);
 
 function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
   const byKind = useMemo(() => {
     const map = {};
     for (const s of specs) {
@@ -655,8 +599,8 @@ function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
           key={`${kind}-${paddedCapacity(items.length)}`}
           limit={paddedCapacity(items.length)}
           range={items.length}
-          castShadow
-          receiveShadow
+          castShadow={shadows}
+          receiveShadow={shadows}
         >
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
@@ -695,7 +639,8 @@ function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
 // One unit cylinder (radius=1, height=1) scaled/rotated per instance --
 // same trick TerraceVoxels/BoxInstances use for boxes.
 function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
   const grouped = useMemo(() => {
     const map = {};
     for (const s of specs) {
@@ -732,8 +677,8 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
           key={`${kind}-${paddedCapacity(items.length)}`}
           limit={paddedCapacity(items.length)}
           range={items.length}
-          castShadow
-          receiveShadow
+          castShadow={shadows}
+          receiveShadow={shadows}
         >
           <cylinderGeometry args={[1, 1, 1, 8]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
@@ -772,7 +717,8 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
   );
   if (items.length === 0) return null;
 
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
   const frameFor = (s) => {
     const [x, y, z] = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
     return { position: [x, y, z], rotation: [0, -(s.rotation_deg * Math.PI) / 180, 0], radius: s.radius_ft || 0.3 };
@@ -784,8 +730,8 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
         key={paddedCapacity(items.length)}
         limit={paddedCapacity(items.length)}
         range={items.length}
-        castShadow
-        receiveShadow
+        castShadow={shadows}
+        receiveShadow={shadows}
       >
         <cylinderGeometry args={[1, 1, 1, 6]} />
         <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.steel_turnbuckle)} />
@@ -862,10 +808,93 @@ function StreetLabels({ siteWidthFt, siteLengthFt }) {
   );
 }
 
+// Bay-grid program placement (logic/program_placement.py, via
+// GET /api/pershing/program-zones) -- one translucent footprint per claimed
+// bay plus a billboard label per program, same instancedMesh-per-group
+// pattern as CategoryGroundCap above, just keyed on bay (gx, gy) at
+// STRUCTURAL_BAY_FT resolution instead of voxel (gx, gy). Placeholder solid
+// colors per category, same "cheap now, swap for real assets later" posture
+// as GREENSCAPE_COLOR above -- these categories don't (yet) exist in
+// kindRegistry.json since they're program zones, not structural/typology
+// kinds.
+const PROGRAM_ZONE_THICKNESS_FT = 1.0;
+const PROGRAM_ZONE_LABEL_HEIGHT_FT = 12;
+const PROGRAM_CATEGORY_COLOR = {
+  green_space: '#3d9142',
+  sports_recreation: '#ff9800',
+  enrichment_civic: '#2196f3',
+  outdoor: '#8bc34a',
+  health_care: '#e91e63',
+};
+
+function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode }) {
+  const meshRef = useRef();
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return;
+    const dummy = new THREE.Object3D();
+    bays.forEach(([gx, gy], i) => {
+      // gx/gy here are BAY indices (STRUCTURAL_BAY_FT-wide cells), not voxel
+      // indices -- do not reuse voxelFt here despite the visual similarity
+      // to CategoryGroundCap above.
+      const cx = (gx + 0.5) * bayFt;
+      const cy = (gy + 0.5) * bayFt;
+      const [x, y, z] = toThree(cx, cy, PROGRAM_ZONE_THICKNESS_FT / 2, siteLengthFt);
+      dummy.position.set(x, y, z);
+      dummy.scale.set(bayFt, PROGRAM_ZONE_THICKNESS_FT, bayFt);
+      dummy.updateMatrix();
+      meshRef.current.setMatrixAt(i, dummy.matrix);
+    });
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [bays, bayFt, siteLengthFt]);
+
+  if (bays.length === 0) return null;
+
+  const mat = materialProps(shadingMode, color);
+  const shadows = castsShadows(shadingMode);
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, bays.length]} castShadow={shadows} receiveShadow={shadows}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial {...mat} />
+    </instancedMesh>
+  );
+}
+
+function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode }) {
+  if (!zones || !bayFt) return null;
+  const placedZones = zones.filter((z) => z.bays.length > 0);
+  return (
+    <>
+      {placedZones.map((zone) => {
+        const color = PROGRAM_CATEGORY_COLOR[zone.category] || '#888888';
+        const centroidGx = zone.bays.reduce((sum, [gx]) => sum + gx, 0) / zone.bays.length;
+        const centroidGy = zone.bays.reduce((sum, [, gy]) => sum + gy, 0) / zone.bays.length;
+        const labelX = (centroidGx + 0.5) * bayFt;
+        const labelY = (centroidGy + 0.5) * bayFt;
+        const [px, py, pz] = toThree(labelX, labelY, PROGRAM_ZONE_LABEL_HEIGHT_FT, siteLengthFt);
+        return (
+          <group key={zone.program_item}>
+            <ProgramZoneFootprint
+              bays={zone.bays} bayFt={bayFt} color={color}
+              siteLengthFt={siteLengthFt} shadingMode={shadingMode}
+            />
+            <Billboard position={[px, py, pz]}>
+              <Text fontSize={10} color={color} anchorX="center" anchorY="middle" outlineWidth={0.4} outlineColor="#000000">
+                {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
+              </Text>
+            </Billboard>
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Viewport({
-  data, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl, onShowLineArt,
-  onExportVectorView, exportingVectorView,
+  data, programZones, bayFt, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl,
+  onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild,
 }) {
+  const loadBuildInputRef = useRef(null);
   const [shadingMode, setShadingMode] = useState('colored');
   // Default OFF (2026-07-10 fix): concrete_floor_block/concrete_retaining_
   // block ("salvage" -- harvested_block_specs() re-instancing removed real
@@ -876,6 +905,10 @@ export default function Viewport({
   // data/tonnage math (slab_harvest_tons, the cut sheet) is unaffected
   // either way, this only filters what BoxInstances actually draws.
   const [showSalvage, setShowSalvage] = useState(false);
+  // Top (surface) slab toggle -- default ON, matches the render before this
+  // toggle existed. Off hides just the topmost real_slabs entry (see
+  // RealSlabs' own comment) so the terracing cuts underneath are visible.
+  const [showTopSlab, setShowTopSlab] = useState(true);
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
   const canvasRef = useRef(null);
@@ -1011,6 +1044,7 @@ export default function Viewport({
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
+                showTopSlab={showTopSlab}
               />
             )}
             {data && (
@@ -1060,6 +1094,7 @@ export default function Viewport({
         )}
         <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
+        <ProgramZones zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
         <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
@@ -1110,6 +1145,22 @@ export default function Viewport({
             ))}
           </div>
         </div>
+        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">TOP SLAB</span>
+          <div className="flex">
+            {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
+              <button
+                key={String(opt.key)}
+                onClick={() => setShowTopSlab(opt.key)}
+                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                  showTopSlab === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           onClick={handleExport}
           disabled={exportingVectorView}
@@ -1122,6 +1173,32 @@ export default function Viewport({
         >
           {exportingVectorView ? 'Exporting Linework...' : 'Export Current View'}
         </button>
+        <button
+          onClick={onSaveBuild}
+          disabled={!canSaveBuild}
+          title="Downloads the current build (params, geometry, network, program zones) as a JSON file you can load back later to recall this exact iteration."
+          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          Save Build
+        </button>
+        <button
+          onClick={() => loadBuildInputRef.current?.click()}
+          title="Load a previously saved build JSON file to recall that exact iteration."
+          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98]"
+        >
+          Load Build
+        </button>
+        <input
+          ref={loadBuildInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onLoadBuild?.(file);
+            e.target.value = ''; // allow re-selecting the same file next time
+          }}
+        />
         {blenderObjUrl && (
           <button
             onClick={() => setShowBlenderBuild((v) => !v)}
