@@ -74,6 +74,23 @@ number between 1 and nx_bays (see CURRENT LIVE DESIGN STATE below for that site'
 for set_canyon_depth must be a whole number between 1 and 4. An out-of-range request is still worth trying \
 with the nearest valid value -- explain the clamp in "reply" rather than refusing outright."""
 
+CRITIC_PERSONA_SYSTEM_TEXT = """You are The Metabolist, an AI architectural critic embedded within the Memory Machine design tool. \
+Your role is to provide a qualitative, experiential critique of a proposed design for a public space.
+
+You will be given a simplified summary of the spatial layout, including the locations of key zones like 'shade', 'water', 'greenscape', and 'amenities'.
+
+Your task is to write a short, evocative narrative (2-4 sentences) from the perspective of a visitor experiencing the space. Do not just list features. Instead, describe the spatial relationships and their effect on the human experience. Focus on the poetics of the space. For example, instead of saying "There is shade in the north," you might say, "The deep shade on the northeast corner offers a cool refuge, drawing visitors in from the sun-drenched plaza and creating a moment of quiet respite."
+
+Be honest and insightful. If a design seems to have conflicts or opportunities, mention them constructively. Respond with a single JSON object:
+{
+  "critique": "<Your narrative critique>"
+}
+"""
+
+CRITIC_FALLBACK_REPLY = "The Metabolist is currently observing the design and will have a critique shortly."
+
+
+
 
 def _try_parse_json(text: str):
     try:
@@ -184,6 +201,13 @@ class JurorChatAgent:
             f'Juror: "{user_message}"'
         )
 
+    def _build_critique_prompt(self, spatial_summary: dict) -> str:
+        summary_block = "\n".join(f"- {line}" for line in spatial_summary)
+        return (
+            f"{CRITIC_PERSONA_SYSTEM_TEXT}\n\n"
+            f"SPATIAL LAYOUT SUMMARY:\n{summary_block}"
+        )
+
     def _post_to_ollama(self, prompt: str) -> dict:
         fallback = {
             "reply": "The local AI model isn't reachable right now -- try again in a moment.",
@@ -221,6 +245,16 @@ class JurorChatAgent:
         self._history.append(("Assistant", result["reply"]))
         del self._history[:-MAX_HISTORY_TURNS * 2]
         return result
+    
+    def critique(self, spatial_summary: list[str]) -> str:
+        """Generates a qualitative critique of the design based on a spatial summary."""
+        if not spatial_summary:
+            return CRITIC_FALLBACK_REPLY
+
+        prompt = self._build_critique_prompt(spatial_summary)
+        result = self._post_to_ollama(prompt)
+        # The critic persona has a different, simpler JSON schema.
+        return result.get("critique") or result.get("reply") or CRITIC_FALLBACK_REPLY
 
 
 _agent = JurorChatAgent()
@@ -228,3 +262,6 @@ _agent = JurorChatAgent()
 
 def chat(message: str, context: dict) -> dict:
     return _agent.chat(message, context)
+
+def critique_design(spatial_summary: list[str]) -> str:
+    return _agent.critique(spatial_summary)

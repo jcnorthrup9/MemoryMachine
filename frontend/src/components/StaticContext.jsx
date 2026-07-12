@@ -2,7 +2,7 @@ import { Suspense, useMemo } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as THREE from 'three';
-import { materialProps, outlineMaterialProps, OUTLINE_SCALE } from '../shading.js';
+import { materialProps, outlineMaterialProps, OUTLINE_SCALE, showsOutline, castsShadows } from '../shading.js';
 
 // Relative, same-origin (2026-07-11 fix) -- previously a hardcoded
 // absolute 'http://127.0.0.1:8000/...' URL, found stale (backend has been
@@ -45,21 +45,24 @@ function siteMatrix(siteLengthFt) {
 
 function StaticContextGroup({ siteLengthFt, shadingMode }) {
   const obj = useLoader(OBJLoader, CONTEXT_OBJ_URL);
-  const ghosted = shadingMode === 'ghosted';
+  const ghosted = showsOutline(shadingMode);
 
   const filtered = useMemo(() => {
     const group = new THREE.Group();
     const material = new THREE.MeshStandardMaterial(materialProps(shadingMode, CONTEXT_COLOR));
+    // Only opaque modes (Shaded/Arctic) cast/receive real shadows -- see
+    // shading.js's castsShadows() docstring for why Wireframe/Ghosted are
+    // excluded (2026-07-12 fix: a wireframe material still threw a solid
+    // depth-material shadow by default, and shadow-mapping on top of
+    // semi-transparent Ghosted geometry added visible artifacting).
+    const shadows = castsShadows(shadingMode);
     for (const child of [...obj.children]) {
       if (child.name === 'terrace') continue;
       child.traverse((n) => {
         if (n.isMesh) {
           n.material = material;
-          // Real existing structure (columns/tunnel/entrance/ramps) should
-          // cast onto and receive from the live excavation result just like
-          // every procedural mesh in Viewport.jsx does (2026-07-11 fix).
-          n.castShadow = true;
-          n.receiveShadow = true;
+          n.castShadow = shadows;
+          n.receiveShadow = shadows;
         }
       });
       group.add(child);
