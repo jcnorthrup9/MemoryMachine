@@ -13,7 +13,9 @@ for this state yet.
 """
 import json
 import os
+import shutil
 import sys
+import time
 
 from pydantic import BaseModel
 
@@ -38,6 +40,10 @@ from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # n
 from foot_traffic import (  # noqa: E402
     load_foot_traffic_hotspots_from_csv, find_latest_csv as find_latest_foot_traffic_csv)
 from circulation_network import CirculationNetworkEngine  # noqa: E402
+# Aliased -- this module defines its own juror_chat() function below (the
+# route handler), which would otherwise shadow the imported module of the
+# same name at module scope.
+from logic import juror_chat as juror_chat_agent  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights_cache.json")
@@ -60,6 +66,22 @@ def _empty_mask(nx, nz):
     return [[False] * nz for _ in range(nx)]
 
 
+def _atomic_write_json(path, data):
+    """Write-to-temp-then-rename so a crash/kill mid-write can't leave a
+    truncated, unreadable file behind (os.replace is atomic on both Windows
+    and POSIX). Shared by _save_paint_state() (runtime persist) and the
+    one-time water_shade->water/shade migration below (bootstrap-time) --
+    extracted so the migration doesn't need a duplicate copy of this logic,
+    and so _save_paint_state() can stay defined near bake() where it's
+    actually called from, rather than needing to move earlier in the file
+    just to be available during module-import-time bootstrap."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(data, f)
+    os.replace(tmp_path, path)
+
+
 _probe = TerracingEngine(REAL_GEOMETRY)  # cheap -- only used for nx/nz/voxel_ft below
 NX, NZ, VOXEL_FT = _probe.nx, _probe.nz, _probe.voxel_ft
 NX_BAYS = max(1, round(REAL_GEOMETRY["site"]["width_ft"] / STRUCTURAL_BAY_FT))
@@ -76,7 +98,7 @@ AMENITY_CSV_PATH = find_latest_csv()
 # of what the frontend's toggle is set to.
 FOOT_TRAFFIC_CSV_PATH = find_latest_foot_traffic_csv()
 
-# Bootstrap all 5 grids: prefer this app's own saved state (PAINT_STATE_PATH,
+# Bootstrap all 6 grids: prefer this app's own saved state (PAINT_STATE_PATH,
 # written by bake() below every time you paint+bake) if one exists -- that's
 # real prior work, more recent than anything else. Otherwise fall back to
 # the older precomputed-sketch-cache bootstrap (blender_cockpit.py's pattern,
@@ -86,7 +108,35 @@ if os.path.exists(PAINT_STATE_PATH):
         _paint_state = json.load(f)
     SKETCH_WEIGHTS = _paint_state["canyon"]
     HARDSCAPE_MASK = _paint_state["hardscape"]
-    WATER_SHADE_MASK = _paint_state["water_shade"]
+    if "water" in _paint_state and "shade" in _paint_state:
+        WATER_MASK = _paint_state["water"]
+        SHADE_MASK = _paint_state["shade"]
+    else:
+        # One-time migration (2026-07-11 water_shade -> water/shade split):
+        # this file predates the split and only has the old combined
+        # "water_shade" key. Back it up with a TIMESTAMPED filename before
+        # touching it -- a fixed ".bak" name caused a real data-loss
+        # incident earlier this session (a second migration/install run
+        # silently clobbered the first backup). Migrate water_shade -> water
+        # only, shade starts empty: this specific file's water_shade mask
+        # is provably pure water (it came from ingest_legacy_diagram.py's
+        # blue-pixel-only segmentation, and the SHADE/GREEN_SPACE color-
+        # collision bug in static/main.js's _getLayerColor meant no diagram
+        # exported before that fix could ever have produced a real shade
+        # signal) -- duplicating into both would fabricate tree placement
+        # the user never actually specified. See
+        # archive/memoryMachine/MILESTONE_07112026_PlanningSession.md.
+        _backup_path = f"{PAINT_STATE_PATH}.{int(time.time())}.bak"
+        shutil.copy2(PAINT_STATE_PATH, _backup_path)
+        WATER_MASK = _paint_state["water_shade"]
+        SHADE_MASK = _empty_mask(NX, NZ)
+        print(f"[pershing_api] migrated {PAINT_STATE_PATH} from water_shade to water/shade "
+              f"(shade starts empty) -- pre-migration backup at {_backup_path}")
+        _atomic_write_json(PAINT_STATE_PATH, {
+            "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK,
+            "water": WATER_MASK, "shade": SHADE_MASK,
+            "greenscape": _paint_state["greenscape"], "amenity_resting": _paint_state["amenity_resting"],
+        })
     GREENSCAPE_MASK = _paint_state["greenscape"]
     AMENITY_RESTING_MASK = _paint_state["amenity_resting"]
 elif os.path.exists(SKETCH_CACHE_PATH):
@@ -94,13 +144,15 @@ elif os.path.exists(SKETCH_CACHE_PATH):
         _cache = json.load(f)
     SKETCH_WEIGHTS = _cache["weights"]
     HARDSCAPE_MASK = _cache.get("hardscape_mask") or _empty_mask(NX, NZ)
-    WATER_SHADE_MASK = _empty_mask(NX, NZ)
+    WATER_MASK = _empty_mask(NX, NZ)
+    SHADE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
 else:
     SKETCH_WEIGHTS = _empty_mask(NX, NZ)
     HARDSCAPE_MASK = _empty_mask(NX, NZ)
-    WATER_SHADE_MASK = _empty_mask(NX, NZ)
+    WATER_MASK = _empty_mask(NX, NZ)
+    SHADE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
 
@@ -144,44 +196,41 @@ class BakeGrids(BaseModel):
     blender_cockpit.py's bake_paint_canvas, just with the sampling done in
     JS against a 2D canvas instead of Python against a Blender Image.
     canyon is the one continuous weight grid (painted alpha IS the
-    weight); the other four are boolean zone masks, already thresholded
-    client-side.
+    weight); the other five are boolean zone masks, already thresholded
+    client-side. water/shade split 2026-07-11 (was one combined
+    water_shade field) -- see terracing_engine.py's Voxel docstring.
     """
     canyon: list[list[float]]
     hardscape: list[list[bool]]
-    water_shade: list[list[bool]]
+    water: list[list[bool]]
+    shade: list[list[bool]]
     greenscape: list[list[bool]]
     amenity_resting: list[list[bool]]
 
 
 def _save_paint_state():
-    """Persist all 5 live grids to PAINT_STATE_PATH (2026-07-10 persistence
-    supplement) so a backend restart doesn't lose painted work -- previously
-    bake() only updated the in-memory globals, never written anywhere.
-    Write-to-temp-then-rename so a crash/kill mid-write can't leave a
-    truncated, unreadable state file behind (os.replace is atomic on both
-    Windows and POSIX)."""
-    os.makedirs(os.path.dirname(PAINT_STATE_PATH), exist_ok=True)
-    state = {
-        "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water_shade": WATER_SHADE_MASK,
+    """Persist all 6 live grids to PAINT_STATE_PATH (2026-07-10 persistence
+    supplement, water/shade split 2026-07-11) so a backend restart doesn't
+    lose painted work -- previously bake() only updated the in-memory
+    globals, never written anywhere. See _atomic_write_json for the actual
+    write mechanics (shared with the one-time bootstrap migration above)."""
+    _atomic_write_json(PAINT_STATE_PATH, {
+        "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water": WATER_MASK, "shade": SHADE_MASK,
         "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK,
-    }
-    tmp_path = PAINT_STATE_PATH + ".tmp"
-    with open(tmp_path, "w") as f:
-        json.dump(state, f)
-    os.replace(tmp_path, PAINT_STATE_PATH)
+    })
 
 
 def bake(grids: BakeGrids):
-    """Overwrite the five live grids from a completed paint session and
+    """Overwrite the six live grids from a completed paint session and
     persist them (see _save_paint_state). Does NOT trigger a rebuild itself
     -- the frontend calls /rebuild right after, reusing its existing
     rebuild path rather than duplicating it here with a second copy of the
     current slider params."""
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
     SKETCH_WEIGHTS = grids.canyon
     HARDSCAPE_MASK = grids.hardscape
-    WATER_SHADE_MASK = grids.water_shade
+    WATER_MASK = grids.water
+    SHADE_MASK = grids.shade
     GREENSCAPE_MASK = grids.greenscape
     AMENITY_RESTING_MASK = grids.amenity_resting
     _save_paint_state()
@@ -190,7 +239,8 @@ def bake(grids: BakeGrids):
         "counts": {
             "canyon": sum(1 for row in SKETCH_WEIGHTS for v in row if v > 0.01),
             "hardscape": sum(1 for row in HARDSCAPE_MASK for v in row if v),
-            "water_shade": sum(1 for row in WATER_SHADE_MASK for v in row if v),
+            "water": sum(1 for row in WATER_MASK for v in row if v),
+            "shade": sum(1 for row in SHADE_MASK for v in row if v),
             "greenscape": sum(1 for row in GREENSCAPE_MASK for v in row if v),
             "amenity_resting": sum(1 for row in AMENITY_RESTING_MASK for v in row if v),
         },
@@ -307,7 +357,8 @@ def _run_pipeline(params: RebuildParams):
         REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=params.sketch_alpha,
         hardscape_regions=hardscape_regions,
         transit_falloff_ft=transit_falloff_ft, max_canyon_depth_ft=max_canyon_depth_ft,
-        water_shade_regions=[{"mask": WATER_SHADE_MASK}],
+        water_regions=[{"mask": WATER_MASK}],
+        shade_regions=[{"mask": SHADE_MASK}],
         greenscape_regions=[{"mask": GREENSCAPE_MASK}],
         amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}],
         deficit_hotspots=deficit_hotspots,
@@ -445,3 +496,24 @@ def grow_network(payload: GrowNetworkRequest):
         "attractor_count": len(net.attractors),
         "attractors_unconsumed": sum(1 for a in net.attractors if not a.consumed),
     }
+
+
+class JurorChatRequest(BaseModel):
+    message: str
+    # Whatever live design state the frontend already holds client-side
+    # (current RebuildParams/NetworkParams, light summaries of the last
+    # rebuild()/grow_network() results) -- loosely typed since this is
+    # purely grounding context for the prompt, not something this endpoint
+    # validates or acts on.
+    context: dict = {}
+
+
+def juror_chat(payload: JurorChatRequest):
+    """Grounded Q&A for the live juror chat -- merges get_config()'s real
+    site facts with whatever live state the frontend supplied, then
+    delegates to logic/juror_chat.py's JurorChatAgent. See that module's
+    docstring for the reply/action contract (action is always null in this
+    pass -- see PERSONA_SYSTEM_TEXT)."""
+    site_facts = get_config()
+    context = {**site_facts, **payload.context}
+    return juror_chat_agent.chat(payload.message, context)

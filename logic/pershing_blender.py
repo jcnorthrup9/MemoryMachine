@@ -52,7 +52,7 @@ DEFAULT_TIMEOUT_S = 180
 _BUILD_LOCK = threading.Lock()
 
 
-def _run_build(job_id, input_path, output_path, svg_path, timeout):
+def _run_build(job_id, input_path, output_path, svg_path, timeout, view_dir=None, include_real_context=False):
     _JOBS[job_id]["status"] = "running"
     t0 = time.time()
     try:
@@ -60,6 +60,25 @@ def _run_build(job_id, input_path, output_path, svg_path, timeout):
                 "--input", input_path, "--output", output_path]
         if svg_path is not None:
             args += ["--lineart-output", svg_path]
+            # view_dir/include_real_context only mean anything alongside a
+            # Line Art export -- silently ignored (not an error) if lineart
+            # wasn't requested, matching --lineart-output's own "optional
+            # and additive" framing in pershing_headless_build.py's docstring.
+            if view_dir is not None:
+                # --view-dir=VALUE (single token), NOT ["--view-dir", VALUE]
+                # (two tokens) -- a view direction with a negative
+                # component (e.g. "-0.2,-0.98,0.09", a real camera angle
+                # hit during browser testing) makes argparse misparse the
+                # two-token form: it sees a token starting with "-"
+                # immediately after --view-dir and concludes no value was
+                # given at all ("expected one argument"), even though
+                # subprocess.run's list form never touches a shell. The
+                # single "--flag=value" token sidesteps that ambiguity
+                # entirely, since argparse always treats an "="-joined
+                # token as one unit regardless of what follows the "=".
+                args += ["--view-dir=" + ",".join(str(v) for v in view_dir)]
+            if include_real_context:
+                args += ["--include-real-context"]
         try:
             result = subprocess.run(
                 # --factory-startup: skip this machine's user addon profile
@@ -132,7 +151,8 @@ def _run_build(job_id, input_path, output_path, svg_path, timeout):
         _BUILD_LOCK.release()
 
 
-def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bool = False) -> str:
+def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bool = False,
+                     view_dir=None, include_real_context: bool = False) -> str:
     """Kicks off a headless Blender build in a background thread and
     returns immediately with a job id -- the caller (FastAPI route) polls
     get_job() for status instead of blocking the request on the subprocess.
@@ -141,6 +161,15 @@ def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bo
     subprocess (see pershing_headless_build.py's build_line_art()) -- one
     process, one build, not a second subprocess launch, since the mesh is
     already in memory there.
+
+    view_dir (2026-07-11, vector-export use): an (x, y, z) sequence
+    threaded through to --view-dir, letting a live browser camera angle
+    drive the Line Art projection instead of always the one hardcoded
+    isometric default. include_real_context threads through to
+    --include-real-context, additionally line-arting the real columns/
+    slabs (as lightweight primitives, not the heavy Rhino OBJ -- see
+    build_real_context_meshes' docstring) -- never included in the OBJ
+    export itself, only the Line Art SVG.
 
     Acquired here (main thread), released in _run_build (background
     thread) once that job actually finishes -- threading.Lock has no
@@ -164,7 +193,10 @@ def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bo
 
     _JOBS[job_id] = {"status": "queued", "obj_url": None, "svg_url": None, "error": None, "duration_s": None}
     thread = threading.Thread(
-        target=_run_build, args=(job_id, input_path, output_path, svg_path, timeout), daemon=True,
+        target=_run_build,
+        args=(job_id, input_path, output_path, svg_path, timeout),
+        kwargs={"view_dir": view_dir, "include_real_context": include_real_context},
+        daemon=True,
     )
     thread.start()
     return job_id

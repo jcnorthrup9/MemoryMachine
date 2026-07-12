@@ -1,14 +1,7 @@
 import { useState } from 'react';
+import { PAINT_CATEGORIES } from '../paintCategories.js';
 
 const NEW_BUILDING_DEFAULTS = { x_ft: 0, y_ft: 0, width_ft: 40, depth_ft: 30, height_ft: 20, setback_ft: 0 };
-
-const PAINT_CATEGORIES = [
-  { key: 'canyon', label: 'Canyon' },
-  { key: 'hardscape', label: 'Hardscape' },
-  { key: 'water_shade', label: 'Water/Shade' },
-  { key: 'greenscape', label: 'Greenscape' },
-  { key: 'amenity_resting', label: 'Amenity/Resting' },
-];
 
 function Slider({ label, value, min, max, step, onChange, format }) {
   return (
@@ -46,10 +39,10 @@ const MOTIVATOR_LABELS = [
 ];
 
 export default function ParamPanel({
-  config, params, onParamsChange, onPaint, onRebuild, slabHarvestTons, kindCounts, usedRealAmenityData,
-  usedRealFootTrafficData, circulationVoxelCount, rebuilding, blenderBuild, onBuildInBlender,
-  lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange, onGrowNetwork,
-  growingNetwork, networkResult,
+  config, params, onParamsChange, onPaint, onOpenDiagramInput, onRebuild, slabHarvestTons, kindCounts,
+  usedRealAmenityData, usedRealFootTrafficData, circulationVoxelCount, rebuilding, blenderBuild,
+  onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
+  onGrowNetwork, growingNetwork, networkResult,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
@@ -245,6 +238,22 @@ export default function ParamPanel({
           Circulation cells:{' '}
           <span className="text-accent">{circulationVoxelCount ?? 0}</span>
         </div>
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Diagram Input
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Read colors off an exported legacy diagram directly into the design masks below --
+          a separate input mode from painting, not routed through it.
+        </p>
+        <button
+          onClick={() => onOpenDiagramInput?.()}
+          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
+        >
+          Import Diagram
+        </button>
       </div>
 
       <div className="p-container border-b border-border space-y-3">

@@ -57,7 +57,8 @@ class Voxel:
     foot_traffic_influence: float = 0.0
     sketch_weight: float = 0.0
     is_hardscape: bool = False
-    is_water_shade: bool = False
+    is_water: bool = False
+    is_shade: bool = False
     is_greenscape: bool = False
     is_amenity_resting: bool = False
     z_ft: float = 0.0
@@ -119,7 +120,7 @@ class TerracingEngine:
                  max_canyon_depth_ft=None,
                  level_depth_thresholds_ft=DEFAULT_LEVEL_DEPTH_THRESHOLDS_FT,
                  sketch_weights=None, sketch_alpha=0.75, hardscape_regions=None,
-                 water_shade_regions=None, greenscape_regions=None, amenity_resting_regions=None,
+                 water_regions=None, shade_regions=None, greenscape_regions=None, amenity_resting_regions=None,
                  circulation_threshold=0.35):
         self.real_geometry = real_geometry
         self.voxel_ft = voxel_ft
@@ -159,7 +160,19 @@ class TerracingEngine:
         # only feed _classify_typology below, purely a post-process asset
         # decoration layer on top of whatever depth the real excavation math
         # already produced.
-        self.water_shade_regions = water_shade_regions or []
+        #
+        # water_regions/shade_regions (2026-07-11 split): previously one
+        # combined water_shade_regions -- split because circulation_network.py's
+        # motivator system already treated "shade" and "water" as distinct
+        # weighted attractors, but derived them asymmetrically from the one
+        # upstream mask (shade read the raw mask directly, water only came
+        # from already-excavated GROTTO props) -- see that module's
+        # sample_attraction_points for the fix on that side. shade_regions
+        # also now drives TypologyAssetEngine.tree_specs() (trees = the
+        # shade-casting object), replacing the old is_greenscape-driven
+        # placement -- greenscape is pure grass now, see that method below.
+        self.water_regions = water_regions or []
+        self.shade_regions = shade_regions or []
         self.greenscape_regions = greenscape_regions or []
         self.amenity_resting_regions = amenity_resting_regions or []
         # Threshold for _classify_typology's CIRCULATION check below --
@@ -243,7 +256,8 @@ class TerracingEngine:
                     sketch_weight = float(self.sketch_weights[gx][gy])
 
                 is_hardscape = any(region["mask"][gx][gy] for region in self.hardscape_regions)
-                is_water_shade = any(region["mask"][gx][gy] for region in self.water_shade_regions)
+                is_water = any(region["mask"][gx][gy] for region in self.water_regions)
+                is_shade = any(region["mask"][gx][gy] for region in self.shade_regions)
                 is_greenscape = any(region["mask"][gx][gy] for region in self.greenscape_regions)
                 is_amenity_resting = any(region["mask"][gx][gy] for region in self.amenity_resting_regions)
 
@@ -254,7 +268,8 @@ class TerracingEngine:
                     foot_traffic_influence=foot_traffic_influence,
                     sketch_weight=sketch_weight,
                     is_hardscape=is_hardscape,
-                    is_water_shade=is_water_shade,
+                    is_water=is_water,
+                    is_shade=is_shade,
                     is_greenscape=is_greenscape,
                     is_amenity_resting=is_amenity_resting,
                 ))
@@ -342,17 +357,20 @@ class TerracingEngine:
         4). GROTTO requires the voxel to actually be excavated (z_ft < 0) --
         water cascades and misting along real structural columns only make
         sense standing in an actual void, not a flat, undug cell that merely
-        happens to be painted Canyon+Water/Shade (confirmed 2026-07-05: this
+        happens to be painted Canyon+Water (confirmed 2026-07-05: this
         is a post-process classification over the already-computed terrace,
-        not a new input to the depth formula). SANCTUARY is paint-only --
-        Greenscape and Amenity/Resting can both sit at grade, unrelated to
-        excavation depth. CIRCULATION is checked last, after GROTTO/
-        SANCTUARY -- existing classifications win outright if a cell
+        not a new input to the depth formula). Reads is_water only (2026-07-11
+        split, was is_water_shade) -- painting Shade alone over an excavated
+        cell no longer implies a grotto, since shade's own semantics moved to
+        "trees go here" (see TypologyAssetEngine.tree_specs). SANCTUARY is
+        paint-only -- Greenscape and Amenity/Resting can both sit at grade,
+        unrelated to excavation depth. CIRCULATION is checked last, after
+        GROTTO/SANCTUARY -- existing classifications win outright if a cell
         happens to be painted both ways, no new priority system needed
         (foot-traffic data driving CIRCULATION is independent of the
-        water_shade/greenscape/amenity_resting masks the other two read).
+        water/shade/greenscape/amenity_resting masks the other two read).
         """
-        if v.z_ft < 0 and v.is_water_shade:
+        if v.z_ft < 0 and v.is_water:
             return "GROTTO"
         if v.is_greenscape and v.is_amenity_resting:
             return "SANCTUARY"
@@ -746,6 +764,58 @@ class StructuralFramingEngine:
             result[slab_key(slab)] = {
                 "slab": slab, "remaining": remaining, "removed": removed, "removed_count": len(removed),
             }
+        return result
+
+    def classify_terrain_cells(self, fragments=None):
+        """
+        Per-cell classification of which REAL slab (if any) a voxel
+        currently "belongs to" -- the exposed real surface a vector-export
+        mesh builder should draw there, vs. cells with no real precedent at
+        all (2026-07-11, vector-export terrain-mesh rewrite: replaces the
+        old approach of boxing every voxel individually regardless of
+        whether it ever corresponded to real structure, which produced a
+        mesh too dense for hidden-line-removal to complete -- see
+        vector_export.build_terraced_solid).
+
+        For each cell, considers every real slab whose footprint contains
+        it and picks the SHALLOWEST one not yet excavated away (max
+        z_top_ft among real_slab_fragments()'s "remaining" classification
+        for that cell) -- that's the currently-exposed real surface, since
+        real_slab_fragments()'s removal test is monotone in the stack: a
+        cut that has passed a deeper slab's elevation has necessarily also
+        passed every shallower slab's elevation at that same XY (confirmed
+        against live real_geometry.json data -- stacked slabs like
+        L2_east_slab/L3_east_slab share identical XY footprints at
+        different elevations, never two same-elevation slabs claiming the
+        same cell).
+
+        Returns {(gx, gy): slab_key or None} -- None means no real slab is
+        currently exposed there at all (either excavated past every real
+        slab present at that XY, or outside every real slab's footprint
+        entirely) -- genuinely new/designed terracing with no real
+        precedent, the vector-export builder's fallback case.
+
+        `fragments`: pass an already-computed real_slab_fragments() result
+        to avoid a second full voxel-grid scan when the caller already has
+        one (vector_export.py's builder will).
+        """
+        if fragments is None:
+            fragments = self.real_slab_fragments()
+
+        best_slab_for_cell = {}  # (gx, gy) -> (z_top_ft, slab_key)
+        for key, entry in fragments.items():
+            z_top_ft = entry["slab"]["z_top_ft"]
+            for gx, gy, _wx, _wy in entry["remaining"]:
+                cell = (gx, gy)
+                current = best_slab_for_cell.get(cell)
+                if current is None or z_top_ft > current[0]:
+                    best_slab_for_cell[cell] = (z_top_ft, key)
+
+        result = {}
+        for gx in range(self.te.nx):
+            for gy in range(self.te.nz):
+                entry = best_slab_for_cell.get((gx, gy))
+                result[(gx, gy)] = entry[1] if entry is not None else None
         return result
 
     def slab_harvest_tons(self):
@@ -1145,18 +1215,18 @@ class TypologyAssetEngine:
 
     def tree_specs(self):
         """
-        Trees on greenscape cells -- reuses the same is_greenscape mask
-        driving the frontend's grass-cap ground layer, so trees only show
-        up where grass has already been painted. Hybrid asset strategy
-        Tier 1: a plain cylinder trunk + hex-prism canopy stand-in (fits
-        the existing kind-dispatch paths with zero new geometry code),
-        swappable for a real tree model/GLB later without touching this
-        placement logic.
+        Trees on shade cells (2026-07-11: moved off is_greenscape -- trees
+        ARE the shade-casting object, so "paint shade" now means "put trees
+        here"; greenscape is pure grass, see the frontend's GreenscapeGround).
+        Hybrid asset strategy Tier 1: a plain cylinder trunk + hex-prism
+        canopy stand-in (fits the existing kind-dispatch paths with zero new
+        geometry code), swappable for a real tree model/GLB later without
+        touching this placement logic.
         """
         specs = []
         for row in self.te.voxels:
             for v in row:
-                if not v.is_greenscape:
+                if not v.is_shade:
                     continue
                 if v.gx % TREE_GRID_SPACING != 0 or v.gy % TREE_GRID_SPACING != 0:
                     continue

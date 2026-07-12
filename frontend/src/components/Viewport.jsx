@@ -151,24 +151,35 @@ function ViewCamera({ view, center, siteWidthFt, siteLengthFt }) {
   );
 }
 
-// Thin colored cap on top of each greenscape-painted voxel's own terrain
-// height (v.z_ft, the same top-surface value TerraceLevelGroup builds its
-// block up to) -- NOT a flat plane at z=0, since the terrain isn't flat
-// once excavated; sitting the cap at v.z_ft keeps grass following the cut
-// terrace surface instead of floating above pits or clipping through
-// them. Same one-InstancedMesh-of-filtered-voxels pattern as
-// TerraceLevelGroup. Placeholder solid color for now (hybrid asset
-// strategy: cheap now, swap for a real grass texture/material later
-// without touching data plumbing -- is_greenscape is already real
-// per-voxel data from the paint mask, not derived here).
-const GREENSCAPE_COLOR = '#3d9142';
-const GREENSCAPE_THICKNESS_FT = 0.5;
-
-function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
+// Thin colored cap on top of each matching voxel's own terrain height
+// (v.z_ft, the same top-surface value TerraceLevelGroup builds its block up
+// to) -- NOT a flat plane at z=0, since the terrain isn't flat once
+// excavated; sitting the cap at v.z_ft keeps it following the cut terrace
+// surface instead of floating above pits or clipping through them. One
+// InstancedMesh of filtered voxels, same pattern TerraceLevelGroup uses.
+// Extracted 2026-07-11 (was three near-identical copies -- greenscape grass,
+// circulation surface, and this session's new shade ground cap -- the exact
+// kind of duplication that already drove the PAINT_CATEGORIES/
+// paintCategories.js extraction once this session).
+//
+// Risk note (carried over from the pre-extraction version, still applies):
+// earlier this session RealSlabFragments had a real bug where a
+// useLayoutEffect's dependency array didn't include a mode flag that
+// changes which JSX element TYPE gets rendered (instancedMesh vs
+// lineSegments for wireframe mode), causing a remount that silently failed
+// to repopulate instance matrices. This component's effect already
+// correctly lists every prop it reads (items/voxelFt/siteLengthFt/ghosted)
+// and never swaps the primary mesh's element type based on shadingMode
+// (only ghosted adds a SECOND outline mesh, it doesn't replace the first)
+// -- if this component ever grows a wireframe-style branch that changes
+// the primary element's JSX type, the mode flag driving that branch MUST
+// be added to this dependency array, or it will silently break exactly the
+// way RealSlabFragments did.
+function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterFn, color, thicknessFt }) {
   const meshRef = useRef();
   const outlineRef = useRef();
   const ghosted = shadingMode === 'ghosted';
-  const items = useMemo(() => voxels.filter((v) => v.is_greenscape), [voxels]);
+  const items = useMemo(() => voxels.filter(filterFn), [voxels, filterFn]);
 
   useLayoutEffect(() => {
     if (!meshRef.current) return;
@@ -176,28 +187,28 @@ function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
     items.forEach((v, i) => {
       const cx = v.gx * voxelFt + voxelFt / 2;
       const cy = v.gy * voxelFt + voxelFt / 2;
-      const cz = v.z_ft + GREENSCAPE_THICKNESS_FT / 2;
+      const cz = v.z_ft + thicknessFt / 2;
       const [x, y, z] = toThree(cx, cy, cz, siteLengthFt);
       dummy.position.set(x, y, z);
-      dummy.scale.set(voxelFt, GREENSCAPE_THICKNESS_FT, voxelFt);
+      dummy.scale.set(voxelFt, thicknessFt, voxelFt);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
       if (outlineRef.current) {
-        dummy.scale.set(voxelFt * OUTLINE_SCALE, GREENSCAPE_THICKNESS_FT * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
+        dummy.scale.set(voxelFt * OUTLINE_SCALE, thicknessFt * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
         dummy.updateMatrix();
         outlineRef.current.setMatrixAt(i, dummy.matrix);
       }
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt, ghosted]);
+  }, [items, voxelFt, siteLengthFt, ghosted, thicknessFt]);
 
   if (items.length === 0) return null;
 
-  const mat = materialProps(shadingMode, GREENSCAPE_COLOR);
+  const mat = materialProps(shadingMode, color);
   return (
     <>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
+      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial {...mat} />
       </instancedMesh>
@@ -211,60 +222,43 @@ function GreenscapeGround({ voxels, voxelFt, siteLengthFt, shadingMode }) {
   );
 }
 
-// Same one-InstancedMesh-of-filtered-voxels pattern as GreenscapeGround,
-// filtered by v.typology === 'CIRCULATION' (server-classified: hardscape
+// Placeholder solid colors for now (hybrid asset strategy: cheap now, swap
+// for real grass/paving textures later without touching data plumbing --
+// is_greenscape/is_shade are already real per-voxel data from the paint
+// masks, not derived here).
+const GREENSCAPE_COLOR = '#3d9142';
+const GREENSCAPE_THICKNESS_FT = 0.5;
+const greenscapeFilter = (v) => v.is_greenscape;
+
+function GreenscapeGround(props) {
+  return <CategoryGroundCap {...props} filterFn={greenscapeFilter} color={GREENSCAPE_COLOR} thicknessFt={GREENSCAPE_THICKNESS_FT} />;
+}
+
+// Shade ground cap (2026-07-11, new) -- tan/beige, matches the paint
+// brush's shade tint (paintCategories.js) and the legacy diagram tool's
+// ZONE_MATERIALS.SHADE. is_shade is what now drives tree placement too
+// (TypologyAssetEngine.tree_specs, moved off is_greenscape) -- this ground
+// cap is the "shade paint has a visible footprint even before trees render"
+// counterpart, same role GreenscapeGround already plays for grass.
+const SHADE_COLOR = '#bcaaa4';
+const SHADE_THICKNESS_FT = 0.5;
+const shadeFilter = (v) => v.is_shade;
+
+function ShadeGround(props) {
+  return <CategoryGroundCap {...props} filterFn={shadeFilter} color={SHADE_COLOR} thicknessFt={SHADE_THICKNESS_FT} />;
+}
+
+// Filtered by v.typology === 'CIRCULATION' (server-classified: hardscape
 // cells where the foot-traffic influence field crosses circulation_threshold
 // -- see terracing_engine.py's _classify_typology) instead of a raw boolean
 // mask. Gives HARDSCAPE_MASK its first visual identity in this viewport --
 // previously invisible, only ever an excavation veto.
 const CIRCULATION_COLOR = '#8a8378';
 const CIRCULATION_THICKNESS_FT = 0.5;
+const circulationFilter = (v) => v.typology === 'CIRCULATION';
 
-function CirculationSurface({ voxels, voxelFt, siteLengthFt, shadingMode }) {
-  const meshRef = useRef();
-  const outlineRef = useRef();
-  const ghosted = shadingMode === 'ghosted';
-  const items = useMemo(() => voxels.filter((v) => v.typology === 'CIRCULATION'), [voxels]);
-
-  useLayoutEffect(() => {
-    if (!meshRef.current) return;
-    const dummy = new THREE.Object3D();
-    items.forEach((v, i) => {
-      const cx = v.gx * voxelFt + voxelFt / 2;
-      const cy = v.gy * voxelFt + voxelFt / 2;
-      const cz = v.z_ft + CIRCULATION_THICKNESS_FT / 2;
-      const [x, y, z] = toThree(cx, cy, cz, siteLengthFt);
-      dummy.position.set(x, y, z);
-      dummy.scale.set(voxelFt, CIRCULATION_THICKNESS_FT, voxelFt);
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-      if (outlineRef.current) {
-        dummy.scale.set(voxelFt * OUTLINE_SCALE, CIRCULATION_THICKNESS_FT * OUTLINE_SCALE, voxelFt * OUTLINE_SCALE);
-        dummy.updateMatrix();
-        outlineRef.current.setMatrixAt(i, dummy.matrix);
-      }
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
-  }, [items, voxelFt, siteLengthFt, ghosted]);
-
-  if (items.length === 0) return null;
-
-  const mat = materialProps(shadingMode, CIRCULATION_COLOR);
-  return (
-    <>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial {...mat} />
-      </instancedMesh>
-      {ghosted && (
-        <instancedMesh ref={outlineRef} args={[undefined, undefined, items.length]}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial {...outlineMaterialProps()} />
-        </instancedMesh>
-      )}
-    </>
-  );
+function CirculationSurface(props) {
+  return <CategoryGroundCap {...props} filterFn={circulationFilter} color={CIRCULATION_COLOR} thicknessFt={CIRCULATION_THICKNESS_FT} />;
 }
 
 // Real column solids, extracted directly from the live Rhino STRUC__Columns
@@ -318,7 +312,13 @@ function RealColumns({ columns, siteLengthFt, shadingMode }) {
 
   return (
     <>
-      <Instances key={paddedCapacity(frames.length)} limit={paddedCapacity(frames.length)} range={frames.length}>
+      <Instances
+        key={paddedCapacity(frames.length)}
+        limit={paddedCapacity(frames.length)}
+        range={frames.length}
+        castShadow
+        receiveShadow
+      >
         <cylinderGeometry args={[1, 1, 1, 12]} />
         <meshStandardMaterial {...mat} />
         {frames.map(({ key, position, quaternion, radius, length }) => (
@@ -392,8 +392,9 @@ const SLAB_PLATE_INDICES = [
 
 function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
   const ghosted = shadingMode === 'ghosted';
+  const wireframe = shadingMode === 'wireframe';
 
-  const { geometry, outlineGeometry } = useMemo(() => {
+  const { geometry, outlineGeometry, edgesGeometry } = useMemo(() => {
     const ordered = orderQuadCorners(slab.top_corners_ft);
     const top = ordered.map(([x, y, z]) => toThree(x, y, z, siteLengthFt));
     const bottom = top.map(([x, y, z]) => [x, y - slab.thickness_ft, z]);
@@ -419,13 +420,32 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
       outlineGeo.setIndex(SLAB_PLATE_INDICES);
       outlineGeo.computeVertexNormals();
     }
-    return { geometry: geo, outlineGeometry: outlineGeo };
-  }, [slab, siteLengthFt, ghosted]);
+    // Wireframe mode (2026-07-10 fix): a plain `wireframe: true` material
+    // draws EVERY triangle edge, including the internal diagonal each flat
+    // quad face gets split by for rendering (top/bottom/every side face
+    // here is a quad, per SLAB_PLATE_INDICES) -- reads as a spurious extra
+    // line cutting across every face, not a real edge of the slab.
+    // THREE.EdgesGeometry only keeps edges where adjacent faces meet at a
+    // real angle (default threshold 1deg) -- a flat quad's two triangles
+    // are coplanar at their shared diagonal, so it's correctly dropped,
+    // leaving just the slab's true outline.
+    const edgesGeo = wireframe ? new THREE.EdgesGeometry(geo) : null;
+    return { geometry: geo, outlineGeometry: outlineGeo, edgesGeometry: edgesGeo };
+  }, [slab, siteLengthFt, ghosted, wireframe]);
 
   const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+
+  if (wireframe && edgesGeometry) {
+    return (
+      <lineSegments geometry={edgesGeometry}>
+        <lineBasicMaterial color={SLAB_KIND_COLOR[slab.kind] || '#aaaaaa'} />
+      </lineSegments>
+    );
+  }
+
   return (
     <>
-      <mesh geometry={geometry}>
+      <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial {...mat} side={THREE.DoubleSide} />
       </mesh>
       {ghosted && outlineGeometry && (
@@ -446,10 +466,63 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
 // rendering as the single intact tilted RealSlabPlate below; fragmenting a
 // tilted plate needs per-fragment elevation interpolation along its slope,
 // deferred (see plan doc).
+// The 12 edges of an axis-aligned box (2026-07-10 wireframe fix), as
+// corner-index pairs -- corner i has x=cx+(i&1?hx:-hx), y=cy+(i&2?hy:-hy),
+// z=cz+(i&4?hz:-hz). Used to build a real edges-only wireframe for
+// RealSlabFragments' many small instanced boxes: unlike RealSlabPlate
+// (one mesh, so THREE.EdgesGeometry works directly), Three.js has no clean
+// way to instance edge-only line geometry the way it instances solid
+// meshes, so wireframe mode here builds ONE flat, non-instanced
+// LineSegments geometry containing every fragment's true 12 edges
+// (24 verts each) instead -- still cheap (wireframe mode only, and this is
+// a handful of thousand line segments at most, well within a modern GPU's
+// line-rendering budget) and correctly excludes each box face's internal
+// triangulation diagonal, same fix as RealSlabPlate's EdgesGeometry.
+const BOX_EDGE_CORNER_PAIRS = [
+  [0, 1], [2, 3], [4, 5], [6, 7], // x-direction edges
+  [0, 2], [1, 3], [4, 6], [5, 7], // y-direction edges
+  [0, 4], [1, 5], [2, 6], [3, 7], // z-direction edges
+];
+
+function boxEdgeVerts(cx, cy, cz, hx, hy, hz) {
+  const corners = [];
+  for (let i = 0; i < 8; i++) {
+    corners.push([
+      cx + (i & 1 ? hx : -hx),
+      cy + (i & 2 ? hy : -hy),
+      cz + (i & 4 ? hz : -hz),
+    ]);
+  }
+  const verts = [];
+  for (const [a, b] of BOX_EDGE_CORNER_PAIRS) {
+    verts.push(...corners[a], ...corners[b]);
+  }
+  return verts;
+}
+
 function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
   const outlineRef = useRef();
   const ghosted = shadingMode === 'ghosted';
+  const wireframe = shadingMode === 'wireframe';
+
+  const wireframeGeometry = useMemo(() => {
+    if (!wireframe || remaining.length === 0) return null;
+    const cz = slab.z_top_ft - slab.thickness_ft / 2;
+    const hx = voxelFt / 2, hy = slab.thickness_ft / 2, hz = voxelFt / 2;
+    const verts = [];
+    for (const [wx, wy] of remaining) {
+      const [x, y, z] = toThree(wx, wy, cz, siteLengthFt);
+      // toThree's y/z axis remap (see its own comment) means the box's
+      // world-space half-extents along Three's (X,Y,Z) are (hx,hy,hz) in
+      // that same order -- no swap needed, it already only permutes/mirrors
+      // axes, never scales them differently.
+      verts.push(...boxEdgeVerts(x, y, z, hx, hy, hz));
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    return geo;
+  }, [wireframe, remaining, voxelFt, slab, siteLengthFt]);
 
   useLayoutEffect(() => {
     if (!meshRef.current || remaining.length === 0) return;
@@ -469,14 +542,33 @@ function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode
     });
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (outlineRef.current) outlineRef.current.instanceMatrix.needsUpdate = true;
-  }, [remaining, voxelFt, slab, siteLengthFt, ghosted]);
+    // `wireframe` must be a dependency here even though nothing inside this
+    // effect body reads it (2026-07-11 fix): the JSX below returns a plain
+    // <lineSegments> instead of <instancedMesh> while wireframe is true, so
+    // toggling wireframe off unmounts/remounts a BRAND NEW instancedMesh
+    // (fresh meshRef.current, matrices unset). Without wireframe in this
+    // array, React sees `remaining`/`voxelFt`/`slab`/`siteLengthFt`/`ghosted`
+    // all unchanged across that mode switch and skips rerunning the effect,
+    // leaving the new mesh's instance matrices at their default (identity/
+    // zero) transform -- every fragment then renders at a degenerate
+    // position, reading as "the slabs disappeared" when returning to
+    // colored/ghosted mode from wireframe.
+  }, [remaining, voxelFt, slab, siteLengthFt, ghosted, wireframe]);
 
   if (remaining.length === 0) return null;
+
+  if (wireframe && wireframeGeometry) {
+    return (
+      <lineSegments geometry={wireframeGeometry}>
+        <lineBasicMaterial color={SLAB_KIND_COLOR[slab.kind] || '#aaaaaa'} />
+      </lineSegments>
+    );
+  }
 
   const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
   return (
     <>
-      <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]}>
+      <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]} castShadow receiveShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial {...mat} />
       </instancedMesh>
@@ -521,16 +613,22 @@ function RealSlabs({ slabs, fragments, voxelFt, siteLengthFt, shadingMode }) {
   );
 }
 
-function BoxInstances({ specs, siteLengthFt, shadingMode }) {
+// Salvaged material (harvested_block_specs() re-instancing removed real
+// slab area) -- see showSalvage's own comment in the main Viewport
+// component for why this is filterable/off by default.
+const SALVAGE_KINDS = new Set(['concrete_floor_block', 'concrete_retaining_block']);
+
+function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
   const ghosted = shadingMode === 'ghosted';
   const byKind = useMemo(() => {
     const map = {};
     for (const s of specs) {
       if (s.x2_ft !== null || HEX_KINDS.has(s.kind) || VERTICAL_CYLINDER_KINDS.has(s.kind)) continue;
+      if (!showSalvage && SALVAGE_KINDS.has(s.kind)) continue;
       (map[s.kind] ||= []).push(s);
     }
     return map;
-  }, [specs]);
+  }, [specs, showSalvage]);
 
   // Fallback footprint (1,1) matches blender_cockpit.py's
   // _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0)) for any kind not in the map.
@@ -553,7 +651,13 @@ function BoxInstances({ specs, siteLengthFt, shadingMode }) {
   return (
     <>
       {Object.entries(byKind).map(([kind, items]) => (
-        <Instances key={`${kind}-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+        <Instances
+          key={`${kind}-${paddedCapacity(items.length)}`}
+          limit={paddedCapacity(items.length)}
+          range={items.length}
+          castShadow
+          receiveShadow
+        >
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
           {items.map((s, i) => {
@@ -624,7 +728,13 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
   return (
     <>
       {Object.entries(grouped).map(([kind, items]) => (
-        <Instances key={`${kind}-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+        <Instances
+          key={`${kind}-${paddedCapacity(items.length)}`}
+          limit={paddedCapacity(items.length)}
+          range={items.length}
+          castShadow
+          receiveShadow
+        >
           <cylinderGeometry args={[1, 1, 1, 8]} />
           <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
           {framesFor(items).map(({ position, quaternion, radius, length }, i) => (
@@ -670,7 +780,13 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
 
   return (
     <>
-      <Instances key={paddedCapacity(items.length)} limit={paddedCapacity(items.length)} range={items.length}>
+      <Instances
+        key={paddedCapacity(items.length)}
+        limit={paddedCapacity(items.length)}
+        range={items.length}
+        castShadow
+        receiveShadow
+      >
         <cylinderGeometry args={[1, 1, 1, 6]} />
         <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.steel_turnbuckle)} />
         {items.map((s, i) => {
@@ -699,10 +815,10 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
   );
 }
 
-function StructuralInstances({ specs, siteLengthFt, shadingMode }) {
+function StructuralInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
   return (
     <>
-      <BoxInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+      <BoxInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={showSalvage} />
       <CylinderInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
       <HexInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
     </>
@@ -748,11 +864,22 @@ function StreetLabels({ siteWidthFt, siteLengthFt }) {
 
 export default function Viewport({
   data, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl, onShowLineArt,
+  onExportVectorView, exportingVectorView,
 }) {
   const [shadingMode, setShadingMode] = useState('colored');
+  // Default OFF (2026-07-10 fix): concrete_floor_block/concrete_retaining_
+  // block ("salvage" -- harvested_block_specs() re-instancing removed real
+  // slab material) render in a near-identical grey to the real floor_slab/
+  // ramp_slab they replace, so an excavated area used to look like nothing
+  // was removed at all -- a same-toned block immediately backfilled the
+  // hole. Off by default so excavation reads as a true void; the underlying
+  // data/tonnage math (slab_harvest_tons, the cut sheet) is unaffected
+  // either way, this only filters what BoxInstances actually draws.
+  const [showSalvage, setShowSalvage] = useState(false);
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
   const canvasRef = useRef(null);
+  const controlsRef = useRef(null);
   // toThree()'s Z range is now [0, siteLengthFt] (fixed 2026-07-09, see
   // toThree's own comment) -- center must sit at the midpoint of THAT
   // range, not the old (buggy) [-siteLengthFt, 0] range's midpoint.
@@ -762,10 +889,28 @@ export default function Viewport({
   // than rendering nothing.
   const renderBlenderBuild = showBlenderBuild && !!blenderObjUrl;
 
-  // Simple "export current view" -- whatever the camera is framing right
-  // now (any preset, or wherever the user has orbited to) becomes a PNG,
-  // same toDataURL() technique + preserveDrawingBuffer/alpha combo the
-  // metabolizer prototype used for its transparent-bg export.
+  // "Export Current View" (2026-07-11, renamed from "Export PNG") --
+  // whatever the camera is framing right now (any preset, or wherever the
+  // user has orbited to) becomes a PNG (unchanged, same toDataURL()
+  // technique + preserveDrawingBuffer/alpha combo the metabolizer
+  // prototype used for its transparent-bg export), and ADDITIONALLY, in
+  // orthographic view modes, triggers a real vector-linework export via
+  // the headless-Blender Line Art pipeline (App.jsx's
+  // handleExportVectorView, which reuses the same job/poll infrastructure
+  // handleBuildInBlender already established).
+  //
+  // Scoped to orthographic modes only (viewMode !== 'perspective') -- a
+  // free-orbit perspective camera has a vanishing point that doesn't map
+  // onto the backend's orthographic Line Art projection the same way (see
+  // the plan doc's Feature 3 scoping decision); PNG export still works in
+  // any mode, since it's just a screenshot.
+  //
+  // Uses the LIVE camera direction (wherever the user has actually
+  // orbited to within the current orthographic preset), not just that
+  // preset's nominal starting direction -- read directly off the
+  // OrbitControls ref (controls.object = the active camera, controls.target
+  // = the current orbit pivot) rather than via useThree(), since
+  // handleExport lives outside the <Canvas> tree.
   const handleExport = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -776,12 +921,52 @@ export default function Viewport({
     document.body.appendChild(a);
     a.click();
     a.remove();
-  }, [viewMode]);
+
+    const isOrthographic = viewMode !== 'perspective';
+    if (isOrthographic && controlsRef.current && onExportVectorView) {
+      const controls = controlsRef.current;
+      const camThreeDir = controls.object.position.clone().sub(controls.target).normalize();
+      // THREE.js (X, Y-up, Z) -> backend's Z-up site-local frame -- exact
+      // inverse of toThree()'s own (x,y,z) -> (x,z,siteLengthFt-y) mapping
+      // (direction vectors only need the linear part, not the
+      // siteLengthFt offset): site_x=three_X, site_y=-three_Z, site_z=
+      // three_Y. Verified against every VIEW_PRESETS entry: e.g. axo's
+      // three dir=(1,1,1) maps to (1,-1,1), exactly vector_export.py's own
+      // AXO_VIEW_DIR.
+      const viewDirSite = [camThreeDir.x, -camThreeDir.z, camThreeDir.y];
+      onExportVectorView(viewDirSite);
+    }
+  }, [viewMode, onExportVectorView]);
+
+  // Real cast shadows (2026-07-11 fix, "flat" viewport report): every mode
+  // before this rendered lit purely by surface-normal angle to the sun, with
+  // no occlusion/contact-shadow cue between terrace steps, columns, and
+  // framing -- combined with a fairly strong ambient+hemisphere fill
+  // relative to the sun, that washed out what little directional contrast
+  // existed. Fix is two-part: (1) enable real shadow-mapping on the main
+  // "sun" light + castShadow/receiveShadow on every real mesh (below), (2)
+  // lower the fill lights so the new shadow contrast actually reads instead
+  // of being flooded back out.
+  //
+  // The sun's shadow camera needs an explicit target pinned to the site's
+  // real center, not three.js's implicit default (world origin) -- this
+  // scene's real geometry spans roughly (0..siteWidthFt, 0..~100ft,
+  // 0..siteLengthFt), entirely in the positive octant, nowhere near the
+  // origin the light would otherwise aim its shadow frustum at. A plain
+  // `target-position` prop on <directionalLight> does NOT work reliably in
+  // r3f (three.js requires the light's `target` Object3D to be part of the
+  // scene graph for its world matrix to update) -- rendering it as an
+  // explicit <primitive> (which r3f DOES add to the scene) and passing that
+  // object via `target=` is the correct, standard fix.
+  const shadowHalfExtent = Math.max(siteWidthFt, siteLengthFt) * 0.65;
+  const sunPosition = [center[0] + 300, 420, center[2] + 220];
+  const sunTarget = useMemo(() => new THREE.Object3D(), []);
 
   return (
     <div className="flex-1 relative bg-background">
       <Canvas
         ref={canvasRef}
+        shadows="soft"
         gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
         onCreated={({ gl }) => {
           // Matches PershingMetabolizer_Prototype's renderer setup --
@@ -793,11 +978,28 @@ export default function Viewport({
         }}
       >
         <ViewCamera view={viewMode} center={center} siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
-        <OrbitControls key={viewMode} target={center} makeDefault />
-        <ambientLight intensity={0.7} />
-        <hemisphereLight args={['#cfe0f2', '#2a2f36', 0.9]} />
-        <directionalLight position={[300, 400, 200]} intensity={1.8} />
-        <directionalLight position={[-200, 200, -300]} intensity={0.7} color="#dde8ff" />
+        <OrbitControls ref={controlsRef} key={viewMode} target={center} makeDefault />
+        {/* Lowered from 0.7/0.9 (2026-07-11) so the sun's new cast-shadow
+            contrast actually shows instead of being flooded back out by fill. */}
+        <ambientLight intensity={0.4} />
+        <hemisphereLight args={['#cfe0f2', '#2a2f36', 0.55]} />
+        <primitive object={sunTarget} position={center} />
+        <directionalLight
+          position={sunPosition}
+          target={sunTarget}
+          intensity={1.8}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-left={-shadowHalfExtent}
+          shadow-camera-right={shadowHalfExtent}
+          shadow-camera-top={shadowHalfExtent}
+          shadow-camera-bottom={-shadowHalfExtent}
+          shadow-camera-near={10}
+          shadow-camera-far={1200}
+          shadow-bias={-0.0004}
+        />
+        <directionalLight position={[-200, 200, -300]} intensity={0.5} color="#dde8ff" />
         {renderBlenderBuild ? (
           <BlenderBuild objUrl={blenderObjUrl} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         ) : (
@@ -815,10 +1017,23 @@ export default function Viewport({
               <RealColumns columns={data.real_columns} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
             )}
             {data && (
-              <StructuralInstances specs={data.structural} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+              <StructuralInstances
+                specs={data.structural}
+                siteLengthFt={siteLengthFt}
+                shadingMode={shadingMode}
+                showSalvage={showSalvage}
+              />
             )}
             {data && (
               <GreenscapeGround
+                voxels={data.voxels}
+                voxelFt={voxelFt}
+                siteLengthFt={siteLengthFt}
+                shadingMode={shadingMode}
+              />
+            )}
+            {data && (
+              <ShadeGround
                 voxels={data.voxels}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
@@ -834,7 +1049,12 @@ export default function Viewport({
               />
             )}
             {networkSpecs && (
-              <StructuralInstances specs={networkSpecs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+              <StructuralInstances
+                specs={networkSpecs}
+                siteLengthFt={siteLengthFt}
+                shadingMode={shadingMode}
+                showSalvage={showSalvage}
+              />
             )}
           </>
         )}
@@ -874,11 +1094,33 @@ export default function Viewport({
             ))}
           </div>
         </div>
+        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">SALVAGE</span>
+          <div className="flex">
+            {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
+              <button
+                key={String(opt.key)}
+                onClick={() => setShowSalvage(opt.key)}
+                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                  showSalvage === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           onClick={handleExport}
-          className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98]"
+          disabled={exportingVectorView}
+          title={
+            viewMode === 'perspective'
+              ? 'Downloads a PNG screenshot. Vector linework export needs an orthographic view mode (Axo/Plan/Front/Side).'
+              : 'Downloads a PNG screenshot and a vector linework SVG (Blender Line Art, real geometry, depth-layered).'
+          }
+          className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          Export PNG
+          {exportingVectorView ? 'Exporting Linework...' : 'Export Current View'}
         </button>
         {blenderObjUrl && (
           <button

@@ -22,12 +22,17 @@ from logic.ai_synthesizer import (
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 from logic.pershing_api import (
-    RebuildParams, BakeGrids, GrowNetworkRequest, get_config as pershing_get_config,
+    RebuildParams, BakeGrids, GrowNetworkRequest, JurorChatRequest, get_config as pershing_get_config,
     rebuild as pershing_rebuild, grow_network as pershing_grow_network,
+    juror_chat as pershing_juror_chat,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
     bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
 )
 from logic import pershing_blender
+from logic.legacy_diagram_bridge import (
+    PreviewLegacyDiagramRequest, list_recent_diagrams as pershing_list_legacy_diagrams,
+    preview_import as pershing_preview_legacy_diagram, DIAGRAM_DIR as LEGACY_DIAGRAM_DIR,
+)
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -120,6 +125,14 @@ app.mount("/pershing-sketch", StaticFiles(directory=PERSHING_SKETCH_DIR), name="
 # logic/pershing_blender.py) -- distinct from /pershing-context, which
 # serves the one static, unchanging reference OBJ.
 app.mount("/blender-headless-output", StaticFiles(directory=pershing_blender.OUTPUT_DIR), name="blender-headless-output")
+
+# Serves the legacy diagram tool's exported JPGs so DiagramInputPanel.jsx
+# can show thumbnails without a dedicated download endpoint -- same pattern
+# as /pershing-context above. Guarded by os.path.exists since this
+# directory only exists once the legacy tool (or ingest_legacy_diagram.py)
+# has actually written something to it.
+if os.path.exists(LEGACY_DIAGRAM_DIR):
+    app.mount("/legacy-diagrams", StaticFiles(directory=LEGACY_DIAGRAM_DIR), name="legacy-diagrams")
 
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
@@ -533,6 +546,13 @@ async def pershing_grow_network_route(payload: GrowNetworkRequest):
     return pershing_grow_network(payload)
 
 
+@app.post("/api/pershing/juror-chat")
+async def pershing_juror_chat_route(payload: JurorChatRequest):
+    """Grounded Q&A for the live thesis-defense juror chat -- see
+    logic/juror_chat.py's module docstring for the reply/action contract."""
+    return pershing_juror_chat(payload)
+
+
 @app.get("/api/pershing/sketch")
 async def pershing_sketch_info():
     return pershing_get_sketch_info()
@@ -549,8 +569,25 @@ async def pershing_bake_route(grids: BakeGrids):
     return pershing_bake(grids)
 
 
+# Diagram Input mode (2026-07-11) -- a separate design-input mechanism from
+# the paint canvas above, reading colors off an existing legacy-diagram
+# export instead of freehand brush strokes. Read-only preview; the frontend
+# commits via the EXISTING /api/pershing/bake route above with the returned
+# grids, so there's no parallel commit path to keep in sync.
+@app.get("/api/pershing/legacy-diagrams")
+async def pershing_legacy_diagrams_list():
+    return pershing_list_legacy_diagrams()
+
+
+@app.post("/api/pershing/legacy-diagrams/preview")
+async def pershing_legacy_diagrams_preview(payload: PreviewLegacyDiagramRequest):
+    return pershing_preview_legacy_diagram(payload.filename)
+
+
 @app.post("/api/pershing/blender-build")
-async def pershing_blender_build_route(payload: dict, lineart: bool = False):
+async def pershing_blender_build_route(
+    payload: dict, lineart: bool = False, view_dir: str = None, include_real_context: bool = False,
+):
     """Kicks off the headless-Blender "build" tier (see
     logic/pershing_blender.py) on whatever rebuild result the frontend
     currently has on screen -- payload is exactly the JSON /rebuild already
@@ -559,10 +596,17 @@ async def pershing_blender_build_route(payload: dict, lineart: bool = False):
     from it. Returns immediately; the browser polls the job-status route
     below rather than blocking this request on the Blender subprocess.
 
-    lineart is a query param (?lineart=true), not a body field -- keeps the
-    POST body exactly the raw rebuild-result dict, unpolluted, since it's
-    forwarded straight through to Blender as the input JSON."""
-    job_id = pershing_blender.start_build_job(payload, lineart=lineart)
+    lineart/view_dir/include_real_context are query params, not body
+    fields -- keeps the POST body exactly the raw rebuild-result dict,
+    unpolluted, since it's forwarded straight through to Blender as the
+    input JSON. view_dir is a comma-separated "x,y,z" string
+    (?view_dir=0.3,-0.6,0.75) -- only meaningful alongside lineart=true
+    (see pershing_blender.start_build_job's docstring); the frontend's
+    "Export Current View" trigger (Viewport.jsx) derives this from the
+    live OrbitControls camera direction."""
+    view_dir_tuple = tuple(float(v) for v in view_dir.split(",")) if view_dir else None
+    job_id = pershing_blender.start_build_job(
+        payload, lineart=lineart, view_dir=view_dir_tuple, include_real_context=include_real_context)
     return {"job_id": job_id, "status": "queued"}
 
 

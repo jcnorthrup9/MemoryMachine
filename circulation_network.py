@@ -131,7 +131,19 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
             if v.deficit_influence >= field_threshold:
                 key = (_bucket_key(v.wx, v.wy, engine), "deficit")
                 buckets.setdefault(key, []).append((v.wx, v.wy, v.deficit_influence))
-            if v.is_water_shade:
+            # 2026-07-11 fix: this bucket previously read is_water_shade (the
+            # old combined mask) -- a real bug, not just a stale name, since
+            # it meant every painted water cell became a "shade" attractor
+            # too, even where no shade/tree was ever painted. Now reads the
+            # split is_shade mask directly. NOTE: "water" has no equivalent
+            # direct-mask bucket here -- it still only enters via
+            # _AMENITY_MOTIVATOR below (i.e. only already-excavated GROTTO
+            # water_plane/water_cascade_block props become "water"
+            # attractors, unlike "shade" which now reads its mask
+            # unconditionally regardless of excavation). Known asymmetry,
+            # not addressed by this fix -- flagged in
+            # MILESTONE_07112026_PlanningSession.md as a possible follow-on.
+            if v.is_shade:
                 key = (_bucket_key(v.wx, v.wy, engine), "shade")
                 buckets.setdefault(key, []).append((v.wx, v.wy, 1.0))
             if v.is_amenity_resting:

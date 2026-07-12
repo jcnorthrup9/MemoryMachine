@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSketchInfo, uploadSketch, bakePaint } from '../api.js';
+import { PAINT_CATEGORIES as CATEGORIES } from '../paintCategories.js';
 
 // Mirrors blender_cockpit.py's image-paint mechanism: a sketch photo as
-// canvas background, five paintable category layers baked into the same
-// weight/mask grids TerracingEngine consumes. canyon is a continuous
-// weight (black tint, alpha IS the weight); the other four are boolean
-// zone masks (thresholded at bake time), each with its own tint so
+// canvas background, six paintable category layers (see ../paintCategories.js)
+// baked into the same weight/mask grids TerracingEngine consumes. canyon is
+// a continuous weight (black tint, alpha IS the weight); the other five are
+// boolean zone masks (thresholded at bake time), each with its own tint so
 // overlapping strokes stay visually distinguishable.
-const CATEGORIES = [
-  { key: 'canyon', label: 'Canyon', color: '#111111' },
-  { key: 'hardscape', label: 'Hardscape', color: '#2f6fd6' },
-  { key: 'water_shade', label: 'Water/Shade', color: '#22b8c8' },
-  { key: 'greenscape', label: 'Greenscape', color: '#2fae4a' },
-  { key: 'amenity_resting', label: 'Amenity/Resting', color: '#e08a2f' },
-];
 const BOOLEAN_THRESHOLD = 0.4;
 
 // X is NOT flipped (real_x = col/w * W) -- Y still is (real_y = (1 - row/h) * L).

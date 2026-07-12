@@ -4,7 +4,12 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as THREE from 'three';
 import { materialProps, outlineMaterialProps, OUTLINE_SCALE } from '../shading.js';
 
-const CONTEXT_OBJ_URL = 'http://127.0.0.1:8000/pershing-context/site_named.obj';
+// Relative, same-origin (2026-07-11 fix) -- previously a hardcoded
+// absolute 'http://127.0.0.1:8000/...' URL, found stale (backend has been
+// on :8001 all session) and silently broken; vite.config.js's proxy now
+// covers /pershing-context directly, consistent with /api/
+// /pershing-sketch/etc.
+const CONTEXT_OBJ_URL = '/pershing-context/site_named.obj';
 const CONTEXT_COLOR = '#5a6570'; // muted grey-blue -- real existing structure, distinct from the colorful live excavation result
 
 // Mirrors blender_cockpit.py's import_static_context(): the real existing
@@ -48,7 +53,14 @@ function StaticContextGroup({ siteLengthFt, shadingMode }) {
     for (const child of [...obj.children]) {
       if (child.name === 'terrace') continue;
       child.traverse((n) => {
-        if (n.isMesh) n.material = material;
+        if (n.isMesh) {
+          n.material = material;
+          // Real existing structure (columns/tunnel/entrance/ramps) should
+          // cast onto and receive from the live excavation result just like
+          // every procedural mesh in Viewport.jsx does (2026-07-11 fix).
+          n.castShadow = true;
+          n.receiveShadow = true;
+        }
       });
       group.add(child);
     }

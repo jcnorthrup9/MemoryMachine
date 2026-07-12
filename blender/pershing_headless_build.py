@@ -189,6 +189,82 @@ def build_terrace_mesh(mesh, voxel_ft, max_canyon_depth_ft, voxels):
     bm.free()
 
 
+def _order_quad_corners_xy(corners):
+    """Sort 4 [x,y,z] corners into a non-crossing loop by angle around
+    their own centroid (plan XY only; Z tags along unchanged) -- same
+    technique vector_export.py's _order_quad_corners uses (mirrors
+    Viewport.jsx's orderQuadCorners), since Rhino's Brep.Vertices order
+    for a planar face isn't guaranteed to trace a boundary loop."""
+    cx = sum(c[0] for c in corners) / len(corners)
+    cy = sum(c[1] for c in corners) / len(corners)
+    return sorted(corners, key=lambda c: math.atan2(c[1] - cy, c[0] - cx))
+
+
+def _add_slab_plate(bm, slab):
+    """One real slab plate as a thin hexahedron -- top face at the slab's
+    real top_corners_ft, bottom face offset straight down in Z by
+    thickness_ft. Same simplification vector_export.py's
+    _build_slab_plate_mesh and Viewport.jsx's RealSlabPlate both already
+    use/document: at real ramp tilt angles here (~1.7deg), the difference
+    vs. an oriented-normal offset is sub-1/8" over a 1ft-thick plate --
+    not worth a full oriented extrusion for a line-art silhouette."""
+    ordered = _order_quad_corners_xy(slab["top_corners_ft"])
+    thickness = slab["thickness_ft"]
+    top = [mathutils.Vector(c) for c in ordered]
+    bottom = [mathutils.Vector((c[0], c[1], c[2] - thickness)) for c in ordered]
+    verts = [bm.verts.new(v) for v in top + bottom]
+    # top(0,1,2,3) / bottom(4,5,6,7) -- same corner-order convention as
+    # vector_export.py's _SLAB_PLATE_INDICES.
+    quads = (
+        (0, 1, 2, 3), (4, 7, 6, 5),
+        (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0),
+    )
+    for q in quads:
+        bm.faces.new([verts[i] for i in q])
+
+
+def build_real_context_meshes(coll, real_columns, real_slabs):
+    """
+    Real column/slab geometry for the vector-export Line Art pipeline --
+    built as simple native Blender primitives directly from real_geometry
+    position/dimension data (real_columns[].x/z/diameter_ft/top_ft/
+    bottom_ft, real_slabs[].top_corners_ft/thickness_ft), NOT by importing
+    the heavy Rhino column_prototype_mesh OBJ. That OBJ is 1984 faces
+    (non-watertight) per column and, instanced across ~294 real columns,
+    was confirmed 2026-07-11 to be the actual dominant cause of a 27+ GiB
+    crash in vector_export.py's trimesh-based hidden-line-removal attempt
+    (99.3% of that pipeline's combined mesh) -- a 12-sided cylinder per
+    column and a thin quad plate per slab give a Line Art bake everything
+    it needs (real silhouette/crease edges) at a fraction of the vertex
+    count, sidestepping that problem entirely on the Blender side too
+    rather than importing the same heavy geometry here.
+
+    Only call this AFTER the main OBJ export in main() has already run --
+    this real-context mesh is vector-export-only and must never leak into
+    --output's OBJ (which deliberately excludes static context, since the
+    live viewport already renders it once, separately, from
+    site_named.obj -- see this module's own docstring).
+    """
+    obj_name = "mm_real_context"
+    mesh = bpy.data.meshes.new(obj_name)
+    obj = bpy.data.objects.new(obj_name, mesh)
+    coll.objects.link(obj)
+
+    bm = bmesh.new()
+    for col in real_columns:
+        radius = col["diameter_ft"] / 2
+        p0 = (col["x"], col["z"], col["bottom_ft"])
+        p1 = (col["x"], col["z"], col["top_ft"])
+        _add_cylinder(bm, p0, p1, radius, segments=12)
+    for slab in real_slabs:
+        _add_slab_plate(bm, slab)
+
+    if bm.verts:
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+
+
 def build_structural_meshes(coll, specs):
     """One mesh/object per StructuralElement kind, every instance of that
     kind concatenated into it -- same box/cylinder/hex-prism dispatch as
@@ -261,7 +337,8 @@ def _scene_bounds_world():
     return mathutils.Vector(mins), mathutils.Vector(maxs)
 
 
-def _export_lineart_svg(gp_obj, cam_obj, output_path, margin=1.05, stroke_width_ft=None):
+def _export_lineart_svg(gp_obj, cam_obj, output_path, margin=1.05, stroke_width_ft=None,
+                         depth_band_labels=("near", "mid", "far")):
     """
     Writes the SVG ourselves from the baked GP stroke points instead of
     calling bpy.ops.wm.grease_pencil_export_svg -- that operator is
@@ -279,30 +356,50 @@ def _export_lineart_svg(gp_obj, cam_obj, output_path, margin=1.05, stroke_width_
     transform already trusted for ortho_scale sidesteps the exporter
     entirely and reproduces a correct, sane result (verified via a
     from-scratch Playwright render).
+
+    Depth-band layering (2026-07-11): each stroke's average camera-space Z
+    -- already computed here as part of the same cam_inv projection this
+    function needs anyway, no extra pass required -- buckets it into one of
+    len(depth_band_labels) evenly-spaced bands across the scene's actual
+    depth range, each becoming its own SVG <g id="..."> group. Illustrator
+    reads SVG groups as layers on import, giving a near/mid/far foreground/
+    midground/background split (hand-drafting convention) instead of one
+    flat pile of strokes. A perfectly flat scene from this exact angle
+    (min depth == max depth, e.g. a true top-down plan view of an
+    unexcavated terrace) puts everything in one band -- correct, not a bug.
+    Blender cameras look down local -Z, so LESS-negative/more-positive
+    camera-space Z is closer to the camera -- "near" is the band nearest
+    max_z, "far" the band nearest min_z.
     """
     cam_inv = cam_obj.matrix_world.inverted()
     gp_mw = gp_obj.matrix_world
-    path_strs = []
+    stroke_entries = []  # (path_d, avg_z)
     min_x = min_y = max_x = max_y = None
+    min_z = max_z = None
     for layer in gp_obj.data.layers:
         for frame in layer.frames:
             for stroke in frame.drawing.strokes:
                 pts2d = []
+                zs = []
                 for pt in stroke.points:
                     world = gp_mw @ pt.position
                     local = cam_inv @ world
                     x, y = local.x, -local.y  # flip Y: camera-space up -> SVG down
                     pts2d.append((x, y))
+                    zs.append(local.z)
                     min_x = x if min_x is None else min(min_x, x)
                     max_x = x if max_x is None else max(max_x, x)
                     min_y = y if min_y is None else min(min_y, y)
                     max_y = y if max_y is None else max(max_y, y)
                 if len(pts2d) < 2:
                     continue
+                avg_z = sum(zs) / len(zs)
+                min_z = avg_z if min_z is None else min(min_z, avg_z)
+                max_z = avg_z if max_z is None else max(max_z, avg_z)
                 d = "M" + " L".join(f"{px:.4f},{py:.4f}" for px, py in pts2d)
                 if stroke.cyclic:
                     d += " Z"
-                path_strs.append(d)
+                stroke_entries.append((d, avg_z))
 
     if min_x is None:
         raise ValueError("Line Art bake produced zero strokes with >=2 points -- nothing to export")
@@ -314,23 +411,39 @@ def _export_lineart_svg(gp_obj, cam_obj, output_path, margin=1.05, stroke_width_
     if stroke_width_ft is None:
         stroke_width_ft = max(w, h) / 1500.0
 
+    n_bands = len(depth_band_labels)
+    z_range = max_z - min_z
+    banded = {label: [] for label in depth_band_labels}
+    for d, avg_z in stroke_entries:
+        if z_range < 1e-9:
+            band_idx = 0
+        else:
+            frac = (max_z - avg_z) / z_range  # 0 at max_z (nearest) -> 1 at min_z (farthest)
+            band_idx = min(n_bands - 1, int(frac * n_bands))
+        banded[depth_band_labels[band_idx]].append(d)
+
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '
         f'viewBox="{vb_x:.4f} {vb_y:.4f} {w:.4f} {h:.4f}" '
         f'width="{w:.4f}" height="{h:.4f}">',
-        f'<g fill="none" stroke="black" stroke-width="{stroke_width_ft:.5f}" '
-        f'stroke-linecap="round" stroke-linejoin="round">',
     ]
-    lines.extend(f'<path d="{d}"/>' for d in path_strs)
-    lines.append("</g></svg>")
+    for label in depth_band_labels:
+        ds = banded[label]
+        if not ds:
+            continue
+        lines.append(f'<g id="{label}" fill="none" stroke="black" stroke-width="{stroke_width_ft:.5f}" '
+                      f'stroke-linecap="round" stroke-linejoin="round">')
+        lines.extend(f'<path d="{d}"/>' for d in ds)
+        lines.append("</g>")
+    lines.append("</svg>")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
 
-def build_line_art(output_path):
+def build_line_art(output_path, view_dir=None):
     """
     Grease Pencil Line Art export against whatever mesh objects are
     currently in the scene -- port of blender/blender_lineart_export.py's
@@ -342,11 +455,21 @@ def build_line_art(output_path):
     (a single source mesh) since this scene has many structural-kind
     objects alongside the terrace.
 
+    `view_dir`: camera direction (any 3-tuple/Vector, normalized here) --
+    defaults to the same fixed isometric AXO_VIEW_DIR vector_export.py
+    also uses (2026-07-11: parameterized so a live browser camera angle
+    can drive this instead of always the one hardcoded direction; the
+    framing math below was already direction-agnostic, deriving ortho_scale
+    from the scene bounds projected into camera space rather than any
+    fixed world-space assumption).
+
     SVG output is written by _export_lineart_svg() above, not Blender's own
     grease_pencil_export_svg operator -- see that function's docstring for
     why (a confirmed upstream Blender bug corrupts that operator's output
     for orthographic-camera Line Art).
     """
+    view_dir = mathutils.Vector(view_dir).normalized() if view_dir else AXO_VIEW_DIR
+
     mins, maxs = _scene_bounds_world()
     center = (mins + maxs) / 2.0
     site_span = max(maxs.x - mins.x, maxs.y - mins.y, maxs.z - mins.z, 1.0)
@@ -357,7 +480,7 @@ def build_line_art(output_path):
     cam_data.clip_end = site_span * 10
     cam_obj = bpy.data.objects.new("LineArtCam", cam_data)
     bpy.context.collection.objects.link(cam_obj)
-    cam_obj.location = center + AXO_VIEW_DIR * site_span * 2
+    cam_obj.location = center + view_dir * site_span * 2
     direction = center - cam_obj.location
     cam_obj.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
     bpy.context.scene.camera = cam_obj
@@ -408,6 +531,15 @@ def main():
     parser.add_argument("--input", required=True, help="Path to the rebuild JSON (voxels/structural/voxel_ft/max_canyon_depth_ft)")
     parser.add_argument("--output", required=True, help="Path to write the built OBJ to")
     parser.add_argument("--lineart-output", default=None, help="Optional path to also write a Grease Pencil Line Art SVG to")
+    parser.add_argument("--view-dir", default=None,
+                         help="Comma-separated x,y,z camera direction for Line Art (Z-up site-local frame, "
+                              "same convention as vector_export.py's AXO_VIEW_DIR) -- default: that same "
+                              "fixed isometric direction")
+    parser.add_argument("--include-real-context", action="store_true",
+                         help="Also line-art the real columns/slabs (payload's real_columns/real_slabs, if "
+                              "present) as lightweight native primitives -- vector-export use only, NOT "
+                              "included in --output's OBJ (which deliberately excludes static context to "
+                              "avoid double-rendering the live viewport's own separate real-context display)")
     args = parser.parse_args(argv)
 
     with open(args.input) as f:
@@ -435,7 +567,13 @@ def main():
     print(f"HEADLESS_BUILD_DONE:{args.output}")
 
     if args.lineart_output:
-        build_line_art(args.lineart_output)
+        if args.include_real_context:
+            real_coll = bpy.data.collections.new("mm_real_context")
+            bpy.context.scene.collection.children.link(real_coll)
+            build_real_context_meshes(
+                real_coll, payload.get("real_columns", []), payload.get("real_slabs", []))
+        view_dir = tuple(float(v) for v in args.view_dir.split(",")) if args.view_dir else None
+        build_line_art(args.lineart_output, view_dir=view_dir)
 
 
 if __name__ == "__main__":

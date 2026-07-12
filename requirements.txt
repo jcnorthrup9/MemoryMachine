@@ -3,3 +3,11 @@ uvicorn[standard]
 pydantic
 numpy
 python-multipart
+pillow
+opencv-python-headless
+trimesh
+rtree
+manifold3d
+fast-simplification
+ezdxf
+matplotlib

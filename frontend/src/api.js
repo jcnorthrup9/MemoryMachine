@@ -46,8 +46,19 @@ export async function bakePaint(grids) {
 // on whatever rebuild result is currently on screen -- pass the exact
 // object /rebuild returned, not a re-derived copy, so the built OBJ can't
 // drift from what the user is actually looking at.
-export async function startBlenderBuild(rebuildResult, lineart = false) {
-  const url = lineart ? '/api/pershing/blender-build?lineart=true' : '/api/pershing/blender-build';
+//
+// viewDir/includeRealContext (2026-07-11, Viewport.jsx's "Export Current
+// View" vector-linework trigger): only meaningful alongside lineart=true
+// (see logic/pershing_blender.py's start_build_job docstring) -- viewDir
+// is a [x,y,z] array in the backend's Z-up site-local frame (Viewport.jsx
+// derives this from the live OrbitControls camera direction).
+export async function startBlenderBuild(rebuildResult, lineart = false, viewDir = null, includeRealContext = false) {
+  const params = new URLSearchParams();
+  if (lineart) params.set('lineart', 'true');
+  if (viewDir) params.set('view_dir', viewDir.join(','));
+  if (includeRealContext) params.set('include_real_context', 'true');
+  const qs = params.toString();
+  const url = qs ? `/api/pershing/blender-build?${qs}` : '/api/pershing/blender-build';
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -74,5 +85,39 @@ export async function growNetwork(rebuildParams, networkParams) {
     body: JSON.stringify({ rebuild: rebuildParams, network: networkParams }),
   });
   if (!res.ok) throw new Error(`grow network failed: ${res.status}`);
+  return res.json();
+}
+
+// Grounded Q&A for the live juror chat -- context is whatever live design
+// state (params/network params/last rebuild+network summaries) the caller
+// already has client-side, forwarded as grounding for the prompt.
+export async function jurorChat(message, context) {
+  const res = await fetch('/api/pershing/juror-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, context }),
+  });
+  if (!res.ok) throw new Error(`juror chat failed: ${res.status}`);
+  return res.json();
+}
+
+// Diagram Input mode (see DiagramInputPanel.jsx) -- a separate design-input
+// mechanism from PaintOverlay's freehand painting, reading colors off an
+// existing legacy-diagram export instead. listLegacyDiagrams/previewLegacyImport
+// are read-only; committing a previewed diagram reuses bakePaint() above
+// unchanged, so there's no separate "confirm" wrapper here.
+export async function listLegacyDiagrams() {
+  const res = await fetch('/api/pershing/legacy-diagrams');
+  if (!res.ok) throw new Error(`legacy diagram list fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function previewLegacyImport(filename) {
+  const res = await fetch('/api/pershing/legacy-diagrams/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  });
+  if (!res.ok) throw new Error(`legacy diagram preview failed: ${res.status}`);
   return res.json();
 }

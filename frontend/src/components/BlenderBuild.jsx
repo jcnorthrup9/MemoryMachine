@@ -4,7 +4,6 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as THREE from 'three';
 import { materialProps } from '../shading.js';
 
-const BLENDER_HOST = 'http://127.0.0.1:8000';
 const BUILD_COLOR = '#c9a35a'; // distinct from the live view's own palette -- makes it obvious which layer is on screen
 
 // Displays the OBJ produced by the headless-Blender "build" tier (see
@@ -19,8 +18,15 @@ const BUILD_COLOR = '#c9a35a'; // distinct from the live view's own palette -- m
 // pershing_headless_build.py's module docstring), so it needs exactly the
 // same real->Three axis remap toThree() applies elsewhere and nothing
 // more.
+//
+// objUrl is used as-is (relative, same-origin) -- previously prefixed with
+// a hardcoded BLENDER_HOST absolute URL, removed 2026-07-11 after it was
+// found stale (pointed at :8000, the backend has been on :8001 all
+// session) and silently broken; vite.config.js's proxy now covers
+// /blender-headless-output directly, so a plain relative URL just works,
+// consistent with how /api and /pershing-sketch already do.
 function BlenderBuildGroup({ objUrl, siteLengthFt, shadingMode }) {
-  const obj = useLoader(OBJLoader, `${BLENDER_HOST}${objUrl}`);
+  const obj = useLoader(OBJLoader, objUrl);
 
   const group = useMemo(() => {
     const g = new THREE.Group();

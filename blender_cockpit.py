@@ -87,14 +87,17 @@ SKETCH_WEIGHTS = _cache["weights"]
 HARDSCAPE_MASK = _cache.get("hardscape_mask") or [[False] * len(SKETCH_WEIGHTS[0]) for _ in SKETCH_WEIGHTS]
 
 # Programmatic Typology Mixing Engine inputs (New Feature Directives section
-# 4) -- Water/Shade, Greenscape, Amenity/Resting. Bootstrap empty (same
+# 4) -- Water, Shade, Greenscape, Amenity/Resting. Bootstrap empty (same
 # pattern HARDSCAPE_MASK used before real hardscape sketch data existed);
 # setup_paint_canvas/bake_paint_canvas below populate these live once the
-# designer paints the corresponding category and hits Bake.
+# designer paints the corresponding category and hits Bake. Water/Shade
+# split into two masks 2026-07-11 -- see terracing_engine.py's Voxel
+# docstring and logic/pershing_api.py's bootstrap migration comment for why.
 def _empty_mask():
     return [[False] * len(SKETCH_WEIGHTS[0]) for _ in SKETCH_WEIGHTS]
 
-WATER_SHADE_MASK = _empty_mask()
+WATER_MASK = _empty_mask()
+SHADE_MASK = _empty_mask()
 GREENSCAPE_MASK = _empty_mask()
 AMENITY_RESTING_MASK = _empty_mask()
 
@@ -332,7 +335,8 @@ def rebuild_all(scene):
     engine = TerracingEngine(REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=scene.mm_sketch_alpha,
                               hardscape_regions=hardscape_regions, deficit_hotspots=deficit_hotspots,
                               transit_falloff_ft=transit_falloff_ft, max_canyon_depth_ft=max_canyon_depth_ft,
-                              water_shade_regions=[{"mask": WATER_SHADE_MASK}],
+                              water_regions=[{"mask": WATER_MASK}],
+                              shade_regions=[{"mask": SHADE_MASK}],
                               greenscape_regions=[{"mask": GREENSCAPE_MASK}],
                               amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}])
     voxels = engine.run(phase=3)
@@ -382,7 +386,11 @@ PAINT_CAM_NAME = "mm_paint_cam"
 PAINT_CATEGORIES = (
     ("canyon", "Canyon", (0.0, 0.0, 0.0), True),
     ("hardscape", "Hardscape", (0.15, 0.35, 1.0), False),
-    ("water_shade", "Water/Shade", (0.15, 0.85, 0.95), False),
+    ("water", "Water", (0.15, 0.85, 0.95), False),
+    # Tan/beige (0xBCAAA4), matches the frontend's shade brush and the
+    # legacy diagram tool's ZONE_MATERIALS.SHADE -- kept consistent across
+    # all three so "shade" reads as the same color everywhere it appears.
+    ("shade", "Shade", (0.74, 0.67, 0.64), False),
     ("greenscape", "Greenscape", (0.2, 0.75, 0.25), False),
     ("amenity_resting", "Amenity/Resting", (1.0, 0.55, 0.1), False),
 )
@@ -597,13 +605,13 @@ def _sample_mask_grid(img, continuous):
 
 def bake_paint_canvas(scene):
     """
-    Sample all 5 painted mask images into SKETCH_WEIGHTS/HARDSCAPE_MASK/
-    WATER_SHADE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK, then trigger the
-    one real rebuild. No falloff math needed -- the painted alpha itself
+    Sample all 6 painted mask images into SKETCH_WEIGHTS/HARDSCAPE_MASK/
+    WATER_MASK/SHADE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK, then trigger
+    the one real rebuild. No falloff math needed -- the painted alpha itself
     already IS the continuous weight (Canyon) or the filled-region claim
     (everything else), since brush painting fills its own interior directly.
     """
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
     painted_counts = {}
     for key, label, tint, continuous in PAINT_CATEGORIES:
         img = bpy.data.images.get(_mask_image_name(key))
@@ -614,8 +622,10 @@ def bake_paint_canvas(scene):
             SKETCH_WEIGHTS = grid
         elif key == "hardscape":
             HARDSCAPE_MASK = grid
-        elif key == "water_shade":
-            WATER_SHADE_MASK = grid
+        elif key == "water":
+            WATER_MASK = grid
+        elif key == "shade":
+            SHADE_MASK = grid
         elif key == "greenscape":
             GREENSCAPE_MASK = grid
         elif key == "amenity_resting":

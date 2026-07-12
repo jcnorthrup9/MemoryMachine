@@ -1069,10 +1069,24 @@ function switchToTab(name) {
 }
 
 // ── LAYER COLOR UTILITY ──────────────────────────────────────────────────────
+// Converts a ZONE_MATERIALS numeric hex (e.g. 0xBCAAA4) to a CSS hex string
+// ('#bcaaa4'), so the 2D SVG/export legend and the 3D material recoloring
+// pull from the exact same constant instead of two copies that can drift.
+function _hexColor(numericHex) {
+  return `#${numericHex.toString(16).padStart(6, '0')}`;
+}
+
 /** Single source of truth for Rhino layer colors across generation and picker. */
 function _getLayerColor(layerId) {
   const id = (layerId || '').toUpperCase();
-  if (id.includes('GREEN') || id.includes('SHADE'))               return '#4CAF50';
+  // SHADE must be checked BEFORE the GREEN branch below (2026-07-11 fix):
+  // previously id.includes('SHADE') piggybacked on the GREEN branch, so
+  // SHADE rendered identically to GREEN_SPACE in every exported diagram --
+  // no export before this fix could ever carry a real shade signal. Now
+  // derives its color from ZONE_MATERIALS.SHADE directly (was already
+  // defined for 3D material recoloring, never wired to this 2D legend).
+  if (id.includes('SHADE'))                                        return _hexColor(ZONE_MATERIALS.SHADE.color);
+  if (id.includes('GREEN'))                                        return '#4CAF50';
   if (id.includes('WATER'))                                        return '#03A9F4';
   if (id.includes('ATTRACTOR') || id.includes('UNIQUE'))          return '#FF9800';
   return '#9E9E9E'; // STREET, PATH, BOUNDARY, PARKING, FURNITURE, etc.

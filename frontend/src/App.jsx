@@ -6,8 +6,11 @@ import ParamPanel from './components/ParamPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
 import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
+import DiagramInputPanel from './components/DiagramInputPanel.jsx';
+import JurorChatBar from './components/JurorChatBar.jsx';
 import {
   getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus, growNetwork as growNetworkApi,
+  jurorChat as jurorChatApi,
 } from './api.js';
 
 const BLENDER_POLL_MS = 1500;
@@ -40,12 +43,15 @@ export default function App() {
   const [rebuilding, setRebuilding] = useState(false);
   const [logs, setLogs] = useState([]);
   const [paintCategory, setPaintCategory] = useState(null);
+  const [showDiagramInput, setShowDiagramInput] = useState(false);
   const [blenderBuild, setBlenderBuild] = useState({ status: 'idle', objUrl: null, svgUrl: null, error: null, durationS: null });
   const [lineartEnabled, setLineartEnabled] = useState(false);
   const [showLineArt, setShowLineArt] = useState(false);
   const [networkParams, setNetworkParams] = useState(DEFAULT_NETWORK_PARAMS);
   const [networkData, setNetworkData] = useState(null);
   const [growingNetwork, setGrowingNetwork] = useState(false);
+  const [exportingVectorView, setExportingVectorView] = useState(false);
+  const vectorExportPollRef = useRef(null);
   const blenderPollRef = useRef(null);
 
   const log = useCallback((text, level = 'info') => {
@@ -141,6 +147,83 @@ export default function App() {
 
   useEffect(() => stopBlenderPoll, [stopBlenderPoll]);
 
+  // "Export Current View" vector linework (2026-07-11) -- Viewport.jsx's
+  // handleExport computes the live camera direction (already converted to
+  // the backend's Z-up site-local frame) and calls this; reuses the SAME
+  // headless-Blender build tier handleBuildInBlender above already relies
+  // on (the backend's own single-build lock already serializes the two, so
+  // no separate coordination is needed here), just with lineart=true,
+  // include_real_context=true, and the live view_dir instead of the
+  // default isometric constant. Own status state (not blenderBuild) so
+  // this doesn't visually clobber the separate "Build in Blender" button's
+  // own status display in ParamPanel -- the two are independent user
+  // actions that happen to share one backend job slot.
+  //
+  // Auto-downloads the resulting SVG directly (fetch + blob URL) rather
+  // than requiring a second "View Line Art" click -- matches the PNG half
+  // of this same button, which already downloads immediately.
+  const stopVectorExportPoll = useCallback(() => {
+    if (vectorExportPollRef.current) {
+      clearInterval(vectorExportPollRef.current);
+      vectorExportPollRef.current = null;
+    }
+  }, []);
+
+  const downloadSvgUrl = useCallback(async (svgUrl, filename) => {
+    const res = await fetch(svgUrl);
+    if (!res.ok) throw new Error(`svg fetch failed: ${res.status}`);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }, []);
+
+  const handleExportVectorView = useCallback(
+    async (viewDirSite) => {
+      if (!data) return;
+      stopVectorExportPoll();
+      setExportingVectorView(true);
+      try {
+        const { job_id } = await startBlenderBuild(data, true, viewDirSite, true);
+        log(`vector export queued: ${job_id} (view_dir=${viewDirSite.map((v) => v.toFixed(2)).join(',')})`);
+        vectorExportPollRef.current = setInterval(async () => {
+          try {
+            const job = await getBlenderBuildStatus(job_id);
+            if (job.status === 'done') {
+              stopVectorExportPoll();
+              log(`vector export done in ${job.duration_s}s`);
+              try {
+                await downloadSvgUrl(job.svg_url, `pershing-lineart-${Date.now()}.svg`);
+              } catch (err) {
+                log(String(err), 'error');
+              }
+              setExportingVectorView(false);
+            } else if (job.status === 'error') {
+              stopVectorExportPoll();
+              log(`vector export failed: ${job.error}`, 'error');
+              setExportingVectorView(false);
+            }
+          } catch (err) {
+            stopVectorExportPoll();
+            log(String(err), 'error');
+            setExportingVectorView(false);
+          }
+        }, BLENDER_POLL_MS);
+      } catch (err) {
+        log(String(err), 'error');
+        setExportingVectorView(false);
+      }
+    },
+    [data, log, stopVectorExportPoll, downloadSvgUrl],
+  );
+
+  useEffect(() => stopVectorExportPoll, [stopVectorExportPoll]);
+
   // Space Colonization circulation network -- explicit action, NOT part of
   // the live rebuild loop below (a real iterative growth simulation, even
   // though it runs well under a second at this grid size, has no reason to
@@ -179,6 +262,89 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, config]);
 
+  // Juror chat live control (2026-07-10) -- dispatches the model's returned
+  // action through the EXACT SAME state setters the matching UI control
+  // already uses (a motivator slider drag, a canyon slider drag, the "Grow
+  // Network" button, a data toggle), so a chat-driven change is
+  // indistinguishable downstream from a manual one: canyon width/depth and
+  // the data toggles flow into the existing debounced auto-rebuild effect
+  // below, motivator weights just update state (mirroring the slider,
+  // which also doesn't auto-regrow), and grow_network calls the same
+  // handler the button does. logic/juror_chat.py's _validate_action already
+  // clamped/sanitized this server-side -- this switch only needs to handle
+  // the known-good shapes, not defend against malformed input again.
+  const applyJurorAction = useCallback(
+    (action) => {
+      if (!action) return;
+      switch (action.type) {
+        case 'adjust_motivator':
+          setNetworkParams((prev) => ({
+            ...prev,
+            motivator_weights: { ...prev.motivator_weights, [action.motivator]: action.value },
+          }));
+          break;
+        case 'set_canyon_width':
+          setParams((prev) => ({ ...prev, canyon_width: action.value }));
+          break;
+        case 'set_canyon_depth':
+          setParams((prev) => ({ ...prev, canyon_depth: action.value }));
+          break;
+        case 'toggle_real_amenity_data':
+          setParams((prev) => ({ ...prev, use_real_amenity_data: action.value }));
+          break;
+        case 'toggle_real_foot_traffic_data':
+          setParams((prev) => ({ ...prev, use_real_foot_traffic_data: action.value }));
+          break;
+        case 'grow_network':
+          handleGrowNetwork();
+          break;
+        default:
+          log(`juror chat returned an unrecognized action type: ${action.type}`, 'error');
+      }
+    },
+    [handleGrowNetwork, log],
+  );
+
+  // Juror chat -- persistent bar (not a modal), replies logged into the same
+  // rebuild-log stream everything else already writes to. Grounding context
+  // is built fresh from state this component already holds
+  // (config/params/networkParams/data/networkData), not re-derived
+  // server-side, so the model always sees exactly what's currently on screen.
+  const handleJurorChat = useCallback(
+    async (message) => {
+      log(`Juror: ${message}`);
+      const context = {
+        site_width_ft: config?.site_width_ft,
+        site_length_ft: config?.site_length_ft,
+        column_height_ft: config?.column_height_ft,
+        nx_bays: config?.nx_bays,
+        params,
+        network_params: networkParams,
+        last_rebuild: data && {
+          kind_counts: data.kind_counts,
+          slab_harvest_tons: data.slab_harvest_tons,
+          max_canyon_depth_ft: data.max_canyon_depth_ft,
+          used_real_amenity_data: data.used_real_amenity_data,
+          used_real_foot_traffic_data: data.used_real_foot_traffic_data,
+        },
+        last_network: networkData && {
+          node_count: networkData.node_count,
+          attractor_count: networkData.attractor_count,
+          attractors_unconsumed: networkData.attractors_unconsumed,
+          kind_counts: networkData.kind_counts,
+        },
+      };
+      try {
+        const result = await jurorChatApi(message, context);
+        log(`Assistant: ${result.reply}`);
+        applyJurorAction(result.action);
+      } catch (err) {
+        log(String(err), 'error');
+      }
+    },
+    [config, params, networkParams, data, networkData, log, applyJurorAction],
+  );
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <Header />
@@ -195,12 +361,15 @@ export default function App() {
               blenderObjUrl={blenderBuild.status === 'done' ? blenderBuild.objUrl : null}
               blenderSvgUrl={blenderBuild.status === 'done' ? blenderBuild.svgUrl : null}
               onShowLineArt={() => setShowLineArt(true)}
+              onExportVectorView={handleExportVectorView}
+              exportingVectorView={exportingVectorView}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center font-mono-sm text-on-surface-variant">
               loading config...
             </div>
           )}
+          <JurorChatBar onSend={handleJurorChat} />
           <LogPanel entries={logs} />
         </main>
         <ParamPanel
@@ -208,6 +377,7 @@ export default function App() {
           params={params}
           onParamsChange={setParams}
           onPaint={(category) => setPaintCategory(category)}
+          onOpenDiagramInput={() => setShowDiagramInput(true)}
           onRebuild={() => doRebuild(params)}
           slabHarvestTons={data?.slab_harvest_tons}
           kindCounts={data?.kind_counts}
@@ -244,6 +414,15 @@ export default function App() {
       )}
       {showLineArt && (
         <LineArtOverlay svgUrl={blenderBuild.svgUrl} onClose={() => setShowLineArt(false)} />
+      )}
+      {showDiagramInput && (
+        <DiagramInputPanel
+          onClose={() => setShowDiagramInput(false)}
+          onBaked={async () => {
+            await doRebuild(params);
+          }}
+          log={log}
+        />
       )}
     </div>
   );

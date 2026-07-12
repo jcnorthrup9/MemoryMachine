@@ -5,10 +5,14 @@ Reads a color diagram export from the OLD diagram tool (static/main.js's
 POST /api/export-diagram, archived at archive/diagrams/generated/
 memory_machine_jpg-color_<epoch_ms>.jpg) and converts it into the SAME JSON
 shape logic/pershing_api.py's PAINT_STATE_PATH bootstrap expects
-(outputs/cockpit/web_paint_state.json: {"canyon", "hardscape", "water_shade",
-"greenscape", "amenity_resting"}, each an (nx, nz) nested list matching
-TerracingEngine's voxel grid). This is a standalone offline tool -- per
-project decision, NOT wired into the live upload/bake flow; use
+(outputs/cockpit/web_paint_state.json: {"canyon", "hardscape", "water",
+"shade", "greenscape", "amenity_resting"}, each an (nx, nz) nested list
+matching TerracingEngine's voxel grid). This is a standalone offline tool --
+per project decision, NOT wired into the live upload/bake flow (though see
+logic/legacy_diagram_bridge.py, which wraps this module's functions behind
+a real HTTP preview endpoint for the live app's Diagram Input panel -- that
+bridge is read-only and still routes the actual commit through the existing
+bake() endpoint, this module itself remains standalone); use
 --install-as-live to promote one converted output into the live app's state.
 
 THE ROTATION PROBLEM this module exists to solve: the old diagram tool
@@ -31,7 +35,7 @@ _1775590162274.jpg, _1775590622731.jpg) against harvest/pershing_square_
 generator.py's COLOR_MAP (itself reverse-engineered from static/main.js's
 own hex constants, the same tool that rendered these images):
   - green  (76,175,80)  -> observed (72-80,168-176,72-80)   -> greenscape
-  - blue   (3,169,244)  -> observed (0-8,160-169,232-244)   -> water_shade
+  - blue   (3,169,244)  -> observed (0-8,160-169,232-244)   -> water
   - gray   (158,158,158)-> observed (144-160,144-168,144-160) -> hardscape
     (this also covers the hatched/stippled "path" texture seen blended over
     green in some diagrams -- per user decision 2026-07-10, dotted/hatched
@@ -45,6 +49,19 @@ own hex constants, the same tool that rendered these images):
     fill -- confirmed by sampling: the "solid black interior" a first visual
     read worried might be indistinguishable hardscape is actually just the
     canvas background showing through; hardscape is exclusively the gray.
+  - tan/beige (188,170,164), i.e. 0xBCAAA4 -> shade. Added 2026-07-11 after
+    static/main.js's _getLayerColor() bug was fixed (SHADE previously
+    rendered identically to GREEN_SPACE, so no diagram exported before that
+    fix could ever have contained this color at all). UNLIKE the other four
+    entries above, this threshold is NOT yet empirically verified against a
+    real exported pixel -- it's derived arithmetically from the
+    ZONE_MATERIALS.SHADE constant, and (188,170,164) sits close to
+    HARDSCAPE_GRAY_RGB's (158,158,158) (distinguished mainly by the shade
+    color being visibly R>G>B tinted rather than channel-flat gray -- see
+    segment_legacy_colors' tan_mask). Re-verify by sampling a few freshly
+    generated diagrams that actually contain SHADE-layer picks before
+    trusting this in production, the same way the other four colors were
+    verified against real samples.
 No legacy diagram color maps to `canyon` (continuous excavation weight) or
 `amenity_resting` -- both stay all-zero/all-False in the converted output.
 """
@@ -71,9 +88,13 @@ VOXEL_FT = 9.0
 GREEN_RGB = (76, 175, 80)
 BLUE_RGB = (3, 169, 244)
 HARDSCAPE_GRAY_RGB = (158, 158, 158)
+# Tan/beige, 0xBCAAA4 -- matches ZONE_MATERIALS.SHADE in static/main.js and
+# paintCategories.js's shade brush. NOT yet empirically re-verified against
+# a real exported pixel -- see module docstring's color-legend note.
+SHADE_TAN_RGB = (188, 170, 164)
 WHITE_RGB = (255, 255, 255)
 COLOR_THRESHOLD = 30
-GRAY_CHANNEL_SPREAD = 20  # max |R-G|, |G-B|, |R-B| to count as "gray" (vs. green/blue tinted)
+GRAY_CHANNEL_SPREAD = 20  # max |R-G|, |G-B|, |R-B| to count as "gray" (vs. green/blue/tan tinted)
 
 # Orientation calibration -- CONFIRMED 2026-07-10 via calibrate_legacy_
 # orientation.py against memory_machine_jpg-color_1775590162274.jpg, using
@@ -312,7 +333,7 @@ def calibrate_batch_affine(sample_image_paths, site_width_ft, site_length_ft,
 
 def segment_legacy_colors(image_path, boundary_polygon_px, sample_stride=2,
                            green_rgb=GREEN_RGB, blue_rgb=BLUE_RGB,
-                           hardscape_gray_rgb=HARDSCAPE_GRAY_RGB,
+                           hardscape_gray_rgb=HARDSCAPE_GRAY_RGB, shade_tan_rgb=SHADE_TAN_RGB,
                            threshold=COLOR_THRESHOLD, gray_spread=GRAY_CHANNEL_SPREAD):
     """
     Threshold image_path's ORIGINAL (unwarped) pixels against the COLOR_MAP
@@ -322,8 +343,8 @@ def segment_legacy_colors(image_path, boundary_polygon_px, sample_stride=2,
 
     Per user decision 2026-07-10: hardscape_gray_rgb also covers the
     hatched/stippled "path" texture (dotted lines fold into hardscape, no
-    separate category). Returns {"greenscape": (N,2) px, "water_shade":
-    (M,2) px, "hardscape": (K,2) px} -- pixel coordinates, NOT yet
+    separate category). Returns {"greenscape": (N,2) px, "water": (M,2) px,
+    "shade": (P,2) px, "hardscape": (K,2) px} -- pixel coordinates, NOT yet
     transformed to site-feet (caller applies BoundaryAffine.transform()).
     """
     from PIL import Image
@@ -342,14 +363,26 @@ def segment_legacy_colors(image_path, boundary_polygon_px, sample_stride=2,
 
     green_mask = near(green_rgb)
     blue_mask = near(blue_rgb)
-    # Gray hardscape: near the target gray AND channel-flat (not a green- or
-    # blue-tinted pixel that happens to also be within `threshold` of gray on
-    # each channel independently).
+    # Gray hardscape: near the target gray AND channel-flat (not a green-,
+    # blue-, or tan-tinted pixel that happens to also be within `threshold`
+    # of gray on each channel independently).
     gray_mask = (
         near(hardscape_gray_rgb)
         & (np.abs(r_ch - g_ch) < gray_spread)
         & (np.abs(g_ch - b_ch) < gray_spread)
         & (np.abs(r_ch - b_ch) < gray_spread)
+    )
+    # Tan shade: near the target tan AND visibly R>G>B tinted (not
+    # channel-flat gray) -- shade_tan_rgb=(188,170,164) sits only ~30 away
+    # from hardscape_gray_rgb=(158,158,158) on the R channel alone (right at
+    # `threshold`'s own boundary), so this tint check is real insurance
+    # against real-world JPEG noise blurring that edge, not just belt-and-
+    # suspenders over already-clean synthetic math. NOT yet empirically
+    # verified against a real exported pixel -- see module docstring.
+    tan_mask = (
+        near(shade_tan_rgb)
+        & (r_ch - g_ch > 5)
+        & (g_ch - b_ch > 0)
     )
 
     h, w = r_ch.shape
@@ -369,23 +402,24 @@ def segment_legacy_colors(image_path, boundary_polygon_px, sample_stride=2,
 
     return {
         "greenscape": pixels_for(green_mask),
-        "water_shade": pixels_for(blue_mask),
+        "water": pixels_for(blue_mask),
+        "shade": pixels_for(tan_mask),
         "hardscape": pixels_for(gray_mask),
     }
 
 
 def rasterize_to_paint_state(category_points_ft, nx, nz, voxel_ft=VOXEL_FT):
     """
-    category_points_ft: {"greenscape": (N,2) ft, "water_shade": (M,2) ft,
-    "hardscape": (K,2) ft}. Returns the full 5-key dict matching
-    outputs/cockpit/web_paint_state.json's shape. `canyon` and
+    category_points_ft: {"greenscape": (N,2) ft, "water": (M,2) ft,
+    "shade": (P,2) ft, "hardscape": (K,2) ft}. Returns the full 6-key dict
+    matching outputs/cockpit/web_paint_state.json's shape. `canyon` and
     `amenity_resting` stay all-zero/all-False -- no legacy diagram color
     maps to either (see module docstring).
     """
     def empty_bool():
         return np.zeros((nx, nz), dtype=bool)
 
-    masks = {"hardscape": empty_bool(), "water_shade": empty_bool(), "greenscape": empty_bool()}
+    masks = {"hardscape": empty_bool(), "water": empty_bool(), "shade": empty_bool(), "greenscape": empty_bool()}
     for category, pts_ft in category_points_ft.items():
         if len(pts_ft) == 0:
             continue
@@ -396,7 +430,8 @@ def rasterize_to_paint_state(category_points_ft, nx, nz, voxel_ft=VOXEL_FT):
     return {
         "canyon": np.zeros((nx, nz)).tolist(),
         "hardscape": masks["hardscape"].tolist(),
-        "water_shade": masks["water_shade"].tolist(),
+        "water": masks["water"].tolist(),
+        "shade": masks["shade"].tolist(),
         "greenscape": masks["greenscape"].tolist(),
         "amenity_resting": np.zeros((nx, nz), dtype=bool).tolist(),
     }
@@ -416,13 +451,15 @@ def render_debug_preview(paint_state, out_path, cell_px=8):
     from PIL import Image
 
     hardscape = np.array(paint_state["hardscape"], dtype=bool)
-    water = np.array(paint_state["water_shade"], dtype=bool)
+    water = np.array(paint_state["water"], dtype=bool)
+    shade = np.array(paint_state["shade"], dtype=bool)
     green = np.array(paint_state["greenscape"], dtype=bool)
     nx, nz = hardscape.shape
 
     img = np.zeros((nz, nx, 3), dtype=np.uint8)
     img[green.T] = (76, 175, 80)
     img[water.T] = (3, 169, 244)
+    img[shade.T] = SHADE_TAN_RGB
     img[hardscape.T] = (158, 158, 158)
     img = img[::-1, :, :]  # row 0 at top should be ymax (5th St), per STREET_LABELS
 
@@ -546,7 +583,7 @@ def convert_batch(glob_pattern=DEFAULT_GLOB, out_dir=DEFAULT_OUT_DIR,
                                        voxel_ft=voxel_ft, out_path=out_path)
             painted = sum(
                 sum(row.count(True) for row in paint_state[cat])
-                for cat in ("hardscape", "water_shade", "greenscape")
+                for cat in ("hardscape", "water", "shade", "greenscape")
             )
             fraction = painted / float(nx * nz)
             manifest_rows.append({"image": path, "out": out_path,
