@@ -711,6 +711,19 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
 // top-referenced value like the box path -- a real inconsistency in the
 // Python field naming across spec kinds, not a bug in this port).
 function HexInstances({ specs, siteLengthFt, shadingMode }) {
+  // Grouped by kind (2026-07-13 fix, mirrors BoxInstances' byKind pattern
+  // above) -- previously ALL hex kinds shared one <Instances> block with a
+  // single hardcoded KIND_COLOR.steel_turnbuckle material, so tree_canopy
+  // (the only other hex kind) silently rendered in steel_turnbuckle's grey
+  // instead of its own color, old or new.
+  const byKind = useMemo(() => {
+    const map = {};
+    for (const s of specs) {
+      if (!HEX_KINDS.has(s.kind) || s.x2_ft !== null) continue;
+      (map[s.kind] ||= []).push(s);
+    }
+    return map;
+  }, [specs]);
   const items = useMemo(
     () => specs.filter((s) => HEX_KINDS.has(s.kind) && s.x2_ft === null),
     [specs],
@@ -726,20 +739,22 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
 
   return (
     <>
-      <Instances
-        key={paddedCapacity(items.length)}
-        limit={paddedCapacity(items.length)}
-        range={items.length}
-        castShadow={shadows}
-        receiveShadow={shadows}
-      >
-        <cylinderGeometry args={[1, 1, 1, 6]} />
-        <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.steel_turnbuckle)} />
-        {items.map((s, i) => {
-          const f = frameFor(s);
-          return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.radius, s.height_ft, f.radius]} />;
-        })}
-      </Instances>
+      {Object.entries(byKind).map(([kind, kindItems]) => (
+        <Instances
+          key={`${kind}-${paddedCapacity(kindItems.length)}`}
+          limit={paddedCapacity(kindItems.length)}
+          range={kindItems.length}
+          castShadow={shadows}
+          receiveShadow={shadows}
+        >
+          <cylinderGeometry args={[1, 1, 1, 6]} />
+          <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind])} />
+          {kindItems.map((s, i) => {
+            const f = frameFor(s);
+            return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.radius, s.height_ft, f.radius]} />;
+          })}
+        </Instances>
+      ))}
       {ghosted && (
         <Instances key={`outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
           <cylinderGeometry args={[1, 1, 1, 6]} />
@@ -819,13 +834,43 @@ function StreetLabels({ siteWidthFt, siteLengthFt }) {
 // kinds.
 const PROGRAM_ZONE_THICKNESS_FT = 1.0;
 const PROGRAM_ZONE_LABEL_HEIGHT_FT = 12;
-const PROGRAM_CATEGORY_COLOR = {
-  green_space: '#3d9142',
-  sports_recreation: '#ff9800',
-  enrichment_civic: '#2196f3',
-  outdoor: '#8bc34a',
-  health_care: '#e91e63',
+// Per-PROGRAM colors (2026-07-13), replacing the old 5-entry per-CATEGORY
+// map -- with only 5 colors for 13-14 individual programs, every
+// sports_recreation zone (Soccer Field/Public Gym/Skatepark/Volleyball
+// Court) rendered in the exact same orange, indistinguishable from each
+// other except by (often overlapping) text labels. Keyed by program_item
+// (the label string place_programs() returns and ProgramZones already uses
+// as its React key -- no new identifier needed). Grouped by hue family per
+// category (red/purple/indigo/teal = sports_recreation, blue/violet/cyan =
+// enrichment_civic, etc.) so category identity still reads at a glance,
+// but each program within a category is genuinely distinct. Deliberately
+// avoids the orange/amber/beige family already load-bearing elsewhere in
+// this viewport (ramp_slab #e8a23c, floor_slab #c9c2b3, amenity fixtures
+// #ff8c26, salvage #8a8580) -- the old sports_recreation orange (#ff9800)
+// was easy to mistake for ramp/slab geometry for exactly this reason (see
+// the "yellow slab" investigation this map is a direct answer to).
+const PROGRAM_COLOR = {
+  'Green Space & Park Infrastructure': '#2e7d32',
+  'Community Garden': '#9ccc65',
+  'Soccer Field': '#d32f2f',
+  'Public Gym': '#7b1fa2',
+  'Skatepark': '#303f9f',
+  'Volleyball Court': '#00838f',
+  'Computer / Tech Space': '#1565c0',
+  'Classrooms / Study Rooms': '#0288d1',
+  'Music Practice Space': '#5e35b1',
+  'Arts & Crafts Studio': '#00acc1',
+  'Playground': '#558b2f',
+  'Picnic / Grill Site': '#00695c',
+  'Workout Equipment': '#9e9d24',
+  'Individual Practice Office': '#e91e63',
+  'Veterinary': '#f06292',
 };
+// Fallback for any program_item not in the map above (e.g. a
+// data/program_requirements.json entry added later without a color
+// picked yet) -- neutral grey, visually flags "needs a color" rather than
+// silently colliding with an existing category/kind color.
+const PROGRAM_FALLBACK_COLOR = '#9e9e9e';
 
 function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
@@ -833,13 +878,19 @@ function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode })
   useLayoutEffect(() => {
     if (!meshRef.current) return;
     const dummy = new THREE.Object3D();
-    bays.forEach(([gx, gy], i) => {
+    bays.forEach(([gx, gy, elevFt], i) => {
       // gx/gy here are BAY indices (STRUCTURAL_BAY_FT-wide cells), not voxel
       // indices -- do not reuse voxelFt here despite the visual similarity
       // to CategoryGroundCap above.
       const cx = (gx + 0.5) * bayFt;
       const cy = (gy + 0.5) * bayFt;
-      const [x, y, z] = toThree(cx, cy, PROGRAM_ZONE_THICKNESS_FT / 2, siteLengthFt);
+      // Per-bay floor elevation (2026-07-13 "use all available space"
+      // update): a zone can now legitimately span more than one real
+      // elevation (see logic/program_placement.py's place_programs()
+      // docstring), so each bay renders at ITS OWN floor_elev_ft instead
+      // of one shared value for the whole zone. `?? 0` covers a bay entry
+      // that predates this field ([gx, gy] only).
+      const [x, y, z] = toThree(cx, cy, (elevFt ?? 0) + PROGRAM_ZONE_THICKNESS_FT / 2, siteLengthFt);
       dummy.position.set(x, y, z);
       dummy.scale.set(bayFt, PROGRAM_ZONE_THICKNESS_FT, bayFt);
       dummy.updateMatrix();
@@ -860,29 +911,36 @@ function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode })
   );
 }
 
-function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode }) {
+function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = true }) {
   if (!zones || !bayFt) return null;
   const placedZones = zones.filter((z) => z.bays.length > 0);
   return (
     <>
       {placedZones.map((zone) => {
-        const color = PROGRAM_CATEGORY_COLOR[zone.category] || '#888888';
+        const color = PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR;
         const centroidGx = zone.bays.reduce((sum, [gx]) => sum + gx, 0) / zone.bays.length;
         const centroidGy = zone.bays.reduce((sum, [, gy]) => sum + gy, 0) / zone.bays.length;
         const labelX = (centroidGx + 0.5) * bayFt;
         const labelY = (centroidGy + 0.5) * bayFt;
-        const [px, py, pz] = toThree(labelX, labelY, PROGRAM_ZONE_LABEL_HEIGHT_FT, siteLengthFt);
+        // floor_elev_ft (2026-07-13 "remove top slab" feature): the real
+        // surface this zone sits on -- 0 (grade) if the API response
+        // predates this field. Label floats the same fixed height above
+        // whatever that floor actually is, not above absolute 0.
+        const floorElevFt = zone.floor_elev_ft ?? 0;
+        const [px, py, pz] = toThree(labelX, labelY, floorElevFt + PROGRAM_ZONE_LABEL_HEIGHT_FT, siteLengthFt);
         return (
           <group key={zone.program_item}>
             <ProgramZoneFootprint
               bays={zone.bays} bayFt={bayFt} color={color}
               siteLengthFt={siteLengthFt} shadingMode={shadingMode}
             />
-            <Billboard position={[px, py, pz]}>
-              <Text fontSize={10} color={color} anchorX="center" anchorY="middle" outlineWidth={0.4} outlineColor="#000000">
-                {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
-              </Text>
-            </Billboard>
+            {showLabels && (
+              <Billboard position={[px, py, pz]}>
+                <Text fontSize={10} color={color} anchorX="center" anchorY="middle" outlineWidth={0.4} outlineColor="#000000">
+                  {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
+                </Text>
+              </Billboard>
+            )}
           </group>
         );
       })}
@@ -890,9 +948,41 @@ function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode }) {
   );
 }
 
+// Plain HTML/CSS overlay (2026-07-13), NOT inside <Canvas> -- the 3D
+// billboard labels ProgramZones already draws stay useful for spatial
+// reference, but visibly overlap/clip in a dense layout (confirmed live),
+// so program names aren't reliably readable from the viewport alone. This
+// is the guaranteed-legible list: every currently-placed program's name
+// with its actual PROGRAM_COLOR swatch, same corner-panel visual style as
+// the VIEW/SHADING/TOP SLAB HUD panels below.
+function ProgramLegend({ zones }) {
+  if (!zones) return null;
+  const placedZones = zones.filter((z) => z.bays.length > 0);
+  if (placedZones.length === 0) return null;
+  return (
+    <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col max-h-[70vh] overflow-y-auto">
+      <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2 pb-1">PROGRAMS</span>
+      <div className="flex flex-col px-3 pb-2 gap-1">
+        {placedZones.map((zone) => (
+          <div key={zone.program_item} className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 shrink-0 border border-border"
+              style={{ backgroundColor: PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR }}
+            />
+            <span className="font-mono-sm text-[11px] text-on-surface-variant whitespace-nowrap">
+              {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Viewport({
   data, programZones, bayFt, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl,
-  onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild,
+  onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild, savingBuild,
+  removeTopSlab, onToggleRemoveTopSlab,
 }) {
   const loadBuildInputRef = useRef(null);
   const [shadingMode, setShadingMode] = useState('colored');
@@ -905,10 +995,22 @@ export default function Viewport({
   // data/tonnage math (slab_harvest_tons, the cut sheet) is unaffected
   // either way, this only filters what BoxInstances actually draws.
   const [showSalvage, setShowSalvage] = useState(false);
-  // Top (surface) slab toggle -- default ON, matches the render before this
-  // toggle existed. Off hides just the topmost real_slabs entry (see
-  // RealSlabs' own comment) so the terracing cuts underneath are visible.
-  const [showTopSlab, setShowTopSlab] = useState(true);
+  // Program-zone 3D billboard labels toggle (2026-07-13) -- on by default;
+  // ProgramLegend (bottom-right HUD panel) already covers "show program
+  // names clearly" as a guaranteed-legible fallback, so turning these off
+  // is purely about decluttering the viewport in a dense layout, not
+  // losing the ability to identify zones.
+  const [showLabels, setShowLabels] = useState(true);
+  // Top (surface) slab toggle (2026-07-13: promoted from a pure client-side
+  // render filter to the real RebuildParams.remove_top_slab control -- see
+  // App.jsx/ParamPanel -- "off" now actually excavates the SURFACE slab
+  // away server-side, not just hides its mesh). Driven by the parent's
+  // params state (removeTopSlab/onToggleRemoveTopSlab), not local state, so
+  // toggling here and toggling from ParamPanel (if ever added) stay in
+  // sync. showTopSlab keeps its old meaning below (still filters
+  // RealSlabs' mesh) -- it's just `!removeTopSlab` now instead of an
+  // independent boolean.
+  const showTopSlab = !removeTopSlab;
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
   const canvasRef = useRef(null);
@@ -1094,7 +1196,10 @@ export default function Viewport({
         )}
         <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
-        <ProgramZones zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        <ProgramZones
+          zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode}
+          showLabels={showLabels}
+        />
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
         <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
@@ -1151,9 +1256,25 @@ export default function Viewport({
             {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
               <button
                 key={String(opt.key)}
-                onClick={() => setShowTopSlab(opt.key)}
+                onClick={() => onToggleRemoveTopSlab?.(!opt.key)}
                 className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
                   showTopSlab === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LABELS</span>
+          <div className="flex">
+            {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
+              <button
+                key={String(opt.key)}
+                onClick={() => setShowLabels(opt.key)}
+                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                  showLabels === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
                 }`}
               >
                 {opt.label}
@@ -1175,11 +1296,11 @@ export default function Viewport({
         </button>
         <button
           onClick={onSaveBuild}
-          disabled={!canSaveBuild}
-          title="Downloads the current build (params, geometry, network, program zones) as a JSON file you can load back later to recall this exact iteration."
+          disabled={!canSaveBuild || savingBuild}
+          title="Saves the current build (params, geometry, network, program zones) into the repo's build archive (outputs/pershing_archive/) -- browse or recall it from the ARCHIVE tab."
           className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          Save Build
+          {savingBuild ? 'Saving...' : 'Save Build'}
         </button>
         <button
           onClick={() => loadBuildInputRef.current?.click()}
@@ -1217,6 +1338,9 @@ export default function Viewport({
             View Line Art
           </button>
         )}
+      </div>
+      <div className="absolute bottom-4 right-4">
+        <ProgramLegend zones={programZones} />
       </div>
     </div>
   );

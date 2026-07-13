@@ -101,6 +101,33 @@ export async function jurorChat(message, context) {
   return res.json();
 }
 
+// "The Metabolist" -- on-demand qualitative critique. spatialSummary is the
+// list[str] rebuild() already returns as data.spatial_summary -- forwarded
+// verbatim, not recomputed here, same as jurorChat()'s context above.
+export async function critiqueDesign(spatialSummary) {
+  const res = await fetch('/api/pershing/critique', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spatial_summary: spatialSummary }),
+  });
+  if (!res.ok) throw new Error(`critique failed: ${res.status}`);
+  return res.json();
+}
+
+// "Precedent Remixer" MVP (see PrecedentRemixerPanel.jsx) -- AI-curated
+// precedent layer selection for a text prompt. Preview-only in this pass
+// (see logic/pershing_api.py's remix_precedent() docstring for why applying
+// these layers to the live paint masks isn't wired up yet).
+export async function remixPrecedent(prompt) {
+  const res = await fetch('/api/pershing/remix-precedent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error(`remix precedent failed: ${res.status}`);
+  return res.json();
+}
+
 // Diagram Input mode (see DiagramInputPanel.jsx) -- a separate design-input
 // mechanism from PaintOverlay's freehand painting, reading colors off an
 // existing legacy-diagram export instead. listLegacyDiagrams/previewLegacyImport
@@ -132,8 +159,9 @@ export async function getProgramZones() {
   return res.json();
 }
 
-// ARCHIVE tab -- server-side persisted build snapshots (outputs/pershing_archive/),
-// distinct from App.jsx's client-side-only "Save Build" file download. Same
+// Server-side persisted build snapshots (outputs/pershing_archive/) -- used
+// by both the ARCHIVE tab's "Save Current Build" (with a user label) and
+// App.jsx's toolbar "Save Build" (no label prompt, passes ''). Same
 // memory-machine-build-v1 snapshot shape either way.
 export async function saveToArchive(snapshot, label) {
   const res = await fetch('/api/pershing/archive', {

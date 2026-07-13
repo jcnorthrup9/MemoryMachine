@@ -79,7 +79,7 @@ export default function DiagnosticsPanel({ config, data, networkData, programZon
         )}
       </Section>
 
-      <Section title="Circulation Network">
+      <Section title="Circulation Growth Network">
         {networkData ? (
           <>
             <StatRow label="Nodes" value={networkData.node_count} />

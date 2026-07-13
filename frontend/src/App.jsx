@@ -6,12 +6,13 @@ import LogPanel from './components/LogPanel.jsx';
 import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
 import DiagramInputPanel from './components/DiagramInputPanel.jsx';
+import PrecedentRemixerPanel from './components/PrecedentRemixerPanel.jsx';
 import JurorChatBar from './components/JurorChatBar.jsx';
 import ArchivePanel from './components/ArchivePanel.jsx';
 import DiagnosticsPanel from './components/DiagnosticsPanel.jsx';
 import {
   getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus, growNetwork as growNetworkApi,
-  jurorChat as jurorChatApi, getProgramZones,
+  jurorChat as jurorChatApi, getProgramZones, critiqueDesign as critiqueDesignApi, saveToArchive,
 } from './api.js';
 
 const BLENDER_POLL_MS = 1500;
@@ -24,11 +25,14 @@ const DEFAULT_PARAMS = {
   shoring_density: 1.0,
   use_real_amenity_data: false,
   use_real_foot_traffic_data: false,
+  data_alpha: 1.0,
+  use_real_noise_data: false,
+  remove_top_slab: true,
   buildings: [],
 };
 
 const DEFAULT_NETWORK_PARAMS = {
-  motivator_weights: { shade: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0 },
+  motivator_weights: { shade: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0, program: 1.0 },
   step_ft: 15.0,
   max_iterations: 300,
 };
@@ -47,12 +51,15 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [paintCategory, setPaintCategory] = useState(null);
   const [showDiagramInput, setShowDiagramInput] = useState(false);
+  const [showPrecedentRemixer, setShowPrecedentRemixer] = useState(false);
   const [blenderBuild, setBlenderBuild] = useState({ status: 'idle', objUrl: null, svgUrl: null, error: null, durationS: null });
   const [lineartEnabled, setLineartEnabled] = useState(false);
   const [showLineArt, setShowLineArt] = useState(false);
   const [networkParams, setNetworkParams] = useState(DEFAULT_NETWORK_PARAMS);
   const [networkData, setNetworkData] = useState(null);
   const [growingNetwork, setGrowingNetwork] = useState(false);
+  const [critiquing, setCritiquing] = useState(false);
+  const [critique, setCritique] = useState(null);
   const [exportingVectorView, setExportingVectorView] = useState(false);
   const vectorExportPollRef = useRef(null);
   const blenderPollRef = useRef(null);
@@ -67,6 +74,16 @@ export default function App() {
       try {
         const result = await rebuildApi(nextParams ?? params);
         setData(result);
+        // 2026-07-12: rebuild() now computes program zones itself (needed
+        // to feed programmatic buildings into the pipeline), so refresh
+        // this on every rebuild instead of relying solely on the mount-time
+        // getProgramZones() fetch below, which otherwise goes stale the
+        // moment a paint/bake changes which bays are claimed. bay_ft is a
+        // fixed constant (STRUCTURAL_BAY_FT), not per-response, so carry
+        // forward whatever the initial getProgramZones() mount fetch set.
+        if (result.program_zones) {
+          setProgramZones((prev) => ({ bay_ft: prev?.bay_ft, zones: result.program_zones }));
+        }
         log(
           `faces=${result.voxels.length} structural=${result.structural.length} slab=${result.slab_harvest_tons.toFixed(0)}t`,
         );
@@ -92,6 +109,9 @@ export default function App() {
         }
         if (c.foot_traffic_csv) {
           setParams((prev) => ({ ...prev, use_real_foot_traffic_data: true }));
+        }
+        if (c.noise_csv) {
+          setParams((prev) => ({ ...prev, use_real_noise_data: true }));
         }
       })
       .catch((err) => log(String(err), 'error'));
@@ -265,6 +285,25 @@ export default function App() {
     }
   }, [params, networkParams, log]);
 
+  // "The Metabolist" -- on-demand qualitative critique, deliberately manual
+  // (not auto-fired after every rebuild) since the underlying Ollama call
+  // has up to a 30s timeout, same reasoning as handleGrowNetwork above not
+  // running on every slider tweak. Forwards data.spatial_summary, which
+  // rebuild() already computed -- nothing recomputed client-side.
+  const handleAskMetabolist = useCallback(async () => {
+    if (!data?.spatial_summary) return;
+    setCritiquing(true);
+    try {
+      const result = await critiqueDesignApi(data.spatial_summary);
+      setCritique(result.critique);
+      log('metabolist critique received');
+    } catch (err) {
+      log(String(err), 'error');
+    } finally {
+      setCritiquing(false);
+    }
+  }, [data, log]);
+
   // Live rebuild, debounced -- mirrors Blender's update=_on_X_update
   // callbacks (every param change triggers a rebuild), but batched behind
   // a short delay since each change here is a network round-trip to the
@@ -365,9 +404,13 @@ export default function App() {
   );
 
   // Save/recall a build iteration -- shared by two surfaces: RECONSTRUCT's
-  // toolbar (a client-side-only JSON file download/upload) and the ARCHIVE
-  // tab (the same snapshot persisted server-side so it survives a reload).
-  // Both work the same way: everything needed to restore the exact
+  // toolbar and the ARCHIVE tab. Both now persist the same snapshot
+  // server-side (outputs/pershing_archive/, via saveToArchive()) so a build
+  // saved from either place survives a reload and shows up in the ARCHIVE
+  // tab's gallery; the toolbar button just skips the label prompt. Loading
+  // stays split: the toolbar's "Load Build" still reads a locally-downloaded
+  // file client-side, while the ARCHIVE tab loads by filename from the
+  // server. Everything needed to restore the exact
   // on-screen state (params/buildings, the full rebuild result, network
   // result, program zones) is already sitting in this component's own
   // state, so this is a snapshot-and-restore of that state, not a re-run of
@@ -404,17 +447,20 @@ export default function App() {
     [],
   );
 
-  const handleSaveBuild = useCallback(() => {
+  const [savingBuild, setSavingBuild] = useState(false);
+
+  const handleSaveBuild = useCallback(async () => {
     const snapshot = buildSnapshot();
     if (!snapshot) return;
-    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `memory-machine-build-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    log(`build saved: ${a.download}`);
+    setSavingBuild(true);
+    try {
+      const result = await saveToArchive(snapshot, '');
+      log(`build saved: ${result.label || result.filename}`);
+    } catch (err) {
+      log(String(err), 'error');
+    } finally {
+      setSavingBuild(false);
+    }
   }, [buildSnapshot, log]);
 
   const handleLoadBuild = useCallback(
@@ -459,6 +505,11 @@ export default function App() {
                   onSaveBuild={handleSaveBuild}
                   onLoadBuild={handleLoadBuild}
                   canSaveBuild={!!data}
+                  savingBuild={savingBuild}
+                  removeTopSlab={params.remove_top_slab}
+                  onToggleRemoveTopSlab={(value) =>
+                    setParams((prev) => ({ ...prev, remove_top_slab: value }))
+                  }
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center font-mono-sm text-on-surface-variant">
@@ -479,7 +530,9 @@ export default function App() {
               kindCounts={data?.kind_counts}
               usedRealAmenityData={data?.used_real_amenity_data}
               usedRealFootTrafficData={data?.used_real_foot_traffic_data}
+              usedRealNoiseData={data?.used_real_noise_data}
               circulationVoxelCount={data?.voxels?.filter((v) => v.typology === 'CIRCULATION').length ?? 0}
+              sanctuaryVoxelCount={data?.voxels?.filter((v) => v.typology === 'SANCTUARY').length ?? 0}
               rebuilding={rebuilding}
               blenderBuild={blenderBuild}
               onBuildInBlender={handleBuildInBlender}
@@ -490,6 +543,10 @@ export default function App() {
               onGrowNetwork={handleGrowNetwork}
               growingNetwork={growingNetwork}
               networkResult={networkData}
+              onAskMetabolist={handleAskMetabolist}
+              critiquing={critiquing}
+              critique={critique}
+              onOpenPrecedentRemixer={() => setShowPrecedentRemixer(true)}
             />
           </>
         )}
@@ -527,6 +584,9 @@ export default function App() {
           }}
           log={log}
         />
+      )}
+      {showPrecedentRemixer && (
+        <PrecedentRemixerPanel onClose={() => setShowPrecedentRemixer(false)} log={log} />
       )}
     </div>
   );

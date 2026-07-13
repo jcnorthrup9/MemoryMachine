@@ -55,12 +55,14 @@ class Voxel:
     transit_influence: float
     deficit_influence: float
     foot_traffic_influence: float = 0.0
+    noise_influence: float = 0.0
     sketch_weight: float = 0.0
     is_hardscape: bool = False
     is_water: bool = False
     is_shade: bool = False
     is_greenscape: bool = False
     is_amenity_resting: bool = False
+    is_deck: bool = False
     z_ft: float = 0.0
     score: float = 0.0
     level: int = 0
@@ -99,6 +101,27 @@ DEFAULT_FOOT_TRAFFIC_HOTSPOTS = [
     {"x_frac": 0.5, "y_frac": 0.92, "strength": 0.7, "radius_ft": 60.0},
 ]
 
+# Same "diagrammatic placeholder, not real data" status as the two above --
+# pending real noise data (acoustic sensor export, or a proxy like measured
+# traffic volume) via noise_survey.py's CSV loader. Placed along the site's
+# two long, street-facing edges (x_frac near 0 and 1, spanning the length
+# axis) -- the same edges circulation_network.py's multi-root growth (2026-
+# 07-12) treats as real pedestrian/street entries, so "louder near the
+# street frontage, quieter toward the interior" is the same directional
+# assumption already made elsewhere in this codebase, not a new one
+# invented just for this placeholder.
+DEFAULT_NOISE_HOTSPOTS = [
+    {"x_frac": 0.02, "y_frac": 0.5, "strength": 0.8, "radius_ft": 90.0},
+    {"x_frac": 0.98, "y_frac": 0.5, "strength": 0.8, "radius_ft": 90.0},
+]
+
+# _classify_typology's SANCTUARY check: a cell painted greenscape+
+# amenity_resting only keeps SANCTUARY status if noise_influence * data_alpha
+# stays below this -- not a UI-exposed slider (data_alpha already is; this
+# is the fixed "how quiet counts as quiet" cutoff), same pattern as
+# FIELD_ATTRACTOR_THRESHOLD in circulation_network.py.
+SANCTUARY_NOISE_THRESHOLD = 0.5
+
 # Depth-below-grade thresholds (ft) for the Botanical Attractor Module's
 # level tagging (Section 3): Level 0 = surface/shade canopy zone, -1 =
 # terraced planters, -2/-3 = deep canyon / structural sub-vault zone.
@@ -115,15 +138,47 @@ class TerracingEngine:
     Pershing-specific beyond the values already baked into that JSON.
     """
 
-    def __init__(self, real_geometry, deficit_hotspots=None, foot_traffic_hotspots=None, voxel_ft=9.0,
+    def __init__(self, real_geometry, deficit_hotspots=None, foot_traffic_hotspots=None,
+                 noise_hotspots=None, data_alpha=1.0, voxel_ft=9.0,
                  transit_falloff_ft=220.0, threshold=0.35, step_ft=9.0,
                  max_canyon_depth_ft=None,
                  level_depth_thresholds_ft=DEFAULT_LEVEL_DEPTH_THRESHOLDS_FT,
                  sketch_weights=None, sketch_alpha=0.75, hardscape_regions=None,
                  water_regions=None, shade_regions=None, greenscape_regions=None, amenity_resting_regions=None,
-                 circulation_threshold=0.35):
+                 deck_regions=None,
+                 circulation_threshold=0.35, remove_top_slab=False):
         self.real_geometry = real_geometry
         self.voxel_ft = voxel_ft
+        # 2026-07-13 "remove top slab" feature: forces a minimum one-step
+        # excavation depth everywhere except an explicitly painted DECK
+        # region -- see _z_for_voxel. Deliberately a coarse, single-step
+        # force, not an attempt to precisely target a specific real slab's
+        # elevation from in here: StructuralFramingEngine's
+        # real_slab_fragments()/classify_terrain_cells() (which run AFTER
+        # this engine finishes, with full real-slab awareness) already
+        # correctly derive "what's actually exposed now" from whatever z_ft
+        # ends up here -- this constructor has no need to duplicate that
+        # logic, just to guarantee the topmost (SURFACE) slab's elevation is
+        # reliably cleared.
+        #
+        # Deliberately NOT gated on is_hardscape (2026-07-13 decouple):
+        # hardscape paint also drives program_placement.py's scoring for
+        # sports_recreation/outdoor programs, which actively SEEKS OUT
+        # hardscape-painted cells -- if hardscape also protected from this
+        # forced dig, sports programs would be systematically pulled toward
+        # the exact cells "remove top slab" is supposed to clear (confirmed
+        # live: 2026-07-13, Soccer Field landed a 103-bay zone entirely on
+        # hardscape-protected grade). deck_regions is a separate paint
+        # category (BakeGrids.deck) specifically for "keep this as an
+        # access deck when the top slab comes off" -- unrelated to whether
+        # that cell also happens to be a scored sports surface.
+        self.remove_top_slab = remove_top_slab
+        # Blend weight for noise_hotspots' effect on SANCTUARY classification
+        # only (see SANCTUARY_NOISE_THRESHOLD) -- does NOT touch excavation
+        # depth/_effective_influence, unlike sketch_alpha. 0 = noise data
+        # never overrides painted intent (designer-dominant, matches
+        # sketch_alpha's own default framing); 1 = full data-driven effect.
+        self.data_alpha = data_alpha
         self.transit_falloff_ft = transit_falloff_ft
         self.threshold = threshold
         self.step_ft = step_ft
@@ -175,6 +230,10 @@ class TerracingEngine:
         self.shade_regions = shade_regions or []
         self.greenscape_regions = greenscape_regions or []
         self.amenity_resting_regions = amenity_resting_regions or []
+        # Deck-survival paint (2026-07-13) -- see __init__'s remove_top_slab
+        # comment above for why this is deliberately separate from
+        # hardscape_regions rather than reusing it.
+        self.deck_regions = deck_regions or []
         # Threshold for _classify_typology's CIRCULATION check below --
         # independent of self.threshold (which gates excavation depth)
         # despite sharing the same default value; unverifiable/cosmetic
@@ -220,6 +279,18 @@ class TerracingEngine:
             ]
         self.foot_traffic_hotspots = foot_traffic_hotspots
 
+        if noise_hotspots is None:
+            noise_hotspots = [
+                {
+                    "x": h["x_frac"] * self.site_width_ft,
+                    "y": h["y_frac"] * self.site_length_ft,
+                    "strength": h["strength"],
+                    "radius": h["radius_ft"],
+                }
+                for h in DEFAULT_NOISE_HOTSPOTS
+            ]
+        self.noise_hotspots = noise_hotspots
+
         self.voxels = self._build_base_voxels()
 
     def _build_base_voxels(self):
@@ -251,6 +322,15 @@ class TerracingEngine:
                     foot_traffic_influence += h["strength"] * math.exp(-d / h["radius"])
                 foot_traffic_influence = clamp01(foot_traffic_influence)
 
+                # Independent of the two above too -- only ever read by
+                # _classify_typology's SANCTUARY check, scaled by
+                # self.data_alpha. See noise_survey.py's module docstring.
+                noise_influence = 0.0
+                for h in self.noise_hotspots:
+                    d = math.hypot(wx - h["x"], wy - h["y"])
+                    noise_influence += h["strength"] * math.exp(-d / h["radius"])
+                noise_influence = clamp01(noise_influence)
+
                 sketch_weight = 0.0
                 if self.sketch_weights is not None:
                     sketch_weight = float(self.sketch_weights[gx][gy])
@@ -260,18 +340,21 @@ class TerracingEngine:
                 is_shade = any(region["mask"][gx][gy] for region in self.shade_regions)
                 is_greenscape = any(region["mask"][gx][gy] for region in self.greenscape_regions)
                 is_amenity_resting = any(region["mask"][gx][gy] for region in self.amenity_resting_regions)
+                is_deck = any(region["mask"][gx][gy] for region in self.deck_regions)
 
                 row.append(Voxel(
                     gx=gx, gy=gy, wx=wx, wy=wy,
                     transit_influence=transit_influence,
                     deficit_influence=deficit_influence,
                     foot_traffic_influence=foot_traffic_influence,
+                    noise_influence=noise_influence,
                     sketch_weight=sketch_weight,
                     is_hardscape=is_hardscape,
                     is_water=is_water,
                     is_shade=is_shade,
                     is_greenscape=is_greenscape,
                     is_amenity_resting=is_amenity_resting,
+                    is_deck=is_deck,
                 ))
             voxels.append(row)
         return voxels
@@ -308,12 +391,32 @@ class TerracingEngine:
         return clamp01(self._effective_influence(v) + v.deficit_influence)
 
     def _z_for_voxel(self, v, phase):
-        if phase != 3 or self._effective_influence(v) <= self.threshold:
-            return 0.0
-        if v.is_hardscape:
+        # 2026-07-13 decouple: which veto applies depends on remove_top_slab.
+        # Normal dig (off) -- hardscape paint protects, exactly as always.
+        # remove_top_slab (on) -- hardscape paint does NOT protect (it also
+        # drives program_placement.py's sports_recreation/outdoor scoring,
+        # which actively seeks out hardscape-painted cells -- letting it
+        # also veto excavation here would systematically pull those
+        # programs toward the cells this toggle exists to clear). Only an
+        # explicitly painted deck region (v.is_deck, a separate paint
+        # category) can keep a cell at grade once this toggle is on.
+        if self.remove_top_slab:
+            if v.is_deck:
+                return 0.0  # explicitly preserved deck -- separate signal from hardscape
+        elif v.is_hardscape:
             return 0.0  # designer-protected region -- veto wins regardless of score
+        if phase != 3 or self._effective_influence(v) <= self.threshold:
+            # Below the normal excavation threshold -- would ordinarily stay
+            # at grade (0.0), but "remove top slab" still forces a minimum
+            # one-step cut here too, or every low-score cell (most of the
+            # site, away from the transit/deficit attractors) would keep the
+            # SURFACE slab intact regardless of the toggle.
+            return -self.step_ft if self.remove_top_slab else 0.0
         raw_depth = self._effective_influence(v) * self.max_canyon_depth_ft
-        return -round(raw_depth / self.step_ft) * self.step_ft
+        z = -round(raw_depth / self.step_ft) * self.step_ft
+        if self.remove_top_slab:
+            z = min(z, -self.step_ft)  # at least one step deep, deeper if the score already says so
+        return z
 
     def _relax_depths(self, phase):
         flat = self._flat_voxels()
@@ -330,7 +433,15 @@ class TerracingEngine:
             for gx in range(nx):
                 for gy in range(nz):
                     i = idx(gx, gy)
-                    if flat[i].is_hardscape:
+                    # Same remove_top_slab-dependent veto swap as
+                    # _z_for_voxel above -- keep the two in lockstep, or a
+                    # cell could get correctly excavated by _z_for_voxel but
+                    # then get pinned back up to grade by relaxation reading
+                    # the wrong veto.
+                    if self.remove_top_slab:
+                        if flat[i].is_deck:
+                            continue  # pinned at grade -- explicitly preserved deck
+                    elif flat[i].is_hardscape:
                         continue  # pinned at grade -- designer-protected region
                     max_neighbor = None
                     for ngx, ngy in ((gx - 1, gy), (gx + 1, gy), (gx, gy - 1), (gx, gy + 1)):
@@ -369,10 +480,22 @@ class TerracingEngine:
         happens to be painted both ways, no new priority system needed
         (foot-traffic data driving CIRCULATION is independent of the
         water/shade/greenscape/amenity_resting masks the other two read).
+
+        SANCTUARY additionally requires real-world quiet (2026-07-12): a
+        cell painted greenscape+amenity_resting only keeps SANCTUARY status
+        if noise_influence * self.data_alpha stays below
+        SANCTUARY_NOISE_THRESHOLD -- data_alpha=0 means noise data never
+        overrides painted intent, same "designer-dominant unless told
+        otherwise" framing sketch_alpha already uses (RebuildParams
+        defaults data_alpha to 1.0, full data-driven effect, but a caller
+        can zero it). A loud real-world spot that fails this check simply
+        isn't SANCTUARY -- it falls through to the CIRCULATION check below
+        like any other cell, not a third typology.
         """
         if v.z_ft < 0 and v.is_water:
             return "GROTTO"
-        if v.is_greenscape and v.is_amenity_resting:
+        if (v.is_greenscape and v.is_amenity_resting
+                and v.noise_influence * self.data_alpha < SANCTUARY_NOISE_THRESHOLD):
             return "SANCTUARY"
         if v.is_hardscape and v.foot_traffic_influence >= self.circulation_threshold:
             return "CIRCULATION"
@@ -593,6 +716,11 @@ class StructuralElement:
     column_id: str = None
     column_id2: str = None
     slab_id: str = None
+    # Which network root a circulation_network.py path segment traces back
+    # to -- "metro_entrance" (the one real, surveyed entry) vs "site_edge"
+    # (fabricated-but-plausible boundary entries, added 2026-07-12 so the
+    # network isn't single-rooted). None for every non-network-path kind.
+    source: str = None
 
 
 def slab_key(slab):
@@ -850,10 +978,21 @@ class StructuralFramingEngine:
             y_min, y_max = min(ys), max(ys)
             remaining = []
             removed = []
+            # Ramp plates are structural connectors between a level's own
+            # stepped sub-elevations (2026-07-13, "remove top slab" feature)
+            # -- not paint-derived like floor_slab, and the only physical
+            # way to move between L1's -0/-5/-10ft steps. Always kept
+            # regardless of how deep excavation reached, or forcing a
+            # uniform minimum dig depth (see TerracingEngine.remove_top_slab)
+            # would strand one step from another.
+            is_ramp = slab.get("kind") == "ramp_slab"
             for gx in range(nx):
                 for gy in range(nz):
                     v = self.te.voxels[gx][gy]
                     if not (x_min <= v.wx <= x_max and y_min <= v.wy <= y_max):
+                        continue
+                    if is_ramp:
+                        remaining.append((gx, gy, v.wx, v.wy))
                         continue
                     # A cell is only "removed" if it's genuinely excavated
                     # (v.z_ft < 0) AND that cut reached at or below this
@@ -1380,11 +1519,15 @@ class BuildingMassEngine:
 
     def __init__(self, buildings):
         """buildings: list of dicts, each {x_ft, y_ft, width_ft, depth_ft,
-        height_ft, setback_ft=0.0}. x_ft/y_ft is the footprint's real-feet
-        origin (not center), snapped to the nearest STRUCTURAL_BAY_FT grid
-        line -- same convention StructuralFramingEngine._column_grid() uses
-        for real columns -- so massing reads as intentional, bay-aligned
-        architecture rather than an arbitrary floating box."""
+        height_ft, setback_ft=0.0, z_ft=0.0}. x_ft/y_ft is the footprint's
+        real-feet origin (not center), snapped to the nearest
+        STRUCTURAL_BAY_FT grid line -- same convention
+        StructuralFramingEngine._column_grid() uses for real columns -- so
+        massing reads as intentional, bay-aligned architecture rather than
+        an arbitrary floating box. z_ft (2026-07-13 "remove top slab"
+        feature) is the real base elevation the footprint actually sits on
+        -- 0.0 (grade) unless program placement supplied a real
+        floor_elev_ft (see logic/program_placement.py)."""
         self.buildings = buildings
 
     @staticmethod
@@ -1398,9 +1541,14 @@ class BuildingMassEngine:
             width = max(b["width_ft"] - 2 * setback, 1.0)
             depth = max(b["depth_ft"] - 2 * setback, 1.0)
             height = b["height_ft"]
+            base_z = b.get("z_ft", 0.0)
             ox, oy = self._snap(b["x_ft"]), self._snap(b["y_ft"])
             cx, cy = ox + width / 2, oy + depth / 2
-            spec = StructuralElement("building_mass", cx, cy, height, height, scale=width)
+            # StructuralElement's z_top_ft is the TOP of the box, extending
+            # DOWNWARD by height_ft (same top-anchored convention every real
+            # slab/column element in this pipeline already uses) -- top =
+            # base + height, not just height, once base_z can be non-zero.
+            spec = StructuralElement("building_mass", cx, cy, base_z + height, height, scale=width)
             spec.scale_y = depth
             specs.append(spec)
         return specs

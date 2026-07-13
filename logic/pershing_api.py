@@ -17,7 +17,7 @@ import shutil
 import sys
 import time
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -41,11 +41,23 @@ from logic.program_placement import load_programs, place_programs  # noqa: E402
 # since both modules define a same-named find_latest_csv().
 from foot_traffic import (  # noqa: E402
     load_foot_traffic_hotspots_from_csv, find_latest_csv as find_latest_foot_traffic_csv)
+# noise_survey.py mirrors the same CSV contract, a third real-data channel
+# (2026-07-12) -- see terracing_engine.py's SANCTUARY_NOISE_THRESHOLD/
+# data_alpha for what it actually feeds.
+from noise_survey import (  # noqa: E402
+    load_noise_hotspots_from_csv, find_latest_csv as find_latest_noise_csv)
 from circulation_network import CirculationNetworkEngine  # noqa: E402
 # Aliased -- this module defines its own juror_chat() function below (the
 # route handler), which would otherwise shadow the imported module of the
 # same name at module scope.
 from logic import juror_chat as juror_chat_agent  # noqa: E402
+# Precedent Remixer (2026-07-12): reuses the OLD app's already-built,
+# already-working AI layer-picker (generate_spatial_seed, which itself
+# falls back Gemini -> local Ollama, see ai_synthesizer.query_ai) and
+# offset composer (remix_layers) rather than re-deriving either -- see
+# remix_precedent() below for what's actually NEW here.
+from logic.ai_synthesizer import generate_spatial_seed  # noqa: E402
+from logic.urban_engine import remix_layers  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights_cache.json")
@@ -107,6 +119,12 @@ AMENITY_CSV_PATH = find_latest_csv()
 # of what the frontend's toggle is set to.
 FOOT_TRAFFIC_CSV_PATH = find_latest_foot_traffic_csv()
 
+# Same lookup, third real-data channel (2026-07-12) -- None if
+# data/noise_survey/ has no CSV yet, in which case rebuild() stays on
+# TerracingEngine's own DEFAULT_NOISE_HOTSPOTS placeholder regardless of
+# what the frontend's toggle is set to.
+NOISE_CSV_PATH = find_latest_noise_csv()
+
 # Bootstrap all 6 grids: prefer this app's own saved state (PAINT_STATE_PATH,
 # written by bake() below every time you paint+bake) if one exists -- that's
 # real prior work, more recent than anything else. Otherwise fall back to
@@ -148,6 +166,13 @@ if os.path.exists(PAINT_STATE_PATH):
         })
     GREENSCAPE_MASK = _paint_state["greenscape"]
     AMENITY_RESTING_MASK = _paint_state["amenity_resting"]
+    # DECK_MASK (2026-07-13, "remove top slab" excavation/hardscape
+    # decouple) -- .get() with an empty-mask fallback, not a hard key
+    # lookup like the others above: this field is new, so any
+    # PAINT_STATE_PATH written before today simply won't have it yet, and
+    # (unlike the water_shade split) there's no ambiguity to migrate --
+    # "no deck painted yet" is exactly what an empty mask already means.
+    DECK_MASK = _paint_state.get("deck") or _empty_mask(NX, NZ)
 elif os.path.exists(SKETCH_CACHE_PATH):
     with open(SKETCH_CACHE_PATH) as f:
         _cache = json.load(f)
@@ -157,6 +182,7 @@ elif os.path.exists(SKETCH_CACHE_PATH):
     SHADE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
+    DECK_MASK = _empty_mask(NX, NZ)
 else:
     SKETCH_WEIGHTS = _empty_mask(NX, NZ)
     HARDSCAPE_MASK = _empty_mask(NX, NZ)
@@ -164,6 +190,7 @@ else:
     SHADE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
+    DECK_MASK = _empty_mask(NX, NZ)
 
 # The sketch image the paint canvas displays as its background -- starts
 # as whatever's already in data/sketches/ (same lookup blender_cockpit.py
@@ -215,33 +242,45 @@ class BakeGrids(BaseModel):
     shade: list[list[bool]]
     greenscape: list[list[bool]]
     amenity_resting: list[list[bool]]
+    # 2026-07-13 "remove top slab" excavation/hardscape decouple: a
+    # DEDICATED "keep this as a deck" signal, separate from hardscape paint
+    # (which keeps its existing meaning everywhere else -- program scoring,
+    # and the normal score-driven canyon dig's own hardscape veto, both
+    # stay exactly as before). See TerracingEngine._z_for_voxel. Defaulted
+    # (unlike the other six grids) so legacy_diagram_bridge.py's
+    # preview_import() -- which predates this field and has no equivalent
+    # signal to convert -- can keep calling bakePaint() without needing its
+    # own update; "no deck painted" is exactly what an empty default means.
+    deck: list[list[bool]] = Field(default_factory=lambda: _empty_mask(NX, NZ))
 
 
 def _save_paint_state():
-    """Persist all 6 live grids to PAINT_STATE_PATH (2026-07-10 persistence
-    supplement, water/shade split 2026-07-11) so a backend restart doesn't
-    lose painted work -- previously bake() only updated the in-memory
-    globals, never written anywhere. See _atomic_write_json for the actual
-    write mechanics (shared with the one-time bootstrap migration above)."""
+    """Persist all 7 live grids to PAINT_STATE_PATH (2026-07-10 persistence
+    supplement, water/shade split 2026-07-11, deck mask 2026-07-13) so a
+    backend restart doesn't lose painted work -- previously bake() only
+    updated the in-memory globals, never written anywhere. See
+    _atomic_write_json for the actual write mechanics (shared with the
+    one-time bootstrap migration above)."""
     _atomic_write_json(PAINT_STATE_PATH, {
         "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water": WATER_MASK, "shade": SHADE_MASK,
-        "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK,
+        "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK, "deck": DECK_MASK,
     })
 
 
 def bake(grids: BakeGrids):
-    """Overwrite the six live grids from a completed paint session and
+    """Overwrite the seven live grids from a completed paint session and
     persist them (see _save_paint_state). Does NOT trigger a rebuild itself
     -- the frontend calls /rebuild right after, reusing its existing
     rebuild path rather than duplicating it here with a second copy of the
     current slider params."""
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, DECK_MASK
     SKETCH_WEIGHTS = grids.canyon
     HARDSCAPE_MASK = grids.hardscape
     WATER_MASK = grids.water
     SHADE_MASK = grids.shade
     GREENSCAPE_MASK = grids.greenscape
     AMENITY_RESTING_MASK = grids.amenity_resting
+    DECK_MASK = grids.deck
     _save_paint_state()
     return {
         "status": "ok",
@@ -252,6 +291,7 @@ def bake(grids: BakeGrids):
             "shade": sum(1 for row in SHADE_MASK for v in row if v),
             "greenscape": sum(1 for row in GREENSCAPE_MASK for v in row if v),
             "amenity_resting": sum(1 for row in AMENITY_RESTING_MASK for v in row if v),
+            "deck": sum(1 for row in DECK_MASK for v in row if v),
         },
     }
 
@@ -266,6 +306,12 @@ class BuildingSpec(BaseModel):
     depth_ft: float = 30.0
     height_ft: float = 20.0
     setback_ft: float = 0.0
+    # Base elevation the building's footprint actually sits on (2026-07-13
+    # "remove top slab" feature) -- 0.0 (grade) unless a program-placement-
+    # derived building_spec supplies its own real floor_elev_ft. User-placed
+    # buildings (via the UI/API, not program placement) default to grade,
+    # same pre-existing behavior as before this field existed.
+    z_ft: float = 0.0
 
 
 class RebuildParams(BaseModel):
@@ -276,7 +322,21 @@ class RebuildParams(BaseModel):
     shoring_density: float = 1.0
     use_real_amenity_data: bool = AMENITY_CSV_PATH is not None
     use_real_foot_traffic_data: bool = FOOT_TRAFFIC_CSV_PATH is not None
+    # Blend weight for noise_hotspots' effect on SANCTUARY typology only --
+    # see terracing_engine.py's SANCTUARY_NOISE_THRESHOLD/data_alpha
+    # docstring. Defaults to full effect (1.0), unlike sketch_alpha's
+    # designer-dominant 0.75 default, since this channel doesn't touch
+    # excavation depth at all -- there's no equivalent risk of data
+    # silently overriding the designer's dig.
+    data_alpha: float = 1.0
+    use_real_noise_data: bool = NOISE_CSV_PATH is not None
     buildings: list[BuildingSpec] = []
+    # 2026-07-13 "remove top slab" feature: forces excavation to clear the
+    # SURFACE slab everywhere except designer-protected (painted hardscape)
+    # cells -- see terracing_engine.py's TerracingEngine.remove_top_slab/
+    # _z_for_voxel. Real column geometry is unaffected either way (already
+    # always rendered full-height regardless of this).
+    remove_top_slab: bool = False
 
 
 def get_config():
@@ -295,6 +355,7 @@ def get_config():
         # instead of just silently no-op'ing when no CSV exists yet.
         "amenity_csv": os.path.basename(AMENITY_CSV_PATH) if AMENITY_CSV_PATH else None,
         "foot_traffic_csv": os.path.basename(FOOT_TRAFFIC_CSV_PATH) if FOOT_TRAFFIC_CSV_PATH else None,
+        "noise_csv": os.path.basename(NOISE_CSV_PATH) if NOISE_CSV_PATH else None,
     }
 
 
@@ -310,6 +371,7 @@ def _serialize_specs(specs):
             "x2_ft": s.x2_ft, "y2_ft": s.y2_ft, "z2_ft": s.z2_ft, "radius_ft": s.radius_ft,
             "scale_y": s.scale_y,
             "column_id": s.column_id, "column_id2": s.column_id2, "slab_id": s.slab_id,
+            "source": s.source,
         }
         for s in specs
     ]
@@ -318,12 +380,12 @@ def _serialize_specs(specs):
 def _run_pipeline(params: RebuildParams):
     """
     Same math blender_cockpit.rebuild_all() runs, minus the bpy mesh build
-    -- builds the TerracingEngine/StructuralFramingEngine/TypologyAssetEngine/
-    BuildingMassEngine stack from RebuildParams. Shared by rebuild() and
-    grow_network(), which both need the identical terrain-shaping setup
-    (the grown network must reflect whatever canyon/amenity state is
-    currently on screen, not a separately-derived copy of it) -- extracted
-    here specifically so the two can't silently drift out of sync.
+    -- builds the TerracingEngine/StructuralFramingEngine/TypologyAssetEngine
+    stack from RebuildParams. Shared by rebuild() and grow_network(), which
+    both need the identical terrain-shaping setup (the grown network must
+    reflect whatever canyon/amenity state is currently on screen, not a
+    separately-derived copy of it) -- extracted here specifically so the two
+    can't silently drift out of sync.
 
     hardscape_regions is applied unconditionally -- there's no separate
     "protect hardscape" toggle anymore (removed 2026-07-06): with painting
@@ -331,7 +393,20 @@ def _run_pipeline(params: RebuildParams):
     "protect this," so a second switch to also enable that protection was
     redundant, dead-looking UI.
 
-    Returns (engine, voxels, typology_specs, all_specs, meta) -- voxels is
+    Building mass is deliberately NOT computed here (2026-07-12) even
+    though params.buildings is available -- program-zone-derived building
+    specs (see logic/program_placement.py's building_spec) are only knowable
+    *after* engine/voxels exist (they come from placing programs onto the
+    bay grid), and building mass has zero feedback into excavation/framing/
+    typology (purely additive). Rather than call the bay-grid/program-zone
+    derivation from inside here (which would need its own engine/voxels and
+    reintroduce exactly the double-pipeline-run problem
+    _bay_grid_from_engine()/_program_zones_from_engine() exist to avoid),
+    rebuild() computes buildings itself, after this returns, from both
+    params.buildings and the programmatic zones it derives from this same
+    engine/voxels.
+
+    Returns (engine, voxels, typology_specs, base_specs, meta) -- voxels is
     the flat, already-classified list engine.run() returns (every voxel,
     not just excavated ones: an unexcavated voxel still gets a solid block
     built from floor_z up to grade, so the un-cut majority of the site
@@ -341,7 +416,8 @@ def _run_pipeline(params: RebuildParams):
     entire base slab from the web viewport). typology_specs is
     TypologyAssetEngine's own output alone (grow_network() needs these
     positions as circulation-network attractors, separate from the full
-    all_specs list rebuild() renders).
+    base_specs list rebuild() renders). base_specs does NOT include
+    buildings -- see above.
     """
     hardscape_regions = [{"mask": HARDSCAPE_MASK}]
     transit_falloff_ft = params.canyon_width * STRUCTURAL_BAY_FT
@@ -362,6 +438,12 @@ def _run_pipeline(params: RebuildParams):
         foot_traffic_hotspots = load_foot_traffic_hotspots_from_csv(
             FOOT_TRAFFIC_CSV_PATH, REAL_GEOMETRY["site"]["width_ft"], REAL_GEOMETRY["site"]["length_ft"])
 
+    # Same conditional-load pattern, third real-data channel (2026-07-12).
+    noise_hotspots = None
+    if params.use_real_noise_data and NOISE_CSV_PATH:
+        noise_hotspots = load_noise_hotspots_from_csv(
+            NOISE_CSV_PATH, REAL_GEOMETRY["site"]["width_ft"], REAL_GEOMETRY["site"]["length_ft"])
+
     engine = TerracingEngine(
         REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=params.sketch_alpha,
         hardscape_regions=hardscape_regions,
@@ -370,8 +452,12 @@ def _run_pipeline(params: RebuildParams):
         shade_regions=[{"mask": SHADE_MASK}],
         greenscape_regions=[{"mask": GREENSCAPE_MASK}],
         amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}],
+        deck_regions=[{"mask": DECK_MASK}],
         deficit_hotspots=deficit_hotspots,
         foot_traffic_hotspots=foot_traffic_hotspots,
+        noise_hotspots=noise_hotspots,
+        data_alpha=params.data_alpha,
+        remove_top_slab=params.remove_top_slab,
     )
     voxels = engine.run(phase=3)
 
@@ -381,13 +467,13 @@ def _run_pipeline(params: RebuildParams):
 
     typology = TypologyAssetEngine(REAL_GEOMETRY, engine)
     typology_specs = typology.run()
-    buildings = BuildingMassEngine([b.model_dump() for b in params.buildings]).run()
-    all_specs = result["harvested_blocks"] + result["structural"] + typology_specs + buildings
+    base_specs = result["harvested_blocks"] + result["structural"] + typology_specs
 
     meta = {
         "max_canyon_depth_ft": max_canyon_depth_ft,
         "used_real_amenity_data": deficit_hotspots is not None,
         "used_real_foot_traffic_data": foot_traffic_hotspots is not None,
+        "used_real_noise_data": noise_hotspots is not None,
         "slab_harvest_tons": result["slab_harvest_tons"],
         # Real-slab-driven remaining/removed cells (2026-07-09 real-slab-
         # driven harvest supplement) -- depends on this rebuild's live
@@ -396,11 +482,70 @@ def _run_pipeline(params: RebuildParams):
         # through from REAL_GEOMETRY as-is.
         "real_slab_fragments": structural.real_slab_fragments(),
     }
-    return engine, voxels, typology_specs, all_specs, meta
+    return engine, voxels, typology_specs, base_specs, meta
 
 
-def get_bay_grid():
+def _bay_floor_elevations(engine, voxels, nx_bays, nz_bays, bays_per_side=3):
     """
+    Per-bay "what real surface is actually exposed now" elevation
+    (2026-07-13, "remove top slab" feature) -- reuses
+    StructuralFramingEngine.classify_terrain_cells() (already does exactly
+    "per-cell, picks the shallowest not-yet-excavated real slab", see its
+    own docstring) rather than re-deriving that logic. A throwaway
+    StructuralFramingEngine here is cheap relative to a full _run_pipeline
+    call -- it only needs build_column_slab_graph() (pure function of
+    REAL_GEOMETRY, not excavation state) plus one more nx*nz classification
+    pass, not a second full terracing/typology/steel-frame run.
+
+    Mode (most common value), not mean, per bay: floor elevation is a
+    fundamentally discrete/categorical quantity (which real slab, if any,
+    is exposed) -- aggregate_grid_to_bays' usual plain-average approach
+    (fine for continuous fields like transit_influence) would blend two
+    genuinely different real elevations into a physically meaningless
+    number wherever a bay straddles a step between them.
+
+    Cells with no real slab exposed at all (classify_terrain_cells()
+    returns None -- excavated past every real slab present there, or
+    outside every slab's footprint) fall back to 0.0 (grade) -- a
+    reasonable default absent any real precedent, and matches this
+    feature's pre-existing behavior when remove_top_slab is off (nearly
+    every cell resolves to the SURFACE slab's ~0.25ft elevation either way,
+    a difference too small to matter for placing programs/buildings on).
+    """
+    structural = StructuralFramingEngine(REAL_GEOMETRY, engine)
+    classified = structural.classify_terrain_cells()
+    slab_z_by_key = {slab_key(s): s["z_top_ft"] for s in REAL_GEOMETRY.get("real_slabs", [])}
+
+    nx, nz = engine.nx, engine.nz
+    out = [[0.0] * nz_bays for _ in range(nx_bays)]
+    for bx in range(nx_bays):
+        for bz in range(nz_bays):
+            counts = {}
+            for dx in range(bays_per_side):
+                gx = bx * bays_per_side + dx
+                if gx >= nx:
+                    continue
+                for dz in range(bays_per_side):
+                    gz = bz * bays_per_side + dz
+                    if gz >= nz:
+                        continue
+                    k = classified.get((gx, gz))
+                    z = slab_z_by_key.get(k, 0.0) if k is not None else 0.0
+                    counts[z] = counts.get(z, 0) + 1
+            out[bx][bz] = max(counts, key=counts.get) if counts else 0.0
+    return out
+
+
+def _bay_grid_from_engine(engine, voxels):
+    """
+    Body of get_bay_grid(), extracted (2026-07-12) to take an already-
+    computed (engine, voxels) pair instead of running _run_pipeline itself
+    -- lets rebuild()/grow_network() derive the bay grid from their OWN
+    already-computed, live-params engine/voxels without paying for a
+    second, default-params _run_pipeline call. get_bay_grid() below (and
+    the standalone GET /api/pershing/bay-grid route) still get a fresh
+    default-params engine themselves and call this.
+
     Returns the 27ft structural bay grid (build_bay_grid(), previously only
     an ephemeral private dict inside StructuralFramingEngine._column_grid())
     plus per-bay aggregated placement signals, for logic/program_placement.py
@@ -415,15 +560,8 @@ def get_bay_grid():
     expressed design intent; the SECONDARY signal is the existing
     transit/deficit fields from TerracingEngine, meant as a tie-breaker when
     a site (or region of one) has no painted/imported intent yet.
-
-    Uses default RebuildParams() rather than whatever sliders the frontend
-    currently has set: the primary signal doesn't depend on slider state at
-    all, and the secondary tie-breaker only needs to be roughly current, not
-    pixel-perfect against live sliders -- rebuild() remains the source of
-    truth for that.
     """
     bay_cells, nx_bays, nz_bays = build_bay_grid(REAL_GEOMETRY)
-    engine, voxels, _typology_specs, _all_specs, _meta = _run_pipeline(RebuildParams())
 
     greenscape_bay = aggregate_grid_to_bays(GREENSCAPE_MASK, nx_bays, nz_bays)
     hardscape_bay = aggregate_grid_to_bays(HARDSCAPE_MASK, nx_bays, nz_bays)
@@ -433,6 +571,10 @@ def get_bay_grid():
                                           nx_bays, nz_bays)
     deficit_bay = aggregate_grid_to_bays(voxel_attr_grid(voxels, engine.nx, engine.nz, "deficit_influence"),
                                           nx_bays, nz_bays)
+    # 2026-07-13 "remove top slab" feature -- see _bay_floor_elevations()'s
+    # own docstring for why this is a separate mode-based aggregation, not
+    # another aggregate_grid_to_bays() mean.
+    floor_elev_bay = _bay_floor_elevations(engine, voxels, nx_bays, nz_bays)
 
     bays = [
         {
@@ -441,11 +583,37 @@ def get_bay_grid():
             "greenscape": greenscape_bay[gx][gy], "hardscape": hardscape_bay[gx][gy],
             "amenity_resting": amenity_resting_bay[gx][gy], "water": water_bay[gx][gy],
             "transit_influence": transit_bay[gx][gy], "deficit_influence": deficit_bay[gx][gy],
+            "floor_elev_ft": floor_elev_bay[gx][gy],
         }
         for (gx, gy), cell in bay_cells.items()
     ]
 
     return {"nx_bays": nx_bays, "nz_bays": nz_bays, "bay_ft": STRUCTURAL_BAY_FT, "bays": bays}
+
+
+def get_bay_grid():
+    """
+    Thin default-params wrapper around _bay_grid_from_engine() -- still used
+    by the standalone GET /api/pershing/bay-grid route and get_program_zones()
+    below, i.e. any caller that doesn't already have a live engine/voxels
+    pair of its own to reuse.
+
+    Uses default RebuildParams() rather than whatever sliders the frontend
+    currently has set: the primary (painted/imported mask) signal doesn't
+    depend on slider state at all, and the secondary (transit/deficit)
+    tie-breaker only needs to be roughly current, not pixel-perfect against
+    live sliders -- rebuild() remains the source of truth for that.
+    """
+    engine, voxels, *_ = _run_pipeline(RebuildParams())
+    return _bay_grid_from_engine(engine, voxels)
+
+
+def _program_zones_from_engine(engine, voxels):
+    """Body of get_program_zones(), extracted (2026-07-12) the same way as
+    _bay_grid_from_engine() -- see that function's docstring for why."""
+    bay_grid = _bay_grid_from_engine(engine, voxels)
+    programs = load_programs()
+    return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs)}
 
 
 def get_program_zones():
@@ -458,18 +626,100 @@ def get_program_zones():
     bays it claimed, achieved vs. target square footage, and whether it was
     fully satisfied.
 
-    Recomputed on every call rather than cached -- reflects whatever masks
-    are currently painted/imported, same as get_bay_grid() itself.
+    Thin default-params wrapper around _program_zones_from_engine() -- see
+    get_bay_grid()'s docstring for why this uses RebuildParams() defaults
+    rather than live slider state. Recomputed on every call rather than
+    cached -- reflects whatever masks are currently painted/imported.
     """
-    bay_grid = get_bay_grid()
-    programs = load_programs()
-    return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs)}
+    engine, voxels, *_ = _run_pipeline(RebuildParams())
+    return _program_zones_from_engine(engine, voxels)
+
+
+_QUADRANT_FEATURES = [
+    ("is_shade", "SHADE"), ("is_water", "WATER"), ("is_greenscape", "GREENSCAPE"),
+    ("is_amenity_resting", "AMENITY_RESTING"), ("is_hardscape", "HARDSCAPE"),
+]
+
+
+def _build_spatial_summary(voxels, zones, engine):
+    """
+    Turns the full per-voxel classification (voxels, already computed by
+    this same rebuild()'s _run_pipeline() call -- no extra work) plus
+    placed program zones into a list[str] of plain-language observations,
+    the exact shape logic/juror_chat.py's critique_design()/
+    _build_critique_prompt() expect -- deliberately coarse (quadrant-level,
+    not per-voxel) since "The Metabolist" persona is meant to receive a
+    "simplified summary," not the raw grid (see CRITIC_PERSONA_SYSTEM_TEXT).
+
+    Cheap and synchronous (no LLM call here) -- included in every rebuild()
+    response so the frontend always has fresh grounding data on hand before
+    a juror ever clicks "Ask The Metabolist" (that button then just POSTs
+    this back, see critique() below -- kept as a separate on-demand call
+    since _post_to_ollama has up to a 30s timeout, too slow to fold into
+    every live-slider rebuild).
+    """
+    mid_x, mid_y = engine.nx / 2.0, engine.nz / 2.0
+
+    def quadrant_of(gx, gy):
+        ns = "north" if gy >= mid_y else "south"
+        ew = "east" if gx >= mid_x else "west"
+        return f"{ns}{ew}"
+
+    counts = {
+        q: {"total": 0, "typologies": {}, **{label: 0 for _, label in _QUADRANT_FEATURES}}
+        for q in ("northeast", "northwest", "southeast", "southwest")
+    }
+    for v in voxels:
+        q = counts[quadrant_of(v.gx, v.gy)]
+        q["total"] += 1
+        for attr, label in _QUADRANT_FEATURES:
+            if getattr(v, attr):
+                q[label] += 1
+        if v.typology:
+            q["typologies"][v.typology] = q["typologies"].get(v.typology, 0) + 1
+
+    lines = []
+    for q_name, q in counts.items():
+        total = q["total"] or 1
+        dominant_attr, dominant_label = max(_QUADRANT_FEATURES, key=lambda f: q[f[1]])
+        if q[dominant_label] / total >= 0.15:
+            lines.append(f"The {q_name} area is largely {dominant_label} "
+                         f"({q[dominant_label]}/{total} voxels there).")
+        if q["typologies"]:
+            top_typology = max(q["typologies"], key=q["typologies"].get)
+            if q["typologies"][top_typology] >= 3:
+                lines.append(f"A cluster of {top_typology} typology is present in the {q_name}.")
+
+    for zone in zones:
+        entrance = zone.get("entrance")
+        if entrance is None:
+            continue
+        gx = min(max(int(entrance["x_ft"] // engine.voxel_ft), 0), engine.nx - 1)
+        gy = min(max(int(entrance["y_ft"] // engine.voxel_ft), 0), engine.nz - 1)
+        lines.append(f"The '{zone['program_item']}' program zone ({zone['category']}) "
+                     f"is located in the {quadrant_of(gx, gy)}.")
+
+    return lines
 
 
 def rebuild(params: RebuildParams):
     """Returns JSON voxels + structural/typology specs for the frontend to
-    render however it likes (Three.js instancing, etc)."""
-    engine, voxels, typology_specs, all_specs, meta = _run_pipeline(params)
+    render however it likes (Three.js instancing, etc).
+
+    Buildings (2026-07-12): merges params.buildings (user-placed, via the
+    UI/API) with programmatic building_specs derived from placing programs
+    onto this SAME already-computed engine/voxels (_program_zones_from_engine,
+    not get_program_zones() -- avoids a second, default-params pipeline
+    run). Both sources render together, one doesn't replace the other."""
+    engine, voxels, typology_specs, base_specs, meta = _run_pipeline(params)
+
+    zones = _program_zones_from_engine(engine, voxels)["zones"]
+    programmatic_buildings = [
+        BuildingSpec(**z["building_spec"]) for z in zones if z["building_spec"]
+    ]
+    buildings = BuildingMassEngine(
+        [b.model_dump() for b in (*params.buildings, *programmatic_buildings)]).run()
+    all_specs = base_specs + buildings
 
     kind_counts = {}
     for s in all_specs:
@@ -484,9 +734,18 @@ def rebuild(params: RebuildParams):
             for v in voxels
         ],
         "structural": _serialize_specs(all_specs),
+        # 2026-07-12: lets App.jsx refresh placed program zones on every
+        # rebuild instead of only fetching them once at mount (they were
+        # already computed above for the buildings step, so this is free).
+        "program_zones": zones,
+        # 2026-07-12: grounding data for "The Metabolist" critique -- see
+        # _build_spatial_summary()'s docstring for why this is included
+        # here (cheap) but the actual LLM call is a separate endpoint (slow).
+        "spatial_summary": _build_spatial_summary(voxels, zones, engine),
         "kind_counts": kind_counts,
         "used_real_amenity_data": meta["used_real_amenity_data"],
         "used_real_foot_traffic_data": meta["used_real_foot_traffic_data"],
+        "used_real_noise_data": meta["used_real_noise_data"],
         "slab_harvest_tons": meta["slab_harvest_tons"],
         "max_canyon_depth_ft": meta["max_canyon_depth_ft"],
         "voxel_ft": VOXEL_FT,
@@ -524,6 +783,8 @@ def rebuild(params: RebuildParams):
 class NetworkParams(BaseModel):
     motivator_weights: dict[str, float] = {
         "shade": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+        # Placed program-zone entrances (2026-07-12) -- see grow_network().
+        "program": 1.0,
     }
     step_ft: float = 15.0
     max_iterations: int = 300
@@ -537,9 +798,10 @@ class GrowNetworkRequest(BaseModel):
 def grow_network(payload: GrowNetworkRequest):
     """
     Grows a Space Colonization pedestrian circulation network from the
-    real Metro entrance on top of whatever canyon/amenity state
-    payload.rebuild describes -- runs the exact same _run_pipeline() setup
-    rebuild() uses so the network reflects the current terrain, not a
+    real Metro entrance (plus fabricated site-boundary entries, see
+    CirculationNetworkEngine.__init__) on top of whatever canyon/amenity
+    state payload.rebuild describes -- runs the exact same _run_pipeline()
+    setup rebuild() uses so the network reflects the current terrain, not a
     separately-derived snapshot.
 
     Synchronous, not an async job like the headless-Blender build tier --
@@ -551,13 +813,19 @@ def grow_network(payload: GrowNetworkRequest):
     machinery for an operation with no external process and no meaningful
     blocking risk.
     """
-    engine, _voxels, typology_specs, _all_specs, _meta = _run_pipeline(payload.rebuild)
+    engine, voxels, typology_specs, _base_specs, _meta = _run_pipeline(payload.rebuild)
+    # 2026-07-12: reuses this call's own already-computed engine/voxels via
+    # _program_zones_from_engine (not get_program_zones(), which would
+    # trigger a second, default-params _run_pipeline run) so placed program
+    # zones can feed CirculationNetworkEngine's "program" attractors below.
+    zones = _program_zones_from_engine(engine, voxels)["zones"]
 
     net = CirculationNetworkEngine(
         REAL_GEOMETRY, engine, typology_specs,
         motivator_weights=payload.network.motivator_weights,
         step_ft=payload.network.step_ft,
         max_iterations=payload.network.max_iterations,
+        zones=zones,
     )
     specs = net.run()
 
@@ -593,6 +861,88 @@ def juror_chat(payload: JurorChatRequest):
     site_facts = get_config()
     context = {**site_facts, **payload.context}
     return juror_chat_agent.chat(payload.message, context)
+
+
+class CritiqueRequest(BaseModel):
+    # The frontend already has this from its last rebuild()'s
+    # "spatial_summary" key -- forwarded here verbatim rather than this
+    # endpoint recomputing it server-side, same "frontend already has the
+    # grounding data, just forward it" pattern JurorChatRequest.context uses
+    # above.
+    spatial_summary: list[str]
+
+
+def critique(payload: CritiqueRequest):
+    """"The Metabolist" -- on-demand qualitative critique, deliberately a
+    SEPARATE endpoint from rebuild() (not folded into every rebuild
+    response) since logic/juror_chat.py's _post_to_ollama has up to a 30s
+    timeout; every live-slider rebuild blocking on that would make editing
+    feel broken. See juror_chat.py's CRITIC_PERSONA_SYSTEM_TEXT for the
+    persona/prompt."""
+    return {"critique": juror_chat_agent.critique_design(payload.spatial_summary)}
+
+
+class RemixPrecedentRequest(BaseModel):
+    prompt: str
+
+
+# Same layerId substring convention static/js/state.js's getProgramStats()
+# classification uses (SHADE/GREEN/WATER/ATTRACTOR|UNIQUE, else hardscape)
+# -- reused here so a precedent layer's inferred paint-mask role matches
+# what a human would expect from that layer's own visual category, not a
+# new, separate taxonomy. "excavation"/canyon has no equivalent in the OLD
+# app's SOFT/HARD/PROG/BLUE/SHADE categories (canyon is a NEW-app-only
+# concept), so no layer infers that role automatically -- see
+# remix_precedent()'s docstring.
+_ROLE_BY_LAYER_SUBSTRING = [
+    ("SHADE", "shade"), ("GREEN", "greenscape"), ("WATER", "water"),
+    ("ATTRACTOR", "amenity_resting"), ("UNIQUE", "amenity_resting"),
+]
+
+
+def _infer_role(layer_id):
+    for substr, role in _ROLE_BY_LAYER_SUBSTRING:
+        if substr in layer_id:
+            return role
+    return "hardscape"
+
+
+def remix_precedent(payload: RemixPrecedentRequest):
+    """
+    "Precedent Remixer" (2026-07-12) -- MVP first slice of the workflow
+    discussed in the 2026-07-12 Gemini planning session (see
+    archive/memoryMachine/STRATEGY_SUMMARY_07122026.md), replacing the OLD
+    app's dead-end (image-only, no editable data model) diagram generator
+    with one whose output can actually drive this app's live paint-mask
+    pipeline.
+
+    Reuses two already-built, already-working pieces rather than
+    re-deriving either: logic.ai_synthesizer.generate_spatial_seed() (the
+    OLD app's LLM layer-picker -- Gemini API if configured, else falls back
+    to local Ollama, see its own query_ai()) selects up to 5 precedent
+    layers + cardinal placements for the given text prompt; logic.
+    urban_engine.remix_layers() converts that into concrete site/layerId/
+    transform offsets, the exact shape static/js/state.js's MemoryState.stack
+    already knows how to render and sample. The only genuinely NEW piece
+    here is _infer_role(): tagging each selected layer with which of the
+    six live paint-mask categories (hardscape/water/shade/greenscape/
+    amenity_resting -- "excavation"/canyon has no automatic inference, not
+    part of the OLD app's taxonomy) it should feed into once applied.
+
+    MVP scope, deliberately: returns the curated layer stack + narrative for
+    the frontend to preview. Does NOT yet rasterize these layers into real
+    paint-mask grids or call bake() itself -- that conversion (precedent
+    SVG-unit space -> real site feet -> NX x NZ voxel grids) is real,
+    separate engineering (needs either a new Python SVG-group rasterizer or
+    reusing static/js's already-verified per-vertex rasterizer through a
+    headless-browser bridge) intentionally left as a following pass rather
+    than shipped untested under time pressure -- see the plan doc's Phase 8
+    notes.
+    """
+    seed_items, narrative = generate_spatial_seed(payload.prompt)
+    composed = remix_layers(seed_items)
+    layers = [{**item, "role": _infer_role(item["layerId"])} for item in composed]
+    return {"narrative": narrative, "layers": layers}
 
 
 class ArchiveSaveRequest(BaseModel):

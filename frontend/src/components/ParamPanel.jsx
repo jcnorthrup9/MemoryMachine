@@ -35,14 +35,16 @@ const AMENITY_KINDS = ['water_plane', 'water_cascade_block', 'misting_line', 'be
 
 const MOTIVATOR_LABELS = [
   ['shade', 'Shade'], ['water', 'Water'], ['rest', 'Rest'],
-  ['foot_traffic', 'Foot Traffic'], ['deficit', 'Deficit'],
+  ['foot_traffic', 'Foot Traffic'], ['deficit', 'Deficit'], ['program', 'Program Zones'],
 ];
 
 export default function ParamPanel({
   config, params, onParamsChange, onPaint, onOpenDiagramInput, onRebuild, slabHarvestTons, kindCounts,
-  usedRealAmenityData, usedRealFootTrafficData, circulationVoxelCount, rebuilding, blenderBuild,
+  usedRealAmenityData, usedRealFootTrafficData, usedRealNoiseData, circulationVoxelCount, sanctuaryVoxelCount,
+  rebuilding, blenderBuild,
   onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
-  onGrowNetwork, growingNetwork, networkResult,
+  onGrowNetwork, growingNetwork, networkResult, onAskMetabolist, critiquing, critique,
+  onOpenPrecedentRemixer,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
@@ -242,6 +244,50 @@ export default function ParamPanel({
 
       <div className="p-container border-b border-border space-y-3">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Noise / Sanctuary Quiet
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          A cell painted Greenscape+Amenity/Resting only keeps Sanctuary status if it's quiet enough --
+          Data Alpha controls how strongly real (or placeholder) noise data can override that painted
+          intent. 0 = noise data never disqualifies a painted Sanctuary; 1 = full effect.
+        </p>
+        <Slider
+          label="Data Alpha"
+          value={params.data_alpha}
+          min={0}
+          max={1}
+          step={0.01}
+          onChange={set('data_alpha')}
+          format={(v) => `${Math.round(v * 100)}%`}
+        />
+        <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer">
+          <input
+            type="checkbox"
+            checked={params.use_real_noise_data}
+            disabled={!config?.noise_csv}
+            onChange={(e) => set('use_real_noise_data')(e.target.checked)}
+            className="accent-accent"
+          />
+          Use Real Noise Data
+        </label>
+        <div className="font-mono-sm text-[11px] text-on-surface-variant">
+          {config?.noise_csv ? `csv: ${config.noise_csv}` : 'no noise CSV found -- using placeholder'}
+        </div>
+        <div className="font-mono-sm text-[11px] text-on-surface-variant">
+          {usedRealNoiseData === false && params.use_real_noise_data
+            ? 'placeholder in use (no CSV)'
+            : usedRealNoiseData === true
+              ? 'real noise data in use'
+              : null}
+        </div>
+        <div className="font-mono-sm text-mono-sm text-on-surface-variant">
+          Sanctuary cells:{' '}
+          <span className="text-accent">{sanctuaryVoxelCount ?? 0}</span>
+        </div>
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
           Diagram Input
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -253,6 +299,12 @@ export default function ParamPanel({
           className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
         >
           Import Diagram
+        </button>
+        <button
+          onClick={() => onOpenPrecedentRemixer?.()}
+          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
+        >
+          Precedent Remixer
         </button>
       </div>
 
@@ -307,10 +359,10 @@ export default function ParamPanel({
 
       <div className="p-container border-b border-border space-y-3">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Circulation Network (Space Colonization)
+          Circulation Growth Network
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Grows a real pedestrian network outward from the Metro entrance toward weighted motivators --
+          Grows a real pedestrian network outward from the site's entrances toward weighted motivators --
           explicit action, separate from the live rebuild loop above (a real growth simulation, not
           instant per-voxel math).
         </p>
@@ -351,6 +403,29 @@ export default function ParamPanel({
             <div>lookouts: <span className="text-accent">{networkResult.kind_counts.lookout_point ?? 0}</span></div>
             <div>attractors unconsumed: <span className="text-accent">{networkResult.attractors_unconsumed}</span></div>
           </div>
+        )}
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          The Metabolist
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          An AI architectural critic -- a qualitative, experiential read of the current design's spatial
+          layout, grounded in the last rebuild's shade/water/greenscape/program-zone summary. Manual,
+          separate from REBUILD below (the underlying model call can take up to ~30s).
+        </p>
+        <button
+          onClick={onAskMetabolist}
+          disabled={critiquing || !onAskMetabolist}
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          {critiquing ? 'Observing...' : 'Ask The Metabolist'}
+        </button>
+        {critique && (
+          <p className="font-mono-sm text-[11px] text-on-surface-variant italic leading-relaxed">
+            {critique}
+          </p>
         )}
       </div>
 

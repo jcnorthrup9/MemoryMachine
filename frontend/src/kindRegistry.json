@@ -22,7 +22,7 @@
     "tree_trunk": { "shape": "vertical_cylinder", "color": "#5a4530", "material_family": "vegetation" },
 
     "steel_turnbuckle": { "shape": "hex", "color": "#c4cdd6", "material_family": "structural_steel" },
-    "tree_canopy": { "shape": "hex", "color": "#3a8a3f", "material_family": "vegetation" },
+    "tree_canopy": { "shape": "hex", "color": "#1b5e20", "material_family": "vegetation" },
 
     "steel_strut": { "shape": "two_point", "color": "#9aa3ad", "material_family": "structural_steel" },
     "steel_tie_rod": { "shape": "two_point", "color": "#9aa3ad", "material_family": "structural_steel" },

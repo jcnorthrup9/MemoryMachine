@@ -16,4 +16,9 @@ export const PAINT_CATEGORIES = [
   { key: 'shade', label: 'Shade', color: '#bcaaa4' },
   { key: 'greenscape', label: 'Greenscape', color: '#2fae4a' },
   { key: 'amenity_resting', label: 'Amenity/Resting', color: '#e08a2f' },
+  // 2026-07-13 "remove top slab" excavation/hardscape decouple -- a
+  // DEDICATED "keep this as an access deck" signal, separate from
+  // hardscape (which stays purely a program-scoring/normal-dig-veto
+  // paint). See terracing_engine.py's TerracingEngine.deck_regions.
+  { key: 'deck', label: 'Deck (Keep on Top-Slab Removal)', color: '#9c27b0' },
 ];

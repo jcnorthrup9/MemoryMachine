@@ -51,6 +51,24 @@ CATEGORY_MASK_FIELD = {
 BUILDING_CATEGORIES = {"enrichment_civic", "health_care"}
 DEFAULT_BUILDING_HEIGHT_FT = 15.0
 
+# 2026-07-13 shape-aware growth: without this, the greedy region-grower has
+# zero shape constraint and blobs out into whatever organic outline scores
+# highest bay-by-bay -- confirmed live (2026-07-13) Soccer Field's placement
+# was an unrecognizable blob, not a rectangle, even though its target_sf
+# (~75,000 sqft) is itself a realistic regulation field size. Keyed by
+# program id (data/program_requirements.json's stable identifier, not the
+# display label) -- a placement-engine-internal tuning value, deliberately
+# NOT added to that JSON's own schema. Only programs where real-world shape
+# actually matters get an entry; everything else keeps today's fully
+# organic growth (a garden plot or picnic site has no real rectangularity
+# requirement). Values are long:short side ratios (FIFA regulation field is
+# ~100-110m x 64-75m, roughly 1.4-1.7; a volleyball court is 18m x 9m, 2.0).
+TARGET_ASPECT_RATIO = {
+    "soccer_field": 1.7,
+    "volleyball_court": 1.8,
+}
+SHAPE_WEIGHT = 8.0  # same rough scale as PRIMARY_WEIGHT below -- meaningfully competes in frontier scoring without dominating it entirely
+
 PRIMARY_WEIGHT = 10.0       # category-matched mask (greenscape/hardscape)
 AMENITY_RESTING_WEIGHT = 5.0  # general "designer marked this an amenity zone" bonus, all categories
 WATER_EXCLUSION_FRAC = 0.5   # bay >=50% water-masked is treated as unbuildable, not just penalized
@@ -103,6 +121,30 @@ def _bay_score(bay, category):
     return score
 
 
+def _aspect_ratio_bonus(island_bays, candidate, target_ratio):
+    """How much closer to target_ratio would the CURRENT ISLAND's bounding-
+    box long:short side ratio get if `candidate` were added? 0 if this
+    program has no target_aspect_ratio entry (the common case -- organic
+    growth, unchanged). `island_bays` is only the current contiguous
+    island's bays (see place_programs()), not every bay the program has
+    claimed overall -- a program that had to jump to a second disjoint area
+    (see place_programs()'s docstring) still gets each island individually
+    steered toward the target shape, rather than one meaningless bounding
+    box spanning both.
+    """
+    if target_ratio is None:
+        return 0.0
+    all_bays = island_bays + [candidate]
+    min_gx = min(b[0] for b in all_bays)
+    max_gx = max(b[0] for b in all_bays)
+    min_gy = min(b[1] for b in all_bays)
+    max_gy = max(b[1] for b in all_bays)
+    w = max_gx - min_gx + 1
+    d = max_gy - min_gy + 1
+    ratio = max(w, d) / min(w, d)  # >=1, orientation-agnostic (a program can run either axis)
+    return SHAPE_WEIGHT / (1.0 + abs(ratio - target_ratio))
+
+
 def place_programs(bay_grid, programs):
     """
     bay_grid: the dict returned by logic.pershing_api.get_bay_grid() (or an
@@ -112,12 +154,29 @@ def place_programs(bay_grid, programs):
     Greedy region-growing bin-packing: for each program in priority order,
     seed at the best-scoring unclaimed bay, then repeatedly grow into the
     best-scoring 4-connected unclaimed neighbor until cumulative bay area
-    meets target_sf or no valid neighbor remains (recording partial
-    fulfillment in that case -- the site can run out of room).
+    meets target_sf or no valid neighbor remains.
+
+    2026-07-13 "use all available space" update: for non-building
+    categories (BUILDING_CATEGORIES still need one real contiguous
+    footprint, unchanged), running out of 4-connected room no longer means
+    partial fulfillment -- the program instead jumps to the next best-
+    scoring UNCLAIMED bay anywhere on the site (no adjacency requirement)
+    and keeps growing from there. Confirmed live (2026-07-13) this was the
+    actual missing piece behind "programming doesn't use the parking
+    garage": the site's excavation depth genuinely varies bay-to-bay
+    (deeper near the transit entrance, shallower elsewhere -- there's no
+    separate "L1 grid" vs "L2 grid", just one bay grid whose floor_elev_ft
+    already reflects whichever real level is currently exposed there), so
+    once a program can span multiple disjoint areas instead of one blob, it
+    naturally ends up spanning multiple real elevations too, using
+    genuinely more of the site instead of exhausting one shallow region.
 
     Returns a list of {program_item, category, need_level, bays, achieved_sf,
     target_sf, fulfilled} dicts, one per input program, in the same priority
-    order they were placed.
+    order they were placed. Each bays entry is [gx, gy, floor_elev_ft] (not
+    just [gx, gy]) since a program can now legitimately span more than one
+    real elevation -- see floor_elev_ft below for the single-value (seed-
+    bay) summary kept for buildings/entrance-attractor purposes.
     """
     bays_by_index = {(b["gx"], b["gy"]): b for b in bay_grid["bays"]}
     nx_bays, nz_bays = bay_grid["nx_bays"], bay_grid["nz_bays"]
@@ -133,15 +192,24 @@ def place_programs(bay_grid, programs):
         }
         candidates = {idx: s for idx, s in candidates.items() if s is not None}
 
+        target_ratio = TARGET_ASPECT_RATIO.get(program["id"])
+
         placed_bays = []
+        # Index into placed_bays where the CURRENT contiguous island
+        # begins (2026-07-13 shape-aware growth) -- reset on every jump to
+        # a new disjoint area, so _aspect_ratio_bonus steers each island's
+        # OWN shape independently instead of one meaningless bounding box
+        # spanning every island the program has claimed so far.
+        island_start_idx = 0
         if candidates:
             seed = max(candidates, key=candidates.get)
             placed_bays.append(seed)
             claimed.add(seed)
 
             while len(placed_bays) * BAY_AREA_SF < program["target_sf"]:
+                current_island = placed_bays[island_start_idx:]
                 frontier = {}
-                for (gx, gy) in placed_bays:
+                for (gx, gy) in current_island:
                     for ngx, ngy in ((gx + 1, gy), (gx - 1, gy), (gx, gy + 1), (gx, gy - 1)):
                         idx = (ngx, ngy)
                         if not (0 <= ngx < nx_bays and 0 <= ngy < nz_bays):
@@ -150,13 +218,44 @@ def place_programs(bay_grid, programs):
                             continue
                         score = _bay_score(bays_by_index[idx], category)
                         if score is not None:
-                            frontier[idx] = score
-                if not frontier:
-                    break  # ran out of valid room -- partial fulfillment
-                best = max(frontier, key=frontier.get)
-                placed_bays.append(best)
-                claimed.add(best)
+                            frontier[idx] = score + _aspect_ratio_bonus(current_island, idx, target_ratio)
+                if frontier:
+                    best = max(frontier, key=frontier.get)
+                    placed_bays.append(best)
+                    claimed.add(best)
+                    continue
+
+                # Local 4-connected room exhausted. Building categories need
+                # one real contiguous footprint -- stop here (partial
+                # fulfillment), same as always. Everything else jumps to a
+                # new best-scoring unclaimed bay anywhere on the site and
+                # keeps growing from there -- see docstring.
+                if category in BUILDING_CATEGORIES:
+                    break
+                remaining = {
+                    idx: _bay_score(bay, category)
+                    for idx, bay in bays_by_index.items()
+                    if idx not in claimed
+                }
+                remaining = {idx: s for idx, s in remaining.items() if s is not None}
+                if not remaining:
+                    break  # truly nothing left anywhere -- real partial fulfillment
+                new_seed = max(remaining, key=remaining.get)
+                placed_bays.append(new_seed)
+                claimed.add(new_seed)
+                island_start_idx = len(placed_bays) - 1  # start a fresh island from here
         
+        # Floor elevation (2026-07-13 "remove top slab" feature): the real
+        # surface this zone actually sits on, from the SEED bay (region-
+        # growing starts from one best-scoring bay and grows outward --
+        # using the seed's elevation is the simplest defensible single
+        # value; a zone that happens to straddle a real elevation step will
+        # look slightly off until refined further, acceptable for a first
+        # pass). Defaults to plain grade (0.0) when a bay grid has no
+        # floor_elev_ft key at all (an older/test caller not yet updated),
+        # matching this feature's pre-existing behavior.
+        floor_elev_ft = bays_by_index[placed_bays[0]].get("floor_elev_ft", 0.0) if placed_bays else 0.0
+
         building_spec = None
         if category in BUILDING_CATEGORIES and placed_bays:
             min_gx = min(b[0] for b in placed_bays)
@@ -176,6 +275,24 @@ def place_programs(bay_grid, programs):
                 "x_ft": x_ft, "y_ft": y_ft,
                 "width_ft": width_ft, "depth_ft": depth_ft,
                 "height_ft": DEFAULT_BUILDING_HEIGHT_FT,
+                "z_ft": floor_elev_ft,
+            }
+
+        # Entrance attractor (2026-07-12): centroid of this zone's claimed
+        # bays, in feet -- feeds circulation_network.py's "program" motivator
+        # so the pedestrian network actually grows toward placed amenities,
+        # not just painted masks. Centroid (not e.g. nearest-bay-to-Metro)
+        # per an explicit design decision -- works uniformly for every
+        # zone category, building or not. +0.5 bay converts a bay INDEX
+        # (whose building_spec corner convention above is gx*bay_ft) to that
+        # bay's real-feet CENTER, matching what "centroid of claimed cells"
+        # should mean.
+        entrance = None
+        if placed_bays:
+            bay_ft = BAY_AREA_SF ** 0.5
+            entrance = {
+                "x_ft": (sum(b[0] for b in placed_bays) / len(placed_bays) + 0.5) * bay_ft,
+                "y_ft": (sum(b[1] for b in placed_bays) / len(placed_bays) + 0.5) * bay_ft,
             }
 
         achieved_sf = len(placed_bays) * BAY_AREA_SF
@@ -183,8 +300,14 @@ def place_programs(bay_grid, programs):
             "program_item": program["label"],
             "category": category,
             "need_level": program["need_level"],
-            "bays": [list(idx) for idx in placed_bays],
+            # [gx, gy, floor_elev_ft] per bay (2026-07-13) -- not just
+            # [gx, gy]: a program can now legitimately span more than one
+            # real elevation (see docstring), so each bay carries its own
+            # floor_elev_ft rather than assuming the whole zone shares one.
+            "bays": [[idx[0], idx[1], bays_by_index[idx].get("floor_elev_ft", 0.0)] for idx in placed_bays],
             "building_spec": building_spec,
+            "entrance": entrance,
+            "floor_elev_ft": floor_elev_ft,
             "achieved_sf": achieved_sf,
             "target_sf": program["target_sf"],
             "fulfilled": achieved_sf >= program["target_sf"],

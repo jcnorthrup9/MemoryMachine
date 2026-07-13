@@ -56,7 +56,7 @@ placeholder data is real, that would misrepresent the project to the committee.
 You must respond with STRICT JSON ONLY, matching this schema, and nothing else:
 {
   "reply": "<the answer to show in the chat transcript>",
-  "action": null | {"type": "adjust_motivator", "motivator": "shade"|"water"|"rest"|"foot_traffic"|"deficit", "value": <float 0-2>}
+  "action": null | {"type": "adjust_motivator", "motivator": "shade"|"water"|"rest"|"foot_traffic"|"deficit"|"program", "value": <float 0-2>}
            | {"type": "set_canyon_width", "value": <int>}
            | {"type": "set_canyon_depth", "value": <int>}
            | {"type": "grow_network"}
@@ -120,7 +120,7 @@ def _parse_ollama_response(raw: str) -> dict:
     return parsed
 
 
-_VALID_MOTIVATORS = {"shade", "water", "rest", "foot_traffic", "deficit"}
+_VALID_MOTIVATORS = {"shade", "water", "rest", "foot_traffic", "deficit", "program"}
 
 
 def _validate_action(action, context: dict):
@@ -201,7 +201,7 @@ class JurorChatAgent:
             f'Juror: "{user_message}"'
         )
 
-    def _build_critique_prompt(self, spatial_summary: dict) -> str:
+    def _build_critique_prompt(self, spatial_summary: list[str]) -> str:
         summary_block = "\n".join(f"- {line}" for line in spatial_summary)
         return (
             f"{CRITIC_PERSONA_SYSTEM_TEXT}\n\n"

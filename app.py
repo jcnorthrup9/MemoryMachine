@@ -22,9 +22,11 @@ from logic.ai_synthesizer import (
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 from logic.pershing_api import (
-    RebuildParams, BakeGrids, GrowNetworkRequest, JurorChatRequest, get_config as pershing_get_config,
+    RebuildParams, BakeGrids, GrowNetworkRequest, JurorChatRequest, CritiqueRequest, RemixPrecedentRequest,
+    get_config as pershing_get_config,
     rebuild as pershing_rebuild, grow_network as pershing_grow_network,
-    juror_chat as pershing_juror_chat,
+    juror_chat as pershing_juror_chat, critique as pershing_critique,
+    remix_precedent as pershing_remix_precedent,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
     bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
     get_bay_grid as pershing_get_bay_grid, get_program_zones as pershing_get_program_zones,
@@ -599,6 +601,23 @@ async def pershing_juror_chat_route(payload: JurorChatRequest):
     """Grounded Q&A for the live thesis-defense juror chat -- see
     logic/juror_chat.py's module docstring for the reply/action contract."""
     return pershing_juror_chat(payload)
+
+
+@app.post("/api/pershing/critique")
+async def pershing_critique_route(payload: CritiqueRequest):
+    """"The Metabolist" -- on-demand qualitative critique of the current
+    design, built from the spatial_summary rebuild() already returns. See
+    logic/juror_chat.py's CRITIC_PERSONA_SYSTEM_TEXT for the persona."""
+    return pershing_critique(payload)
+
+
+@app.post("/api/pershing/remix-precedent")
+async def pershing_remix_precedent_route(payload: RemixPrecedentRequest):
+    """"Precedent Remixer" MVP -- AI-curated precedent layer selection +
+    placement for a text prompt, with an inferred paint-mask role per layer.
+    Preview-only in this pass (see remix_precedent()'s docstring for what's
+    NOT yet wired: applying these layers to the live paint masks/bake())."""
+    return pershing_remix_precedent(payload)
 
 
 @app.get("/api/pershing/sketch")

@@ -40,6 +40,8 @@ from terracing_engine import StructuralElement
 # --- Tunable-by-UI defaults (see logic/pershing_api.py's NetworkParams) ---
 DEFAULT_MOTIVATOR_WEIGHTS = {
     "shade": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+    # Placed program-zone entrances (2026-07-12) -- see sample_attraction_points()'s zones loop.
+    "program": 1.0,
 }
 DEFAULT_STEP_FT = 15.0
 DEFAULT_MAX_ITERATIONS = 300
@@ -79,6 +81,13 @@ class NetworkNode:
     parent_id: int = None
     captured: int = 0
     flow: int = 0
+    # Which root this node (or, for a non-root node, its whole branch)
+    # traces back to -- "metro_entrance" for the one real, surveyed entry,
+    # "site_edge" for the fabricated-but-plausible boundary entries added
+    # 2026-07-12 (see __init__). Only ever set directly on roots
+    # (parent_id is None); non-root nodes inherit it from their parent in
+    # _grow() so the whole branch stays taggable.
+    source: str = "metro_entrance"
 
 
 def _voxel_at(engine, x, y):
@@ -105,7 +114,7 @@ _AMENITY_MOTIVATOR = {
 
 
 def sample_attraction_points(engine, typology_specs, motivator_weights=None,
-                              field_threshold=FIELD_ATTRACTOR_THRESHOLD):
+                              field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None):
     """
     Builds a manageable (tens-to-~150-point) set of weighted, motivator-
     labeled Attractors from the same real per-voxel fields/placed amenities
@@ -119,6 +128,13 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
     and deduped to one Attractor per non-empty bucket, at the bucket's
     survivor centroid. Already-placed amenity props are used directly as
     strong fixed attractors (see _AMENITY_MOTIVATOR above).
+
+    zones (2026-07-12, optional): logic/program_placement.py's
+    place_programs() output (a list of zone dicts, each with an "entrance"
+    key) -- each zone's entrance becomes a strong fixed "program" attractor,
+    same full-strength/no-threshold treatment as the amenity loop below, so
+    pedestrian paths actually connect to placed amenities, not just painted
+    masks.
     """
     weights = {**DEFAULT_MOTIVATOR_WEIGHTS, **(motivator_weights or {})}
     buckets = {}  # (bucket_key, motivator) -> list of (wx, wy, value)
@@ -163,24 +179,32 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
             continue
         attractors.append(Attractor(spec.x_ft, spec.y_ft, 1.0 * weights.get(motivator, 1.0), motivator))
 
+    for zone in (zones or []):
+        entrance = zone.get("entrance")
+        if entrance is None:
+            continue
+        attractors.append(Attractor(entrance["x_ft"], entrance["y_ft"],
+                                     1.0 * weights.get("program", 1.0), "program"))
+
     return attractors
 
 
 class CirculationNetworkEngine:
     """
-    Space Colonization pedestrian-path growth engine. Single root at the
-    real Metro station entrance (terracing_engine.entrance_x/entrance_y --
-    real_geometry["secondary_entrance_anchor"]); grows toward the weighted
-    attraction points sample_attraction_points() builds; classifies the
-    resulting edges into real construction guidance (footpath/ramp/
-    escalator, optionally "_bridge"-suffixed) plus lookout_point markers at
-    qualifying leaf tips.
+    "Circulation Growth Network" (UI name, 2026-07-12) -- Space Colonization
+    pedestrian-path growth engine. Roots at the real Metro station entrance
+    (terracing_engine.entrance_x/entrance_y -- real_geometry
+    ["secondary_entrance_anchor"]) plus additional site-boundary entry
+    points (see __init__); grows toward the weighted attraction points
+    sample_attraction_points() builds; classifies the resulting edges into
+    real construction guidance (footpath/ramp/escalator, optionally
+    "_bridge"-suffixed) plus lookout_point markers at qualifying leaf tips.
     """
 
     def __init__(self, real_geometry, terracing_engine, typology_specs,
                  motivator_weights=None, step_ft=DEFAULT_STEP_FT,
                  max_iterations=DEFAULT_MAX_ITERATIONS,
-                 field_threshold=FIELD_ATTRACTOR_THRESHOLD):
+                 field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None):
         self.rg = real_geometry
         self.te = terracing_engine
         self.step_ft = step_ft
@@ -194,10 +218,31 @@ class CirculationNetworkEngine:
         self.kill_radius_ft = 1.2 * step_ft
 
         self.attractors = sample_attraction_points(
-            terracing_engine, typology_specs, motivator_weights, field_threshold)
+            terracing_engine, typology_specs, motivator_weights, field_threshold, zones=zones)
 
         root_z = _voxel_at(terracing_engine, terracing_engine.entrance_x, terracing_engine.entrance_y).z_ft
-        self.nodes = [NetworkNode(0, terracing_engine.entrance_x, terracing_engine.entrance_y, root_z)]
+        self.nodes = [NetworkNode(0, terracing_engine.entrance_x, terracing_engine.entrance_y, root_z,
+                                   source="metro_entrance")]
+
+        # Additional roots (2026-07-12): real pedestrians don't only arrive
+        # via the Metro entrance -- they also walk in from the surrounding
+        # street edges. No real survey of where those entries actually are,
+        # so this approximates them at the 4 site corners plus the midpoint
+        # of each long edge (site_length_ft > site_width_ft at this site, so
+        # the long edges are the two running along x=0 and x=site_width_ft)
+        # -- "realistically fabricated," per an explicit design decision,
+        # not survey data like the Metro anchor. Tagged source="site_edge"
+        # (vs "metro_entrance") so a caller can distinguish/filter these
+        # branches later if the fabricated-vs-real distinction matters
+        # downstream (see _classify_edges()). Safe to seed multiple roots
+        # here -- _grow() below already operates generically over
+        # self.nodes, nearest-node assignment naturally treats every root
+        # as an independent trunk.
+        w, l = terracing_engine.site_width_ft, terracing_engine.site_length_ft
+        site_edge_points = [(0.0, 0.0), (w, 0.0), (0.0, l), (w, l), (0.0, l / 2.0), (w, l / 2.0)]
+        for ex, ey in site_edge_points:
+            ez = _voxel_at(terracing_engine, ex, ey).z_ft
+            self.nodes.append(NetworkNode(len(self.nodes), ex, ey, ez, source="site_edge"))
 
     def _grow(self):
         te = self.te
@@ -273,7 +318,8 @@ class CirculationNetworkEngine:
                     continue  # clamped back onto the parent (site edge) -- would be a zero-length stub
                 new_id = len(self.nodes) + len(new_nodes)
                 z = _voxel_at(te, new_x, new_y).z_ft
-                new_nodes.append(NetworkNode(new_id, new_x, new_y, z, parent_id=parent.id))
+                new_nodes.append(NetworkNode(new_id, new_x, new_y, z, parent_id=parent.id,
+                                              source=parent.source))
 
             if not new_nodes:
                 break  # nothing grew this round -> nothing will grow next round either
@@ -330,7 +376,8 @@ class CirculationNetworkEngine:
             if self._is_bridge(parent, n):
                 kind += "_bridge"
             radius_ft = min(MAX_PATH_RADIUS_FT, BASE_PATH_RADIUS_FT + FLOW_WIDTH_PER_UNIT_FT * n.flow)
-            spec = StructuralElement(kind, parent.x, parent.y, parent.z_ft, 0.0, radius_ft=radius_ft)
+            spec = StructuralElement(kind, parent.x, parent.y, parent.z_ft, 0.0, radius_ft=radius_ft,
+                                      source=n.source)
             spec.x2_ft, spec.y2_ft, spec.z2_ft = n.x, n.y, n.z_ft
             specs.append(spec)
         return specs

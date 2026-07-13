@@ -28,10 +28,13 @@ No aggregation/clustering is done here -- every row becomes its own hotspot.
 Multiple nearby weak responses naturally combine into a stronger influence
 via terracing_engine.py's existing additive deficit_influence sum; that's
 already the right behavior, not something this loader needs to duplicate.
-"""
-import csv
 
-DEFAULT_RADIUS_FT = 50.0
+2026-07-12: the actual CSV-parsing body moved to hotspot_csv.py (shared
+with foot_traffic.py/noise_survey.py, which had grown into byte-for-byte
+copies of this same contract) -- this module now just wraps it with this
+channel's own default radius/folder.
+"""
+from hotspot_csv import load_hotspots_from_csv, find_latest_csv_in, DEFAULT_RADIUS_FT
 
 
 def load_deficit_hotspots_from_csv(csv_path, site_width_ft, site_length_ft,
@@ -45,51 +48,9 @@ def load_deficit_hotspots_from_csv(csv_path, site_width_ft, site_length_ft,
     real feet (only the module's own frac-based default gets converted
     internally). Ready to pass straight to TerracingEngine(deficit_hotspots=...).
     """
-    hotspots = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        # case-insensitive column lookup
-        fieldmap = {name.strip().lower(): name for name in reader.fieldnames or []}
-
-        def get(row, key):
-            return row.get(fieldmap[key]) if key in fieldmap else None
-
-        required = ("x_frac", "y_frac", "strength")
-        missing = [k for k in required if k not in fieldmap]
-        if missing:
-            raise ValueError(f"{csv_path}: missing required column(s) {missing} "
-                              f"(found columns: {list(fieldmap.values())})")
-
-        for i, row in enumerate(reader, start=2):  # start=2: row 1 is the header
-            try:
-                x_frac = float(get(row, "x_frac"))
-                y_frac = float(get(row, "y_frac"))
-                strength = float(get(row, "strength"))
-            except (TypeError, ValueError):
-                raise ValueError(f"{csv_path} line {i}: x_frac/y_frac/strength must be numeric, "
-                                  f"got {get(row, 'x_frac')!r}/{get(row, 'y_frac')!r}/{get(row, 'strength')!r}")
-            radius_raw = get(row, "radius_ft")
-            radius_ft = float(radius_raw) if radius_raw not in (None, "") else default_radius_ft
-
-            hotspots.append({
-                "x": x_frac * site_width_ft,
-                "y": y_frac * site_length_ft,
-                "strength": strength,
-                "radius": radius_ft,
-            })
-
-    if not hotspots:
-        raise ValueError(f"{csv_path}: no data rows found")
-
-    return hotspots
+    return load_hotspots_from_csv(csv_path, site_width_ft, site_length_ft, default_radius_ft)
 
 
 def find_latest_csv(folder=r"D:\MemoryMachine\data\amenity_survey"):
     """Return the most recently modified .csv file in `folder`, or None."""
-    import os
-    if not os.path.isdir(folder):
-        return None
-    candidates = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith(".csv")]
-    if not candidates:
-        return None
-    return max(candidates, key=os.path.getmtime)
+    return find_latest_csv_in(folder)
