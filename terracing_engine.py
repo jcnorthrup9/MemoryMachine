@@ -721,6 +721,15 @@ class StructuralElement:
     # (fabricated-but-plausible boundary entries, added 2026-07-12 so the
     # network isn't single-rooted). None for every non-network-path kind.
     source: str = None
+    # Unit surface-normal components (2026-07-16, Canopy Redesign) -- only
+    # meaningful for "panel"-shape kinds (canopy_panel), which need a full
+    # per-instance tilt that rotation_deg's single Y-axis rotation can't
+    # express. Stored in this dataclass's own real-feet Z-up frame, same as
+    # every position field -- NOT the Three.js Y-up frame (see Viewport.
+    # jsx's toThreeDir() for that conversion). None for every other kind.
+    normal_x: float = None
+    normal_y: float = None
+    normal_z: float = None
 
 
 def slab_key(slab):
@@ -838,6 +847,14 @@ CUT_SHEET_PROTOTYPE_DIMS_FT = {
 CUT_SHEET_LINEAR_KINDS = {
     kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "two_point"
 }
+# Panel-shape kinds (2026-07-16, Canopy Redesign) -- unlike box kinds, a
+# panel's width/depth aren't a static per-kind dict entry (dims_ft); each
+# instance's own scale/scale_y ARE its real width/depth (see
+# canopy_engine.py's _panel_specs()), so area is computed directly from the
+# spec in build_cut_sheet_manifest below, not looked up here.
+CUT_SHEET_PANEL_KINDS = {
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "panel"
+}
 
 
 def build_cut_sheet_manifest(all_specs, real_slabs=None, real_columns=None):
@@ -864,6 +881,10 @@ def build_cut_sheet_manifest(all_specs, real_slabs=None, real_columns=None):
             if s.x2_ft is not None:
                 length = math.dist((s.x_ft, s.y_ft, s.z_top_ft), (s.x2_ft, s.y2_ft, s.z2_ft))
                 b["linear_ft"] += length
+        elif s.kind in CUT_SHEET_PANEL_KINDS:
+            area = s.scale * (s.scale_y if s.scale_y is not None else s.scale)
+            b["area_ft2"] += area
+            b["volume_ft3"] += area * max(s.height_ft, 0.0)
         else:
             dims = CUT_SHEET_PROTOTYPE_DIMS_FT.get(s.kind)
             if dims:

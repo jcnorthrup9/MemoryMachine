@@ -5,14 +5,14 @@ import ParamPanel from './components/ParamPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
 import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
-import DiagramInputPanel from './components/DiagramInputPanel.jsx';
 import PrecedentRemixerPanel from './components/PrecedentRemixerPanel.jsx';
 import JurorChatBar from './components/JurorChatBar.jsx';
 import ArchivePanel from './components/ArchivePanel.jsx';
 import DiagnosticsPanel from './components/DiagnosticsPanel.jsx';
 import {
   getConfig, rebuild as rebuildApi, startBlenderBuild, getBlenderBuildStatus, growNetwork as growNetworkApi,
-  jurorChat as jurorChatApi, getProgramZones, critiqueDesign as critiqueDesignApi, saveToArchive,
+  generateCanopy as generateCanopyApi,
+  jurorChat as jurorChatApi, getProgramZones, saveToArchive,
 } from './api.js';
 
 const BLENDER_POLL_MS = 1500;
@@ -29,12 +29,38 @@ const DEFAULT_PARAMS = {
   use_real_noise_data: false,
   remove_top_slab: true,
   buildings: [],
+  disabled_programs: [],
 };
 
 const DEFAULT_NETWORK_PARAMS = {
   motivator_weights: { shade: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0, program: 1.0 },
   step_ft: 15.0,
   max_iterations: 300,
+};
+
+// 2026-07-16 Canopy Redesign -- mirrors logic/pershing_api.py's
+// CanopyParams defaults exactly; canopy generation is an explicit action
+// (see handleGenerateCanopy below), not part of DEFAULT_PARAMS/doRebuild's
+// live loop.
+const DEFAULT_CANOPY_PARAMS = {
+  base_height_ft: 20.0,
+  wave_amplitude_ft: 8.0,
+  wave_length_x_ft: 120.0,
+  wave_length_y_ft: 90.0,
+  wave_phase_x: 0.0,
+  wave_phase_y: 0.0,
+  dip_weight_ft: 6.0,
+  program_boost_ft: 6.0,
+  sculpt_radius_scale: 1.3,
+  smoothing_iterations: 4,
+  puncture_threshold: 0.5,
+  panel_pitch_ft: 9.0,
+  panel_thickness_ft: 0.15,
+  fork_height_fraction: 0.6,
+  fork_spread_ft: 4.0,
+  column_search_radius_ft: 40.0,
+  footprint_paint_threshold: 0.05,
+  support_tie_back_tolerance_ft: 15.0,
 };
 
 function timeNow() {
@@ -49,17 +75,34 @@ export default function App() {
   const [data, setData] = useState(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [paintCategory, setPaintCategory] = useState(null);
-  const [showDiagramInput, setShowDiagramInput] = useState(false);
+  // Unified "Paint" dialog (2026-07-16) -- one trigger, PaintOverlay's own
+  // Source tab picks sketch-painting vs. diagram-import internally (used
+  // to be two separate buttons/dialogs, paintCategory + showDiagramInput).
+  const [showPaint, setShowPaint] = useState(false);
   const [showPrecedentRemixer, setShowPrecedentRemixer] = useState(false);
   const [blenderBuild, setBlenderBuild] = useState({ status: 'idle', objUrl: null, svgUrl: null, error: null, durationS: null });
   const [lineartEnabled, setLineartEnabled] = useState(false);
   const [showLineArt, setShowLineArt] = useState(false);
+  // Layer visibility toggles (2026-07-13, moved to ParamPanel's sidebar
+  // 2026-07-13) -- lifted here (like removeTopSlab below) since both
+  // ParamPanel (renders the checkboxes) and Viewport (filters what it
+  // renders) need to share this state.
+  const [visibleLayers, setVisibleLayers] = useState({
+    realContext: true, structural: true, greenscape: true, shade: true,
+    circulation: true, canopy: true, programZones: true, staticContext: true,
+    // 2026-07-16: off by default -- the existing flat-plane ProgramZones
+    // footprint stays the default visual for every program category, this
+    // is an opt-in placeholder-massing preview (see logic/pershing_api.py's
+    // rebuild() docstring for why it's a separate toggle from both
+    // "Program Zones" and "Structural").
+    programBoxes: false,
+  });
   const [networkParams, setNetworkParams] = useState(DEFAULT_NETWORK_PARAMS);
   const [networkData, setNetworkData] = useState(null);
   const [growingNetwork, setGrowingNetwork] = useState(false);
-  const [critiquing, setCritiquing] = useState(false);
-  const [critique, setCritique] = useState(null);
+  const [canopyParams, setCanopyParams] = useState(DEFAULT_CANOPY_PARAMS);
+  const [canopyResult, setCanopyResult] = useState(null);
+  const [generatingCanopy, setGeneratingCanopy] = useState(false);
   const [exportingVectorView, setExportingVectorView] = useState(false);
   const vectorExportPollRef = useRef(null);
   const blenderPollRef = useRef(null);
@@ -148,12 +191,32 @@ export default function App() {
     }
   }, []);
 
+  // Canopy panels/columns (2026-07-16) live in their OWN response
+  // (canopyResult, from the explicit "Generate Canopy" action), not in
+  // data.structural -- headless Blender exports still need them, so merge
+  // them into the structural list right before sending, the same shape
+  // every other procedural element already uses (kind-based dispatch, see
+  // blender/pershing_headless_build.py's build_structural_meshes). Falls
+  // back to `data` unchanged if canopy hasn't been generated yet.
+  const dataForBlenderExport = useCallback(() => {
+    if (!data) return data;
+    if (!canopyResult) return data;
+    return {
+      ...data,
+      structural: [
+        ...data.structural,
+        ...(canopyResult.canopy_panels || []),
+        ...(canopyResult.canopy_columns || []),
+      ],
+    };
+  }, [data, canopyResult]);
+
   const handleBuildInBlender = useCallback(async () => {
     if (!data) return;
     stopBlenderPoll();
     setBlenderBuild({ status: 'queued', objUrl: null, svgUrl: null, error: null, durationS: null });
     try {
-      const { job_id } = await startBlenderBuild(data, lineartEnabled);
+      const { job_id } = await startBlenderBuild(dataForBlenderExport(), lineartEnabled);
       log(`blender build queued: ${job_id}${lineartEnabled ? ' (+ line art)' : ''}`);
       blenderPollRef.current = setInterval(async () => {
         try {
@@ -182,7 +245,7 @@ export default function App() {
       log(String(err), 'error');
       setBlenderBuild({ status: 'error', objUrl: null, svgUrl: null, error: String(err), durationS: null });
     }
-  }, [data, lineartEnabled, log, stopBlenderPoll]);
+  }, [data, dataForBlenderExport, lineartEnabled, log, stopBlenderPoll]);
 
   useEffect(() => stopBlenderPoll, [stopBlenderPoll]);
 
@@ -228,7 +291,7 @@ export default function App() {
       stopVectorExportPoll();
       setExportingVectorView(true);
       try {
-        const { job_id } = await startBlenderBuild(data, true, viewDirSite, true);
+        const { job_id } = await startBlenderBuild(dataForBlenderExport(), true, viewDirSite, true);
         log(`vector export queued: ${job_id} (view_dir=${viewDirSite.map((v) => v.toFixed(2)).join(',')})`);
         vectorExportPollRef.current = setInterval(async () => {
           try {
@@ -258,7 +321,7 @@ export default function App() {
         setExportingVectorView(false);
       }
     },
-    [data, log, stopVectorExportPoll, downloadSvgUrl],
+    [data, dataForBlenderExport, log, stopVectorExportPoll, downloadSvgUrl],
   );
 
   useEffect(() => stopVectorExportPoll, [stopVectorExportPoll]);
@@ -285,24 +348,28 @@ export default function App() {
     }
   }, [params, networkParams, log]);
 
-  // "The Metabolist" -- on-demand qualitative critique, deliberately manual
-  // (not auto-fired after every rebuild) since the underlying Ollama call
-  // has up to a 30s timeout, same reasoning as handleGrowNetwork above not
-  // running on every slider tweak. Forwards data.spatial_summary, which
-  // rebuild() already computed -- nothing recomputed client-side.
-  const handleAskMetabolist = useCallback(async () => {
-    if (!data?.spatial_summary) return;
-    setCritiquing(true);
+  // Organic panelized canopy + branching supports (2026-07-16 Canopy
+  // Redesign) -- explicit action, NOT part of the live rebuild loop, same
+  // reasoning as handleGrowNetwork above: real per-cell panel/support
+  // generation (up to a few thousand panels) has no reason to rerun on
+  // every trivial slider tweak. Panels/supports only appear where the
+  // "canopy" brush has been painted -- see logic/canopy_engine.py's module
+  // docstring for the full paint-as-footprint design.
+  const handleGenerateCanopy = useCallback(async () => {
+    setGeneratingCanopy(true);
     try {
-      const result = await critiqueDesignApi(data.spatial_summary);
-      setCritique(result.critique);
-      log('metabolist critique received');
+      const result = await generateCanopyApi(params, canopyParams);
+      setCanopyResult(result);
+      log(
+        `canopy generated: panels=${result.kind_counts.canopy_panel ?? 0} ` +
+        `columns=${(result.kind_counts.canopy_column_trunk ?? 0) + (result.kind_counts.canopy_column_branch ?? 0)}`,
+      );
     } catch (err) {
       log(String(err), 'error');
     } finally {
-      setCritiquing(false);
+      setGeneratingCanopy(false);
     }
-  }, [data, log]);
+  }, [params, canopyParams, log]);
 
   // Live rebuild, debounced -- mirrors Blender's update=_on_X_update
   // callbacks (every param change triggers a rebuild), but batched behind
@@ -429,19 +496,23 @@ export default function App() {
       },
       params,
       network_params: networkParams,
+      canopy_params: canopyParams,
       data,
       network_data: networkData,
+      canopy_data: canopyResult,
       program_zones: programZones,
     };
-  }, [config, params, networkParams, data, networkData, programZones]);
+  }, [config, params, networkParams, canopyParams, data, networkData, canopyResult, programZones]);
 
   const restoreSnapshot = useCallback(
     (snapshot) => {
       if (!snapshot.data) throw new Error("missing 'data' field -- not a valid build snapshot");
       if (snapshot.params) setParams(snapshot.params);
       if (snapshot.network_params) setNetworkParams(snapshot.network_params);
+      if (snapshot.canopy_params) setCanopyParams(snapshot.canopy_params);
       setData(snapshot.data);
       setNetworkData(snapshot.network_data ?? null);
+      setCanopyResult(snapshot.canopy_data ?? null);
       setProgramZones(snapshot.program_zones ?? null);
     },
     [],
@@ -494,6 +565,7 @@ export default function App() {
                   programZones={programZones?.zones}
                   bayFt={programZones?.bay_ft}
                   networkSpecs={networkData?.network}
+                  canopyResult={canopyResult}
                   siteWidthFt={config.site_width_ft}
                   siteLengthFt={config.site_length_ft}
                   voxelFt={config.voxel_ft}
@@ -510,6 +582,7 @@ export default function App() {
                   onToggleRemoveTopSlab={(value) =>
                     setParams((prev) => ({ ...prev, remove_top_slab: value }))
                   }
+                  visibleLayers={visibleLayers}
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center font-mono-sm text-on-surface-variant">
@@ -523,8 +596,7 @@ export default function App() {
               config={config}
               params={params}
               onParamsChange={setParams}
-              onPaint={(category) => setPaintCategory(category)}
-              onOpenDiagramInput={() => setShowDiagramInput(true)}
+              onPaint={() => setShowPaint(true)}
               onRebuild={() => doRebuild(params)}
               slabHarvestTons={data?.slab_harvest_tons}
               kindCounts={data?.kind_counts}
@@ -534,6 +606,8 @@ export default function App() {
               circulationVoxelCount={data?.voxels?.filter((v) => v.typology === 'CIRCULATION').length ?? 0}
               sanctuaryVoxelCount={data?.voxels?.filter((v) => v.typology === 'SANCTUARY').length ?? 0}
               rebuilding={rebuilding}
+              visibleLayers={visibleLayers}
+              onToggleLayer={(key) => setVisibleLayers((prev) => ({ ...prev, [key]: !prev[key] }))}
               blenderBuild={blenderBuild}
               onBuildInBlender={handleBuildInBlender}
               lineartEnabled={lineartEnabled}
@@ -543,9 +617,11 @@ export default function App() {
               onGrowNetwork={handleGrowNetwork}
               growingNetwork={growingNetwork}
               networkResult={networkData}
-              onAskMetabolist={handleAskMetabolist}
-              critiquing={critiquing}
-              critique={critique}
+              canopyParams={canopyParams}
+              onCanopyParamsChange={setCanopyParams}
+              onGenerateCanopy={handleGenerateCanopy}
+              generatingCanopy={generatingCanopy}
+              canopyResult={canopyResult}
               onOpenPrecedentRemixer={() => setShowPrecedentRemixer(true)}
             />
           </>
@@ -557,11 +633,10 @@ export default function App() {
           <DiagnosticsPanel config={config} data={data} networkData={networkData} programZones={programZones} />
         )}
       </div>
-      {paintCategory && (
+      {showPaint && (
         <PaintOverlay
           config={config}
-          initialCategory={paintCategory}
-          onClose={() => setPaintCategory(null)}
+          onClose={() => setShowPaint(false)}
           // Just triggers the rebuild -- closing the overlay is now
           // PaintOverlay's own call (closeAfterBake), since auto-bake while
           // painting (2026-07-10) must rebuild WITHOUT closing, and this
@@ -576,17 +651,14 @@ export default function App() {
       {showLineArt && (
         <LineArtOverlay svgUrl={blenderBuild.svgUrl} onClose={() => setShowLineArt(false)} />
       )}
-      {showDiagramInput && (
-        <DiagramInputPanel
-          onClose={() => setShowDiagramInput(false)}
+      {showPrecedentRemixer && (
+        <PrecedentRemixerPanel
+          onClose={() => setShowPrecedentRemixer(false)}
           onBaked={async () => {
             await doRebuild(params);
           }}
           log={log}
         />
-      )}
-      {showPrecedentRemixer && (
-        <PrecedentRemixerPanel onClose={() => setShowPrecedentRemixer(false)} log={log} />
       )}
     </div>
   );

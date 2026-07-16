@@ -3,14 +3,14 @@ blender/pershing_headless_build.py
 -----------------------------------
 Headless Blender scene builder for the Pershing hybrid pipeline.
 
-Ingests the SAME voxel/structural JSON payload the browser already gets
-from POST /api/pershing/rebuild (logic/pershing_api.py) -- does NOT
-re-run TerracingEngine, does NOT need bpy paint-canvas state. This is the
+Ingests the SAME rebuild JSON payload the browser already gets from
+POST /api/pershing/rebuild (logic/pershing_api.py) -- does NOT re-run
+TerracingEngine, does NOT need bpy paint-canvas state. This is the
 headless counterpart to blender_cockpit.py's rebuild_all() /
-build_terrace_mesh() / build_structural_meshes(), stripped of the live-paint
-UI (the browser's PaintOverlay.jsx already owns that job) and re-pointed at
-CLI args instead of hardcoded D:\\MemoryMachine paths, so it stays portable
-across the Syncthing-synced machines this repo lives on.
+build_structural_meshes(), stripped of the live-paint UI (the browser's
+PaintOverlay.jsx already owns that job) and re-pointed at CLI args instead
+of hardcoded D:\\MemoryMachine paths, so it stays portable across the
+Syncthing-synced machines this repo lives on.
 
 Deliberately does NOT re-import blender_cockpit.py's static-context import
 or axo-view/mirror setup: that mirror is specific to the cockpit's own fixed
@@ -18,14 +18,21 @@ presentation camera. This export instead stays in the same raw real-feet,
 Z-up convention the live JSON/Three.js viewport already uses (see
 Viewport.jsx's toThree() and StaticContext.jsx's own transform) -- baking
 in the axo mirror here would silently put this mesh in a different
-coordinate convention than everything else the frontend loads. Static
-context (columns/tunnel/entrance/ramps) is not re-embedded either -- the
-frontend already renders that once, separately, from site_named.obj;
-duplicating it here would double-render it.
+coordinate convention than everything else the frontend loads.
+
+2026-07-13: real columns/slabs/ramps (real_columns, real_slabs, ramp_meshes
+-- see build_real_context_meshes/build_ramp_meshes) ARE now included in the
+primary --output OBJ, replacing what used to be a box-per-voxel terrace
+mesh (never matched the actual parking structure slabs). This export is
+consumed standalone (e.g. opened directly in Rhino), not alongside the
+live web viewport, so the earlier "avoid double-rendering site_named.obj"
+reasoning no longer applies to that geometry. The tunnel/secondary-entrance/
+metro-connector static context is still NOT re-embedded here -- only real
+columns/slabs/ramps, per what's actually been requested so far.
 
 Run headless:
     blender --background --python pershing_headless_build.py -- \
-        --input <voxel/structural JSON> --output <obj path> \
+        --input <rebuild JSON> --output <obj path> \
         [--lineart-output <svg path>]
 
 The box/cylinder/hex-prism mesh-building math below is a straight port of
@@ -58,54 +65,63 @@ import bmesh
 import bpy
 import mathutils
 
-TERRACE_OBJ_NAME = "cockpit_terrace"
 STRUCTURAL_COLLECTION_NAME = "mm_structural_frame"
+CANOPY_OBJ_NAME = "mm_canopy"
+CANOPY_COLLECTION_NAME = "mm_canopy_layer"
+REAL_CONTEXT_COLLECTION_NAME = "mm_real_slabs_columns"
+REAL_RAMPS_COLLECTION_NAME = "mm_real_ramps"
+
+# Shared kind registry (2026-07-16 fix -- see the note this block used to
+# carry, admitting this file's kind tables had ALREADY drifted once:
+# circulation_network.py's footpath/ramp/escalator kinds were silently
+# dropped from this script's OBJ export until manually patched, while
+# blender_cockpit.py's equivalent tables derived dynamically from
+# KIND_REGISTRY and never had that problem. Fixed properly this time by
+# doing the same here, instead of hand-patching another entry (canopy_panel/
+# canopy_column_trunk/canopy_column_branch) into a tuple that will just
+# drift again next time a kind is added). Pure stdlib json.load(), no bpy/
+# numpy cost -- this script already imports json at module scope, so this
+# doesn't reintroduce the "importing terracing_engine.py pulls in numpy
+# plus a throwaway TerracingEngine instance" cost the module docstring
+# explains this file avoids elsewhere.
+_KIND_REGISTRY_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "frontend", "src", "kindRegistry.json")
+with open(_KIND_REGISTRY_PATH) as _f:
+    _KIND_REGISTRY = json.load(_f)
 
 # Cross-section (plan) footprint in feet for each box-shaped
 # StructuralElement.kind -- mirrors blender_cockpit.py's _PROTOTYPE_DIMS_FT
-# exactly (see that file for the per-kind rationale). Cylinder/hex/disc
-# kinds don't use this dict; their geometry comes from radius_ft (and, for
-# two-point kinds, x2/y2/z2_ft) instead.
+# exactly. Cylinder/hex/panel kinds don't use this dict; their geometry
+# comes from radius_ft/normal_x-y-z (and, for two-point kinds, x2/y2/z2_ft)
+# instead.
 _PROTOTYPE_DIMS_FT = {
-    "concrete_floor_block": (9.0, 9.0, 8.0 / 12.0),
-    "concrete_retaining_block": (3.0, 3.0, 8.0 / 12.0),
-    "steel_collar_sleeve": (2.0, 2.0, 1.0),
-    "gusset_plate": (1.5, 0.1, 1.5),
-    "steel_strap_band": (2.2, 0.15, 1.0),
-    "footing_shoe": (1.3, 1.3, 1.0),
-    "glulam_post": (1.0, 1.0, 1.0),
-    "water_plane": (8.0, 8.0, 0.2),
-    "water_cascade_block": (4.0, 1.5, 1.0),
-    "misting_line": (0.15, 0.15, 1.0),
-    "bench_assembly": (6.0, 2.0, 1.5),
-    "restroom_pod": (10.0, 8.0, 8.0),
-    "fountain": (4.0, 4.0, 3.0),
-    # Unit footprint -- BuildingMassEngine passes real width/depth via
-    # scale/scale_y rather than a fixed prototype size like every other
-    # box kind here, since building footprints vary per instance.
-    "building_mass": (1.0, 1.0, 1.0),
+    kind: tuple(entry["dims_ft"]) for kind, entry in _KIND_REGISTRY["kinds"].items() if entry["shape"] == "box"
 }
-_VERTICAL_CYLINDER_KINDS = {"steel_bolt", "bolt_flange_plate", "tree_trunk"}
-_HEX_KINDS = {"steel_turnbuckle", "tree_canopy"}
-_ALL_STRUCT_KINDS = (
-    tuple(_PROTOTYPE_DIMS_FT) + tuple(_VERTICAL_CYLINDER_KINDS) + tuple(_HEX_KINDS)
-    + ("steel_strut", "steel_tie_rod", "knee_brace", "timber_beam")
+_VERTICAL_CYLINDER_KINDS = {
+    kind for kind, entry in _KIND_REGISTRY["kinds"].items() if entry["shape"] == "vertical_cylinder"
+}
+_HEX_KINDS = {kind for kind, entry in _KIND_REGISTRY["kinds"].items() if entry["shape"] == "hex"}
+# 2026-07-16 Canopy Redesign -- flat individually-oriented panels
+# (canopy_panel), needs a full per-instance basis from a normal vector
+# (see _add_panel), not just a rotation_deg like the box path.
+_PANEL_KINDS = {kind for kind, entry in _KIND_REGISTRY["kinds"].items() if entry["shape"] == "panel"}
+# Circulation paths (2026-07-13) render as flat ribbons, not round tubes --
+# see _add_ribbon below. Kept as a small explicit set rather than derived
+# from KIND_REGISTRY's `shape` field (unlike everything else in this
+# block): "two_point AND a walkable path" isn't a shape-level distinction
+# the registry schema captures, and unlike _ALL_STRUCT_KINDS below, this
+# set hasn't actually drifted -- it's reviewed alongside every new
+# two-point kind addition, so hand-maintaining it is a deliberate choice,
+# not a repeat of the bug this fix closes.
+CIRCULATION_PATH_KINDS = {
+    "footpath", "ramp", "escalator", "footpath_bridge", "ramp_bridge", "escalator_bridge",
+}
+PATH_HALF_THICKNESS_FT = 0.25  # slightly thickened, not a paper-thin plane -- see Viewport.jsx's twin constant
+_ALL_STRUCT_KINDS = tuple(
+    kind for kind, entry in _KIND_REGISTRY["kinds"].items() if entry["shape"] != "real"
 )
 
 _BOX_FACES = ((0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7))
-
-
-def _add_box(bm, cx, cy, cz, sx, sy, sz):
-    hx, hy, hz = sx / 2, sy / 2, sz / 2
-    coords = (
-        (cx - hx, cy - hy, cz - hz), (cx + hx, cy - hy, cz - hz),
-        (cx + hx, cy + hy, cz - hz), (cx - hx, cy + hy, cz - hz),
-        (cx - hx, cy - hy, cz + hz), (cx + hx, cy - hy, cz + hz),
-        (cx + hx, cy + hy, cz + hz), (cx - hx, cy + hy, cz + hz),
-    )
-    verts = [bm.verts.new(c) for c in coords]
-    for f in _BOX_FACES:
-        bm.faces.new([verts[i] for i in f])
 
 
 def _add_rotated_box(bm, center, size, rot_mat3):
@@ -152,6 +168,35 @@ def _add_cylinder(bm, p0, p1, radius, segments=8):
     bm.faces.new(ring1)
 
 
+def _add_ribbon(bm, p0, p1, half_width, half_thickness):
+    """Flat, slightly-thickened plank between two points -- same u/v basis
+    _add_cylinder uses above (ref=(0,0,1) unless the segment is nearly
+    vertical), but a 4-corner rectangle cross-section instead of a circular
+    ring, so an inclined ramp's cross-section tilts naturally with grade
+    instead of staying flat. Used for circulation_network.py's footpath/
+    ramp/escalator kinds (2026-07-13, replacing round cylinders -- these
+    are walkable path surfaces, not structural rods)."""
+    p0 = mathutils.Vector(p0)
+    p1 = mathutils.Vector(p1)
+    axis = p1 - p0
+    length = axis.length
+    if length < 1e-6:
+        return
+    axis_n = axis / length
+    ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(axis_n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
+    u = ref.cross(axis_n).normalized()  # width axis
+    v = axis_n.cross(u).normalized()    # thickness axis
+    corners = (u * half_width + v * half_thickness, -u * half_width + v * half_thickness,
+               -u * half_width - v * half_thickness, u * half_width - v * half_thickness)
+    ring0 = [bm.verts.new(p0 + c) for c in corners]
+    ring1 = [bm.verts.new(p1 + c) for c in corners]
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((ring0[i], ring0[j], ring1[j], ring1[i]))
+    bm.faces.new(ring0[::-1])
+    bm.faces.new(ring1)
+
+
 def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
     cx, cy, cz = center
     top, bottom = cz + height / 2, cz - height / 2
@@ -168,22 +213,57 @@ def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
     bm.faces.new(ring_bottom[::-1])
 
 
-def build_terrace_mesh(mesh, voxel_ft, max_canyon_depth_ft, voxels):
-    """Box-per-voxel port of blender_cockpit.py's build_terrace_mesh, taking
-    plain scalars/dicts instead of a live TerracingEngine instance -- the
-    JSON payload already carries everything this needs (z_ft/gx/gy per
-    voxel, voxel_ft, max_canyon_depth_ft), so no engine object required."""
+def _add_panel(bm, center, normal, width, depth, thickness):
+    """Flat individually-oriented plate (canopy_panel) -- 2026-07-16 Canopy
+    Redesign. Straight port of blender_cockpit.py's _add_panel (same u/v
+    basis _add_cylinder/_add_ribbon above already use: ref=(0,0,1) unless
+    the normal is nearly vertical, then fall back to (1,0,0); u = ref x n,
+    v = n x u) -- same threshold, same cross-product order as
+    Viewport.jsx's CanopyPanelInstances (which works in Three.js's Y-up
+    frame post-toThreeDir(), this one works directly in Blender's native
+    Z-up frame on the raw real-feet normal, so the reference axis is Z
+    here vs Y there BY DESIGN, not a discrepancy). See that component's own
+    comment for why this must be checked cross-tool if ever touched
+    again -- this exact bug class (position/direction mirror mismatches)
+    has shipped once already in this codebase."""
+    center_v = mathutils.Vector(center)
+    n = mathutils.Vector(normal).normalized()
+    ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
+    u = ref.cross(n).normalized()
+    v = n.cross(u).normalized()
+    hw, hd, ht = width / 2, depth / 2, thickness / 2
+    bottom, top = [], []
+    for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+        base = center_v + u * (su * hw) + v * (sv * hd)
+        bottom.append(bm.verts.new(base - n * ht))
+        top.append(bm.verts.new(base + n * ht))
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((bottom[i], bottom[j], top[j], top[i]))
+    bm.faces.new(bottom[::-1])
+    bm.faces.new(top)
+
+
+def build_canopy_mesh(mesh, height_matrix, voxel_ft, puncture_mask=None):
+    """Continuous heightfield mesh (one bmesh vert per (gx, gy) grid point,
+    one quad face per cell) -- NOT box-per-voxel like build_terrace_mesh
+    above, a real continuous surface, same cx/cy centering convention as
+    build_terrace_mesh. Cells where puncture_mask[gx][gy] is true skip their
+    face entirely, leaving a real hole rather than a solid quad there."""
     bm = bmesh.new()
-    floor_z = -(max_canyon_depth_ft + 10.0)
-    for v in voxels:
-        top = v["z_ft"]
-        height = top - floor_z
-        if height <= 0:
-            continue
-        cx = v["gx"] * voxel_ft + voxel_ft / 2
-        cy = v["gy"] * voxel_ft + voxel_ft / 2
-        cz = top - height / 2
-        _add_box(bm, cx, cy, cz, voxel_ft, voxel_ft, height)
+    nx = len(height_matrix)
+    nz = len(height_matrix[0]) if nx else 0
+    verts = [[None] * nz for _ in range(nx)]
+    for gx in range(nx):
+        for gy in range(nz):
+            cx = gx * voxel_ft + voxel_ft / 2
+            cy = gy * voxel_ft + voxel_ft / 2
+            verts[gx][gy] = bm.verts.new((cx, cy, height_matrix[gx][gy]))
+    for gx in range(nx - 1):
+        for gy in range(nz - 1):
+            if puncture_mask and puncture_mask[gx][gy]:
+                continue
+            bm.faces.new((verts[gx][gy], verts[gx + 1][gy], verts[gx + 1][gy + 1], verts[gx][gy + 1]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(mesh)
     bm.free()
@@ -223,29 +303,34 @@ def _add_slab_plate(bm, slab):
         bm.faces.new([verts[i] for i in q])
 
 
-def build_real_context_meshes(coll, real_columns, real_slabs):
+def build_real_context_meshes(coll, real_columns, real_slabs, obj_name="mm_real_context"):
     """
-    Real column/slab geometry for the vector-export Line Art pipeline --
-    built as simple native Blender primitives directly from real_geometry
-    position/dimension data (real_columns[].x/z/diameter_ft/top_ft/
-    bottom_ft, real_slabs[].top_corners_ft/thickness_ft), NOT by importing
-    the heavy Rhino column_prototype_mesh OBJ. That OBJ is 1984 faces
-    (non-watertight) per column and, instanced across ~294 real columns,
-    was confirmed 2026-07-11 to be the actual dominant cause of a 27+ GiB
-    crash in vector_export.py's trimesh-based hidden-line-removal attempt
-    (99.3% of that pipeline's combined mesh) -- a 12-sided cylinder per
-    column and a thin quad plate per slab give a Line Art bake everything
-    it needs (real silhouette/crease edges) at a fraction of the vertex
-    count, sidestepping that problem entirely on the Blender side too
-    rather than importing the same heavy geometry here.
+    Real column/slab geometry -- built as simple native Blender primitives
+    directly from real_geometry position/dimension data (real_columns[].x/
+    z/diameter_ft/top_ft/bottom_ft, real_slabs[].top_corners_ft/
+    thickness_ft), NOT by importing the heavy Rhino column_prototype_mesh
+    OBJ. That OBJ is 1984 faces (non-watertight) per column and, instanced
+    across ~294 real columns, was confirmed 2026-07-11 to be the actual
+    dominant cause of a 27+ GiB crash in vector_export.py's trimesh-based
+    hidden-line-removal attempt (99.3% of that pipeline's combined mesh) --
+    a 12-sided cylinder per column and a thin quad plate per slab give
+    everything needed (real silhouette/crease edges, real footprint) at a
+    fraction of the vertex count, sidestepping that problem entirely on the
+    Blender side too rather than importing the same heavy geometry here.
 
-    Only call this AFTER the main OBJ export in main() has already run --
-    this real-context mesh is vector-export-only and must never leak into
-    --output's OBJ (which deliberately excludes static context, since the
-    live viewport already renders it once, separately, from
-    site_named.obj -- see this module's own docstring).
+    2026-07-13: now also called unconditionally from main()'s primary
+    --output path (see REAL_CONTEXT_COLLECTION_NAME below) -- the user
+    consumes this OBJ standalone in Rhino, not alongside the live web
+    viewport's own separate site_named.obj render, so the earlier "never
+    leak real context into --output" exclusion (still true for the
+    tunnel/secondary-entrance/metro-connector static context, which this
+    function still does NOT include) no longer applies to columns/slabs
+    for that workflow. Still also called from the --lineart-output/
+    --include-real-context path below under its own default "mm_real_context"
+    name -- harmless if both run in the same invocation (Blender just
+    auto-suffixes the second object), not deduplicated since that combo is
+    a rare, explicit opt-in.
     """
-    obj_name = "mm_real_context"
     mesh = bpy.data.meshes.new(obj_name)
     obj = bpy.data.objects.new(obj_name, mesh)
     coll.objects.link(obj)
@@ -263,6 +348,34 @@ def build_real_context_meshes(coll, real_columns, real_slabs):
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(mesh)
     bm.free()
+
+
+def build_ramp_meshes(coll, ramp_meshes):
+    """Real spiral-core parking ramp geometry (2026-07-13) -- unlike columns/
+    slabs above, this is already pre-tessellated real mesh data straight
+    from Rhino (real_geometry.json's ramp_meshes: per-cluster list of
+    per-level {vertices: flat [x,y,z,...], faces: flat [i0,i1,i2,...]}), so
+    no primitive simplification is needed -- just build the real faces
+    directly. One object per cluster (all of that cluster's levels
+    concatenated), named mm_real_ramp_<cluster>."""
+    for cluster_name, levels in ramp_meshes.items():
+        obj_name = f"mm_real_ramp_{cluster_name}"
+        mesh = bpy.data.meshes.new(obj_name)
+        obj = bpy.data.objects.new(obj_name, mesh)
+        coll.objects.link(obj)
+
+        bm = bmesh.new()
+        for level in levels:
+            verts = level["vertices"]
+            level_verts = [bm.verts.new((verts[i], verts[i + 1], verts[i + 2]))
+                            for i in range(0, len(verts), 3)]
+            faces = level["faces"]
+            for i in range(0, len(faces), 3):
+                bm.faces.new((level_verts[faces[i]], level_verts[faces[i + 1]], level_verts[faces[i + 2]]))
+        if bm.verts:
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(mesh)
+        bm.free()
 
 
 def build_structural_meshes(coll, specs):
@@ -286,17 +399,27 @@ def build_structural_meshes(coll, specs):
         bm = bmesh.new()
         for spec in kind_specs:
             if spec.get("x2_ft") is not None:
-                _add_cylinder(bm, (spec["x_ft"], spec["y_ft"], spec["z_top_ft"]),
-                               (spec["x2_ft"], spec["y2_ft"], spec["z2_ft"]), spec.get("radius_ft") or 0.2)
+                p0 = (spec["x_ft"], spec["y_ft"], spec["z_top_ft"])
+                p1 = (spec["x2_ft"], spec["y2_ft"], spec["z2_ft"])
+                if kind in CIRCULATION_PATH_KINDS:
+                    _add_ribbon(bm, p0, p1, spec.get("radius_ft") or 0.2, PATH_HALF_THICKNESS_FT)
+                else:
+                    _add_cylinder(bm, p0, p1, spec.get("radius_ft") or 0.2)
             elif kind in _HEX_KINDS:
                 _add_hex_prism(bm, (spec["x_ft"], spec["y_ft"], spec["z_top_ft"]), spec.get("radius_ft") or 0.3,
                                 spec["height_ft"], rotation_deg=spec.get("rotation_deg", 0.0))
+            elif kind in _PANEL_KINDS:
+                normal = (spec.get("normal_x") or 0.0, spec.get("normal_y") or 0.0, spec.get("normal_z") or 1.0)
+                scale = spec.get("scale", 1.0)
+                scale_y = spec.get("scale_y") or scale
+                _add_panel(bm, (spec["x_ft"], spec["y_ft"], spec["z_top_ft"]), normal,
+                           scale, scale_y, spec["height_ft"])
             elif kind in _VERTICAL_CYLINDER_KINDS:
                 p0 = (spec["x_ft"], spec["y_ft"], spec["z_top_ft"] - spec["height_ft"])
                 p1 = (spec["x_ft"], spec["y_ft"], spec["z_top_ft"])
                 _add_cylinder(bm, p0, p1, spec.get("radius_ft") or 0.2)
             else:
-                base_sx, base_sy, _ = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0))
+                base_sx, base_sy = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0))
                 scale = spec.get("scale", 1.0)
                 # scale_y is only set for kinds needing an independent width
                 # vs. depth (currently just building_mass) -- None
@@ -528,7 +651,7 @@ def main():
     argv = argv[argv.index("--") + 1:] if "--" in argv else []
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="Path to the rebuild JSON (voxels/structural/voxel_ft/max_canyon_depth_ft)")
+    parser.add_argument("--input", required=True, help="Path to the rebuild JSON (real_columns/real_slabs/ramp_meshes/structural/voxel_ft)")
     parser.add_argument("--output", required=True, help="Path to write the built OBJ to")
     parser.add_argument("--lineart-output", default=None, help="Optional path to also write a Grease Pencil Line Art SVG to")
     parser.add_argument("--view-dir", default=None,
@@ -547,14 +670,51 @@ def main():
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    terrace_mesh = bpy.data.meshes.new(TERRACE_OBJ_NAME)
-    terrace_obj = bpy.data.objects.new(TERRACE_OBJ_NAME, terrace_mesh)
-    bpy.context.collection.objects.link(terrace_obj)
-    build_terrace_mesh(terrace_mesh, payload["voxel_ft"], payload["max_canyon_depth_ft"], payload["voxels"])
+    # 2026-07-13: real slab/column/ramp geometry replaces the old box-per-
+    # voxel terrace mesh here -- the voxel boxes never matched the actual
+    # parking structure slabs as they exist in the Rhino file, and this OBJ
+    # is now consumed standalone in Rhino (not alongside the live web
+    # viewport, which is the only reason real context used to be excluded
+    # from this export -- see build_real_context_meshes's docstring).
+    real_coll = bpy.data.collections.new(REAL_CONTEXT_COLLECTION_NAME)
+    bpy.context.scene.collection.children.link(real_coll)
+    build_real_context_meshes(
+        real_coll, payload.get("real_columns", []), payload.get("real_slabs", []),
+        obj_name=REAL_CONTEXT_COLLECTION_NAME)
+
+    if payload.get("ramp_meshes"):
+        ramp_coll = bpy.data.collections.new(REAL_RAMPS_COLLECTION_NAME)
+        bpy.context.scene.collection.children.link(ramp_coll)
+        build_ramp_meshes(ramp_coll, payload["ramp_meshes"])
 
     struct_coll = bpy.data.collections.new(STRUCTURAL_COLLECTION_NAME)
     bpy.context.scene.collection.children.link(struct_coll)
     build_structural_meshes(struct_coll, payload["structural"])
+
+    if "canopy_height_matrix" in payload:
+        # 2026-07-16: this key no longer appears in real payloads --
+        # rebuild() stopped computing canopy entirely (see logic/
+        # pershing_api.py), and App.jsx's dataForBlenderExport() merges the
+        # new canopy_panel/canopy_column_trunk/canopy_column_branch specs
+        # straight into payload["structural"] instead (handled generically
+        # by build_structural_meshes above via _PANEL_KINDS/_add_panel, no
+        # special-casing needed there). This branch is effectively dead on
+        # any current payload; left in place only in case an old saved
+        # payload (from before this date) is ever replayed through this
+        # script. Own named collection (2026-07-13), matching
+        # STRUCTURAL_COLLECTION_NAME/REAL_CONTEXT_COLLECTION_NAME/
+        # REAL_RAMPS_COLLECTION_NAME above -- consistent per-layer
+        # organization for anyone opening the intermediate scene in
+        # Blender itself (the exported OBJ's own per-object "o" naming is
+        # what actually matters for isolating layers in Rhino --
+        # collections don't carry through OBJ export).
+        canopy_coll = bpy.data.collections.new(CANOPY_COLLECTION_NAME)
+        bpy.context.scene.collection.children.link(canopy_coll)
+        canopy_mesh = bpy.data.meshes.new(CANOPY_OBJ_NAME)
+        canopy_obj = bpy.data.objects.new(CANOPY_OBJ_NAME, canopy_mesh)
+        canopy_coll.objects.link(canopy_obj)
+        build_canopy_mesh(canopy_mesh, payload["canopy_height_matrix"], payload["voxel_ft"],
+                           payload.get("canopy_puncture_mask"))
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     bpy.ops.object.select_all(action='SELECT')
@@ -568,10 +728,19 @@ def main():
 
     if args.lineart_output:
         if args.include_real_context:
-            real_coll = bpy.data.collections.new("mm_real_context")
-            bpy.context.scene.collection.children.link(real_coll)
+            # 2026-07-13: real columns/slabs are now ALSO already in the
+            # scene unconditionally (see REAL_CONTEXT_COLLECTION_NAME
+            # above) -- this duplicates them into a second object under the
+            # historical "mm_real_context" name. Harmless (Line Art bakes
+            # off the whole scene either way, and OBJ export already
+            # finished above) but redundant whenever both this flag and the
+            # primary export run together; left as-is rather than touching
+            # this flag's own opt-in contract for --lineart-output-only
+            # callers.
+            lineart_real_coll = bpy.data.collections.new("mm_real_context")
+            bpy.context.scene.collection.children.link(lineart_real_coll)
             build_real_context_meshes(
-                real_coll, payload.get("real_columns", []), payload.get("real_slabs", []))
+                lineart_real_coll, payload.get("real_columns", []), payload.get("real_slabs", []))
         view_dir = tuple(float(v) for v in args.view_dir.split(",")) if args.view_dir else None
         build_line_art(args.lineart_output, view_dir=view_dir)
 

@@ -1,26 +1,28 @@
 import { useCallback, useState } from 'react';
-import { remixPrecedent } from '../api.js';
+import { remixPrecedent, bakePaint } from '../api.js';
 
-// "Precedent Remixer" MVP (2026-07-12) -- AI-curated selection of layers
-// from the data/ParkSVG/ precedent library for a text prompt, reusing the
-// OLD app's already-working generate_spatial_seed()/remix_layers() (see
-// logic/pershing_api.py's remix_precedent() docstring). Preview-only in
-// this pass: shows the curated narrative + layer/role breakdown, but does
-// NOT yet rasterize these layers into live paint masks or call bake() --
-// that conversion (precedent SVG-unit space -> real site feet -> voxel
-// grids) is real, separate engineering intentionally left for a following
-// pass rather than shipped untested. Modeled on DiagramInputPanel.jsx's
-// modal structure.
+// "Precedent Remixer" (2026-07-12, finished 2026-07-16) -- AI-curated
+// selection of layers from the canonical precedent library
+// (data/PershingMetabolizer/parkSVG/PrecedentSVG/) for a text prompt,
+// reusing the OLD app's already-working generate_spatial_seed()/
+// remix_layers() (see logic/pershing_api.py's remix_precedent()
+// docstring). Preview-then-bake, same pattern DiagramInputPanel.jsx
+// already established: remix_precedent() now also rasterizes the curated
+// layers into real paint-mask grids server-side (ingest_diagram_svg.
+// rasterize_precedent_layers()), this component just calls bakePaint()
+// with those grids directly once the user confirms -- no separate "apply"
+// endpoint needed, same as DiagramInputPanel's handleBake().
 
 const ROLE_LABELS = {
   hardscape: 'Hardscape', water: 'Water', shade: 'Shade',
   greenscape: 'Greenscape', amenity_resting: 'Amenity / Rest',
 };
 
-export default function PrecedentRemixerPanel({ onClose, log }) {
+export default function PrecedentRemixerPanel({ onClose, onBaked, log }) {
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState(null); // { narrative, layers }
+  const [baking, setBaking] = useState(false);
+  const [result, setResult] = useState(null); // { narrative, layers, grids, counts, resolved_layers, requested_layers }
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -28,13 +30,28 @@ export default function PrecedentRemixerPanel({ onClose, log }) {
     try {
       const res = await remixPrecedent(prompt.trim());
       setResult(res);
-      log?.(`precedent remix: ${res.layers.length} layers curated`);
+      log?.(`precedent remix: ${res.resolved_layers}/${res.requested_layers} layers resolved, ${JSON.stringify(res.counts)}`);
     } catch (err) {
       log?.(String(err), 'error');
     } finally {
       setGenerating(false);
     }
   }, [prompt, log]);
+
+  const handleBake = useCallback(async () => {
+    if (!result?.grids) return;
+    setBaking(true);
+    try {
+      const bakeResult = await bakePaint(result.grids);
+      log?.(`baked from precedent remix: ${JSON.stringify(bakeResult.counts)}`);
+      await onBaked?.();
+      onClose?.();
+    } catch (err) {
+      log?.(String(err), 'error');
+    } finally {
+      setBaking(false);
+    }
+  }, [result, log, onBaked, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
@@ -53,8 +70,7 @@ export default function PrecedentRemixerPanel({ onClose, log }) {
           <p className="font-mono-sm text-[11px] text-on-surface-variant">
             Describe the atmosphere you want and an AI curator selects layers from the precedent
             library (Parc de la Villette, Zaryadye Park, Schouwburgplein, Gardens by the Bay, ...) to
-            match. Preview only for now -- applying the result to the live paint masks isn't wired
-            up yet.
+            match, rasterized directly onto the real paint masks -- review below, then bake to apply.
           </p>
           <textarea
             value={prompt}
@@ -87,6 +103,27 @@ export default function PrecedentRemixerPanel({ onClose, log }) {
                   </div>
                 ))}
               </div>
+              <div className="font-mono-sm text-[11px] text-on-surface-variant">
+                resolved: <span className="text-accent">{result.resolved_layers}/{result.requested_layers}</span> layers
+                {result.resolved_layers < result.requested_layers && (
+                  <span> -- one or more picks didn't match real geometry and were skipped</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono-sm text-[11px] text-on-surface-variant">
+                {Object.entries(result.counts).map(([key, count]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="uppercase">{ROLE_LABELS[key] ?? key}</span>
+                    <span className="text-accent">{count} cells</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleBake}
+                disabled={baking || Object.values(result.counts).every((c) => c === 0)}
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {baking ? 'Baking...' : 'Bake + Rebuild'}
+              </button>
             </div>
           )}
         </div>

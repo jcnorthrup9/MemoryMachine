@@ -83,9 +83,19 @@ ENRICHMENT_QUIET_PENALTY = 3.0  # enrichment_civic programs (study rooms, music 
                                 # near high-transit bays -- adapted from EllipseAgent.py's adjacency-
                                 # rule *concept* (keep quiet program away from high-traffic zones),
                                 # not its code.
+LEVEL_SPREAD_BONUS_WEIGHT = 6.0  # 2026-07-13: rewards claiming a bay on a level (floor_elev_ft)
+                                 # this program hasn't already claimed -- without this, nothing in
+                                 # _bay_score() ever referenced level at all, so a large program
+                                 # (soccer field) would happily concentrate its whole footprint on
+                                 # whichever single level scored best, never touching the garage's
+                                 # other floors. Additive, not a hard requirement -- still loses out
+                                 # to a strong mask/amenity match (PRIMARY_WEIGHT=10), but clearly
+                                 # beats the tie-breaking-only SECONDARY_WEIGHT=1. Applied in the
+                                 # frontier-growth and area-jump scoring below, not at the initial
+                                 # seed bay (every candidate ties there -- no level is claimed yet).
 
 
-def load_programs(need_levels=("NEEDED", "Suggested"), path=PROGRAM_REQUIREMENTS_PATH):
+def load_programs(need_levels=("NEEDED", "Suggested"), path=PROGRAM_REQUIREMENTS_PATH, exclude_ids=None):
     """
     Load data/program_requirements.json's program list, filtered to the
     given need_levels (Optional excluded by default -- pass need_levels
@@ -93,10 +103,17 @@ def load_programs(need_levels=("NEEDED", "Suggested"), path=PROGRAM_REQUIREMENTS
     NEEDED -> Suggested -> Optional, largest target_sf first within a tier
     (largest-first bin-packing: place the biggest asks while the most
     contiguous open area is still available).
+
+    exclude_ids (2026-07-13 program enable/disable checklist): program
+    `id`s to drop entirely before placement -- e.g. {"soccer_field"} to
+    turn off the soccer field for this rebuild. None/empty means every
+    program in need_levels participates, same as before this existed.
     """
     with open(path) as f:
         data = json.load(f)
-    programs = [p for p in data["programs"] if p.get("need_level") in need_levels]
+    exclude_ids = exclude_ids or ()
+    programs = [p for p in data["programs"]
+                if p.get("need_level") in need_levels and p["id"] not in exclude_ids]
     programs.sort(key=lambda p: (NEED_LEVEL_ORDER[p["need_level"]], -p["target_sf"]))
     return programs
 
@@ -119,6 +136,15 @@ def _bay_score(bay, category):
     if category == "enrichment_civic":
         score -= ENRICHMENT_QUIET_PENALTY * bay["transit_influence"]
     return score
+
+
+def _level_spread_bonus(bay, claimed_levels):
+    """0 if this bay's level is already among the bays this program has
+    claimed so far; LEVEL_SPREAD_BONUS_WEIGHT otherwise -- see that
+    constant's comment. `claimed_levels` is a set of floor_elev_ft values,
+    tracked per-program by place_programs() (reset for each new program)."""
+    level = bay.get("floor_elev_ft", 0.0)
+    return 0.0 if level in claimed_levels else LEVEL_SPREAD_BONUS_WEIGHT
 
 
 def _aspect_ratio_bonus(island_bays, candidate, target_ratio):
@@ -171,6 +197,16 @@ def place_programs(bay_grid, programs):
     naturally ends up spanning multiple real elevations too, using
     genuinely more of the site instead of exhausting one shallow region.
 
+    2026-07-13 level-spread bonus (LEVEL_SPREAD_BONUS_WEIGHT/
+    _level_spread_bonus): the above jump-to-new-area behavior only spreads
+    a program across levels as a SIDE EFFECT of running out of local room;
+    it doesn't actively prefer an unused level. This bonus makes that
+    preference explicit -- both the frontier-growth step and the area-jump
+    step now score a candidate bay higher if its level isn't one this
+    program has already claimed, so large programs actively spread across
+    the garage's levels instead of concentrating on whichever single level
+    scores best overall.
+
     Returns a list of {program_item, category, need_level, bays, achieved_sf,
     target_sf, fulfilled} dicts, one per input program, in the same priority
     order they were placed. Each bays entry is [gx, gy, floor_elev_ft] (not
@@ -201,10 +237,15 @@ def place_programs(bay_grid, programs):
         # OWN shape independently instead of one meaningless bounding box
         # spanning every island the program has claimed so far.
         island_start_idx = 0
+        # Levels (floor_elev_ft values) this program has claimed so far --
+        # see LEVEL_SPREAD_BONUS_WEIGHT/_level_spread_bonus. Reset per
+        # program (each program spreads across levels independently).
+        claimed_levels = set()
         if candidates:
             seed = max(candidates, key=candidates.get)
             placed_bays.append(seed)
             claimed.add(seed)
+            claimed_levels.add(bays_by_index[seed].get("floor_elev_ft", 0.0))
 
             while len(placed_bays) * BAY_AREA_SF < program["target_sf"]:
                 current_island = placed_bays[island_start_idx:]
@@ -218,11 +259,14 @@ def place_programs(bay_grid, programs):
                             continue
                         score = _bay_score(bays_by_index[idx], category)
                         if score is not None:
-                            frontier[idx] = score + _aspect_ratio_bonus(current_island, idx, target_ratio)
+                            bonus = (_aspect_ratio_bonus(current_island, idx, target_ratio)
+                                     + _level_spread_bonus(bays_by_index[idx], claimed_levels))
+                            frontier[idx] = score + bonus
                 if frontier:
                     best = max(frontier, key=frontier.get)
                     placed_bays.append(best)
                     claimed.add(best)
+                    claimed_levels.add(bays_by_index[best].get("floor_elev_ft", 0.0))
                     continue
 
                 # Local 4-connected room exhausted. Building categories need
@@ -237,12 +281,16 @@ def place_programs(bay_grid, programs):
                     for idx, bay in bays_by_index.items()
                     if idx not in claimed
                 }
-                remaining = {idx: s for idx, s in remaining.items() if s is not None}
+                remaining = {
+                    idx: s + _level_spread_bonus(bays_by_index[idx], claimed_levels)
+                    for idx, s in remaining.items() if s is not None
+                }
                 if not remaining:
                     break  # truly nothing left anywhere -- real partial fulfillment
                 new_seed = max(remaining, key=remaining.get)
                 placed_bays.append(new_seed)
                 claimed.add(new_seed)
+                claimed_levels.add(bays_by_index[new_seed].get("floor_elev_ft", 0.0))
                 island_start_idx = len(placed_bays) - 1  # start a fresh island from here
         
         # Floor elevation (2026-07-13 "remove top slab" feature): the real
@@ -256,8 +304,22 @@ def place_programs(bay_grid, programs):
         # matching this feature's pre-existing behavior.
         floor_elev_ft = bays_by_index[placed_bays[0]].get("floor_elev_ft", 0.0) if placed_bays else 0.0
 
+        # building_spec (2026-07-16: computed for EVERY zone, not just
+        # BUILDING_CATEGORIES -- was previously gated to civic/health_care
+        # only, since those are the categories that get an always-on real
+        # enclosed-structure box merged into the live structural mesh. Every
+        # OTHER category now gets the identical box math too, but as an
+        # OPTIONAL placeholder-massing preview (see logic/pershing_api.py's
+        # rebuild() "program_boxes" response field and Viewport.jsx's
+        # "Program Boxes" toggle) -- a simple box sized to this zone's real
+        # claimed bay footprint, not a separate target_sf-derived shape, so
+        # it never floats disconnected from what's actually reserved on the
+        # grid. The BUILDING_CATEGORIES gate on placement BEHAVIOR just
+        # above (single contiguous run vs. "use all available space"
+        # jumping) is unrelated and intentionally untouched -- that's about
+        # how a zone claims bays, not whether it gets a display box.
         building_spec = None
-        if category in BUILDING_CATEGORIES and placed_bays:
+        if placed_bays:
             min_gx = min(b[0] for b in placed_bays)
             max_gx = max(b[0] for b in placed_bays)
             min_gy = min(b[1] for b in placed_bays)

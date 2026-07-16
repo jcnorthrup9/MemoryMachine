@@ -88,6 +88,20 @@ export async function growNetwork(rebuildParams, networkParams) {
   return res.json();
 }
 
+// Generates the organic panelized canopy roof + branching supports against
+// the given terrain params -- synchronous explicit action, same reasoning
+// as growNetwork() above (see logic/pershing_api.py's generate_canopy()
+// docstring).
+export async function generateCanopy(rebuildParams, canopyParams) {
+  const res = await fetch('/api/pershing/generate-canopy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild: rebuildParams, canopy: canopyParams }),
+  });
+  if (!res.ok) throw new Error(`generate canopy failed: ${res.status}`);
+  return res.json();
+}
+
 // Grounded Q&A for the live juror chat -- context is whatever live design
 // state (params/network params/last rebuild+network summaries) the caller
 // already has client-side, forwarded as grounding for the prompt.
@@ -128,9 +142,10 @@ export async function remixPrecedent(prompt) {
   return res.json();
 }
 
-// Diagram Input mode (see DiagramInputPanel.jsx) -- a separate design-input
-// mechanism from PaintOverlay's freehand painting, reading colors off an
-// existing legacy-diagram export instead. listLegacyDiagrams/previewLegacyImport
+// Diagram Input mode (2026-07-16: the "Diagram" tab inside PaintOverlay.jsx's
+// unified Paint dialog, folded in from the former standalone
+// DiagramInputPanel.jsx) -- reads colors off an existing legacy-diagram
+// export instead of freehand strokes. listLegacyDiagrams/previewLegacyImport
 // are read-only; committing a previewed diagram reuses bakePaint() above
 // unchanged, so there's no separate "confirm" wrapper here.
 export async function listLegacyDiagrams() {

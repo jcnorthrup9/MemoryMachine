@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { PAINT_CATEGORIES } from '../paintCategories.js';
 
 const NEW_BUILDING_DEFAULTS = { x_ft: 0, y_ft: 0, width_ft: 40, depth_ft: 30, height_ft: 20, setback_ft: 0 };
 
@@ -38,12 +37,27 @@ const MOTIVATOR_LABELS = [
   ['foot_traffic', 'Foot Traffic'], ['deficit', 'Deficit'], ['program', 'Program Zones'],
 ];
 
+// Layer visibility toggle list (2026-07-13, moved from Viewport's own HUD
+// panel into this sidebar) -- keys match App.jsx's visibleLayers state.
+const LAYER_TOGGLES = [
+  { key: 'realContext', label: 'Real Slabs/Cols' },
+  { key: 'structural', label: 'Structural' },
+  { key: 'greenscape', label: 'Greenscape' },
+  { key: 'shade', label: 'Shade' },
+  { key: 'circulation', label: 'Circulation' },
+  { key: 'canopy', label: 'Canopy' },
+  { key: 'programZones', label: 'Program Zones' },
+  { key: 'programBoxes', label: 'Program Boxes' },
+  { key: 'staticContext', label: 'Static Context' },
+];
+
 export default function ParamPanel({
-  config, params, onParamsChange, onPaint, onOpenDiagramInput, onRebuild, slabHarvestTons, kindCounts,
+  config, params, onParamsChange, onPaint, onRebuild, slabHarvestTons, kindCounts,
   usedRealAmenityData, usedRealFootTrafficData, usedRealNoiseData, circulationVoxelCount, sanctuaryVoxelCount,
-  rebuilding, blenderBuild,
+  rebuilding, visibleLayers, onToggleLayer, blenderBuild,
   onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
-  onGrowNetwork, growingNetwork, networkResult, onAskMetabolist, critiquing, critique,
+  onGrowNetwork, growingNetwork, networkResult,
+  canopyParams, onCanopyParamsChange, onGenerateCanopy, generatingCanopy, canopyResult,
   onOpenPrecedentRemixer,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
@@ -56,6 +70,7 @@ export default function ParamPanel({
       motivator_weights: { ...networkParams.motivator_weights, [key]: value },
     });
   const setNetworkField = (key) => (value) => onNetworkParamsChange({ ...networkParams, [key]: value });
+  const setCanopyField = (key) => (value) => onCanopyParamsChange({ ...canopyParams, [key]: value });
 
   const addBuilding = () => {
     onParamsChange({ ...params, buildings: [...params.buildings, newBuilding] });
@@ -80,6 +95,26 @@ export default function ParamPanel({
           onChange={set('sketch_alpha')}
           format={(v) => `${Math.round(v * 100)}%`}
         />
+      </div>
+
+      <div className="p-container border-b border-border space-y-2">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Layers
+        </h4>
+        {LAYER_TOGGLES.map(({ key, label }) => (
+          <label
+            key={key}
+            className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={visibleLayers[key]}
+              onChange={() => onToggleLayer(key)}
+              className="accent-accent"
+            />
+            {label}
+          </label>
+        ))}
       </div>
 
       <div className="p-container border-b border-border space-y-6">
@@ -127,6 +162,145 @@ export default function ParamPanel({
           Slab Material Harvested:{' '}
           <span className="text-accent">{slabHarvestTons?.toFixed(0) ?? 0} Tons</span>
         </div>
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Canopy Engine
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Panels only appear where the "Canopy" paint brush has been painted -- these sliders control the
+          wave/crest shape and support columns, not where it exists. Explicit action, separate from the live
+          rebuild loop above (real per-cell panel/support generation, not instant per-voxel math).
+        </p>
+        <Slider
+          label="Base Height (ft)"
+          value={canopyParams.base_height_ft}
+          min={8}
+          max={40}
+          step={0.5}
+          onChange={setCanopyField('base_height_ft')}
+        />
+        <Slider
+          label="Wave Amplitude (ft)"
+          value={canopyParams.wave_amplitude_ft}
+          min={0}
+          max={20}
+          step={0.5}
+          onChange={setCanopyField('wave_amplitude_ft')}
+        />
+        <Slider
+          label="Wave Length X (ft)"
+          value={canopyParams.wave_length_x_ft}
+          min={20}
+          max={300}
+          step={5}
+          onChange={setCanopyField('wave_length_x_ft')}
+        />
+        <Slider
+          label="Wave Length Y (ft)"
+          value={canopyParams.wave_length_y_ft}
+          min={20}
+          max={300}
+          step={5}
+          onChange={setCanopyField('wave_length_y_ft')}
+        />
+        <Slider
+          label="Wave Phase X"
+          value={canopyParams.wave_phase_x}
+          min={0}
+          max={6.283}
+          step={0.05}
+          onChange={setCanopyField('wave_phase_x')}
+        />
+        <Slider
+          label="Wave Phase Y"
+          value={canopyParams.wave_phase_y}
+          min={0}
+          max={6.283}
+          step={0.05}
+          onChange={setCanopyField('wave_phase_y')}
+        />
+        <Slider
+          label="Excavation Dip (ft)"
+          value={canopyParams.dip_weight_ft}
+          min={0}
+          max={20}
+          step={0.5}
+          onChange={setCanopyField('dip_weight_ft')}
+        />
+        <Slider
+          label="Program Zone Crest (ft)"
+          value={canopyParams.program_boost_ft}
+          min={0}
+          max={20}
+          step={0.5}
+          onChange={setCanopyField('program_boost_ft')}
+        />
+        <Slider
+          label="Panel Pitch (ft)"
+          value={canopyParams.panel_pitch_ft}
+          min={4.5}
+          max={18}
+          step={0.5}
+          onChange={setCanopyField('panel_pitch_ft')}
+        />
+        <Slider
+          label="Support Tie-Back Tolerance (ft)"
+          value={canopyParams.support_tie_back_tolerance_ft}
+          min={0}
+          max={40}
+          step={1}
+          onChange={setCanopyField('support_tie_back_tolerance_ft')}
+        />
+        <button
+          onClick={onGenerateCanopy}
+          disabled={generatingCanopy || !onGenerateCanopy}
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          {generatingCanopy ? 'Generating...' : 'Generate Canopy'}
+        </button>
+        {canopyResult && (
+          <div className="font-mono-sm text-[11px] text-on-surface-variant space-y-1">
+            <div>panels: <span className="text-accent">{canopyResult.kind_counts.canopy_panel ?? 0}</span></div>
+            <div>
+              support columns: <span className="text-accent">
+                {(canopyResult.kind_counts.canopy_column_trunk ?? 0) + (canopyResult.kind_counts.canopy_column_branch ?? 0)}
+              </span>
+            </div>
+            {(canopyResult.kind_counts.canopy_panel ?? 0) === 0 && (
+              <div className="text-error">nothing painted yet -- paint the Canopy brush first</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Programs
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Uncheck a program to exclude it entirely from this rebuild's placement pass (e.g. turn off
+          Soccer Field if it's claiming more of the site than you want).
+        </p>
+        {(config?.all_programs ?? []).map((program) => {
+          const disabled = params.disabled_programs.includes(program.id);
+          const toggle = (e) => {
+            const next = e.target.checked
+              ? params.disabled_programs.filter((id) => id !== program.id)
+              : [...params.disabled_programs, program.id];
+            onParamsChange({ ...params, disabled_programs: next });
+          };
+          return (
+            <label
+              key={program.id}
+              className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer"
+            >
+              <input type="checkbox" checked={!disabled} onChange={toggle} className="accent-accent" />
+              {program.label}
+            </label>
+          );
+        })}
       </div>
 
       <div className="p-container border-b border-border space-y-3">
@@ -288,17 +462,17 @@ export default function ParamPanel({
 
       <div className="p-container border-b border-border space-y-3">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Diagram Input
+          Design Input
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Read colors off an exported legacy diagram directly into the design masks below --
-          a separate input mode from painting, not routed through it.
+          Paint freehand on the sketch photo, or import colors from an exported legacy diagram -- both
+          feed the same live design masks, pick the source inside the dialog.
         </p>
         <button
-          onClick={() => onOpenDiagramInput?.()}
+          onClick={() => onPaint?.()}
           className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
         >
-          Import Diagram
+          Paint
         </button>
         <button
           onClick={() => onOpenPrecedentRemixer?.()}
@@ -306,23 +480,6 @@ export default function ParamPanel({
         >
           Precedent Remixer
         </button>
-      </div>
-
-      <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Live Sketch (Paint on Photo)
-        </h4>
-        <div className="grid grid-cols-1 gap-2">
-          {PAINT_CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => onPaint?.(c.key)}
-              className="px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
-            >
-              Paint {c.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="p-container border-b border-border space-y-3">
@@ -403,29 +560,6 @@ export default function ParamPanel({
             <div>lookouts: <span className="text-accent">{networkResult.kind_counts.lookout_point ?? 0}</span></div>
             <div>attractors unconsumed: <span className="text-accent">{networkResult.attractors_unconsumed}</span></div>
           </div>
-        )}
-      </div>
-
-      <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          The Metabolist
-        </h4>
-        <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          An AI architectural critic -- a qualitative, experiential read of the current design's spatial
-          layout, grounded in the last rebuild's shade/water/greenscape/program-zone summary. Manual,
-          separate from REBUILD below (the underlying model call can take up to ~30s).
-        </p>
-        <button
-          onClick={onAskMetabolist}
-          disabled={critiquing || !onAskMetabolist}
-          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
-        >
-          {critiquing ? 'Observing...' : 'Ask The Metabolist'}
-        </button>
-        {critique && (
-          <p className="font-mono-sm text-[11px] text-on-surface-variant italic leading-relaxed">
-            {critique}
-          </p>
         )}
       </div>
 

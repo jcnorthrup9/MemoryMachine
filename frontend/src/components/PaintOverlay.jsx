@@ -1,14 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSketchInfo, uploadSketch, bakePaint } from '../api.js';
+import { getSketchInfo, uploadSketch, bakePaint, listLegacyDiagrams, previewLegacyImport } from '../api.js';
 import { PAINT_CATEGORIES as CATEGORIES } from '../paintCategories.js';
 
+// Unified "Paint" dialog (2026-07-16, merging what used to be two separate
+// entry points -- this component's own freehand sketch-painting, and the
+// former DiagramInputPanel.jsx's "import an exported diagram's colors
+// instead" mode). One button opens this; a Source tab inside picks which
+// input mechanism feeds the same live paint-mask grids. Both modes still
+// commit through the exact same bakePaint() endpoint (bake() doesn't care
+// about a grid's source, only its shape), so there's still no parallel
+// commit path to keep in sync -- only the UI entry point is unified now.
+//
 // Mirrors blender_cockpit.py's image-paint mechanism: a sketch photo as
-// canvas background, six paintable category layers (see ../paintCategories.js)
-// baked into the same weight/mask grids TerracingEngine consumes. canyon is
-// a continuous weight (black tint, alpha IS the weight); the other five are
-// boolean zone masks (thresholded at bake time), each with its own tint so
-// overlapping strokes stay visually distinguishable.
+// canvas background, seven paintable category layers (see ../paintCategories.js)
+// baked into the same weight/mask grids TerracingEngine/CanopyEngine consume.
+// canyon and canopy are continuous weights (alpha IS the weight); the other
+// five are boolean zone masks (thresholded at bake time), each with its own
+// tint so overlapping strokes stay visually distinguishable.
 const BOOLEAN_THRESHOLD = 0.4;
+const PREVIEW_CELL_PX = 6;
 
 // X is NOT flipped (real_x = col/w * W) -- Y still is (real_y = (1 - row/h) * L).
 // Fixed 2026-07-10: this previously mirrored X the same way sketch_weight_mapper.py's
@@ -49,13 +59,58 @@ function sampleGrid(imageData, w, h, nx, nz, siteWidthFt, siteLengthFt) {
   return grid;
 }
 
+// Ported from DiagramInputPanel.jsx unchanged.
+function drawDiagramPreview(canvas, grids) {
+  if (!canvas || !grids) return;
+  const nx = grids.hardscape.length;
+  const nz = grids.hardscape[0].length;
+  canvas.width = nx * PREVIEW_CELL_PX;
+  canvas.height = nz * PREVIEW_CELL_PX;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Same category order as the sketch canvas's own composite() below --
+  // later entries draw on top, matching how overlapping painted strokes
+  // already resolve there.
+  for (const cat of CATEGORIES) {
+    if (cat.key === 'canyon' || cat.key === 'canopy') continue; // continuous weights, not boolean regions -- no fill color to preview here
+    const grid = grids[cat.key];
+    if (!grid) continue;
+    ctx.fillStyle = cat.color;
+    for (let gx = 0; gx < nx; gx++) {
+      for (let gy = 0; gy < nz; gy++) {
+        if (!grid[gx][gy]) continue;
+        // row 0 at top = ymax (5th St), matching vector_export.py's
+        // STREET_LABELS convention and ingest_legacy_diagram.py's own
+        // render_debug_preview.
+        const py = nz - 1 - gy;
+        ctx.fillRect(gx * PREVIEW_CELL_PX, py * PREVIEW_CELL_PX, PREVIEW_CELL_PX, PREVIEW_CELL_PX);
+      }
+    }
+  }
+}
+
+const SOURCE_TABS = [
+  { key: 'sketch', label: 'Sketch' },
+  { key: 'diagram', label: 'Diagram' },
+];
+
 export default function PaintOverlay({ config, initialCategory, onClose, onBaked, log }) {
+  const [source, setSource] = useState('sketch');
+
+  // ---- Sketch mode state ----
   const [category, setCategory] = useState(initialCategory ?? 'canyon');
   const [sketchUrl, setSketchUrl] = useState(null);
   const [brushSize, setBrushSize] = useState(24);
   const [erase, setErase] = useState(false);
   const [baking, setBaking] = useState(false);
   const [imgSize, setImgSize] = useState(null);
+  // Mirrors whatever's sent to log(), but rendered inside this modal too --
+  // the modal is a fullscreen fixed inset-0 z-50 overlay, so App.jsx's
+  // LogPanel (rendered underneath it in <main>) is invisible while this is
+  // open. Without this, upload/bake/load errors fired silently as far as
+  // the user could tell.
+  const [modalError, setModalError] = useState(null);
 
   const canvasRef = useRef(null); // visible, composited
   const imgRef = useRef(null);
@@ -99,7 +154,10 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
         if (cancelled || !info.url) return;
         setSketchUrl(`${info.url}?t=${Date.now()}`);
       })
-      .catch((err) => log?.(String(err), 'error'));
+      .catch((err) => {
+        log?.(String(err), 'error');
+        setModalError(String(err));
+      });
     return () => {
       cancelled = true;
     };
@@ -115,7 +173,10 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
       ensureLayers(w, h);
       setImgSize({ w, h });
     };
-    img.onerror = () => log?.('failed to load sketch image', 'error');
+    img.onerror = () => {
+      log?.('failed to load sketch image', 'error');
+      setModalError('failed to load sketch image');
+    };
     img.src = sketchUrl;
   }, [sketchUrl, ensureLayers, log]);
 
@@ -171,14 +232,18 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
         const layer = layersRef.current[c.key];
         const data = layer.getContext('2d').getImageData(0, 0, w, h);
         const grid = sampleGrid(data, w, h, nx, nz, W, L);
-        grids[c.key] = c.key === 'canyon' ? grid : grid.map((row) => row.map((v) => v > BOOLEAN_THRESHOLD));
+        grids[c.key] = (c.key === 'canyon' || c.key === 'canopy')
+          ? grid
+          : grid.map((row) => row.map((v) => v > BOOLEAN_THRESHOLD));
       }
       const result = await bakePaint(grids);
       log?.(`baked: ${JSON.stringify(result.counts)}`);
+      setModalError(null);
       await onBaked?.();
       if (closeAfterBake) onClose?.();
     } catch (err) {
       log?.(String(err), 'error');
+      setModalError(String(err));
     } finally {
       setBaking(false);
     }
@@ -257,6 +322,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
       try {
         const info = await uploadSketch(file);
         log?.(`sketch uploaded: ${info.filename}`);
+        setModalError(null);
         // New photo -> old painted marks no longer correspond to anything.
         for (const c of CATEGORIES) {
           const layer = layersRef.current[c.key];
@@ -265,16 +331,79 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
         setSketchUrl(`${info.url}?t=${Date.now()}`);
       } catch (err) {
         log?.(String(err), 'error');
+        setModalError(String(err));
       }
     },
     [log],
   );
 
+  // ---- Diagram mode state (ported from the former DiagramInputPanel.jsx) ----
+  const [diagrams, setDiagrams] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [selectedDiagram, setSelectedDiagram] = useState(null);
+  const [diagramPreview, setDiagramPreview] = useState(null); // { filename, grids, counts }
+  const [loadingDiagramPreview, setLoadingDiagramPreview] = useState(false);
+  const [diagramBaking, setDiagramBaking] = useState(false);
+  const diagramCanvasRef = useRef(null);
+
+  useEffect(() => {
+    if (source !== 'diagram') return;
+    let cancelled = false;
+    setLoadingList(true);
+    listLegacyDiagrams()
+      .then((list) => {
+        if (!cancelled) setDiagrams(list);
+      })
+      .catch((err) => log?.(String(err), 'error'))
+      .finally(() => {
+        if (!cancelled) setLoadingList(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, log]);
+
+  useEffect(() => {
+    drawDiagramPreview(diagramCanvasRef.current, diagramPreview?.grids);
+  }, [diagramPreview]);
+
+  const handleSelectDiagram = useCallback(
+    async (filename) => {
+      setSelectedDiagram(filename);
+      setDiagramPreview(null);
+      setLoadingDiagramPreview(true);
+      try {
+        const result = await previewLegacyImport(filename);
+        setDiagramPreview(result);
+      } catch (err) {
+        log?.(String(err), 'error');
+      } finally {
+        setLoadingDiagramPreview(false);
+      }
+    },
+    [log],
+  );
+
+  const handleBakeDiagram = useCallback(async () => {
+    if (!diagramPreview) return;
+    setDiagramBaking(true);
+    try {
+      const result = await bakePaint(diagramPreview.grids);
+      log?.(`baked from diagram ${diagramPreview.filename}: ${JSON.stringify(result.counts)}`);
+      await onBaked?.();
+      onClose?.();
+    } catch (err) {
+      log?.(String(err), 'error');
+    } finally {
+      setDiagramBaking(false);
+    }
+  }, [diagramPreview, log, onBaked, onClose]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
       <div className="bg-surface border border-border max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-container border-b border-border">
-          <h3 className="font-headline-md text-headline-md text-primary">PAINT SKETCH</h3>
+          <h3 className="font-headline-md text-headline-md text-primary">PAINT</h3>
           <button
             onClick={onClose}
             className="px-3 py-1 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
@@ -283,96 +412,191 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 overflow-auto flex items-center justify-center bg-background p-4">
-            {sketchUrl ? (
-              <canvas
-                ref={canvasRef}
-                className="max-w-full max-h-full cursor-crosshair border border-border"
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-              />
-            ) : (
-              <p className="font-mono-sm text-mono-sm text-on-surface-variant">
-                No sketch loaded -- upload one to begin painting.
-              </p>
-            )}
-          </div>
-
-          <aside className="w-64 border-l border-border p-container space-y-4 overflow-y-auto shrink-0">
-            <div className="space-y-2">
-              <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
-                Upload Sketch Photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleUpload}
-                className="font-mono-sm text-[11px] text-on-surface-variant w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
-                Category
-              </label>
-              <div className="grid grid-cols-1 gap-1">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.key}
-                    onClick={() => setCategory(c.key)}
-                    className={`px-3 py-2 border font-mono-sm text-mono-sm uppercase text-left flex items-center gap-2 ${
-                      category === c.key
-                        ? 'border-accent text-accent'
-                        : 'border-border text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <span className="inline-block w-3 h-3" style={{ backgroundColor: c.color }} />
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between font-mono-sm text-mono-sm">
-                <span className="text-on-surface-variant uppercase">Brush Size</span>
-                <span className="text-accent">{brushSize}px</span>
-              </div>
-              <input
-                type="range"
-                min={4}
-                max={80}
-                step={1}
-                value={brushSize}
-                onChange={(e) => setBrushSize(parseInt(e.target.value, 10))}
-                className="w-full h-[1px] bg-border appearance-none cursor-pointer accent-accent"
-              />
-            </div>
-
-            <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant uppercase cursor-pointer">
-              <input type="checkbox" checked={erase} onChange={(e) => setErase(e.target.checked)} />
-              Erase
-            </label>
-
+        <div className="flex border-b border-border">
+          {SOURCE_TABS.map((t) => (
             <button
-              onClick={handleClear}
-              className="w-full px-3 py-2 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
+              key={t.key}
+              onClick={() => setSource(t.key)}
+              className={`px-4 py-2 font-mono-sm text-mono-sm uppercase tracking-widest border-b-2 ${
+                source === t.key
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-              Clear {CATEGORIES.find((c) => c.key === category)?.label}
+              {t.label}
             </button>
-
-            <button
-              onClick={() => handleBake(true)}
-              disabled={baking || !imgSize}
-              className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
-            >
-              {baking ? 'BAKING...' : 'BAKE + REBUILD'}
-            </button>
-          </aside>
+          ))}
         </div>
+
+        {modalError && (
+          <div className="flex items-center justify-between gap-3 px-container py-2 bg-error/10 border-b border-error text-error font-mono-sm text-mono-sm">
+            <span>{modalError}</span>
+            <button onClick={() => setModalError(null)} className="uppercase hover:opacity-70 shrink-0">
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {source === 'sketch' ? (
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-background p-4">
+              {sketchUrl ? (
+                <canvas
+                  ref={canvasRef}
+                  className="max-w-full max-h-full cursor-crosshair border border-border"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerLeave={handlePointerUp}
+                />
+              ) : (
+                <p className="font-mono-sm text-mono-sm text-on-surface-variant">
+                  No sketch loaded -- upload one to begin painting.
+                </p>
+              )}
+            </div>
+
+            <aside className="w-64 border-l border-border p-container space-y-4 overflow-y-auto shrink-0">
+              <div className="space-y-2">
+                <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
+                  Upload Sketch Photo
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  className="font-mono-sm text-[11px] text-on-surface-variant w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
+                  Category
+                </label>
+                <div className="grid grid-cols-1 gap-1">
+                  {CATEGORIES.map((c) => (
+                    <button
+                      key={c.key}
+                      onClick={() => setCategory(c.key)}
+                      className={`px-3 py-2 border font-mono-sm text-mono-sm uppercase text-left flex items-center gap-2 ${
+                        category === c.key
+                          ? 'border-accent text-accent'
+                          : 'border-border text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      <span className="inline-block w-3 h-3" style={{ backgroundColor: c.color }} />
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between font-mono-sm text-mono-sm">
+                  <span className="text-on-surface-variant uppercase">Brush Size</span>
+                  <span className="text-accent">{brushSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min={4}
+                  max={80}
+                  step={1}
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(parseInt(e.target.value, 10))}
+                  className="w-full h-[1px] bg-border appearance-none cursor-pointer accent-accent"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant uppercase cursor-pointer">
+                <input type="checkbox" checked={erase} onChange={(e) => setErase(e.target.checked)} />
+                Erase
+              </label>
+
+              <button
+                onClick={handleClear}
+                className="w-full px-3 py-2 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
+              >
+                Clear {CATEGORIES.find((c) => c.key === category)?.label}
+              </button>
+
+              <button
+                onClick={() => handleBake(true)}
+                disabled={baking || !imgSize}
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {baking ? 'BAKING...' : 'BAKE + REBUILD'}
+              </button>
+            </aside>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-1 overflow-hidden">
+              <aside className="w-64 border-r border-border p-container space-y-2 overflow-y-auto shrink-0">
+                <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
+                  Recent Diagrams
+                </label>
+                {loadingList ? (
+                  <p className="font-mono-sm text-[11px] text-on-surface-variant">Loading...</p>
+                ) : diagrams.length === 0 ? (
+                  <p className="font-mono-sm text-[11px] text-on-surface-variant">
+                    No exported diagrams found -- generate one in the legacy diagram tool first.
+                  </p>
+                ) : (
+                  diagrams.map((d) => (
+                    <button
+                      key={d.filename}
+                      onClick={() => handleSelectDiagram(d.filename)}
+                      className={`w-full text-left border p-1 flex items-center gap-2 ${
+                        selectedDiagram === d.filename
+                          ? 'border-accent'
+                          : 'border-border hover:border-on-surface-variant'
+                      }`}
+                    >
+                      <img
+                        src={`/legacy-diagrams/${d.filename}`}
+                        alt={d.filename}
+                        className="w-12 h-12 object-cover shrink-0 bg-background"
+                      />
+                      <span className="font-mono-sm text-[10px] text-on-surface-variant truncate">
+                        {d.filename}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </aside>
+
+              <div className="flex-1 overflow-auto flex flex-col items-center justify-center bg-background p-4 gap-4">
+                {loadingDiagramPreview ? (
+                  <p className="font-mono-sm text-mono-sm text-on-surface-variant">Converting...</p>
+                ) : diagramPreview ? (
+                  <>
+                    <canvas ref={diagramCanvasRef} className="border border-border max-w-full max-h-full" />
+                    <div className="font-mono-sm text-[11px] text-on-surface-variant">
+                      {Object.entries(diagramPreview.counts)
+                        .filter(([k]) => k !== 'canyon')
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join('  ')}
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-mono-sm text-mono-sm text-on-surface-variant">
+                    Select a diagram to preview its converted regions.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-container border-t border-border">
+              <button
+                onClick={handleBakeDiagram}
+                disabled={!diagramPreview || diagramBaking}
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {diagramBaking ? 'BAKING...' : 'BAKE THIS DIAGRAM + REBUILD'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

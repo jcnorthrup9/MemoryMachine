@@ -41,6 +41,13 @@ const VERTICAL_CYLINDER_KINDS = new Set(
 const HEX_KINDS = new Set(
   Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'hex').map(([k]) => k),
 );
+// 2026-07-16 Canopy Redesign -- flat individually-oriented panels
+// (canopy_panel). Single-point like hex, but needs a full per-instance
+// tilt (normal_x/y/z) that HEX_KINDS' single Y-axis rotation can't
+// express -- see CanopyPanelInstances below.
+const PANEL_KINDS = new Set(
+  Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'panel').map(([k]) => k),
+);
 // Per-kind tint -- roughly matches the paint-category tints already
 // established for Water/Shade (cyan) and Amenity/Resting (orange) so the
 // same semantic colors carry through from painting to rendered assets.
@@ -67,6 +74,19 @@ const KIND_COLOR = Object.fromEntries(Object.entries(KIND_REGISTRY.kinds).map(([
 // upside-down" symptom reported after adding the Plan-view street labels.
 function toThree(x, y, z, siteLengthFt) {
   return [x, z, siteLengthFt - y];
+}
+
+// Direction-only counterpart to toThree() (2026-07-16, Canopy Redesign) --
+// for transforming a vector with no translation term (a surface normal),
+// not a position. This is the exact coefficient-only reduction of
+// toThree()'s formula: [x,y,z] -> [x, z, L-y] has a constant term (L) only
+// in the z-slot; dropping that constant and keeping just the coefficients
+// on (dx,dy,dz) gives [dx, dz, -dy]. Verified against toThree()'s own
+// handedness bug history before use -- do not skip that verification if
+// this is ever touched again, a normal transform is exactly the kind of
+// position-vs-direction mismatch that bug class already hit once.
+function toThreeDir(nx, ny, nz) {
+  return [nx, nz, -ny];
 }
 
 // Generous vertical extent estimate for framing Front/Side elevations --
@@ -264,6 +284,79 @@ const circulationFilter = (v) => v.typology === 'CIRCULATION';
 
 function CirculationSurface(props) {
   return <CategoryGroundCap {...props} filterFn={circulationFilter} color={CIRCULATION_COLOR} thicknessFt={CIRCULATION_THICKNESS_FT} />;
+}
+
+// Canopy Engine glass overlay (2026-07-13) -- SUPERSEDED, kept for
+// reference only, not currently mounted anywhere in this file (disabled
+// 2026-07-13 for occluding Program Zone labels; the 2026-07-16 Canopy
+// Redesign replaced this whole feature with CanopyPanelInstances' faceted
+// panels + branching supports, which was the explicit design goal --
+// individually-oriented panels, not a smooth continuous surface -- so this
+// isn't "pending re-enable," just preserved as the right technique
+// precedent for a possible future smooth-glass variant. If ever revived,
+// read canopyResult.canopy_height_matrix (the explicit-action response),
+// NOT data.canopy_height_matrix -- canopy no longer runs inside rebuild()
+// at all, see App.jsx's handleGenerateCanopy. Still a continuous nx x nz
+// heightfield technique, NOT a per-voxel box like CategoryGroundCap above:
+// one BufferGeometry vertex per grid point, triangulated as a regular
+// grid, same technique RealSlabPlate uses (position attribute + explicit
+// index array + computeVertexNormals), generalized from one quad's 8
+// verts to a full nx*nz surface. Punctures (punctureMask[gx][gy]) skip
+// both triangles for that cell -- a real hole, not a post-hoc deletion pass.
+function CanopyOverlay({ heightMatrix, punctureMask, voxelFt, siteLengthFt }) {
+  const geometry = useMemo(() => {
+    const nx = heightMatrix.length;
+    const nz = nx > 0 ? heightMatrix[0].length : 0;
+
+    const positions = new Array(nx * nz * 3);
+    for (let gx = 0; gx < nx; gx++) {
+      for (let gy = 0; gy < nz; gy++) {
+        const cx = gx * voxelFt + voxelFt / 2;
+        const cy = gy * voxelFt + voxelFt / 2;
+        const [x, y, z] = toThree(cx, cy, heightMatrix[gx][gy], siteLengthFt);
+        const i = (gx * nz + gy) * 3;
+        positions[i] = x;
+        positions[i + 1] = y;
+        positions[i + 2] = z;
+      }
+    }
+
+    const indices = [];
+    for (let gx = 0; gx < nx - 1; gx++) {
+      for (let gy = 0; gy < nz - 1; gy++) {
+        if (punctureMask?.[gx]?.[gy]) continue;
+        const a = gx * nz + gy;
+        const b = (gx + 1) * nz + gy;
+        const c = (gx + 1) * nz + (gy + 1);
+        const d = gx * nz + (gy + 1);
+        indices.push(a, b, c, a, c, d);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+  }, [heightMatrix, punctureMask, voxelFt, siteLengthFt]);
+
+  // First use of meshPhysicalMaterial/transmission in this codebase --
+  // deliberately NOT routed through shading.js's materialProps() (which only
+  // targets meshStandardMaterial's roughness/metalness/color/transparent
+  // shape); this is a fixed "architectural glass" treatment, not wired into
+  // the wireframe/ghosted/arctic shading-mode branching yet (follow-up).
+  return (
+    <mesh geometry={geometry}>
+      <meshPhysicalMaterial
+        color="#dfeff2"
+        roughness={0.05}
+        transmission={0.9}
+        thickness={0.5}
+        transparent
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
 }
 
 // Real column solids, extracted directly from the live Rhino STRUC__Columns
@@ -631,13 +724,30 @@ function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
   );
 }
 
+// Circulation path kinds (2026-07-13) -- footpath/ramp/escalator and their
+// _bridge variants render as flat, slightly-thickened ribbons (RibbonInstances
+// below) instead of round cylinders: these are walkable path surfaces, not
+// structural rods, so a round "tree branch" cross-section read wrong. Kept
+// as an explicit kind set (not e.g. "everything with x2_ft"), since
+// steel_strut/steel_tie_rod/knee_brace/timber_beam are also two-point but
+// ARE genuinely round members and should stay cylinders.
+const CIRCULATION_PATH_KINDS = new Set([
+  'footpath', 'ramp', 'escalator', 'footpath_bridge', 'ramp_bridge', 'escalator_bridge',
+]);
+// Ribbon cross-section thickness (vertical) -- "slightly thickened" per
+// design request, not a paper-thin plane. Width comes from each spec's own
+// radius_ft (flow-scaled path width, same field CylinderInstances used for
+// tube radius before this split), just applied as a flat rectangle instead.
+const PATH_THICKNESS_FT = 0.5;
+
 // Round cylinders: two-point specs (steel_strut, steel_tie_rod,
 // knee_brace, timber_beam -- anything with x2_ft set, matching Python's
-// "if spec.x2_ft is not None" check, not a kind-name allowlist) plus the
-// single-point "vertical cylinder" kinds (steel_bolt, bolt_flange_plate),
-// whose endpoints Python derives as (x,y,z_top-height) -> (x,y,z_top).
-// One unit cylinder (radius=1, height=1) scaled/rotated per instance --
-// same trick TerraceVoxels/BoxInstances use for boxes.
+// "if spec.x2_ft is not None" check, not a kind-name allowlist -- EXCEPT
+// CIRCULATION_PATH_KINDS, see RibbonInstances below) plus the single-point
+// "vertical cylinder" kinds (steel_bolt, bolt_flange_plate), whose
+// endpoints Python derives as (x,y,z_top-height) -> (x,y,z_top). One unit
+// cylinder (radius=1, height=1) scaled/rotated per instance -- same trick
+// TerraceVoxels/BoxInstances use for boxes.
 function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
   const ghosted = showsOutline(shadingMode);
   const shadows = castsShadows(shadingMode);
@@ -646,6 +756,7 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
     for (const s of specs) {
       let p0, p1;
       if (s.x2_ft !== null) {
+        if (CIRCULATION_PATH_KINDS.has(s.kind)) continue; // rendered as a flat ribbon instead
         p0 = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
         p1 = toThree(s.x2_ft, s.y2_ft, s.z2_ft, siteLengthFt);
       } else if (VERTICAL_CYLINDER_KINDS.has(s.kind)) {
@@ -697,6 +808,83 @@ function CylinderInstances({ specs, siteLengthFt, shadingMode }) {
               position={position}
               quaternion={quaternion}
               scale={[radius * OUTLINE_SCALE, length * OUTLINE_SCALE, radius * OUTLINE_SCALE]}
+            />
+          ))}
+        </Instances>
+      ))}
+    </>
+  );
+}
+
+// Flat, slightly-thickened ribbons for CIRCULATION_PATH_KINDS (footpath/
+// ramp/escalator + _bridge variants) -- same two-point grouping as
+// CylinderInstances above, but builds a proper (right, thickness, forward)
+// orthonormal basis instead of a single quaternion-from-vectors trick
+// (which only fixes a cylinder's symmetric long axis, not a box's twist/
+// roll around it). `ref` mirrors blender/pershing_headless_build.py's
+// _add_cylinder basis choice exactly (world-up unless the segment is
+// nearly vertical, then fall back to world-X) so a live-viewport ramp and
+// its Blender-exported twin tilt the same way. Width comes from radius_ft
+// (the same flow-scaled field CylinderInstances used for tube radius);
+// thickness is the fixed PATH_THICKNESS_FT constant above.
+function RibbonInstances({ specs, siteLengthFt, shadingMode }) {
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
+  const grouped = useMemo(() => {
+    const map = {};
+    for (const s of specs) {
+      if (s.x2_ft === null || !CIRCULATION_PATH_KINDS.has(s.kind)) continue;
+      const p0 = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
+      const p1 = toThree(s.x2_ft, s.y2_ft, s.z2_ft, siteLengthFt);
+      (map[s.kind] ||= []).push({ p0, p1, width: (s.radius_ft || 0.2) * 2 });
+    }
+    return map;
+  }, [specs, siteLengthFt]);
+
+  const framesFor = (items) => items.map(({ p0, p1, width }) => {
+    const a = new THREE.Vector3(...p0);
+    const b = new THREE.Vector3(...p1);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const forward = b.clone().sub(a);
+    const length = forward.length();
+    if (length < 1e-6) return null;
+    forward.normalize();
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const ref = Math.abs(forward.y) < 0.9 ? worldUp : new THREE.Vector3(1, 0, 0);
+    const u = new THREE.Vector3().crossVectors(ref, forward).normalize();
+    const v = new THREE.Vector3().crossVectors(forward, u).normalize();
+    const basis = new THREE.Matrix4().makeBasis(u, v, forward);
+    const quat = new THREE.Quaternion().setFromRotationMatrix(basis);
+    return { position: mid.toArray(), quaternion: quat.toArray(), width, length };
+  }).filter(Boolean);
+
+  return (
+    <>
+      {Object.entries(grouped).map(([kind, items]) => (
+        <Instances
+          key={`${kind}-ribbon-${paddedCapacity(items.length)}`}
+          limit={paddedCapacity(items.length)}
+          range={items.length}
+          castShadow={shadows}
+          receiveShadow={shadows}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
+          {framesFor(items).map(({ position, quaternion, width, length }, i) => (
+            <Instance key={i} position={position} quaternion={quaternion} scale={[width, PATH_THICKNESS_FT, length]} />
+          ))}
+        </Instances>
+      ))}
+      {ghosted && Object.entries(grouped).map(([kind, items]) => (
+        <Instances key={`${kind}-ribbon-outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {framesFor(items).map(({ position, quaternion, width, length }, i) => (
+            <Instance
+              key={i}
+              position={position}
+              quaternion={quaternion}
+              scale={[width * OUTLINE_SCALE, PATH_THICKNESS_FT * OUTLINE_SCALE, length * OUTLINE_SCALE]}
             />
           ))}
         </Instances>
@@ -776,11 +964,88 @@ function HexInstances({ specs, siteLengthFt, shadingMode }) {
   );
 }
 
+// Individually-oriented flat panels (canopy_panel) -- 2026-07-16 Canopy
+// Redesign. Modeled on RibbonInstances' basis-construction above (a
+// panel's orientation needs a full 3D basis pinned to its surface normal,
+// not just a single-axis rotation like HexInstances) -- same worldUp/
+// worldX fallback rule (0.9 dot-product threshold), so a live-viewport
+// panel and its Blender-exported twin tilt the same way (see
+// blender_cockpit.py's _add_panel). makeBasis(u, v, normal) puts the
+// normal on the box's local Z axis, so scale=[width, depth, thickness]
+// (scale/scale_y/height_ft) lines up with (u, v, normal) exactly. Box
+// geometry, not a plane, so panels get real thickness and a correct
+// outline pass in Ghosted mode like every other kind. NOT part of
+// StructuralInstances below -- panels come from their own explicit-action
+// response (canopyResult), not data.structural, see Viewport's main
+// render tree.
+function CanopyPanelInstances({ specs, siteLengthFt, shadingMode }) {
+  const items = useMemo(
+    () => specs.filter((s) => PANEL_KINDS.has(s.kind)),
+    [specs],
+  );
+
+  const frames = useMemo(() => items.map((s) => {
+    const position = toThree(s.x_ft, s.y_ft, s.z_top_ft, siteLengthFt);
+    const [nx_, ny_, nz_] = toThreeDir(s.normal_x, s.normal_y, s.normal_z);
+    const normal = new THREE.Vector3(nx_, ny_, nz_).normalize();
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const ref = Math.abs(normal.y) < 0.9 ? worldUp : new THREE.Vector3(1, 0, 0);
+    const u = new THREE.Vector3().crossVectors(ref, normal).normalize();
+    const v = new THREE.Vector3().crossVectors(normal, u).normalize();
+    const basis = new THREE.Matrix4().makeBasis(u, v, normal);
+    const quaternion = new THREE.Quaternion().setFromRotationMatrix(basis).toArray();
+    const scale = [s.scale, s.scale_y ?? s.scale, s.height_ft];
+    return { position, quaternion, scale };
+  }), [items, siteLengthFt]);
+
+  if (items.length === 0) return null;
+
+  const ghosted = showsOutline(shadingMode);
+  const shadows = castsShadows(shadingMode);
+
+  return (
+    <>
+      <Instances
+        key={`canopy_panel-${paddedCapacity(items.length)}`}
+        limit={paddedCapacity(items.length)}
+        range={items.length}
+        castShadow={shadows}
+        receiveShadow={shadows}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR.canopy_panel)} />
+        {frames.map(({ position, quaternion, scale }, i) => (
+          <Instance key={i} position={position} quaternion={quaternion} scale={scale} />
+        ))}
+      </Instances>
+      {ghosted && (
+        <Instances
+          key={`canopy_panel-outline-${paddedCapacity(items.length)}`}
+          limit={paddedCapacity(items.length)}
+          range={items.length}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial {...outlineMaterialProps()} />
+          {frames.map(({ position, quaternion, scale }, i) => (
+            <Instance
+              key={i}
+              position={position}
+              quaternion={quaternion}
+              scale={[scale[0] * OUTLINE_SCALE, scale[1] * OUTLINE_SCALE, scale[2] * OUTLINE_SCALE]}
+            />
+          ))}
+        </Instances>
+      )}
+    </>
+  );
+}
+
 function StructuralInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
   return (
     <>
       <BoxInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={showSalvage} />
       <CylinderInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+      <RibbonInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
       <HexInstances specs={specs} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
     </>
   );
@@ -980,9 +1245,9 @@ function ProgramLegend({ zones }) {
 }
 
 export default function Viewport({
-  data, programZones, bayFt, networkSpecs, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl, blenderSvgUrl,
-  onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild, savingBuild,
-  removeTopSlab, onToggleRemoveTopSlab,
+  data, programZones, bayFt, networkSpecs, canopyResult, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl,
+  blenderSvgUrl, onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild,
+  savingBuild, removeTopSlab, onToggleRemoveTopSlab, visibleLayers,
 }) {
   const loadBuildInputRef = useRef(null);
   const [shadingMode, setShadingMode] = useState('colored');
@@ -1139,7 +1404,7 @@ export default function Viewport({
           <BlenderBuild objUrl={blenderObjUrl} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         ) : (
           <>
-            {data && (
+            {visibleLayers.realContext && data && (
               <RealSlabs
                 slabs={data.real_slabs}
                 fragments={data.real_slab_fragments}
@@ -1149,10 +1414,10 @@ export default function Viewport({
                 showTopSlab={showTopSlab}
               />
             )}
-            {data && (
+            {visibleLayers.realContext && data && (
               <RealColumns columns={data.real_columns} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
             )}
-            {data && (
+            {visibleLayers.structural && data && (
               <StructuralInstances
                 specs={data.structural}
                 siteLengthFt={siteLengthFt}
@@ -1160,7 +1425,7 @@ export default function Viewport({
                 showSalvage={showSalvage}
               />
             )}
-            {data && (
+            {visibleLayers.greenscape && data && (
               <GreenscapeGround
                 voxels={data.voxels}
                 voxelFt={voxelFt}
@@ -1168,7 +1433,7 @@ export default function Viewport({
                 shadingMode={shadingMode}
               />
             )}
-            {data && (
+            {visibleLayers.shade && data && (
               <ShadeGround
                 voxels={data.voxels}
                 voxelFt={voxelFt}
@@ -1176,7 +1441,7 @@ export default function Viewport({
                 shadingMode={shadingMode}
               />
             )}
-            {data && (
+            {visibleLayers.circulation && data && (
               <CirculationSurface
                 voxels={data.voxels}
                 voxelFt={voxelFt}
@@ -1184,7 +1449,32 @@ export default function Viewport({
                 shadingMode={shadingMode}
               />
             )}
-            {networkSpecs && (
+            {/* Organic panelized canopy + branching supports (2026-07-16
+                Canopy Redesign) -- from canopyResult, the "Generate Canopy"
+                explicit action's OWN response, not data.structural (see
+                App.jsx's handleGenerateCanopy). "Canopy" toggle repurposed
+                a third time (previously: the disabled glass mesh below,
+                then the old canopy_beam/Structural split) to gate this
+                instead. Glass CanopyOverlay mesh stays disabled (2026-07-13
+                -- it was occluding Program Zone text labels) -- if ever
+                revived, gate it on visibleLayers.canopy too and read
+                canopyResult.canopy_height_matrix, not data.canopy_height_matrix
+                (removed, canopy no longer runs inside rebuild()). */}
+            {visibleLayers.canopy && canopyResult && (
+              <>
+                <CanopyPanelInstances
+                  specs={canopyResult.canopy_panels}
+                  siteLengthFt={siteLengthFt}
+                  shadingMode={shadingMode}
+                />
+                <CylinderInstances
+                  specs={canopyResult.canopy_columns}
+                  siteLengthFt={siteLengthFt}
+                  shadingMode={shadingMode}
+                />
+              </>
+            )}
+            {visibleLayers.structural && networkSpecs && (
               <StructuralInstances
                 specs={networkSpecs}
                 siteLengthFt={siteLengthFt}
@@ -1194,12 +1484,28 @@ export default function Viewport({
             )}
           </>
         )}
-        <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        {visibleLayers.staticContext && (
+          <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        )}
         <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
-        <ProgramZones
-          zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode}
-          showLabels={showLabels}
-        />
+        {visibleLayers.programZones && (
+          <ProgramZones
+            zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode}
+            showLabels={showLabels}
+          />
+        )}
+        {/* Program Boxes (2026-07-16) -- optional placeholder-massing
+            preview for EVERY placed program zone (not just the civic/
+            health_care zones that still always render as real structural
+            mass under "Structural"), sized to each zone's actual claimed
+            bay footprint. Own toggle, off by default -- data.program_boxes
+            is a top-level rebuild() field, not part of data.structural, so
+            this reuses BoxInstances directly rather than the full
+            StructuralInstances wrapper (program_boxes only ever contains
+            the box-shape building_mass kind, never cylinder/hex/panel). */}
+        {visibleLayers.programBoxes && data?.program_boxes && (
+          <BoxInstances specs={data.program_boxes} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={false} />
+        )}
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
         <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">

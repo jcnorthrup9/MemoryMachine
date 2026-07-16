@@ -36,6 +36,7 @@ from sketch_weight_mapper import find_latest_sketch  # noqa: E402
 # above, safe to import directly at module level.
 from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # noqa: E402
 from logic.program_placement import load_programs, place_programs  # noqa: E402
+from logic.canopy_engine import CanopyEngine  # noqa: E402
 # foot_traffic.py mirrors amenity_deficit.py's CSV contract exactly, for a
 # separate real-data channel (foot traffic vs. amenity deficit) -- aliased
 # since both modules define a same-named find_latest_csv().
@@ -58,6 +59,7 @@ from logic import juror_chat as juror_chat_agent  # noqa: E402
 # remix_precedent() below for what's actually NEW here.
 from logic.ai_synthesizer import generate_spatial_seed  # noqa: E402
 from logic.urban_engine import remix_layers  # noqa: E402
+import ingest_diagram_svg  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(BASE_DIR, "outputs", "cockpit", "sketch_weights_cache.json")
@@ -173,6 +175,9 @@ if os.path.exists(PAINT_STATE_PATH):
     # (unlike the water_shade split) there's no ambiguity to migrate --
     # "no deck painted yet" is exactly what an empty mask already means.
     DECK_MASK = _paint_state.get("deck") or _empty_mask(NX, NZ)
+    # CANOPY_MASK (2026-07-13, Canopy Engine) -- same .get()-with-fallback
+    # as DECK_MASK above: new field, no legacy-payload ambiguity to migrate.
+    CANOPY_MASK = _paint_state.get("canopy") or _empty_mask(NX, NZ)
 elif os.path.exists(SKETCH_CACHE_PATH):
     with open(SKETCH_CACHE_PATH) as f:
         _cache = json.load(f)
@@ -183,6 +188,7 @@ elif os.path.exists(SKETCH_CACHE_PATH):
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
     DECK_MASK = _empty_mask(NX, NZ)
+    CANOPY_MASK = _empty_mask(NX, NZ)
 else:
     SKETCH_WEIGHTS = _empty_mask(NX, NZ)
     HARDSCAPE_MASK = _empty_mask(NX, NZ)
@@ -191,6 +197,7 @@ else:
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
     DECK_MASK = _empty_mask(NX, NZ)
+    CANOPY_MASK = _empty_mask(NX, NZ)
 
 # The sketch image the paint canvas displays as its background -- starts
 # as whatever's already in data/sketches/ (same lookup blender_cockpit.py
@@ -231,7 +238,7 @@ class BakeGrids(BaseModel):
     real-feet cell indexing TerracingEngine uses) -- mirrors
     blender_cockpit.py's bake_paint_canvas, just with the sampling done in
     JS against a 2D canvas instead of Python against a Blender Image.
-    canyon is the one continuous weight grid (painted alpha IS the
+    canyon and canopy are continuous weight grids (painted alpha IS the
     weight); the other five are boolean zone masks, already thresholded
     client-side. water/shade split 2026-07-11 (was one combined
     water_shade field) -- see terracing_engine.py's Voxel docstring.
@@ -252,28 +259,38 @@ class BakeGrids(BaseModel):
     # signal to convert -- can keep calling bakePaint() without needing its
     # own update; "no deck painted" is exactly what an empty default means.
     deck: list[list[bool]] = Field(default_factory=lambda: _empty_mask(NX, NZ))
+    # 2026-07-13 Canopy Engine: a continuous weight grid, same role as
+    # canyon above (painted alpha IS the weight, not thresholded to a
+    # boolean) -- see CanopyEngine's height equation. Defaulted, like deck,
+    # NOT undefaulted like canyon: logic/legacy_diagram_bridge.py's
+    # preview_import() builds a BakeGrids-shaped dict from
+    # ingest_legacy_diagram.convert_one(), which predates this field and has
+    # no equivalent color-segmented signal to convert -- "no canopy painted"
+    # is exactly what an empty default means, same reasoning as deck's.
+    canopy: list[list[float]] = Field(default_factory=lambda: _empty_mask(NX, NZ))
 
 
 def _save_paint_state():
-    """Persist all 7 live grids to PAINT_STATE_PATH (2026-07-10 persistence
-    supplement, water/shade split 2026-07-11, deck mask 2026-07-13) so a
-    backend restart doesn't lose painted work -- previously bake() only
-    updated the in-memory globals, never written anywhere. See
-    _atomic_write_json for the actual write mechanics (shared with the
-    one-time bootstrap migration above)."""
+    """Persist all 8 live grids to PAINT_STATE_PATH (2026-07-10 persistence
+    supplement, water/shade split 2026-07-11, deck mask 2026-07-13, canopy
+    mask 2026-07-13) so a backend restart doesn't lose painted work --
+    previously bake() only updated the in-memory globals, never written
+    anywhere. See _atomic_write_json for the actual write mechanics (shared
+    with the one-time bootstrap migration above)."""
     _atomic_write_json(PAINT_STATE_PATH, {
         "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water": WATER_MASK, "shade": SHADE_MASK,
         "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK, "deck": DECK_MASK,
+        "canopy": CANOPY_MASK,
     })
 
 
 def bake(grids: BakeGrids):
-    """Overwrite the seven live grids from a completed paint session and
+    """Overwrite the eight live grids from a completed paint session and
     persist them (see _save_paint_state). Does NOT trigger a rebuild itself
     -- the frontend calls /rebuild right after, reusing its existing
     rebuild path rather than duplicating it here with a second copy of the
     current slider params."""
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, DECK_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, DECK_MASK, CANOPY_MASK
     SKETCH_WEIGHTS = grids.canyon
     HARDSCAPE_MASK = grids.hardscape
     WATER_MASK = grids.water
@@ -281,6 +298,7 @@ def bake(grids: BakeGrids):
     GREENSCAPE_MASK = grids.greenscape
     AMENITY_RESTING_MASK = grids.amenity_resting
     DECK_MASK = grids.deck
+    CANOPY_MASK = grids.canopy
     _save_paint_state()
     return {
         "status": "ok",
@@ -292,6 +310,7 @@ def bake(grids: BakeGrids):
             "greenscape": sum(1 for row in GREENSCAPE_MASK for v in row if v),
             "amenity_resting": sum(1 for row in AMENITY_RESTING_MASK for v in row if v),
             "deck": sum(1 for row in DECK_MASK for v in row if v),
+            "canopy": sum(1 for row in CANOPY_MASK for v in row if v > 0.01),
         },
     }
 
@@ -337,6 +356,13 @@ class RebuildParams(BaseModel):
     # _z_for_voxel. Real column geometry is unaffected either way (already
     # always rendered full-height regardless of this).
     remove_top_slab: bool = False
+    # 2026-07-13 program enable/disable checklist -- program `id`s (data/
+    # program_requirements.json's stable identifier, e.g. "soccer_field")
+    # to exclude entirely from this rebuild's placement pass. Empty by
+    # default (every NEEDED/Suggested program participates, same as
+    # before this existed). See _program_zones_from_engine's
+    # disabled_programs param and ParamPanel.jsx's Programs checklist.
+    disabled_programs: list[str] = []
 
 
 def get_config():
@@ -356,14 +382,24 @@ def get_config():
         "amenity_csv": os.path.basename(AMENITY_CSV_PATH) if AMENITY_CSV_PATH else None,
         "foot_traffic_csv": os.path.basename(FOOT_TRAFFIC_CSV_PATH) if FOOT_TRAFFIC_CSV_PATH else None,
         "noise_csv": os.path.basename(NOISE_CSV_PATH) if NOISE_CSV_PATH else None,
+        # 2026-07-13 program enable/disable checklist -- every NEEDED/
+        # Suggested program's id/label/target_sf, so ParamPanel.jsx can
+        # render a checkbox for each one even while it's currently disabled
+        # (and therefore absent from the last rebuild's own program_zones,
+        # which only lists programs that actually went through placement).
+        "all_programs": [
+            {"id": p["id"], "label": p["label"], "category": p["category"], "target_sf": p["target_sf"]}
+            for p in load_programs()
+        ],
     }
 
 
 def _serialize_specs(specs):
-    """Shared StructuralElement -> JSON dict shape, used by both rebuild()'s
-    "structural" key and grow_network()'s "network" key -- keeping this in
-    one place means the two response payloads can never silently drift
-    apart in which fields they expose."""
+    """Shared StructuralElement -> JSON dict shape, used by rebuild()'s
+    "structural" key, grow_network()'s "network" key, and generate_canopy()'s
+    "canopy_panels"/"canopy_columns" keys -- keeping this in one place means
+    these response payloads can never silently drift apart in which fields
+    they expose."""
     return [
         {
             "kind": s.kind, "x_ft": s.x_ft, "y_ft": s.y_ft, "z_top_ft": s.z_top_ft,
@@ -372,6 +408,9 @@ def _serialize_specs(specs):
             "scale_y": s.scale_y,
             "column_id": s.column_id, "column_id2": s.column_id2, "slab_id": s.slab_id,
             "source": s.source,
+            # 2026-07-16 Canopy Redesign -- unit surface normal, only set for
+            # "panel"-shape kinds (canopy_panel). None for everything else.
+            "normal_x": s.normal_x, "normal_y": s.normal_y, "normal_z": s.normal_z,
         }
         for s in specs
     ]
@@ -608,11 +647,17 @@ def get_bay_grid():
     return _bay_grid_from_engine(engine, voxels)
 
 
-def _program_zones_from_engine(engine, voxels):
+def _program_zones_from_engine(engine, voxels, disabled_programs=None):
     """Body of get_program_zones(), extracted (2026-07-12) the same way as
-    _bay_grid_from_engine() -- see that function's docstring for why."""
+    _bay_grid_from_engine() -- see that function's docstring for why.
+
+    disabled_programs (2026-07-13 program enable/disable checklist):
+    passed straight through to load_programs()'s exclude_ids -- None here
+    (get_program_zones()'s own default-params wrapper below) means every
+    program participates, same pre-existing behavior; rebuild() passes
+    params.disabled_programs instead (see its own call site)."""
     bay_grid = _bay_grid_from_engine(engine, voxels)
-    programs = load_programs()
+    programs = load_programs(exclude_ids=disabled_programs)
     return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs)}
 
 
@@ -706,20 +751,33 @@ def rebuild(params: RebuildParams):
     """Returns JSON voxels + structural/typology specs for the frontend to
     render however it likes (Three.js instancing, etc).
 
-    Buildings (2026-07-12): merges params.buildings (user-placed, via the
-    UI/API) with programmatic building_specs derived from placing programs
-    onto this SAME already-computed engine/voxels (_program_zones_from_engine,
-    not get_program_zones() -- avoids a second, default-params pipeline
-    run). Both sources render together, one doesn't replace the other."""
+    Buildings (2026-07-12): params.buildings (user-placed, via the UI/API)
+    render unconditionally as real structural mass, merged into all_specs
+    -- these are explicit manual placements, not tied to any program zone.
+
+    Program-zone box massing (2026-07-16 rework): EVERY placed program zone
+    now gets a building_spec (see logic/program_placement.py's place_programs()
+    -- previously only enrichment_civic/health_care zones did), sized to
+    that zone's real claimed bay footprint, not a separate target_sf-
+    derived shape. Returned as its OWN "program_boxes" response field,
+    NOT merged into all_specs -- these are an OPTIONAL placeholder-massing
+    preview (Viewport.jsx's "Program Boxes" toggle), independent of both
+    "Program Zones" (the existing flat-plane footprint markers) and
+    "Structural" (which would otherwise force every program's box on
+    whenever real structural framing is shown, the exact same kind-mixing
+    problem the canopy_beam/Structural split fixed 2026-07-16 for a
+    different feature)."""
     engine, voxels, typology_specs, base_specs, meta = _run_pipeline(params)
 
-    zones = _program_zones_from_engine(engine, voxels)["zones"]
-    programmatic_buildings = [
+    zones = _program_zones_from_engine(engine, voxels, disabled_programs=params.disabled_programs)["zones"]
+
+    manual_buildings = BuildingMassEngine([b.model_dump() for b in params.buildings]).run()
+    all_specs = base_specs + manual_buildings
+
+    program_box_specs = [
         BuildingSpec(**z["building_spec"]) for z in zones if z["building_spec"]
     ]
-    buildings = BuildingMassEngine(
-        [b.model_dump() for b in (*params.buildings, *programmatic_buildings)]).run()
-    all_specs = base_specs + buildings
+    program_boxes = BuildingMassEngine([b.model_dump() for b in program_box_specs]).run()
 
     kind_counts = {}
     for s in all_specs:
@@ -734,6 +792,10 @@ def rebuild(params: RebuildParams):
             for v in voxels
         ],
         "structural": _serialize_specs(all_specs),
+        # 2026-07-16: every placed program zone's optional placeholder box
+        # (see this function's own docstring for why these are kept OUT of
+        # "structural"/kind_counts above, not merged in).
+        "program_boxes": _serialize_specs(program_boxes),
         # 2026-07-12: lets App.jsx refresh placed program zones on every
         # rebuild instead of only fetching them once at mount (they were
         # already computed above for the buildings step, so this is free).
@@ -760,6 +822,15 @@ def rebuild(params: RebuildParams):
         # number -20, and `${-20}` stringifies to "-20" not "-20.0").
         "real_slabs": [{**s, "key": slab_key(s)} for s in REAL_GEOMETRY.get("real_slabs", [])],
         "real_columns": REAL_GEOMETRY.get("real_columns", []),
+        # Real spiral-core parking ramp geometry (2026-07-13) -- pre-
+        # tessellated vertices/faces per level per cluster, extracted
+        # straight from Rhino (see PershingMetabolizer_Prototype/
+        # real_geometry.json's own ramp_meshes). Passed through as-is,
+        # fixed geometry like real_slabs/real_columns above -- doesn't
+        # depend on excavation params. Only consumed by
+        # blender/pershing_headless_build.py's OBJ export so far (not yet
+        # rendered in the live Three.js viewport).
+        "ramp_meshes": REAL_GEOMETRY.get("ramp_meshes", {}),
         # Per-slab remaining (not-yet-excavated) fragment cells, keyed by the
         # same slab_key() string as each real_slabs entry's `key` above --
         # only remaining/removed_count sent (not the full "slab" sub-dict
@@ -839,6 +910,84 @@ def grow_network(payload: GrowNetworkRequest):
         "node_count": len(net.nodes),
         "attractor_count": len(net.attractors),
         "attractors_unconsumed": sum(1 for a in net.attractors if not a.consumed),
+    }
+
+
+class CanopyParams(BaseModel):
+    """2026-07-16 Canopy Redesign -- every tunable CanopyEngine's __init__
+    takes besides real_geometry/terracing_engine/voxels/zones/canopy_mask
+    (those come from _run_pipeline()/CANOPY_MASK, not the client). Field
+    names match CanopyEngine's constructor kwargs exactly (generate_canopy()
+    passes this whole model in via **model_dump()), so keep them in sync --
+    see logic/canopy_engine.py's module docstring for what each one does."""
+    base_height_ft: float = 20.0
+    wave_amplitude_ft: float = 8.0
+    wave_length_x_ft: float = 120.0
+    wave_length_y_ft: float = 90.0
+    wave_phase_x: float = 0.0
+    wave_phase_y: float = 0.0
+    dip_weight_ft: float = 6.0
+    program_boost_ft: float = 6.0
+    sculpt_radius_scale: float = 1.3
+    smoothing_iterations: int = 4
+    puncture_threshold: float = 0.5
+    panel_pitch_ft: float = 9.0
+    panel_thickness_ft: float = 0.15
+    fork_height_fraction: float = 0.6
+    fork_spread_ft: float = 4.0
+    column_search_radius_ft: float = 40.0
+    # Deliberately low (see _footprint_mask's own docstring) -- any
+    # deliberate brush stroke should count as "painted here."
+    footprint_paint_threshold: float = 0.05
+    support_tie_back_tolerance_ft: float = 15.0
+
+
+class GenerateCanopyRequest(BaseModel):
+    rebuild: RebuildParams = RebuildParams()
+    canopy: CanopyParams = CanopyParams()
+
+
+def generate_canopy(payload: GenerateCanopyRequest):
+    """
+    Generates the organic panelized canopy roof + branching support columns
+    ONLY where the user has painted the canopy brush (CANOPY_MASK) -- see
+    logic/canopy_engine.py's module docstring for the full paint-as-
+    footprint / sliders-as-shape design. Runs the exact same _run_pipeline()
+    setup rebuild() uses so the canopy reflects the current terrain/program
+    placement, not a separately-derived snapshot -- same reasoning as
+    grow_network().
+
+    Synchronous, explicit action -- not part of rebuild()'s live 200ms-
+    debounced loop. Canopy generation used to run inside rebuild() itself
+    (2026-07-13), gated to a flat plane by paint intensity; moved out
+    2026-07-16 once panel/support generation became real per-cell work (up
+    to a few thousand panels + hundreds of support elements) that has no
+    reason to rerun on every trivial slider tweak -- mirrors grow_network()'s
+    own already-established "heavier one-shot computation -> explicit
+    button, not the live loop" pattern.
+    """
+    engine, voxels, _typology_specs, _base_specs, _meta = _run_pipeline(payload.rebuild)
+    zones = _program_zones_from_engine(
+        engine, voxels, disabled_programs=payload.rebuild.disabled_programs)["zones"]
+
+    canopy = CanopyEngine(
+        REAL_GEOMETRY, engine, voxels, zones,
+        canopy_mask=CANOPY_MASK,
+        **payload.canopy.model_dump(),
+    )
+    height_matrix, puncture_mask, panel_specs, support_specs = canopy.run()
+
+    all_specs = panel_specs + support_specs
+    kind_counts = {}
+    for s in all_specs:
+        kind_counts[s.kind] = kind_counts.get(s.kind, 0) + 1
+
+    return {
+        "canopy_panels": _serialize_specs(panel_specs),
+        "canopy_columns": _serialize_specs(support_specs),
+        "canopy_height_matrix": height_matrix,
+        "canopy_puncture_mask": puncture_mask,
+        "kind_counts": kind_counts,
     }
 
 
@@ -929,20 +1078,32 @@ def remix_precedent(payload: RemixPrecedentRequest):
     amenity_resting -- "excavation"/canyon has no automatic inference, not
     part of the OLD app's taxonomy) it should feed into once applied.
 
-    MVP scope, deliberately: returns the curated layer stack + narrative for
-    the frontend to preview. Does NOT yet rasterize these layers into real
-    paint-mask grids or call bake() itself -- that conversion (precedent
-    SVG-unit space -> real site feet -> NX x NZ voxel grids) is real,
-    separate engineering (needs either a new Python SVG-group rasterizer or
-    reusing static/js's already-verified per-vertex rasterizer through a
-    headless-browser bridge) intentionally left as a following pass rather
-    than shipped untested under time pressure -- see the plan doc's Phase 8
-    notes.
+    2026-07-16: the "does NOT yet rasterize" gap this docstring used to
+    describe is closed -- ingest_diagram_svg.rasterize_precedent_layers()
+    now converts the composed layer stack (precedent SVG-unit space, via
+    each site's own boundary bbox) into real site feet and rasterizes onto
+    the voxel grid, reusing this app's already-calibrated BoundaryAffine
+    rather than a new bridge. Returns `grids`/`counts`/`resolved_layers`
+    alongside narrative/layers so the frontend can preview-then-bake, the
+    SAME pattern legacy_diagram_bridge.preview_import() already
+    established (client calls bakePaint(grids) directly once the user
+    confirms, no separate "apply" endpoint needed).
     """
     seed_items, narrative = generate_spatial_seed(payload.prompt)
     composed = remix_layers(seed_items)
     layers = [{**item, "role": _infer_role(item["layerId"])} for item in composed]
-    return {"narrative": narrative, "layers": layers}
+
+    grids, resolved_count = ingest_diagram_svg.rasterize_precedent_layers(layers, nx=NX, nz=NZ, voxel_ft=VOXEL_FT)
+    counts = {
+        key: sum(row.count(True) for row in grids[key])
+        for key in ("hardscape", "water", "shade", "greenscape", "amenity_resting")
+    }
+
+    return {
+        "narrative": narrative, "layers": layers,
+        "grids": grids, "counts": counts,
+        "resolved_layers": resolved_count, "requested_layers": len(layers),
+    }
 
 
 class ArchiveSaveRequest(BaseModel):

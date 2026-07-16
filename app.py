@@ -22,9 +22,11 @@ from logic.ai_synthesizer import (
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 from logic.pershing_api import (
-    RebuildParams, BakeGrids, GrowNetworkRequest, JurorChatRequest, CritiqueRequest, RemixPrecedentRequest,
+    RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, JurorChatRequest, CritiqueRequest,
+    RemixPrecedentRequest,
     get_config as pershing_get_config,
     rebuild as pershing_rebuild, grow_network as pershing_grow_network,
+    generate_canopy as pershing_generate_canopy,
     juror_chat as pershing_juror_chat, critique as pershing_critique,
     remix_precedent as pershing_remix_precedent,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
@@ -133,11 +135,10 @@ app.mount("/pershing-sketch", StaticFiles(directory=PERSHING_SKETCH_DIR), name="
 # serves the one static, unchanging reference OBJ.
 app.mount("/blender-headless-output", StaticFiles(directory=pershing_blender.OUTPUT_DIR), name="blender-headless-output")
 
-# Serves the legacy diagram tool's exported JPGs so DiagramInputPanel.jsx
-# can show thumbnails without a dedicated download endpoint -- same pattern
-# as /pershing-context above. Guarded by os.path.exists since this
-# directory only exists once the legacy tool (or ingest_legacy_diagram.py)
-# has actually written something to it.
+# Serves diagram_tool/'s exported SVGs so DiagramInputPanel.jsx can show
+# thumbnails without a dedicated download endpoint -- same pattern as
+# /pershing-context above. Guarded by os.path.exists since this directory
+# only exists once diagram_tool/ has actually exported something to it.
 if os.path.exists(LEGACY_DIAGRAM_DIR):
     app.mount("/legacy-diagrams", StaticFiles(directory=LEGACY_DIAGRAM_DIR), name="legacy-diagrams")
 
@@ -594,6 +595,16 @@ async def pershing_grow_network_route(payload: GrowNetworkRequest):
     (see grow_network()'s own docstring for why this doesn't need the
     async job-polling pattern the Blender build tier below uses)."""
     return pershing_grow_network(payload)
+
+
+@app.post("/api/pershing/generate-canopy")
+async def pershing_generate_canopy_route(payload: GenerateCanopyRequest):
+    """Generates the organic panelized canopy roof + branching supports
+    against whatever terrain/program params the frontend currently has
+    set -- explicit action, synchronous (see generate_canopy()'s own
+    docstring for why this doesn't need the async job-polling pattern the
+    Blender build tier below uses)."""
+    return pershing_generate_canopy(payload)
 
 
 @app.post("/api/pershing/juror-chat")
