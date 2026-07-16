@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Machine // Diagram Tool</title>
+    <link rel="icon" href="data:," />
+    <!-- Fonts: Space Grotesk (headlines) / Space Mono (labels) / Inter (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap">
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body class="panel-collapsed">
+    <header class="app-header">
+        <div class="header-left">
+            <h1>MEMORY MACHINE <span>// DIAGRAM TOOL</span></h1>
+        </div>
+        <div class="header-right">
+            <button id="export-btn" class="icon-btn" title="Export solid-fill SVG for Pershing Metabolizer">📷 EXPORT SVG</button>
+            <button id="theme-toggle" class="icon-btn">☀ / ☾</button>
+        </div>
+    </header>
+
+    <!-- Panel collapse tab — sits on the right edge of the canvas -->
+    <button id="panel-toggle" class="panel-toggle-tab" title="Toggle panel">›</button>
+
+    <div class="main-grid">
+        <!-- Left Panel: 2D site plan (no tabs -- this tool is 2D-only, Pershing Metabolizer owns 3D) -->
+        <div class="visual-panel">
+            <div class="tab-content-container">
+                <div id="tab-2d" class="tab-pane active">
+                    <div id="remix-svg-container" style="flex: 1; width: 100%; min-height: 500px; position: relative;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Stack editor + HUD -->
+        <div class="terminal-panel">
+            <div class="status-bar">
+                <span id="status-dot" class="success"></span>
+                <span id="status-text">SYSTEM READY</span>
+            </div>
+
+            <!-- ── PANEL RESIZER ─────────────────────────────────────── -->
+            <div id="panel-resizer" class="panel-resizer" title="Drag to resize"></div>
+
+            <!-- ── STACK EDITOR ──────────────────────────────────────── -->
+            <div class="stack-editor">
+                <div class="stack-editor-header" id="stack-toggle" role="button" title="Toggle layer stack">
+                    <span class="section-label">LAYER STACK</span>
+                    <div class="stack-header-right">
+                        <span id="stack-count" class="stack-count">0 LAYERS</span>
+                        <span class="stack-chevron">▾</span>
+                    </div>
+                </div>
+                <div class="stack-body">
+                    <div id="stack-list" class="stack-list">
+                        <div class="stack-empty">No layers placed yet.</div>
+                    </div>
+                    <!-- Manual layer picker -->
+                    <div class="layer-picker">
+                        <select id="picker-site" class="picker-select" title="Site">
+                            <option value="PershingSquare">Pershing Sq</option>
+                            <option value="GardensBytheBay">Gardens by the Bay</option>
+                            <option value="ParcVillette">Villette</option>
+                            <option value="ZaryadyePark">Zaryadye</option>
+                            <option value="Schouwburgplein">Schouwburg</option>
+                        </select>
+                        <select id="picker-layer" class="picker-select" title="Layer">
+                            <option value="">— layer —</option>
+                        </select>
+                        <button id="picker-add-btn" class="picker-add-btn" disabled>+ ADD</button>
+                    </div>
+                    <!-- Slider panel — shown when a layer is selected -->
+                    <div id="xform-panel" class="xform-panel" style="display:none;">
+                        <div class="xform-label" id="xform-title">SELECT A LAYER</div>
+                        <div class="xform-row">
+                            <label>X</label>
+                            <input type="range" id="xform-x" min="-400" max="400" value="0" step="1">
+                            <input type="number" id="xform-x-val" class="xform-val-input" step="1">
+                        </div>
+                        <div class="xform-row">
+                            <label>Y</label>
+                            <input type="range" id="xform-y" min="-300" max="300" value="0" step="1">
+                            <input type="number" id="xform-y-val" class="xform-val-input" step="1">
+                        </div>
+                        <div class="xform-row">
+                            <label>SCL</label>
+                            <input type="range" id="xform-scale" min="10" max="500" value="100" step="1">
+                            <input type="number" id="xform-scale-val" class="xform-val-input" step="0.1">
+                        </div>
+                        <div class="xform-row">
+                            <label>ROT</label>
+                            <input type="range" id="xform-rot" min="0" max="360" value="0" step="1">
+                            <input type="number" id="xform-rot-val" class="xform-val-input" step="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── ZONAL CONSTRAINTS HUD ─────────────────────────────── -->
+            <div class="zonal-hud">
+                <div class="section-label">ZONAL CONSTRAINTS</div>
+                <div id="hud-rows" class="hud-rows">
+                    <div class="hud-row" id="hud-SOFT">
+                        <span class="hud-label">SOFTSCAPE</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-SOFT"></span></span>
+                        <span class="hud-pct" id="hud-pct-SOFT">0%</span>
+                        <span class="hud-target" id="hud-tgt-SOFT">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-HARD">
+                        <span class="hud-label">HARDSCAPE</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-HARD"></span></span>
+                        <span class="hud-pct" id="hud-pct-HARD">0%</span>
+                        <span class="hud-target" id="hud-tgt-HARD">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-PROG">
+                        <span class="hud-label">ACTIVATORS</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-PROG"></span></span>
+                        <span class="hud-pct" id="hud-pct-PROG">0%</span>
+                        <span class="hud-target" id="hud-tgt-PROG">—</span>
+                    </div>
+                    <div class="hud-row" id="hud-BLUE">
+                        <span class="hud-label">WATER</span>
+                        <span class="hud-bar-wrap"><span class="hud-bar" id="hud-bar-BLUE"></span></span>
+                        <span class="hud-pct" id="hud-pct-BLUE">0%</span>
+                        <span class="hud-target" id="hud-tgt-BLUE">—</span>
+                    </div>
+                </div>
+                <div class="hud-actions">
+                    <button id="clear-stack-btn" class="hud-clr-btn">CLR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modular logic: load order matters — constants → state → engine2D → main -->
+    <script src="/static/js/constants.js"></script>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/engine2D.js"></script>
+
+    <!-- Immediate UI wiring (no dependency on main.js's async init) -->
+    <script>
+        document.getElementById('stack-toggle')?.addEventListener('click', () => {
+            document.querySelector('.stack-editor').classList.toggle('collapsed');
+        });
+        document.getElementById('panel-toggle')?.addEventListener('click', () => {
+            const collapsed = document.body.classList.toggle('panel-collapsed');
+            document.getElementById('panel-toggle').textContent = collapsed ? '›' : '‹';
+        });
+    </script>
+
+    <!-- Main application controller -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- Bottom status bar -->
+    <footer class="app-footer">
+        <span class="footer-left">MEMORY MACHINE // DIAGRAM TOOL</span>
+        <span class="footer-center">PERSHING SQUARE, DTLA</span>
+        <span class="footer-right">forked from Digital Palimpsest, 2026-07-14</span>
+    </footer>
+  </body>
+</html>
