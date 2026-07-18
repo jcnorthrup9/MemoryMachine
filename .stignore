@@ -1,0 +1,10 @@
+.git
+venv
+.venv
+.venv-1
+node_modules
+*.sync-conflict-*
+__pycache__
+*.pyc
+dist
+.pytest_cache

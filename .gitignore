@@ -58,6 +58,7 @@ archive/diagrams/generatedDiagramsColor/
 db/
 output/
 outputs/vector_export_test/
+outputs/stylized_export_test/
 assets/
 
 # Syncthing's own internal folder marker -- never project content
