@@ -24,6 +24,7 @@ amenity_needs.csv itself -- that CSV only supplies WHAT to build, HOW MUCH,
 and PRIORITY (need_level), never WHERE.
 """
 import json
+import math
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -44,12 +45,24 @@ CATEGORY_MASK_FIELD = {
     "green_space": "greenscape",
     "sports_recreation": "hardscape",
     "outdoor": "hardscape",
+    # 2026-07-17: restrooms (support_amenity) reuse the same painted-
+    # hardscape signal sports_recreation/outdoor already use -- "even
+    # hardscape places that could have food" (user's own framing) is
+    # covered directly by this existing mask, no fabricated cafe/food
+    # program needed (the real amenity_needs.csv assessment explicitly
+    # found no food-service deficit -- see program_requirements.json's
+    # restrooms_metro/restrooms_recreation sizing_basis fields).
+    "support_amenity": "hardscape",
 }
 
-# Program categories that imply an enclosed structure and should generate a
-# 3D building mass. See BuildingMassEngine in terracing_engine.py.
-BUILDING_CATEGORIES = {"enrichment_civic", "health_care"}
-DEFAULT_BUILDING_HEIGHT_FT = 15.0
+# Program categories that imply an enclosed structure -- currently only
+# gates PLACEMENT behavior (single contiguous footprint vs. "use all
+# available space" jumping, below), not massing/display (every category
+# gets a program_boxes extrusion now, see logic/pershing_api.py's
+# rebuild() docstring). support_amenity added 2026-07-17 (restrooms) --
+# a restroom is a real discrete building, same reasoning as enrichment_
+# civic/health_care.
+BUILDING_CATEGORIES = {"enrichment_civic", "health_care", "support_amenity"}
 
 # 2026-07-13 shape-aware growth: without this, the greedy region-grower has
 # zero shape constraint and blobs out into whatever organic outline scores
@@ -94,6 +107,139 @@ LEVEL_SPREAD_BONUS_WEIGHT = 6.0  # 2026-07-13: rewards claiming a bay on a level
                                  # frontier-growth and area-jump scoring below, not at the initial
                                  # seed bay (every candidate ties there -- no level is claimed yet).
 
+# 2026-07-16 program-placement correlation logic -- see logic/pershing_api.py's
+# _bay_grid_from_engine() for where "trees"/"major_attractor_proximity"/
+# "minor_attractor_proximity" get computed onto each bay.
+TREE_WEIGHT = 6.0  # scaled by the program's own shade_target_pct/100 (a
+                   # program with no shade_target_pct, e.g. enclosed
+                   # enrichment_civic/health_care programs, gets zero
+                   # contribution) -- a 50%-target program (e.g.
+                   # community_garden) gets ~3.0 pull, sub-PRIMARY_WEIGHT but
+                   # clearly above the tie-breaking-only SECONDARY_WEIGHT=1.
+                   # "trees" (TREE_MASK) is the closest live "this area will
+                   # be shaded" proxy -- distinct from CANOPY_MASK (built
+                   # canopy structure, a separate system not scored here).
+ATTRACTOR_WEIGHT = 6.0  # same magnitude reasoning as TREE_WEIGHT
+
+# First-pass, tunable (major_affinity, minor_affinity) signed multipliers per
+# category -- same "category-based adjacency rule" precedent as
+# ENRICHMENT_QUIET_PENALTY above (adapted from EllipseAgent.py's adjacency-
+# rule concept, not its code). Positive = drawn toward that attractor tier,
+# negative = repelled. sports_recreation/outdoor (active, social) lean
+# toward major attractors; enrichment_civic (quiet study/practice program)
+# is repelled from major attractors the same way it's already penalized
+# near high-transit bays, with a mild pull toward minor/secondary nodes
+# instead. Categories not listed get (0.0, 0.0) -- no attractor effect.
+CATEGORY_ATTRACTOR_AFFINITY = {
+    "green_space": (0.4, 0.5),
+    "sports_recreation": (1.0, 0.3),
+    "outdoor": (0.5, 0.5),
+    "enrichment_civic": (-1.0, 0.3),
+    "health_care": (-0.5, 0.0),
+}
+
+# 2026-07-17 restrooms correlation logic. Two distinct signals, both scored
+# outside CATEGORY_ATTRACTOR_AFFINITY (which is about painted/imported
+# attractor MARKERS) since these are about (a) the real surveyed metro
+# entrance (already-computed bay["transit_influence"], see terracing_
+# engine.py's TerracingEngine.__init__/entrance_x/entrance_y) and (b) bays
+# already claimed by OTHER programs placed earlier in this same run -- a
+# genuinely different, placement-outcome-dependent signal (see
+# _gathering_proximity_bonus()'s docstring for why this only works because
+# restrooms sort last).
+GATHERING_CATEGORIES = {"sports_recreation", "outdoor", "green_space"}
+GATHERING_PROXIMITY_RADIUS_FT = 100.0  # walking-distance scale, tighter than
+                                        # ATTRACTOR_INFLUENCE_RADIUS_FT
+                                        # (200ft) -- a restroom needs to be
+                                        # NEAR the activity, not just "feel
+                                        # its pull."
+
+# (transit_weight, gathering_weight) per support_amenity program id -- how
+# strongly THIS specific program is pulled toward the real metro entrance
+# vs. toward bays other gathering-type programs have already claimed.
+# restrooms_metro leans hard toward the entrance; restrooms_recreation
+# leans hard toward the recreation cluster -- the whole point of splitting
+# restrooms into two entries instead of one compromise-location building.
+# Default (4.0, 4.0) for any future support_amenity program not listed here.
+RESTROOM_PROXIMITY_WEIGHTS = {
+    "restrooms_metro": (10.0, 2.0),
+    "restrooms_recreation": (2.0, 8.0),
+}
+
+
+def _gathering_proximity_bonus(bay, gathering_bay_centers, radius_ft=GATHERING_PROXIMITY_RADIUS_FT):
+    """0..1 falloff to the NEAREST bay already claimed by an earlier program
+    in GATHERING_CATEGORIES this same place_programs() run -- same falloff
+    shape as pershing_api._attractor_proximity_bays, but computed from
+    placement OUTCOME so far (results accumulated by place_programs()), not
+    a static painted mask. 0.0 if gathering_bay_centers is empty (nothing
+    gathering-like claimed yet)."""
+    if not gathering_bay_centers:
+        return 0.0
+    nearest = min(math.hypot(bay["x_ft"] - gx, bay["z_ft"] - gz) for gx, gz in gathering_bay_centers)
+    return max(0.0, 1.0 - nearest / radius_ft)
+
+
+# 2026-07-17 restroom "host attachment" placement -- REPLACES the pure
+# distance-falloff pull above with a hard requirement: a restroom's seed bay
+# must physically TOUCH a specific host program's already-claimed footprint,
+# the way a real restroom annex attaches to a building rather than floating
+# nearby. Confirmed live (2026-07-17) the pure-pull model produced a real
+# but architecturally unconvincing result -- both restrooms landed in the
+# same leftover neighborhood near, but not touching, any other program.
+# RESTROOM_PROXIMITY_WEIGHTS/_gathering_proximity_bonus are still used
+# ALONGSIDE this, as a tie-breaker among the host-adjacent candidates, not
+# removed.
+
+def _nearest_host_bays(results, bays_by_index, ref_x, ref_z, categories=None):
+    """Among already-placed `results` (optionally filtered to `categories`),
+    find the program whose CLOSEST claimed bay is nearest to (ref_x, ref_z)
+    -- e.g. "whichever program ended up nearest the real metro entrance."
+    Returns that program's full {(gx, gy), ...} bay-index set, or None if
+    nothing qualifies yet (nothing placed, or `categories` excludes
+    everything placed so far). Looks up each bay's real x_ft/z_ft from
+    `bays_by_index` (already computed by place_programs()) rather than
+    re-deriving bay-center coordinates from gx/gy itself, so this can't
+    silently drift from BAY_AREA_SF/STRUCTURAL_BAY_FT."""
+    best_zone = None
+    best_dist = None
+    for r in results:
+        if categories is not None and r["category"] not in categories:
+            continue
+        if not r["bays"]:
+            continue
+        zone_dist = min(
+            math.hypot(bays_by_index[(bx, by)]["x_ft"] - ref_x, bays_by_index[(bx, by)]["z_ft"] - ref_z)
+            for bx, by, _ in r["bays"]
+        )
+        if best_dist is None or zone_dist < best_dist:
+            best_dist = zone_dist
+            best_zone = r
+    return {(gx, gy) for gx, gy, _ in best_zone["bays"]} if best_zone else None
+
+
+def _largest_host_bays(results, categories):
+    """Among already-placed `results` filtered to `categories`, the
+    bay-index set of the program with the largest achieved_sf -- the
+    dominant activity cluster (e.g. "whichever recreation zone is
+    biggest"). None if nothing qualifies yet."""
+    candidates = [r for r in results if r["category"] in categories and r["bays"]]
+    if not candidates:
+        return None
+    biggest = max(candidates, key=lambda r: r["achieved_sf"])
+    return {(gx, gy) for gx, gy, _ in biggest["bays"]}
+
+
+def _adjacent_to_any(idx, host_bays, nx_bays, nz_bays):
+    """True if idx is 4-connected-adjacent to (touches) any bay in
+    host_bays -- the actual "attachment" test, same 4-neighbor pattern
+    place_programs()'s own frontier-growth step already uses."""
+    gx, gy = idx
+    for ngx, ngy in ((gx + 1, gy), (gx - 1, gy), (gx, gy + 1), (gx, gy - 1)):
+        if 0 <= ngx < nx_bays and 0 <= ngy < nz_bays and (ngx, ngy) in host_bays:
+            return True
+    return False
+
 
 def load_programs(need_levels=("NEEDED", "Suggested"), path=PROGRAM_REQUIREMENTS_PATH, exclude_ids=None):
     """
@@ -118,9 +264,21 @@ def load_programs(need_levels=("NEEDED", "Suggested"), path=PROGRAM_REQUIREMENTS
     return programs
 
 
-def _bay_score(bay, category):
+def _bay_score(bay, category, shade_target_pct=None, transit_weight=0.0):
     """Per-bay placement score for one program's category. Higher is better.
-    Returns None if the bay is hard-excluded (majority water)."""
+    Returns None if the bay is hard-excluded (majority water).
+
+    shade_target_pct (2026-07-16 program-placement correlation logic):
+    the placing program's own data/program_requirements.json shade_target_pct
+    (None/0 for programs with no shade preference, e.g. enclosed structures)
+    -- see TREE_WEIGHT's comment for the scoring rationale.
+
+    transit_weight (2026-07-17 restrooms correlation logic): per-program
+    override on top of the blanket SECONDARY_WEIGHT every program already
+    gets from bay["transit_influence"] -- 0.0 (no extra pull) for every
+    program except RESTROOM_PROXIMITY_WEIGHTS' entries, which need a much
+    stronger, dedicated pull toward the real metro entrance than the
+    tie-breaking-only SECONDARY_WEIGHT provides."""
     if bay["water"] >= WATER_EXCLUSION_FRAC:
         return None
 
@@ -135,6 +293,12 @@ def _bay_score(bay, category):
     score += SECONDARY_WEIGHT * (bay["transit_influence"] + bay["deficit_influence"])
     if category == "enrichment_civic":
         score -= ENRICHMENT_QUIET_PENALTY * bay["transit_influence"]
+    if shade_target_pct:
+        score += TREE_WEIGHT * bay.get("trees", 0.0) * (shade_target_pct / 100.0)
+    major_aff, minor_aff = CATEGORY_ATTRACTOR_AFFINITY.get(category, (0.0, 0.0))
+    score += ATTRACTOR_WEIGHT * (major_aff * bay.get("major_attractor_proximity", 0.0)
+                                  + minor_aff * bay.get("minor_attractor_proximity", 0.0))
+    score += transit_weight * bay["transit_influence"]
     return score
 
 
@@ -221,12 +385,73 @@ def place_programs(bay_grid, programs):
     results = []
     for program in programs:
         category = program["category"]
+        shade_target_pct = program.get("shade_target_pct")
+        # 2026-07-17 restrooms correlation logic -- see RESTROOM_PROXIMITY_
+        # WEIGHTS' own comment. gathering_bay_centers is computed ONCE per
+        # program, from `results` accumulated by EARLIER programs in this
+        # same loop -- only meaningful because small support_amenity
+        # programs (restrooms) sort to the end of their need_level tier
+        # (largest target_sf first), so every gathering-type program is
+        # already placed by the time this runs.
+        transit_weight, gathering_weight = (
+            RESTROOM_PROXIMITY_WEIGHTS.get(program["id"], (4.0, 4.0))
+            if category == "support_amenity" else (0.0, 0.0)
+        )
+        gathering_bay_centers = [
+            (bays_by_index[(gx, gy)]["x_ft"], bays_by_index[(gx, gy)]["z_ft"])
+            for r in results if r["category"] in GATHERING_CATEGORIES
+            for gx, gy, _ in r["bays"]
+        ] if gathering_weight else []
         candidates = {
-            idx: _bay_score(bay, category)
+            idx: _bay_score(bay, category, shade_target_pct, transit_weight)
             for idx, bay in bays_by_index.items()
             if idx not in claimed
         }
         candidates = {idx: s for idx, s in candidates.items() if s is not None}
+        # Unlike _aspect_ratio_bonus/_level_spread_bonus (genuinely undefined
+        # before this program has claimed any bay of its own -- "every
+        # candidate ties"), gathering_proximity_bonus is well-defined even
+        # at the very first (seed) bay: it's scored against OTHER programs'
+        # already-finished placements, not this program's own in-progress
+        # island. Confirmed live (2026-07-17) this matters in practice --
+        # restrooms are small enough that they're frequently satisfied by
+        # their single seed bay alone (the growth loop below never runs),
+        # so without this the gathering bonus would silently never affect
+        # restrooms_recreation's actual placement at all.
+        if gathering_weight:
+            candidates = {
+                idx: s + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
+                for idx, s in candidates.items()
+            }
+
+        # 2026-07-17 restroom "host attachment" placement -- a restroom's
+        # seed bay must physically TOUCH a specific host program's already-
+        # claimed footprint (see _nearest_host_bays/_largest_host_bays'
+        # own docstrings for how each restroom's host is chosen). Hard
+        # filter, not another scoring bonus -- RESTROOM_PROXIMITY_WEIGHTS
+        # above still ranks AMONG the filtered candidates as a tie-breaker.
+        # host_bays is None (no filtering) if nothing qualifying has been
+        # placed yet -- e.g. every gathering program disabled via the
+        # enable/disable checklist -- so restrooms still place somewhere
+        # via the unfiltered scoring above, rather than failing outright.
+        host_bays = None
+        if program["id"] == "restrooms_metro":
+            entrance = bay_grid.get("metro_entrance")
+            if entrance:
+                host_bays = _nearest_host_bays(results, bays_by_index, entrance["x_ft"], entrance["z_ft"])
+        elif program["id"] == "restrooms_recreation":
+            host_bays = _largest_host_bays(results, GATHERING_CATEGORIES)
+        if host_bays:
+            adjacent_candidates = {
+                idx: s for idx, s in candidates.items()
+                if _adjacent_to_any(idx, host_bays, nx_bays, nz_bays)
+            }
+            # Fall back to the unfiltered (soft-pull) candidates if the
+            # chosen host's entire perimeter is already claimed by OTHER
+            # programs by the time this restroom places -- better to place
+            # nearby than to vanish entirely.
+            if adjacent_candidates:
+                candidates = adjacent_candidates
 
         target_ratio = TARGET_ASPECT_RATIO.get(program["id"])
 
@@ -257,10 +482,11 @@ def place_programs(bay_grid, programs):
                             continue
                         if idx in claimed or idx in frontier:
                             continue
-                        score = _bay_score(bays_by_index[idx], category)
+                        score = _bay_score(bays_by_index[idx], category, shade_target_pct, transit_weight)
                         if score is not None:
                             bonus = (_aspect_ratio_bonus(current_island, idx, target_ratio)
-                                     + _level_spread_bonus(bays_by_index[idx], claimed_levels))
+                                     + _level_spread_bonus(bays_by_index[idx], claimed_levels)
+                                     + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers))
                             frontier[idx] = score + bonus
                 if frontier:
                     best = max(frontier, key=frontier.get)
@@ -277,12 +503,13 @@ def place_programs(bay_grid, programs):
                 if category in BUILDING_CATEGORIES:
                     break
                 remaining = {
-                    idx: _bay_score(bay, category)
+                    idx: _bay_score(bay, category, shade_target_pct, transit_weight)
                     for idx, bay in bays_by_index.items()
                     if idx not in claimed
                 }
                 remaining = {
                     idx: s + _level_spread_bonus(bays_by_index[idx], claimed_levels)
+                          + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
                     for idx, s in remaining.items() if s is not None
                 }
                 if not remaining:
@@ -304,51 +531,30 @@ def place_programs(bay_grid, programs):
         # matching this feature's pre-existing behavior.
         floor_elev_ft = bays_by_index[placed_bays[0]].get("floor_elev_ft", 0.0) if placed_bays else 0.0
 
-        # building_spec (2026-07-16: computed for EVERY zone, not just
-        # BUILDING_CATEGORIES -- was previously gated to civic/health_care
-        # only, since those are the categories that get an always-on real
-        # enclosed-structure box merged into the live structural mesh. Every
-        # OTHER category now gets the identical box math too, but as an
-        # OPTIONAL placeholder-massing preview (see logic/pershing_api.py's
-        # rebuild() "program_boxes" response field and Viewport.jsx's
-        # "Program Boxes" toggle) -- a simple box sized to this zone's real
-        # claimed bay footprint, not a separate target_sf-derived shape, so
-        # it never floats disconnected from what's actually reserved on the
-        # grid. The BUILDING_CATEGORIES gate on placement BEHAVIOR just
-        # above (single contiguous run vs. "use all available space"
-        # jumping) is unrelated and intentionally untouched -- that's about
-        # how a zone claims bays, not whether it gets a display box.
-        building_spec = None
-        if placed_bays:
-            min_gx = min(b[0] for b in placed_bays)
-            max_gx = max(b[0] for b in placed_bays)
-            min_gy = min(b[1] for b in placed_bays)
-            max_gy = max(b[1] for b in placed_bays)
-
-            # BuildingSpec origin is the corner, not center.
-            # The bay grid gx/gy is already aligned with the structural grid,
-            # so we can convert directly to feet.
-            x_ft = min_gx * BAY_AREA_SF**0.5
-            y_ft = min_gy * BAY_AREA_SF**0.5
-            width_ft = (max_gx - min_gx + 1) * BAY_AREA_SF**0.5
-            depth_ft = (max_gy - min_gy + 1) * BAY_AREA_SF**0.5
-
-            building_spec = {
-                "x_ft": x_ft, "y_ft": y_ft,
-                "width_ft": width_ft, "depth_ft": depth_ft,
-                "height_ft": DEFAULT_BUILDING_HEIGHT_FT,
-                "z_ft": floor_elev_ft,
-            }
+        # building_spec REMOVED 2026-07-16 (was: one bounding-box over the
+        # zone's whole min/max gx/gy span). Confirmed live this didn't
+        # actually match what the flat-plane ProgramZoneFootprint shows for
+        # any zone with an irregular/non-contiguous claimed shape (the "use
+        # all available space" jump-to-new-area behavior above means most
+        # non-BUILDING_CATEGORIES zones are NOT one solid rectangle) -- a
+        # bounding box silently covers bays the zone never actually
+        # claimed. Replaced by per-bay extrusion computed directly in
+        # logic/pershing_api.py's rebuild() from this zone's own `bays`
+        # list below (one box per claimed bay, exact same footprint the
+        # flat plane already renders, just given real height) -- see that
+        # function's "program_boxes" docstring. DEFAULT_BUILDING_HEIGHT_FT
+        # is now unused for the same reason (real per-level height comes
+        # from real_geometry.json's real_slabs instead, see
+        # logic/pershing_api.py's REAL_LEVEL_HEIGHT_FT).
 
         # Entrance attractor (2026-07-12): centroid of this zone's claimed
         # bays, in feet -- feeds circulation_network.py's "program" motivator
         # so the pedestrian network actually grows toward placed amenities,
         # not just painted masks. Centroid (not e.g. nearest-bay-to-Metro)
         # per an explicit design decision -- works uniformly for every
-        # zone category, building or not. +0.5 bay converts a bay INDEX
-        # (whose building_spec corner convention above is gx*bay_ft) to that
-        # bay's real-feet CENTER, matching what "centroid of claimed cells"
-        # should mean.
+        # zone category, building or not. +0.5 bay converts a bay INDEX to
+        # that bay's real-feet CENTER, matching what "centroid of claimed
+        # cells" should mean.
         entrance = None
         if placed_bays:
             bay_ft = BAY_AREA_SF ** 0.5
@@ -367,7 +573,11 @@ def place_programs(bay_grid, programs):
             # real elevation (see docstring), so each bay carries its own
             # floor_elev_ft rather than assuming the whole zone shares one.
             "bays": [[idx[0], idx[1], bays_by_index[idx].get("floor_elev_ft", 0.0)] for idx in placed_bays],
-            "building_spec": building_spec,
+            # 2026-07-16: whether this program needs 2 real levels of clear
+            # height instead of 1 when extruded to program_boxes (see
+            # data/program_requirements.json's own per-program field) --
+            # public_gym/skatepark are the two confirmed examples so far.
+            "double_height": program.get("double_height", False),
             "entrance": entrance,
             "floor_elev_ft": floor_elev_ft,
             "achieved_sf": achieved_sf,

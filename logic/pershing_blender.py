@@ -22,6 +22,7 @@ avoids re-solving an already-solved problem.
 """
 import json
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -33,6 +34,14 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT_PATH = os.path.join(BASE_DIR, "blender", "pershing_headless_build.py")
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs", "blender_headless")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# "Export Current View" (Viewport.jsx) -- user asked (2026-07-17) for the
+# Line Art SVG to land here automatically, no browser download/dialog.
+# OUTPUT_DIR above stays the canonical write target (it's what
+# /blender-headless-output serves for LineArtOverlay.jsx's preview <img>);
+# this is a same-content copy alongside it, not a replacement.
+REMIXED_SVG_DIR = os.path.join(BASE_DIR, "data", "PershingMetabolizer", "parkSVG", "remixedGeneratedSVGs")
+os.makedirs(REMIXED_SVG_DIR, exist_ok=True)
 
 # In-memory job store -- same "local single-user dev tool, no persistence
 # needed yet" pattern logic/pershing_api.py already uses for its own grid
@@ -133,6 +142,9 @@ def _run_build(job_id, input_path, output_path, svg_path, timeout, view_dir=None
                 duration_s=duration,
             )
             return
+
+        if svg_path is not None:
+            shutil.copy2(svg_path, os.path.join(REMIXED_SVG_DIR, os.path.basename(svg_path)))
 
         filename = os.path.basename(output_path)
         svg_url = f"/blender-headless-output/{os.path.basename(svg_path)}" if svg_path is not None else None

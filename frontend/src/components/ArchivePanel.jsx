@@ -12,11 +12,10 @@ function formatSavedAt(iso) {
 
 // ARCHIVE tab: a real gallery for build iterations, server-persisted
 // (outputs/pershing_archive/ via logic/pershing_api.py's save/list/get/delete
-// endpoints) -- distinct from the RECONSTRUCT toolbar's "Save Build" button,
-// which only downloads a JSON file client-side with no browsing UI. Both
-// share the same memory-machine-build-v1 snapshot shape, so a build saved
-// here can be loaded exactly the same way a downloaded file is (App.jsx's
-// restoreSnapshot()).
+// endpoints). The RECONSTRUCT toolbar's "Save Build" button writes into the
+// same folder via the same saveToArchive() call, just without a label
+// prompt -- so a build saved from either place shows up here, and loads the
+// same way through App.jsx's restoreSnapshot().
 export default function ArchivePanel({ getSnapshot, onRestoreSnapshot, canSave, log }) {
   const [entries, setEntries] = useState([]);
   const [loadingList, setLoadingList] = useState(true);

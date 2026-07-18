@@ -56,7 +56,7 @@ placeholder data is real, that would misrepresent the project to the committee.
 You must respond with STRICT JSON ONLY, matching this schema, and nothing else:
 {
   "reply": "<the answer to show in the chat transcript>",
-  "action": null | {"type": "adjust_motivator", "motivator": "shade"|"water"|"rest"|"foot_traffic"|"deficit"|"program", "value": <float 0-2>}
+  "action": null | {"type": "adjust_motivator", "motivator": "trees"|"water"|"rest"|"foot_traffic"|"deficit"|"program", "value": <float 0-2>}
            | {"type": "set_canyon_width", "value": <int>}
            | {"type": "set_canyon_depth", "value": <int>}
            | {"type": "grow_network"}
@@ -65,9 +65,9 @@ You must respond with STRICT JSON ONLY, matching this schema, and nothing else:
 }
 
 Live control via chat IS enabled. If a juror clearly asks for something the schema above can express (e.g. \
-"make it more shady", "widen the canyon", "grow the network", "use the real amenity data"), set "action" to \
-the matching object AND say what you did in "reply" (e.g. "Raised the shade weight to 1.5."). Only ever emit \
-ONE action per turn. If the request is ambiguous, a pure question, or doesn't map to anything in the schema, \
+"add more trees", "make it more shady", "widen the canyon", "grow the network", "use the real amenity data"), \
+set "action" to the matching object AND say what you did in "reply" (e.g. "Raised the trees weight to 1.5."). \
+Only ever emit ONE action per turn. If the request is ambiguous, a pure question, or doesn't map to anything in the schema, \
 set "action" to null and just answer in "reply" -- do not guess at a change the juror didn't clearly ask for. \
 "value" for adjust_motivator must be a number between 0 and 2. "value" for set_canyon_width must be a whole \
 number between 1 and nx_bays (see CURRENT LIVE DESIGN STATE below for that site's actual nx_bays). "value" \
@@ -77,7 +77,7 @@ with the nearest valid value -- explain the clamp in "reply" rather than refusin
 CRITIC_PERSONA_SYSTEM_TEXT = """You are The Metabolist, an AI architectural critic embedded within the Memory Machine design tool. \
 Your role is to provide a qualitative, experiential critique of a proposed design for a public space.
 
-You will be given a simplified summary of the spatial layout, including the locations of key zones like 'shade', 'water', 'greenscape', and 'amenities'.
+You will be given a simplified summary of the spatial layout, including the locations of key zones like 'trees', 'water', 'greenscape', and 'amenities'.
 
 Your task is to write a short, evocative narrative (2-4 sentences) from the perspective of a visitor experiencing the space. Do not just list features. Instead, describe the spatial relationships and their effect on the human experience. Focus on the poetics of the space. For example, instead of saying "There is shade in the north," you might say, "The deep shade on the northeast corner offers a cool refuge, drawing visitors in from the sun-drenched plaza and creating a moment of quiet respite."
 
@@ -120,7 +120,7 @@ def _parse_ollama_response(raw: str) -> dict:
     return parsed
 
 
-_VALID_MOTIVATORS = {"shade", "water", "rest", "foot_traffic", "deficit", "program"}
+_VALID_MOTIVATORS = {"trees", "water", "rest", "foot_traffic", "deficit", "program"}
 
 
 def _validate_action(action, context: dict):

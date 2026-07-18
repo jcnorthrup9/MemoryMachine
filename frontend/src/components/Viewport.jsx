@@ -4,6 +4,7 @@ import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCame
 import * as THREE from 'three';
 import StaticContext from './StaticContext.jsx';
 import BlenderBuild from './BlenderBuild.jsx';
+import { exportViewPng } from '../api.js';
 import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES, showsOutline, castsShadows } from '../shading.js';
 import KIND_REGISTRY from '../kindRegistry.json';
 
@@ -49,7 +50,7 @@ const PANEL_KINDS = new Set(
   Object.entries(KIND_REGISTRY.kinds).filter(([, v]) => v.shape === 'panel').map(([k]) => k),
 );
 // Per-kind tint -- roughly matches the paint-category tints already
-// established for Water/Shade (cyan) and Amenity/Resting (orange) so the
+// established for Water/Trees (cyan) and Amenity/Resting (orange) so the
 // same semantic colors carry through from painting to rendered assets.
 const KIND_COLOR = Object.fromEntries(Object.entries(KIND_REGISTRY.kinds).map(([k, v]) => [k, v.color]));
 
@@ -178,7 +179,7 @@ function ViewCamera({ view, center, siteWidthFt, siteLengthFt }) {
 // surface instead of floating above pits or clipping through them. One
 // InstancedMesh of filtered voxels, same pattern TerraceLevelGroup uses.
 // Extracted 2026-07-11 (was three near-identical copies -- greenscape grass,
-// circulation surface, and this session's new shade ground cap -- the exact
+// circulation surface, and this session's new trees ground cap -- the exact
 // kind of duplication that already drove the PAINT_CATEGORIES/
 // paintCategories.js extraction once this session).
 //
@@ -196,22 +197,19 @@ function ViewCamera({ view, center, siteWidthFt, siteLengthFt }) {
 // be added to this dependency array, or it will silently break exactly the
 // way RealSlabFragments did.
 // 2026-07-12 fix ("voxel grid gets too cluttered"): CategoryGroundCap draws
-// one box per matching voxel cell -- painted greenscape/shade/circulation
+// one box per matching voxel cell -- painted greenscape/trees/circulation
 // cells can number in the hundreds, so this is the densest per-voxel
-// tessellation in the scene. In Wireframe mode a naive `materialProps` call
-// would draw true wireframe edges on every one of those boxes (a fine
-// repeated grid, not a useful line drawing); in Ghosted mode the per-box
-// outline pass added the same clutter as a fringe around every cell.
+// tessellation in the scene. Ghosted mode's per-box outline pass added a
+// fringe clutter around every cell, so that pass is dropped entirely below
+// (not conditionally gated) for this layer only.
 //
-// Fix, corrected 2026-07-12 (an earlier version of this fix over-corrected
-// -- forcing 'colored' unconditionally also discarded Ghosted's translucent
-// grey and Arctic's flat-white material for this layer, not just the
-// clutter): only Wireframe's true-line style is swapped for a plain solid
-// fill (`fillMode` below); Ghosted/Arctic/Colored still get their real
-// per-mode material via materialProps, unchanged -- the ONLY thing this
-// component permanently opts out of is the outline instancedMesh pass
-// (removed entirely below, not conditionally gated), since that's the part
-// that was actually cluttered.
+// 2026-07-17 (user report, "wireframe view isn't just wireframe"): this
+// component used to also swap Wireframe's true-line style for a plain solid
+// fill, on the same "too cluttered" reasoning -- but that meant ground caps
+// silently rendered as SHADED even while the toggle read WIREFRAME. Wireframe
+// mode is now real per-mode material like every other layer (materialProps
+// below, no fillMode override); a busy grid of true wireframe boxes is the
+// correct trade for a wireframe view actually being all-wireframe.
 function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterFn, color, thicknessFt }) {
   const meshRef = useRef();
   const items = useMemo(() => voxels.filter(filterFn), [voxels, filterFn]);
@@ -234,10 +232,7 @@ function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterF
 
   if (items.length === 0) return null;
 
-  // Wireframe's true-line style swapped for a solid fill (see component
-  // comment above); Ghosted/Arctic/Colored keep their real per-mode material.
-  const fillMode = shadingMode === 'wireframe' ? 'colored' : shadingMode;
-  const mat = materialProps(fillMode, color);
+  const mat = materialProps(shadingMode, color);
   const shadows = castsShadows(shadingMode);
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]} castShadow={shadows} receiveShadow={shadows}>
@@ -249,7 +244,7 @@ function CategoryGroundCap({ voxels, voxelFt, siteLengthFt, shadingMode, filterF
 
 // Placeholder solid colors for now (hybrid asset strategy: cheap now, swap
 // for real grass/paving textures later without touching data plumbing --
-// is_greenscape/is_shade are already real per-voxel data from the paint
+// is_greenscape/is_tree are already real per-voxel data from the paint
 // masks, not derived here).
 const GREENSCAPE_COLOR = '#3d9142';
 const GREENSCAPE_THICKNESS_FT = 0.5;
@@ -259,18 +254,20 @@ function GreenscapeGround(props) {
   return <CategoryGroundCap {...props} filterFn={greenscapeFilter} color={GREENSCAPE_COLOR} thicknessFt={GREENSCAPE_THICKNESS_FT} />;
 }
 
-// Shade ground cap (2026-07-11, new) -- tan/beige, matches the paint
-// brush's shade tint (paintCategories.js) and the legacy diagram tool's
-// ZONE_MATERIALS.SHADE. is_shade is what now drives tree placement too
+// Trees ground cap (2026-07-11, new; category renamed from "shade" to
+// "trees" 2026-07-16) -- tan/beige, matches the paint brush's trees tint
+// (paintCategories.js) and the legacy diagram tool's ZONE_MATERIALS.SHADE.
+// is_tree (was is_shade) is what drives actual tree placement too
 // (TypologyAssetEngine.tree_specs, moved off is_greenscape) -- this ground
-// cap is the "shade paint has a visible footprint even before trees render"
-// counterpart, same role GreenscapeGround already plays for grass.
-const SHADE_COLOR = '#bcaaa4';
-const SHADE_THICKNESS_FT = 0.5;
-const shadeFilter = (v) => v.is_shade;
+// cap is the "trees paint has a visible footprint even before the trees
+// themselves render" counterpart, same role GreenscapeGround already
+// plays for grass.
+const TREE_COLOR = '#bcaaa4';
+const TREE_THICKNESS_FT = 0.5;
+const treeFilter = (v) => v.is_tree;
 
-function ShadeGround(props) {
-  return <CategoryGroundCap {...props} filterFn={shadeFilter} color={SHADE_COLOR} thicknessFt={SHADE_THICKNESS_FT} />;
+function TreeGround(props) {
+  return <CategoryGroundCap {...props} filterFn={treeFilter} color={TREE_COLOR} thicknessFt={TREE_THICKNESS_FT} />;
 }
 
 // Filtered by v.typology === 'CIRCULATION' (server-classified: hardscape
@@ -569,14 +566,16 @@ function RealSlabPlate({ slab, siteLengthFt, shadingMode }) {
 
 // 2026-07-12 fix ("voxel grid gets too cluttered"): like CategoryGroundCap
 // above, this is a dense per-voxel tessellation (one box per surviving real
-// slab cell, potentially thousands before the canyon cuts through). Both
-// the true-wireframe edge geometry this used to build for Wireframe mode
-// and the per-box outline pass Ghosted mode used to add are dropped
-// entirely -- corrected 2026-07-12 (an earlier version forced 'colored'
-// unconditionally, which also discarded Ghosted's grey/Arctic's white
-// material for this layer, not just the clutter): only Wireframe's true-line
-// style is swapped for a solid fill; Ghosted/Arctic/Colored keep their real
-// per-mode material via materialProps, unchanged.
+// slab cell, potentially thousands before the canyon cuts through). Ghosted
+// mode's per-box outline pass is dropped entirely for this layer (same
+// clutter reasoning as CategoryGroundCap).
+//
+// 2026-07-17 (user report, "wireframe view isn't just wireframe"): this used
+// to also swap Wireframe's true-line style for a solid fill, same as
+// CategoryGroundCap -- meaning real slab remnants silently rendered SHADED
+// under the WIREFRAME toggle. Reverted to real per-mode material
+// (materialProps below, no fillMode override) so Wireframe mode is actually
+// all wireframe; see CategoryGroundCap's comment for the same fix.
 function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode }) {
   const meshRef = useRef();
 
@@ -596,8 +595,7 @@ function RealSlabFragments({ slab, remaining, voxelFt, siteLengthFt, shadingMode
 
   if (remaining.length === 0) return null;
 
-  const fillMode = shadingMode === 'wireframe' ? 'colored' : shadingMode;
-  const mat = materialProps(fillMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
+  const mat = materialProps(shadingMode, SLAB_KIND_COLOR[slab.kind] || '#aaaaaa');
   const shadows = castsShadows(shadingMode);
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, remaining.length]} castShadow={shadows} receiveShadow={shadows}>
@@ -657,12 +655,21 @@ const SALVAGE_KINDS = new Set(['concrete_floor_block', 'concrete_retaining_block
 function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
   const ghosted = showsOutline(shadingMode);
   const shadows = castsShadows(shadingMode);
-  const byKind = useMemo(() => {
+  // Grouping key (2026-07-16 program_boxes per-program coloring): boxes
+  // tagged with a program_item (rebuild()'s program_box_specs -- one
+  // building_mass box per claimed bay) group and color per PROGRAM (same
+  // PROGRAM_COLOR map ProgramZoneFootprint already uses below), not per
+  // kind -- every program box shares the one building_mass kind, so
+  // grouping by kind alone would still paint them all one shared color.
+  // Every other BoxInstances consumer (salvage, etc.) has no program_item
+  // and keeps the original per-kind grouping/coloring.
+  const byGroup = useMemo(() => {
     const map = {};
     for (const s of specs) {
       if (s.x2_ft !== null || HEX_KINDS.has(s.kind) || VERTICAL_CYLINDER_KINDS.has(s.kind)) continue;
       if (!showSalvage && SALVAGE_KINDS.has(s.kind)) continue;
-      (map[s.kind] ||= []).push(s);
+      const groupKey = s.program_item ? `program:${s.program_item}` : s.kind;
+      (map[groupKey] ||= { kind: s.kind, programItem: s.program_item, items: [] }).items.push(s);
     }
     return map;
   }, [specs, showSalvage]);
@@ -687,28 +694,33 @@ function BoxInstances({ specs, siteLengthFt, shadingMode, showSalvage }) {
 
   return (
     <>
-      {Object.entries(byKind).map(([kind, items]) => (
-        <Instances
-          key={`${kind}-${paddedCapacity(items.length)}`}
-          limit={paddedCapacity(items.length)}
-          range={items.length}
-          castShadow={shadows}
-          receiveShadow={shadows}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial {...materialProps(shadingMode, KIND_COLOR[kind] || '#888888')} />
-          {items.map((s, i) => {
-            const f = frameFor(kind, s);
-            return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.sx, f.sz, f.sy]} />;
-          })}
-        </Instances>
-      ))}
-      {ghosted && Object.entries(byKind).map(([kind, items]) => (
-        <Instances key={`${kind}-outline-${paddedCapacity(items.length)}`} limit={paddedCapacity(items.length)} range={items.length}>
+      {Object.entries(byGroup).map(([groupKey, group]) => {
+        const color = group.programItem
+          ? (PROGRAM_COLOR[group.programItem] || PROGRAM_FALLBACK_COLOR)
+          : (KIND_COLOR[group.kind] || '#888888');
+        return (
+          <Instances
+            key={`${groupKey}-${paddedCapacity(group.items.length)}`}
+            limit={paddedCapacity(group.items.length)}
+            range={group.items.length}
+            castShadow={shadows}
+            receiveShadow={shadows}
+          >
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial {...materialProps(shadingMode, color)} />
+            {group.items.map((s, i) => {
+              const f = frameFor(group.kind, s);
+              return <Instance key={i} position={f.position} rotation={f.rotation} scale={[f.sx, f.sz, f.sy]} />;
+            })}
+          </Instances>
+        );
+      })}
+      {ghosted && Object.entries(byGroup).map(([groupKey, group]) => (
+        <Instances key={`${groupKey}-outline-${paddedCapacity(group.items.length)}`} limit={paddedCapacity(group.items.length)} range={group.items.length}>
           <boxGeometry args={[1, 1, 1]} />
           <meshStandardMaterial {...outlineMaterialProps()} />
-          {items.map((s, i) => {
-            const f = frameFor(kind, s);
+          {group.items.map((s, i) => {
+            const f = frameFor(group.kind, s);
             return (
               <Instance
                 key={i}
@@ -1130,6 +1142,12 @@ const PROGRAM_COLOR = {
   'Workout Equipment': '#9e9d24',
   'Individual Practice Office': '#e91e63',
   'Veterinary': '#f06292',
+  // 2026-07-17 restrooms correlation logic (support_amenity, first program
+  // in this category) -- two new hues, distinct from every family above and
+  // from the excluded orange/amber/beige group (ramp_slab/floor_slab/
+  // amenity fixtures/salvage) this map's own comment already avoids.
+  'Restrooms (Metro Entrance)': '#546e7a',
+  'Restrooms (Recreation Cluster)': '#6d4c41',
 };
 // Fallback for any program_item not in the map above (e.g. a
 // data/program_requirements.json entry added later without a color
@@ -1176,7 +1194,56 @@ function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode })
   );
 }
 
-function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = true }) {
+// Major/minor attractor markers (2026-07-16 program-placement correlation
+// logic) -- small spheres at data.attractor_points' positions, purely a
+// debug/verification visualization for the new proximity scoring in
+// logic/program_placement.py (see CATEGORY_ATTRACTOR_AFFINITY there), NOT
+// the future discrete-3D-asset-library feature the original 2026-07-14
+// design comment scoped separately (a pavilion/tennis-court model swap is
+// out of scope here). No z_ft on these points (2D-SVG-derived plan
+// positions only) -- rests each sphere on grade at its own radius, same
+// "cheap now, swap for a real asset later" posture as GREENSCAPE_COLOR
+// above. amphitheatre points are persisted but not rendered here (not
+// scored either, see _bay_grid_from_engine()'s docstring).
+const ATTRACTOR_MARKER_COLOR = { major_attractor: '#ffd54f', minor_attractor: '#b0bec5' };
+const ATTRACTOR_MARKER_RADIUS_FT = { major_attractor: 6, minor_attractor: 4 };
+
+function AttractorMarkers({ points, siteLengthFt, shadingMode }) {
+  const shadows = castsShadows(shadingMode);
+  return (
+    <>
+      {['major_attractor', 'minor_attractor'].map((cat) => {
+        const pts = points?.[cat] || [];
+        if (pts.length === 0) return null;
+        const radius = ATTRACTOR_MARKER_RADIUS_FT[cat];
+        return (
+          <Instances
+            key={`${cat}-${paddedCapacity(pts.length)}`}
+            limit={paddedCapacity(pts.length)}
+            range={pts.length}
+            castShadow={shadows}
+            receiveShadow={shadows}
+          >
+            <sphereGeometry args={[radius, 12, 12]} />
+            <meshStandardMaterial {...materialProps(shadingMode, ATTRACTOR_MARKER_COLOR[cat])} />
+            {pts.map((p, i) => {
+              const [x, y, z] = toThree(p.x_ft, p.y_ft, radius, siteLengthFt);
+              return <Instance key={i} position={[x, y, z]} />;
+            })}
+          </Instances>
+        );
+      })}
+    </>
+  );
+}
+
+// showFootprint (2026-07-16): the flat-plane footprint and the "Program
+// Boxes" extrusion (BoxInstances over data.program_boxes, rendered as a
+// sibling in the main tree below) are the SAME program-zone data in two
+// mutually-exclusive render modes, not two independently-stackable layers
+// -- the "Program Boxes" toggle just swaps which one shows, same zones
+// either way. Labels stay on regardless of which geometry mode is active.
+function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = true, showFootprint = true }) {
   if (!zones || !bayFt) return null;
   const placedZones = zones.filter((z) => z.bays.length > 0);
   return (
@@ -1195,10 +1262,12 @@ function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = tr
         const [px, py, pz] = toThree(labelX, labelY, floorElevFt + PROGRAM_ZONE_LABEL_HEIGHT_FT, siteLengthFt);
         return (
           <group key={zone.program_item}>
-            <ProgramZoneFootprint
-              bays={zone.bays} bayFt={bayFt} color={color}
-              siteLengthFt={siteLengthFt} shadingMode={shadingMode}
-            />
+            {showFootprint && (
+              <ProgramZoneFootprint
+                bays={zone.bays} bayFt={bayFt} color={color}
+                siteLengthFt={siteLengthFt} shadingMode={shadingMode}
+              />
+            )}
             {showLabels && (
               <Billboard position={[px, py, pz]}>
                 <Text fontSize={10} color={color} anchorX="center" anchorY="middle" outlineWidth={0.4} outlineColor="#000000">
@@ -1221,25 +1290,37 @@ function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = tr
 // with its actual PROGRAM_COLOR swatch, same corner-panel visual style as
 // the VIEW/SHADING/TOP SLAB HUD panels below.
 function ProgramLegend({ zones }) {
+  // Collapsed by default state is local/UI-only (2026-07-17) -- purely a
+  // display convenience, not design data, so it doesn't need to be lifted
+  // to App.jsx/visibleLayers like the real layer toggles.
+  const [collapsed, setCollapsed] = useState(false);
   if (!zones) return null;
   const placedZones = zones.filter((z) => z.bays.length > 0);
   if (placedZones.length === 0) return null;
   return (
     <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col max-h-[70vh] overflow-y-auto">
-      <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2 pb-1">PROGRAMS</span>
-      <div className="flex flex-col px-3 pb-2 gap-1">
-        {placedZones.map((zone) => (
-          <div key={zone.program_item} className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 shrink-0 border border-border"
-              style={{ backgroundColor: PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR }}
-            />
-            <span className="font-mono-sm text-[11px] text-on-surface-variant whitespace-nowrap">
-              {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
-            </span>
-          </div>
-        ))}
-      </div>
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex items-center justify-between gap-3 px-3 pt-2 pb-1 text-on-surface-variant hover:text-on-surface"
+      >
+        <span className="text-[10px] font-mono-sm">PROGRAMS</span>
+        <span className="text-[10px] font-mono-sm">{collapsed ? '+' : '−'}</span>
+      </button>
+      {!collapsed && (
+        <div className="flex flex-col px-3 pb-2 gap-1">
+          {placedZones.map((zone) => (
+            <div key={zone.program_item} className="flex items-center gap-2">
+              <span
+                className="w-3 h-3 shrink-0 border border-border"
+                style={{ backgroundColor: PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR }}
+              />
+              <span className="font-mono-sm text-[11px] text-on-surface-variant whitespace-nowrap">
+                {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1314,13 +1395,13 @@ export default function Viewport({
   const handleExport = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pershing-${viewMode}-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    // Posted straight to the backend (data/PershingMetabolizer/parkSVG/
+    // remixedGeneratedPNGs/) instead of a browser <a download> -- user
+    // asked (2026-07-17) for these to land next to the vector-export SVGs
+    // automatically, no Downloads folder, no save dialog.
+    const dataUrl = canvas.toDataURL('image/png');
+    const filename = `pershing-${viewMode}-${Date.now()}.png`;
+    exportViewPng(dataUrl, filename).catch((err) => console.error('view PNG export failed:', err));
 
     const isOrthographic = viewMode !== 'perspective';
     if (isOrthographic && controlsRef.current && onExportVectorView) {
@@ -1433,8 +1514,8 @@ export default function Viewport({
                 shadingMode={shadingMode}
               />
             )}
-            {visibleLayers.shade && data && (
-              <ShadeGround
+            {visibleLayers.trees && data && (
+              <TreeGround
                 voxels={data.voxels}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
@@ -1488,23 +1569,31 @@ export default function Viewport({
           <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         )}
         <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
+        {/* Program Zones + Program Boxes (2026-07-16 rework) -- the SAME
+            program-zone data in two mutually-exclusive render modes, not
+            two independently-stackable layers: "Program Zones" is the
+            master visibility switch (off hides both geometry and labels
+            entirely), "Program Boxes" just swaps flat footprint plates for
+            extruded placeholder massing (sized to each zone's real claimed
+            bay footprint, every category now, not just the civic/
+            health_care ones that used to always render as real structural
+            mass under "Structural" -- see logic/pershing_api.py's
+            rebuild() docstring). Labels stay on in either mode. Boxes
+            reuse BoxInstances directly rather than the full
+            StructuralInstances wrapper since data.program_boxes only ever
+            contains the box-shape building_mass kind. */}
         {visibleLayers.programZones && (
           <ProgramZones
             zones={programZones} bayFt={bayFt} siteLengthFt={siteLengthFt} shadingMode={shadingMode}
             showLabels={showLabels}
+            showFootprint={!visibleLayers.programBoxes}
           />
         )}
-        {/* Program Boxes (2026-07-16) -- optional placeholder-massing
-            preview for EVERY placed program zone (not just the civic/
-            health_care zones that still always render as real structural
-            mass under "Structural"), sized to each zone's actual claimed
-            bay footprint. Own toggle, off by default -- data.program_boxes
-            is a top-level rebuild() field, not part of data.structural, so
-            this reuses BoxInstances directly rather than the full
-            StructuralInstances wrapper (program_boxes only ever contains
-            the box-shape building_mass kind, never cylinder/hex/panel). */}
-        {visibleLayers.programBoxes && data?.program_boxes && (
+        {visibleLayers.programZones && visibleLayers.programBoxes && data?.program_boxes && (
           <BoxInstances specs={data.program_boxes} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={false} />
+        )}
+        {visibleLayers.attractors && data?.attractor_points && (
+          <AttractorMarkers points={data.attractor_points} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         )}
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">

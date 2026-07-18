@@ -223,17 +223,18 @@ class CanopyEngine:
         return cur
 
     def _puncture_mask(self, nx, nz):
-        """Boolean shade/water presence gates the puncture; the threshold
+        """Boolean trees/water presence gates the puncture; the threshold
         itself applies to the canopy mask's own continuous weight (a
         heavier brush stroke = a more deliberate puncture request) -- there
-        is no continuous shade/water intensity to compare against instead.
+        is no continuous trees/water intensity to compare against instead.
         Unchanged from the original design; still operates within whatever
         footprint _footprint_mask ends up describing, since a panel is
         never generated at all outside that footprint regardless of this
-        mask."""
+        mask. (is_shade renamed to is_tree 2026-07-16 when the "shade"
+        paint category was renamed to "trees" -- same underlying signal.)"""
         punctures = [[False] * nz for _ in range(nx)]
         for v in self.voxels:
-            if (v.is_shade or v.is_water) and self.canopy_mask[v.gx][v.gy] > self.puncture_threshold:
+            if (v.is_tree or v.is_water) and self.canopy_mask[v.gx][v.gy] > self.puncture_threshold:
                 punctures[v.gx][v.gy] = True
         return punctures
 

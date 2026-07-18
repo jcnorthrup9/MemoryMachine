@@ -98,7 +98,7 @@ def _empty_mask():
     return [[False] * len(SKETCH_WEIGHTS[0]) for _ in SKETCH_WEIGHTS]
 
 WATER_MASK = _empty_mask()
-SHADE_MASK = _empty_mask()
+TREE_MASK = _empty_mask()
 GREENSCAPE_MASK = _empty_mask()
 AMENITY_RESTING_MASK = _empty_mask()
 # Canopy Engine (2026-07-13) -- continuous weight grid, same role as
@@ -452,7 +452,7 @@ def rebuild_all(scene):
                               hardscape_regions=hardscape_regions, deficit_hotspots=deficit_hotspots,
                               transit_falloff_ft=transit_falloff_ft, max_canyon_depth_ft=max_canyon_depth_ft,
                               water_regions=[{"mask": WATER_MASK}],
-                              shade_regions=[{"mask": SHADE_MASK}],
+                              tree_regions=[{"mask": TREE_MASK}],
                               greenscape_regions=[{"mask": GREENSCAPE_MASK}],
                               amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}])
     voxels = engine.run(phase=3)
@@ -559,10 +559,11 @@ PAINT_CATEGORIES = (
     ("canyon", "Canyon", (0.0, 0.0, 0.0), True),
     ("hardscape", "Hardscape", (0.15, 0.35, 1.0), False),
     ("water", "Water", (0.15, 0.85, 0.95), False),
-    # Tan/beige (0xBCAAA4), matches the frontend's shade brush and the
+    # Tan/beige (0xBCAAA4), matches the frontend's trees brush and the
     # legacy diagram tool's ZONE_MATERIALS.SHADE -- kept consistent across
-    # all three so "shade" reads as the same color everywhere it appears.
-    ("shade", "Shade", (0.74, 0.67, 0.64), False),
+    # all three so "trees" reads as the same color everywhere it appears.
+    # (renamed from "shade" 2026-07-16 -- always meant "place trees here")
+    ("trees", "Trees", (0.74, 0.67, 0.64), False),
     ("greenscape", "Greenscape", (0.2, 0.75, 0.25), False),
     ("amenity_resting", "Amenity/Resting", (1.0, 0.55, 0.1), False),
     # 2026-07-13 Canopy Engine: continuous weight, like Canyon -- see
@@ -781,13 +782,13 @@ def _sample_mask_grid(img, continuous):
 def bake_paint_canvas(scene):
     """
     Sample all 7 painted mask images into SKETCH_WEIGHTS/HARDSCAPE_MASK/
-    WATER_MASK/SHADE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK/CANOPY_MASK,
+    WATER_MASK/TREE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK/CANOPY_MASK,
     then trigger the one real rebuild. No falloff math needed -- the painted
     alpha itself already IS the continuous weight (Canyon, Canopy) or the
     filled-region claim (everything else), since brush painting fills its
     own interior directly.
     """
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, CANOPY_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, TREE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, CANOPY_MASK
     painted_counts = {}
     for key, label, tint, continuous in PAINT_CATEGORIES:
         img = bpy.data.images.get(_mask_image_name(key))
@@ -800,8 +801,8 @@ def bake_paint_canvas(scene):
             HARDSCAPE_MASK = grid
         elif key == "water":
             WATER_MASK = grid
-        elif key == "shade":
-            SHADE_MASK = grid
+        elif key == "trees":
+            TREE_MASK = grid
         elif key == "greenscape":
             GREENSCAPE_MASK = grid
         elif key == "amenity_resting":
@@ -1034,7 +1035,7 @@ def register():
     )
     bpy.types.Scene.mm_canopy_puncture_threshold = bpy.props.FloatProperty(
         name="Canopy Puncture Threshold",
-        description="Canopy weight above which painted shade/water cells punch an opening",
+        description="Canopy weight above which painted trees/water cells punch an opening",
         default=0.5, min=0.0, max=1.0,
         update=_on_canopy_update,
     )

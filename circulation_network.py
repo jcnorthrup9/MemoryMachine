@@ -39,7 +39,7 @@ from terracing_engine import StructuralElement
 
 # --- Tunable-by-UI defaults (see logic/pershing_api.py's NetworkParams) ---
 DEFAULT_MOTIVATOR_WEIGHTS = {
-    "shade": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+    "trees": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
     # Placed program-zone entrances (2026-07-12) -- see sample_attraction_points()'s zones loop.
     "program": 1.0,
 }
@@ -122,7 +122,7 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
     voxel (2680 voxels would be far too dense/slow for the growth loop).
 
     Field-driven motivators (foot_traffic/deficit) and boolean-mask
-    motivators (shade/rest) are bucketed into 27ft x 27ft cells
+    motivators (trees/rest) are bucketed into 27ft x 27ft cells
     (BUCKET_VOXELS * voxel_ft == STRUCTURAL_BAY_FT, reusing the same real
     structural-bay unit already load-bearing elsewhere in this pipeline)
     and deduped to one Attractor per non-empty bucket, at the bucket's
@@ -149,18 +149,20 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
                 buckets.setdefault(key, []).append((v.wx, v.wy, v.deficit_influence))
             # 2026-07-11 fix: this bucket previously read is_water_shade (the
             # old combined mask) -- a real bug, not just a stale name, since
-            # it meant every painted water cell became a "shade" attractor
-            # too, even where no shade/tree was ever painted. Now reads the
-            # split is_shade mask directly. NOTE: "water" has no equivalent
-            # direct-mask bucket here -- it still only enters via
-            # _AMENITY_MOTIVATOR below (i.e. only already-excavated GROTTO
-            # water_plane/water_cascade_block props become "water"
-            # attractors, unlike "shade" which now reads its mask
-            # unconditionally regardless of excavation). Known asymmetry,
-            # not addressed by this fix -- flagged in
-            # MILESTONE_07112026_PlanningSession.md as a possible follow-on.
-            if v.is_shade:
-                key = (_bucket_key(v.wx, v.wy, engine), "shade")
+            # it meant every painted water cell became a "trees" attractor
+            # too, even where no trees were ever painted. Now reads the
+            # split is_tree mask directly (field renamed from is_shade,
+            # 2026-07-16, alongside the paint category's shade->trees
+            # rename). NOTE: "water" has no equivalent direct-mask bucket
+            # here -- it still only enters via _AMENITY_MOTIVATOR below
+            # (i.e. only already-excavated GROTTO water_plane/
+            # water_cascade_block props become "water" attractors, unlike
+            # "trees" which now reads its mask unconditionally regardless of
+            # excavation). Known asymmetry, not addressed by this fix --
+            # flagged in MILESTONE_07112026_PlanningSession.md as a possible
+            # follow-on.
+            if v.is_tree:
+                key = (_bucket_key(v.wx, v.wy, engine), "trees")
                 buckets.setdefault(key, []).append((v.wx, v.wy, 1.0))
             if v.is_amenity_resting:
                 key = (_bucket_key(v.wx, v.wy, engine), "rest")

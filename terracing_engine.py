@@ -59,7 +59,7 @@ class Voxel:
     sketch_weight: float = 0.0
     is_hardscape: bool = False
     is_water: bool = False
-    is_shade: bool = False
+    is_tree: bool = False
     is_greenscape: bool = False
     is_amenity_resting: bool = False
     is_deck: bool = False
@@ -143,8 +143,8 @@ class TerracingEngine:
                  transit_falloff_ft=220.0, threshold=0.35, step_ft=9.0,
                  max_canyon_depth_ft=None,
                  level_depth_thresholds_ft=DEFAULT_LEVEL_DEPTH_THRESHOLDS_FT,
-                 sketch_weights=None, sketch_alpha=0.75, hardscape_regions=None,
-                 water_regions=None, shade_regions=None, greenscape_regions=None, amenity_resting_regions=None,
+                 sketch_weights=None, sketch_alpha=0.75, deficit_alpha=1.0, hardscape_regions=None,
+                 water_regions=None, tree_regions=None, greenscape_regions=None, amenity_resting_regions=None,
                  deck_regions=None,
                  circulation_threshold=0.35, remove_top_slab=False):
         self.real_geometry = real_geometry
@@ -202,6 +202,20 @@ class TerracingEngine:
         # defaults sketch-dominant (0.75), not an even 50/50 blend.
         self.sketch_weights = sketch_weights
         self.sketch_alpha = sketch_alpha
+        # 2026-07-17 demand-driven excavation: deficit_influence (real
+        # neighborhood program-deficit hotspots, see __init__'s
+        # deficit_hotspots param) additively blended into _effective_
+        # influence alongside transit_influence -- same "designer/data-
+        # dominant" framing sketch_alpha/data_alpha already use. Previously
+        # deficit_influence had ZERO effect on excavation depth (only
+        # entered score_for_phase, a separate placement/typology signal) --
+        # confirmed live 2026-07-17 this was the actual missing piece
+        # behind "programming doesn't reach below-grade" (excavation was
+        # ~85ft-radius/9ft-deep at default slider values, entrance-
+        # proximity-only). Defaults co-equal with transit_influence (1.0),
+        # not a secondary nudge -- real programmatic need should carve the
+        # site as much as transit convenience does.
+        self.deficit_alpha = deficit_alpha
         # hardscape_regions: optional list of {"mask": (nx, nz) bool array}
         # dicts, e.g. straight from sketch_weight_mapper.build_hardscape_regions().
         # Unlike sketch_weights (additive, can CREATE excavation), a hardscape
@@ -216,18 +230,21 @@ class TerracingEngine:
         # decoration layer on top of whatever depth the real excavation math
         # already produced.
         #
-        # water_regions/shade_regions (2026-07-11 split): previously one
-        # combined water_shade_regions -- split because circulation_network.py's
-        # motivator system already treated "shade" and "water" as distinct
-        # weighted attractors, but derived them asymmetrically from the one
-        # upstream mask (shade read the raw mask directly, water only came
-        # from already-excavated GROTTO props) -- see that module's
-        # sample_attraction_points for the fix on that side. shade_regions
-        # also now drives TypologyAssetEngine.tree_specs() (trees = the
-        # shade-casting object), replacing the old is_greenscape-driven
-        # placement -- greenscape is pure grass now, see that method below.
+        # water_regions/tree_regions (2026-07-11 split, renamed from "shade"
+        # to "trees" 2026-07-16): previously one combined water_shade_regions
+        # -- split because circulation_network.py's motivator system already
+        # treated "trees" (nee "shade") and "water" as distinct weighted
+        # attractors, but derived them asymmetrically from the one upstream
+        # mask (trees read the raw mask directly, water only came from
+        # already-excavated GROTTO props) -- see that module's
+        # sample_attraction_points for the fix on that side. tree_regions
+        # drives TypologyAssetEngine.tree_specs() directly -- painting this
+        # category always meant "put trees here" (see that method below),
+        # the field/category name just didn't say so until this rename.
+        # Replaces the old is_greenscape-driven placement -- greenscape is
+        # pure grass now, see that method below.
         self.water_regions = water_regions or []
-        self.shade_regions = shade_regions or []
+        self.tree_regions = tree_regions or []
         self.greenscape_regions = greenscape_regions or []
         self.amenity_resting_regions = amenity_resting_regions or []
         # Deck-survival paint (2026-07-13) -- see __init__'s remove_top_slab
@@ -337,7 +354,7 @@ class TerracingEngine:
 
                 is_hardscape = any(region["mask"][gx][gy] for region in self.hardscape_regions)
                 is_water = any(region["mask"][gx][gy] for region in self.water_regions)
-                is_shade = any(region["mask"][gx][gy] for region in self.shade_regions)
+                is_tree = any(region["mask"][gx][gy] for region in self.tree_regions)
                 is_greenscape = any(region["mask"][gx][gy] for region in self.greenscape_regions)
                 is_amenity_resting = any(region["mask"][gx][gy] for region in self.amenity_resting_regions)
                 is_deck = any(region["mask"][gx][gy] for region in self.deck_regions)
@@ -351,7 +368,7 @@ class TerracingEngine:
                     sketch_weight=sketch_weight,
                     is_hardscape=is_hardscape,
                     is_water=is_water,
-                    is_shade=is_shade,
+                    is_tree=is_tree,
                     is_greenscape=is_greenscape,
                     is_amenity_resting=is_amenity_resting,
                     is_deck=is_deck,
@@ -364,10 +381,12 @@ class TerracingEngine:
 
     def _effective_influence(self, v):
         """
-        transit_influence, additively boosted by the designer's sketch
-        weight (if any). This is the one place both depth (_z_for_voxel)
-        and score (score_for_phase) read "how much does this cell want to
-        excavate" -- keeping the two consistent by construction.
+        transit_influence, additively boosted by real programmatic deficit
+        (deficit_alpha * v.deficit_influence, 2026-07-17) and the
+        designer's sketch weight (if any). This is the one place both
+        depth (_z_for_voxel) and score (score_for_phase) read "how much
+        does this cell want to excavate" -- keeping the two consistent by
+        construction.
 
         Literal addition, not a weighted average -- v.sketch_weight == 0
         (nowhere near a sketched line, i.e. most of the site) must leave
@@ -377,11 +396,15 @@ class TerracingEngine:
         alpha*sketch + (1-alpha)*transit -- that's an interpolation between
         two full fields, and wiped out the real entrance-driven excavation
         everywhere the sketch was blank. Caught by testing before/after
-        against real data, not assumed correct.)
+        against real data, not assumed correct.) Same reasoning applies to
+        deficit_influence -- it's added on top, never blended down, so a
+        cell far from any deficit hotspot keeps its full transit-driven
+        excavation unchanged.
         """
-        if self.sketch_weights is None:
-            return v.transit_influence
-        return clamp01(v.transit_influence + self.sketch_alpha * v.sketch_weight)
+        influence = v.transit_influence + self.deficit_alpha * v.deficit_influence
+        if self.sketch_weights is not None:
+            influence += self.sketch_alpha * v.sketch_weight
+        return clamp01(influence)
 
     def score_for_phase(self, v, phase):
         if phase == 1:
@@ -471,15 +494,15 @@ class TerracingEngine:
         happens to be painted Canyon+Water (confirmed 2026-07-05: this
         is a post-process classification over the already-computed terrace,
         not a new input to the depth formula). Reads is_water only (2026-07-11
-        split, was is_water_shade) -- painting Shade alone over an excavated
-        cell no longer implies a grotto, since shade's own semantics moved to
-        "trees go here" (see TypologyAssetEngine.tree_specs). SANCTUARY is
+        split, was is_water_shade) -- painting Trees alone over an excavated
+        cell no longer implies a grotto, since that paint category's own
+        semantics are "trees go here" (see TypologyAssetEngine.tree_specs). SANCTUARY is
         paint-only -- Greenscape and Amenity/Resting can both sit at grade,
         unrelated to excavation depth. CIRCULATION is checked last, after
         GROTTO/SANCTUARY -- existing classifications win outright if a cell
         happens to be painted both ways, no new priority system needed
         (foot-traffic data driving CIRCULATION is independent of the
-        water/shade/greenscape/amenity_resting masks the other two read).
+        water/trees/greenscape/amenity_resting masks the other two read).
 
         SANCTUARY additionally requires real-world quiet (2026-07-12): a
         cell painted greenscape+amenity_resting only keeps SANCTUARY status
@@ -730,6 +753,14 @@ class StructuralElement:
     normal_x: float = None
     normal_y: float = None
     normal_z: float = None
+    # Which program_requirements.json program this element's massing
+    # represents (2026-07-16, program_boxes per-program coloring) -- only
+    # set on rebuild()'s program_box_specs (one building_mass box per
+    # claimed bay), so the frontend can color each box by its actual
+    # program (matching the flat-plane ProgramZoneFootprint's PROGRAM_COLOR)
+    # instead of every program box sharing building_mass's one kind color.
+    # None for every other building_mass use (manual/user-placed buildings).
+    program_item: str = None
 
 
 def slab_key(slab):
@@ -1487,9 +1518,12 @@ class TypologyAssetEngine:
 
     def tree_specs(self):
         """
-        Trees on shade cells (2026-07-11: moved off is_greenscape -- trees
-        ARE the shade-casting object, so "paint shade" now means "put trees
-        here"; greenscape is pure grass, see the frontend's GreenscapeGround).
+        Trees on tree-painted cells (2026-07-11: moved off is_greenscape --
+        trees ARE the shade-casting object, so this paint category places
+        them directly; greenscape is pure grass, see the frontend's
+        GreenscapeGround). Category renamed from "shade" to "trees" 2026-07-16
+        so the paint brush's name matches what it actually places, rather
+        than requiring this docstring to explain the indirection.
         Hybrid asset strategy Tier 1: a plain cylinder trunk + hex-prism
         canopy stand-in (fits the existing kind-dispatch paths with zero new
         geometry code), swappable for a real tree model/GLB later without
@@ -1498,7 +1532,7 @@ class TypologyAssetEngine:
         specs = []
         for row in self.te.voxels:
             for v in row:
-                if not v.is_shade:
+                if not v.is_tree:
                     continue
                 if v.gx % TREE_GRID_SPACING != 0 or v.gy % TREE_GRID_SPACING != 0:
                     continue
@@ -1519,8 +1553,11 @@ class TypologyAssetEngine:
 class BuildingMassEngine:
     """
     Programmatic building-massing layer for surface-intervention planning
-    (establishing structures on the site over time) -- purely user-
-    parameterized, NOT read from data/building_heights.json: that file is
+    (establishing structures on the site over time) -- purely parameterized
+    (its only live caller, 2026-07-17, is rebuild()'s program_box_specs,
+    computed from real program placement -- manual user-typed buildings
+    were removed as redundant with that), NOT read from
+    data/building_heights.json: that file is
     off-site context (real-world buildings around Pershing Square, e.g. the
     Biltmore Hotel) in an abstract coordinate frame that doesn't correspond
     to real_geometry.json's site-feet frame, so it's not usable as an
