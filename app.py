@@ -72,35 +72,28 @@ app.add_middleware(
 )
 
 # --- AI & DB INITIALIZATION ---
+# 2026-07-17: decoupled from the Gemini/google-genai import -- this repo's
+# AI text-generation path is now Ollama-only (see logic/ai_synthesizer.py),
+# but AI_ENABLED was previously gated behind `from google import genai`
+# succeeding, which silently kept ChromaDB's real 4001-document review
+# corpus offline the whole time too (the "historical reviews" RAG context
+# in generate_spatial_seed() was always empty). ChromaDB now inits on its
+# own, independent of any Gemini/API-key availability.
 AI_ENABLED = False
-ai_client = None
 
 try:
     from dotenv import load_dotenv
-    from google import genai
     import chromadb
     load_dotenv(os.path.join(BASE_DIR, '.env'))
-    
-    # FIX: Your logs show both GOOGLE_API_KEY and GEMINI_API_KEY are set.
-    # Standard GOOGLE_API_KEYs often lack the GenAI API permission.
-    # We explicitly prioritize the AI Studio Key (GEMINI_API_KEY).
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    
-    if api_key:
-        # Initialize client for the google-genai SDK
-        ai_client = genai.Client(api_key=api_key)
-        
-        # Init ChromaDB
-        db_path = os.path.join(BASE_DIR, 'db')
-        chroma_client = chromadb.PersistentClient(path=db_path)
-        collection = chroma_client.get_or_create_collection(name="memory_machine_corpus")
-        
-        AI_ENABLED = True
-        print(f"✅ AI Services Online (Using Key: {'GEMINI' if os.environ.get('GEMINI_API_KEY') else 'GOOGLE'})")
-    else:
-        print("⚠️ No API Key found in .env")
+
+    db_path = os.path.join(BASE_DIR, 'db')
+    chroma_client = chromadb.PersistentClient(path=db_path)
+    collection = chroma_client.get_or_create_collection(name="memory_machine_corpus")
+
+    AI_ENABLED = True
+    print(f"✅ ChromaDB corpus online ({collection.count()} documents)")
 except Exception as e:
-    print(f"⚠️ AI Services Offline: {e}")
+    print(f"⚠️ ChromaDB unavailable: {e}")
 
 # Ensure static mount directories exist to prevent startup crashes
 os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
@@ -149,6 +142,10 @@ class ExportPayload(BaseModel):
     filename: str
     data: str
     type: str
+
+class ExportViewPngPayload(BaseModel):
+    filename: str
+    data: str  # data:image/png;base64,... straight from canvas.toDataURL()
 
 class CapturePayload(BaseModel):
     prompt: str
@@ -247,6 +244,24 @@ async def export_diagram(payload: ExportPayload):
             header, encoded = payload.data.split(",", 1)
             with open(filepath, "wb") as f:
                 f.write(base64.b64decode(encoded))
+        return {"status": "success", "path": filepath}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# "Export Current View" (Viewport.jsx) -- user asked (2026-07-17) for the
+# PNG screenshot to land next to the vector-linework SVG exports instead of
+# the browser's Downloads folder, with no save dialog. Same base64-dataURL
+# decode as export_diagram() above, different fixed target directory.
+PERSHING_EXPORT_PNG_DIR = os.path.join(BASE_DIR, "data", "PershingMetabolizer", "parkSVG", "remixedGeneratedPNGs")
+
+@app.post("/api/pershing/export-view-png")
+async def pershing_export_view_png(payload: ExportViewPngPayload):
+    os.makedirs(PERSHING_EXPORT_PNG_DIR, exist_ok=True)
+    filepath = os.path.join(PERSHING_EXPORT_PNG_DIR, os.path.basename(payload.filename))
+    try:
+        header, encoded = payload.data.split(",", 1)
+        with open(filepath, "wb") as f:
+            f.write(base64.b64decode(encoded))
         return {"status": "success", "path": filepath}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})

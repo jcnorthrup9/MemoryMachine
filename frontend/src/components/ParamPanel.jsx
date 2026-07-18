@@ -1,7 +1,3 @@
-import { useState } from 'react';
-
-const NEW_BUILDING_DEFAULTS = { x_ft: 0, y_ft: 0, width_ft: 40, depth_ft: 30, height_ft: 20, setback_ft: 0 };
-
 function Slider({ label, value, min, max, step, onChange, format }) {
   return (
     <div className="space-y-2">
@@ -33,7 +29,7 @@ const BLENDER_BUILD_LABEL = {
 const AMENITY_KINDS = ['water_plane', 'water_cascade_block', 'misting_line', 'bench_assembly', 'restroom_pod', 'fountain'];
 
 const MOTIVATOR_LABELS = [
-  ['shade', 'Shade'], ['water', 'Water'], ['rest', 'Rest'],
+  ['trees', 'Trees'], ['water', 'Water'], ['rest', 'Rest'],
   ['foot_traffic', 'Foot Traffic'], ['deficit', 'Deficit'], ['program', 'Program Zones'],
 ];
 
@@ -43,11 +39,21 @@ const LAYER_TOGGLES = [
   { key: 'realContext', label: 'Real Slabs/Cols' },
   { key: 'structural', label: 'Structural' },
   { key: 'greenscape', label: 'Greenscape' },
-  { key: 'shade', label: 'Shade' },
+  { key: 'trees', label: 'Trees' },
   { key: 'circulation', label: 'Circulation' },
   { key: 'canopy', label: 'Canopy' },
   { key: 'programZones', label: 'Program Zones' },
-  { key: 'programBoxes', label: 'Program Boxes' },
+  // Sub-option of Program Zones, not an independent layer (2026-07-16) --
+  // same zone data, just swaps flat footprint plates for extruded
+  // placeholder massing. Indented + disabled when Program Zones itself is
+  // off, per ParamPanel's own render loop below.
+  { key: 'programBoxes', label: 'Extrude as Boxes', indent: true },
+  // Independent of Program Zones (2026-07-16 program-placement correlation
+  // logic) -- major/minor attractor markers from a baked diagram import,
+  // now an input to WHERE programs place, not just a debug overlay of the
+  // zones themselves. See logic/program_placement.py's
+  // CATEGORY_ATTRACTOR_AFFINITY.
+  { key: 'attractors', label: 'Attractors' },
   { key: 'staticContext', label: 'Static Context' },
 ];
 
@@ -62,7 +68,6 @@ export default function ParamPanel({
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
-  const [newBuilding, setNewBuilding] = useState(NEW_BUILDING_DEFAULTS);
 
   const setNetworkWeight = (key) => (value) =>
     onNetworkParamsChange({
@@ -71,13 +76,6 @@ export default function ParamPanel({
     });
   const setNetworkField = (key) => (value) => onNetworkParamsChange({ ...networkParams, [key]: value });
   const setCanopyField = (key) => (value) => onCanopyParamsChange({ ...canopyParams, [key]: value });
-
-  const addBuilding = () => {
-    onParamsChange({ ...params, buildings: [...params.buildings, newBuilding] });
-  };
-  const removeBuilding = (i) => {
-    onParamsChange({ ...params, buildings: params.buildings.filter((_, idx) => idx !== i) });
-  };
 
   return (
     <aside className="w-80 border-l border-border bg-surface flex flex-col shrink-0 overflow-y-auto">
@@ -97,18 +95,43 @@ export default function ParamPanel({
         />
       </div>
 
+      <div className="p-container border-b border-border space-y-3">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          Design Input
+        </h4>
+        <p className="font-mono-sm text-[11px] text-on-surface-variant">
+          Paint freehand on the sketch photo, or import colors from an exported legacy diagram -- both
+          feed the same live design masks, pick the source inside the dialog.
+        </p>
+        <button
+          onClick={() => onPaint?.()}
+          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
+        >
+          Paint
+        </button>
+        <button
+          onClick={() => onOpenPrecedentRemixer?.()}
+          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
+        >
+          Precedent Remixer
+        </button>
+      </div>
+
       <div className="p-container border-b border-border space-y-2">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
           Layers
         </h4>
-        {LAYER_TOGGLES.map(({ key, label }) => (
+        {LAYER_TOGGLES.map(({ key, label, indent }) => (
           <label
             key={key}
-            className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer"
+            className={`flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer ${
+              indent ? 'pl-5' : ''
+            } ${indent && !visibleLayers.programZones ? 'opacity-40' : ''}`}
           >
             <input
               type="checkbox"
               checked={visibleLayers[key]}
+              disabled={indent && !visibleLayers.programZones}
               onChange={() => onToggleLayer(key)}
               className="accent-accent"
             />
@@ -305,53 +328,6 @@ export default function ParamPanel({
 
       <div className="p-container border-b border-border space-y-3">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Building Massing
-        </h4>
-        <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          v1: single-box massing per footprint, user-parameterized (not read from real-world context
-          data) -- swap for real building form later.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            ['x_ft', 'X (ft)'], ['y_ft', 'Y (ft)'],
-            ['width_ft', 'Width (ft)'], ['depth_ft', 'Depth (ft)'],
-            ['height_ft', 'Height (ft)'], ['setback_ft', 'Setback (ft)'],
-          ].map(([key, label]) => (
-            <label key={key} className="space-y-1 block">
-              <span className="font-mono-sm text-[11px] text-on-surface-variant uppercase">{label}</span>
-              <input
-                type="number"
-                value={newBuilding[key]}
-                onChange={(e) => setNewBuilding({ ...newBuilding, [key]: parseFloat(e.target.value) || 0 })}
-                className="w-full bg-background border border-border font-mono-sm text-mono-sm p-2 focus:ring-0 focus:border-accent text-on-surface outline-none"
-              />
-            </label>
-          ))}
-        </div>
-        <button
-          onClick={addBuilding}
-          className="w-full py-2 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98]"
-        >
-          Add Building
-        </button>
-        {params.buildings.length > 0 && (
-          <div className="space-y-1">
-            {params.buildings.map((b, i) => (
-              <div key={i} className="flex justify-between items-center font-mono-sm text-[11px] text-on-surface-variant">
-                <span>
-                  {b.width_ft}x{b.depth_ft}x{b.height_ft}ft @ ({b.x_ft}, {b.y_ft})
-                </span>
-                <button onClick={() => removeBuilding(i)} className="text-error hover:brightness-125 px-2">
-                  remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
           Amenity Deficit
         </h4>
         <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer">
@@ -458,28 +434,6 @@ export default function ParamPanel({
           Sanctuary cells:{' '}
           <span className="text-accent">{sanctuaryVoxelCount ?? 0}</span>
         </div>
-      </div>
-
-      <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Design Input
-        </h4>
-        <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Paint freehand on the sketch photo, or import colors from an exported legacy diagram -- both
-          feed the same live design masks, pick the source inside the dialog.
-        </p>
-        <button
-          onClick={() => onPaint?.()}
-          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
-        >
-          Paint
-        </button>
-        <button
-          onClick={() => onOpenPrecedentRemixer?.()}
-          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
-        >
-          Precedent Remixer
-        </button>
       </div>
 
       <div className="p-container border-b border-border space-y-3">

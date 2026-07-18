@@ -20,7 +20,11 @@ const BLENDER_POLL_MS = 1500;
 const DEFAULT_PARAMS = {
   sketch_alpha: 0.75,
   canyon_width: 3,
-  canyon_depth: 1,
+  // 2026-07-17 demand-driven excavation: bumped from 1 -> 4 (36ft raw,
+  // clamped to the real 30ft column-height cap) so the full real slab
+  // depth range (-10/-20/-30ft) is reachable out of the box, not just a
+  // single 9ft step -- see logic/pershing_api.py's excavation_scale.
+  canyon_depth: 4,
   material_mode: 'STEEL',
   shoring_density: 1.0,
   use_real_amenity_data: false,
@@ -28,12 +32,11 @@ const DEFAULT_PARAMS = {
   data_alpha: 1.0,
   use_real_noise_data: false,
   remove_top_slab: true,
-  buildings: [],
   disabled_programs: [],
 };
 
 const DEFAULT_NETWORK_PARAMS = {
-  motivator_weights: { shade: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0, program: 1.0 },
+  motivator_weights: { trees: 1.0, water: 1.0, rest: 1.0, foot_traffic: 1.0, deficit: 1.0, program: 1.0 },
   step_ft: 15.0,
   max_iterations: 300,
 };
@@ -88,7 +91,7 @@ export default function App() {
   // ParamPanel (renders the checkboxes) and Viewport (filters what it
   // renders) need to share this state.
   const [visibleLayers, setVisibleLayers] = useState({
-    realContext: true, structural: true, greenscape: true, shade: true,
+    realContext: true, structural: true, greenscape: true, trees: true,
     circulation: true, canopy: true, programZones: true, staticContext: true,
     // 2026-07-16: off by default -- the existing flat-plane ProgramZones
     // footprint stays the default visual for every program category, this
@@ -96,6 +99,10 @@ export default function App() {
     // rebuild() docstring for why it's a separate toggle from both
     // "Program Zones" and "Structural").
     programBoxes: false,
+    // 2026-07-16 program-placement correlation logic: on by default -- these
+    // markers now actively steer program placement (not just a passive
+    // debug overlay), so a designer should see them without an extra click.
+    attractors: true,
   });
   const [networkParams, setNetworkParams] = useState(DEFAULT_NETWORK_PARAMS);
   const [networkData, setNetworkData] = useState(null);
@@ -271,20 +278,6 @@ export default function App() {
     }
   }, []);
 
-  const downloadSvgUrl = useCallback(async (svgUrl, filename) => {
-    const res = await fetch(svgUrl);
-    if (!res.ok) throw new Error(`svg fetch failed: ${res.status}`);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(blobUrl);
-  }, []);
-
   const handleExportVectorView = useCallback(
     async (viewDirSite) => {
       if (!data) return;
@@ -298,12 +291,10 @@ export default function App() {
             const job = await getBlenderBuildStatus(job_id);
             if (job.status === 'done') {
               stopVectorExportPoll();
-              log(`vector export done in ${job.duration_s}s`);
-              try {
-                await downloadSvgUrl(job.svg_url, `pershing-lineart-${Date.now()}.svg`);
-              } catch (err) {
-                log(String(err), 'error');
-              }
+              // Backend already copied the SVG into data/PershingMetabolizer/
+              // parkSVG/remixedGeneratedSVGs/ as part of the build job (see
+              // logic/pershing_blender.py) -- no client-side download needed.
+              log(`vector export done in ${job.duration_s}s -> remixedGeneratedSVGs/`);
               setExportingVectorView(false);
             } else if (job.status === 'error') {
               stopVectorExportPoll();
@@ -321,7 +312,7 @@ export default function App() {
         setExportingVectorView(false);
       }
     },
-    [data, dataForBlenderExport, log, stopVectorExportPoll, downloadSvgUrl],
+    [data, dataForBlenderExport, log, stopVectorExportPoll],
   );
 
   useEffect(() => stopVectorExportPoll, [stopVectorExportPoll]);
@@ -478,7 +469,7 @@ export default function App() {
   // stays split: the toolbar's "Load Build" still reads a locally-downloaded
   // file client-side, while the ARCHIVE tab loads by filename from the
   // server. Everything needed to restore the exact
-  // on-screen state (params/buildings, the full rebuild result, network
+  // on-screen state (params, the full rebuild result, network
   // result, program zones) is already sitting in this component's own
   // state, so this is a snapshot-and-restore of that state, not a re-run of
   // the generation pipeline against saved inputs. That matters because

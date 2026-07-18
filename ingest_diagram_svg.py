@@ -6,7 +6,7 @@ Reads a solid-fill site diagram exported by diagram_tool/ (the standalone
 archived at archive/diagrams/site_svgs/site_diagram_<epoch_ms>.svg) and
 converts it into the SAME JSON shape ingest_legacy_diagram.py's
 rasterize_to_paint_state() already produces: {"canyon", "hardscape",
-"water", "shade", "greenscape", "amenity_resting"}, each an (nx, nz)
+"water", "trees", "greenscape", "amenity_resting"}, each an (nx, nz)
 nested list matching TerracingEngine's voxel grid.
 
 WHY THIS MODULE EXISTS, AND WHY IT'S NOT JUST A ingest_legacy_diagram.py
@@ -70,7 +70,7 @@ SVG_NS = "http://www.w3.org/2000/svg"
 # own ordering exactly) never misclassifies. Anything matching none of
 # these falls through to hardscape, same as the JS fallback.
 _ZONE_KEYWORD_ORDER = [
-    ("shade", ["SHADE"]),
+    ("trees", ["SHADE"]),
     ("greenscape", ["GREEN"]),
     ("water", ["WATER"]),
 ]
@@ -84,7 +84,7 @@ _ZONE_KEYWORD_ORDER = [
 # points a 3D asset gets seated on top of, same pattern as the old Digital
 # Palimpsest app's loadGLBIntoScene()). Kept as a SEPARATE keyword list
 # from _ZONE_KEYWORD_ORDER above -- these never contribute to the
-# hardscape/water/shade/greenscape area grid at all, not even as a
+# hardscape/water/trees/greenscape area grid at all, not even as a
 # fallback, since they're not area content.
 _ATTRACTOR_KEYWORD_ORDER = [
     ("major_attractor", ["MAJOR_ATTRACTOR"]),
@@ -252,7 +252,7 @@ def classify_svg_zones(root):
     """Find each known zone category's placed, FILLED shapes by their
     group `id` substring (the ORIGINAL Rhino layer name, preserved through
     diagram_tool's clone-and-transform export) -- NOT by color. Returns
-    {"hardscape": [poly, poly, ...], "water": [...], "shade": [...],
+    {"hardscape": [poly, poly, ...], "water": [...], "trees": [...],
     "greenscape": [...]} -- a list of separate (Ni,2) pixel-space vertex
     loops per category (NOT concatenated into one point cloud: each shape
     needs to be filled independently via point-in-polygon testing, see
@@ -271,7 +271,7 @@ def classify_svg_zones(root):
         if _local_tag(g) == 'g' and 'intervention-group' in (g.get('class') or '')
     ]
 
-    classified = {"hardscape": [], "water": [], "shade": [], "greenscape": []}
+    classified = {"hardscape": [], "water": [], "trees": [], "greenscape": []}
     for wrapper in intervention_wrappers:
         # The wrapper contains one cloned original layer group, e.g.
         # <g id="GREEN_SPACE_042">...</g> -- id substring match decides
@@ -396,7 +396,7 @@ def rasterize_zone_polygons(category_polygons_ft, nx, nz, voxel_ft):
     # below; convert_svg_to_paint_state's own classify_svg_zones() never
     # produces an "amenity_resting" key, so .get(..., []) keeps that path's
     # existing all-zero behavior unchanged.
-    for category in ("hardscape", "water", "shade", "greenscape", "amenity_resting"):
+    for category in ("hardscape", "water", "trees", "greenscape", "amenity_resting"):
         inside_any = np.zeros(len(grid_pts), dtype=bool)
         for poly in category_polygons_ft.get(category, []):
             if len(poly) < 3:
@@ -408,7 +408,7 @@ def rasterize_zone_polygons(category_polygons_ft, nx, nz, voxel_ft):
         "canyon": np.zeros((nx, nz)).tolist(),
         "hardscape": masks["hardscape"].tolist(),
         "water": masks["water"].tolist(),
-        "shade": masks["shade"].tolist(),
+        "trees": masks["trees"].tolist(),
         "greenscape": masks["greenscape"].tolist(),
         "amenity_resting": masks["amenity_resting"].tolist(),
     }
@@ -606,7 +606,7 @@ def rasterize_precedent_layers(composed_layers, nx=None, nz=None, voxel_ft=VOXEL
     affine, _pts, _angle = detect_boundary_affine_from_svg(
         pershing_root, site_width_ft, site_length_ft, FLIP_X, FLIP_Y)
 
-    category_polygons_ft = {"hardscape": [], "water": [], "shade": [], "greenscape": [], "amenity_resting": []}
+    category_polygons_ft = {"hardscape": [], "water": [], "trees": [], "greenscape": [], "amenity_resting": []}
     resolved_count = 0
 
     for item in composed_layers:
@@ -646,3 +646,77 @@ def rasterize_precedent_layers(composed_layers, nx=None, nz=None, voxel_ft=VOXEL
 
     masks = rasterize_zone_polygons(category_polygons_ft, nx, nz, voxel_ft)
     return masks, resolved_count
+
+
+def extract_attractor_points_from_composed_layers(composed_layers):
+    """
+    Companion to rasterize_precedent_layers() -- same composed layer stack,
+    same per-item load/fit-scale/rotate/translate/affine pipeline, but
+    pulls out MAJOR_ATTRACTOR/MINOR_ATTRACTOR/AMPHITHEATRE point-marker
+    centroids instead of filling area polygons for hardscape/water/trees/
+    greenscape/amenity_resting. Added 2026-07-17 so the Precedent Remixer
+    (AI/random generator) can place real attractor markers that flow into
+    3D program placement the same way a manually-composed diagram_tool
+    export already does via extract_attractor_points() above -- see that
+    function's docstring for why these are discrete points, not area
+    masks, and logic/pershing_api.py's _bay_grid_from_engine()/
+    program_placement.py for how they get consumed.
+
+    Returns the same shape extract_attractor_points() does:
+    {"major_attractor": [{"x_ft":.., "y_ft":..}, ...], "minor_attractor":
+    [...], "amphitheatre": [...]}.
+    """
+    _require_calibration()
+    real_geometry = _load_real_geometry()
+    site_width_ft = real_geometry["site"]["width_ft"]
+    site_length_ft = real_geometry["site"]["length_ft"]
+
+    pershing_root = _load_precedent_svg("PershingSquare")
+    pcx, pcy, pw, ph = _boundary_bbox_center_and_size(pershing_root)
+    affine, _pts, _angle = detect_boundary_affine_from_svg(
+        pershing_root, site_width_ft, site_length_ft, FLIP_X, FLIP_Y)
+
+    result = {"major_attractor": [], "minor_attractor": [], "amphitheatre": []}
+
+    for item in composed_layers:
+        layer_id = (item.get("layerId") or "").upper()
+        category = None
+        for cat, keywords in _ATTRACTOR_KEYWORD_ORDER:
+            if any(k in layer_id for k in keywords):
+                category = cat
+                break
+        if category is None:
+            continue  # not an attractor/amphitheatre layer -- rasterize_precedent_layers() handles it instead
+
+        try:
+            src_root = _load_precedent_svg(item["site"])
+        except FileNotFoundError:
+            continue
+        layer_g = _find_layer_group(src_root, item["layerId"])
+        if layer_g is None:
+            continue
+        src_polys_px = _group_polygons(layer_g)
+        if not src_polys_px:
+            continue
+
+        scx, scy, sw, sh = _boundary_bbox_center_and_size(src_root)
+        fit_scale = min(pw / (sw or 1.0), ph / (sh or 1.0))
+        t = item.get("transform") or {}
+        final_scale = fit_scale * (t.get("scale") or 1.0)
+        rot = np.radians(t.get("rot") or 0.0)
+        cos_r, sin_r = np.cos(rot), np.sin(rot)
+        offset_x = pcx + (t.get("x_frac") or 0.0) * pw
+        offset_y = pcy + (t.get("y_frac") or 0.0) * ph
+
+        for poly_px in src_polys_px:
+            centroid_px = poly_px.mean(axis=0)
+            shifted = centroid_px - np.array([scx, scy])
+            rotated = np.array([
+                shifted[0] * cos_r - shifted[1] * sin_r,
+                shifted[0] * sin_r + shifted[1] * cos_r,
+            ])
+            placed_px = rotated * final_scale + np.array([offset_x, offset_y])
+            x_ft, y_ft = affine.transform(placed_px.reshape(1, 2))[0]
+            result[category].append({"x_ft": float(x_ft), "y_ft": float(y_ft)})
+
+    return result

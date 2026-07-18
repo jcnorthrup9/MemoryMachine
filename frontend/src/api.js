@@ -32,11 +32,16 @@ export async function uploadSketch(file) {
   return res.json();
 }
 
-export async function bakePaint(grids) {
+// attractorPoints (2026-07-16 program-placement correlation logic):
+// optional -- only logic/legacy_diagram_bridge.py's diagram-preview flow has
+// an equivalent signal (freehand painting has no discrete-point concept).
+// Spreading `undefined` here is dropped by JSON.stringify, so the backend's
+// BakeGrids default (empty per-category lists) applies unchanged when omitted.
+export async function bakePaint(grids, attractorPoints) {
   const res = await fetch('/api/pershing/bake', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(grids),
+    body: JSON.stringify({ ...grids, attractor_points: attractorPoints }),
   });
   if (!res.ok) throw new Error(`bake failed: ${res.status}`);
   return res.json();
@@ -65,6 +70,21 @@ export async function startBlenderBuild(rebuildResult, lineart = false, viewDir 
     body: JSON.stringify(rebuildResult),
   });
   if (!res.ok) throw new Error(`blender build start failed: ${res.status}`);
+  return res.json();
+}
+
+// "Export Current View" PNG (Viewport.jsx) -- posts the canvas's own
+// toDataURL() output straight to the backend so it lands in
+// data/PershingMetabolizer/parkSVG/remixedGeneratedPNGs/ (same home as the
+// vector-export SVGs), not the browser's Downloads folder. No client-side
+// download/dialog at all -- see app.py's pershing_export_view_png().
+export async function exportViewPng(dataUrl, filename) {
+  const res = await fetch('/api/pershing/export-view-png', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, data: dataUrl }),
+  });
+  if (!res.ok) throw new Error(`view PNG export failed: ${res.status}`);
   return res.json();
 }
 

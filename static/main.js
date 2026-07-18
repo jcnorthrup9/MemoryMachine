@@ -1307,9 +1307,11 @@ async function init() {
   try {
     const res  = await fetch('/api/guidelines');
     const data = await res.json();
-    // Backend returns { guidelines: {Softscape,Hardscape,Active,Blue_Space}, ... }
-    // or flat { SOFT, HARD, PROG, BLUE } — handle both shapes
-    const g = data.guidelines || data;
+    // /api/guidelines nests the parsed table under data.data.guidelines
+    // (see app.py's get_guidelines()) -- reading data.guidelines directly
+    // always missed, silently keeping the hardcoded defaults below no
+    // matter what urban_design_guidelines.md actually said.
+    const g = data.data?.guidelines || data.guidelines || {};
     const remap = {
       Softscape:  'SOFT',
       Hardscape:  'HARD',

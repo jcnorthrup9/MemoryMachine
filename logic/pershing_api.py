@@ -12,6 +12,7 @@ single-user dev tool, not a multi-tenant service, so no database is needed
 for this state yet.
 """
 import json
+import math
 import os
 import shutil
 import sys
@@ -57,8 +58,8 @@ from logic import juror_chat as juror_chat_agent  # noqa: E402
 # falls back Gemini -> local Ollama, see ai_synthesizer.query_ai) and
 # offset composer (remix_layers) rather than re-deriving either -- see
 # remix_precedent() below for what's actually NEW here.
-from logic.ai_synthesizer import generate_spatial_seed  # noqa: E402
-from logic.urban_engine import remix_layers  # noqa: E402
+from logic.ai_synthesizer import generate_spatial_seed, random_spatial_seed  # noqa: E402
+from logic.urban_engine import remix_layers, guideline_manager  # noqa: E402
 import ingest_diagram_svg  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
@@ -89,11 +90,15 @@ def _empty_mask(nx, nz):
     return [[False] * nz for _ in range(nx)]
 
 
+def _empty_attractor_points():
+    return {"major_attractor": [], "minor_attractor": [], "amphitheatre": []}
+
+
 def _atomic_write_json(path, data):
     """Write-to-temp-then-rename so a crash/kill mid-write can't leave a
     truncated, unreadable file behind (os.replace is atomic on both Windows
     and POSIX). Shared by _save_paint_state() (runtime persist) and the
-    one-time water_shade->water/shade migration below (bootstrap-time) --
+    one-time water_shade->water/trees migration below (bootstrap-time) --
     extracted so the migration doesn't need a duplicate copy of this logic,
     and so _save_paint_state() can stay defined near bake() where it's
     actually called from, rather than needing to move earlier in the file
@@ -108,6 +113,38 @@ def _atomic_write_json(path, data):
 _probe = TerracingEngine(REAL_GEOMETRY)  # cheap -- only used for nx/nz/voxel_ft below
 NX, NZ, VOXEL_FT = _probe.nx, _probe.nz, _probe.voxel_ft
 NX_BAYS = max(1, round(REAL_GEOMETRY["site"]["width_ft"] / STRUCTURAL_BAY_FT))
+
+# How far a major/minor attractor's pull reaches (2026-07-16 program-
+# placement correlation logic) -- roughly a third of the site's ~600ft
+# length, "close enough to plausibly feel the pull of a major draw."
+# Linear falloff to 0 beyond this radius, see _attractor_proximity_bays().
+ATTRACTOR_INFLUENCE_RADIUS_FT = 200.0
+
+# 2026-07-17 demand-driven excavation ceiling -- ASPO Planning Advisory
+# Service Report No. 194 (Jan 1965, "Standards for Outdoor Recreational
+# Areas"), citing Butler's Standards for Municipal Recreation Areas (NRA,
+# rev. 1962, p.6): "30 to 50 per cent of the total park and recreation
+# land of a community should be set aside for active recreation."
+# Midpoint used as the active-recreation area budget. ACTIVE_RECREATION_
+# CATEGORIES maps onto sports_recreation only -- the one category in
+# program_requirements.json unambiguously "active" per that standard;
+# "outdoor" mixes active items (playground/workout_equipment) with
+# passive ones (picnic_grill_site), and splitting it further isn't
+# grounded in any real categorization this project already tracks, so
+# it's conservatively excluded rather than guessed at. See rebuild()'s
+# excavation_scale computation.
+ACTIVE_RECREATION_SITE_FRACTION = 0.40
+ACTIVE_RECREATION_CATEGORIES = {"sports_recreation"}
+
+# One real full floor-to-floor step (2026-07-16 program_boxes per-bay
+# extrusion) -- real_geometry.json's real_slabs "floor_slab" kind entries
+# (the real full floor plates, as opposed to the mid-level "ramp_slab"
+# entries) sit at a uniform 10ft z_top_ft spacing (0 / -10 / -20 / -30), so
+# this is ground truth, not a guess -- confirmed by direct inspection, not
+# derived from Voxel.level (irregular depth-bucket bands) or voxel_ft/
+# STRUCTURAL_BAY_FT (9ft/27ft excavation and column grids, unrelated to
+# floor-to-floor height).
+REAL_LEVEL_HEIGHT_FT = 10.0
 
 # Same lookup blender_cockpit.py does at import time -- None if
 # data/amenity_survey/ has no CSV yet, in which case rebuild() stays on
@@ -137,33 +174,48 @@ if os.path.exists(PAINT_STATE_PATH):
         _paint_state = json.load(f)
     SKETCH_WEIGHTS = _paint_state["canyon"]
     HARDSCAPE_MASK = _paint_state["hardscape"]
-    if "water" in _paint_state and "shade" in _paint_state:
+    if "water" in _paint_state and "trees" in _paint_state:
         WATER_MASK = _paint_state["water"]
-        SHADE_MASK = _paint_state["shade"]
+        TREE_MASK = _paint_state["trees"]
+    elif "water" in _paint_state and "shade" in _paint_state:
+        # One-time migration (2026-07-16 shade -> trees rename): this file
+        # predates the rename and only has the old "shade" key. Straight
+        # key rename, same data, no ambiguity to resolve (unlike the
+        # water_shade split below) -- "shade" always meant "trees go here"
+        # since the 2026-07-11 split (see TypologyAssetEngine.tree_specs()),
+        # this just makes the paint category's name match what it places.
+        WATER_MASK = _paint_state["water"]
+        TREE_MASK = _paint_state["shade"]
+        print(f"[pershing_api] migrated {PAINT_STATE_PATH} from shade to trees (same data, key rename only)")
+        _atomic_write_json(PAINT_STATE_PATH, {
+            "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK,
+            "water": WATER_MASK, "trees": TREE_MASK,
+            "greenscape": _paint_state["greenscape"], "amenity_resting": _paint_state["amenity_resting"],
+        })
     else:
-        # One-time migration (2026-07-11 water_shade -> water/shade split):
+        # One-time migration (2026-07-11 water_shade -> water/trees split):
         # this file predates the split and only has the old combined
         # "water_shade" key. Back it up with a TIMESTAMPED filename before
         # touching it -- a fixed ".bak" name caused a real data-loss
         # incident earlier this session (a second migration/install run
         # silently clobbered the first backup). Migrate water_shade -> water
-        # only, shade starts empty: this specific file's water_shade mask
+        # only, trees starts empty: this specific file's water_shade mask
         # is provably pure water (it came from ingest_legacy_diagram.py's
         # blue-pixel-only segmentation, and the SHADE/GREEN_SPACE color-
         # collision bug in static/main.js's _getLayerColor meant no diagram
-        # exported before that fix could ever have produced a real shade
-        # signal) -- duplicating into both would fabricate tree placement
-        # the user never actually specified. See
+        # exported before that fix could ever have produced a real shade/
+        # tree signal) -- duplicating into both would fabricate tree
+        # placement the user never actually specified. See
         # archive/memoryMachine/MILESTONE_07112026_PlanningSession.md.
         _backup_path = f"{PAINT_STATE_PATH}.{int(time.time())}.bak"
         shutil.copy2(PAINT_STATE_PATH, _backup_path)
         WATER_MASK = _paint_state["water_shade"]
-        SHADE_MASK = _empty_mask(NX, NZ)
-        print(f"[pershing_api] migrated {PAINT_STATE_PATH} from water_shade to water/shade "
-              f"(shade starts empty) -- pre-migration backup at {_backup_path}")
+        TREE_MASK = _empty_mask(NX, NZ)
+        print(f"[pershing_api] migrated {PAINT_STATE_PATH} from water_shade to water/trees "
+              f"(trees starts empty) -- pre-migration backup at {_backup_path}")
         _atomic_write_json(PAINT_STATE_PATH, {
             "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK,
-            "water": WATER_MASK, "shade": SHADE_MASK,
+            "water": WATER_MASK, "trees": TREE_MASK,
             "greenscape": _paint_state["greenscape"], "amenity_resting": _paint_state["amenity_resting"],
         })
     GREENSCAPE_MASK = _paint_state["greenscape"]
@@ -172,32 +224,39 @@ if os.path.exists(PAINT_STATE_PATH):
     # decouple) -- .get() with an empty-mask fallback, not a hard key
     # lookup like the others above: this field is new, so any
     # PAINT_STATE_PATH written before today simply won't have it yet, and
-    # (unlike the water_shade split) there's no ambiguity to migrate --
+    # (unlike the water_shade/shade->trees migrations) there's no ambiguity to migrate --
     # "no deck painted yet" is exactly what an empty mask already means.
     DECK_MASK = _paint_state.get("deck") or _empty_mask(NX, NZ)
     # CANOPY_MASK (2026-07-13, Canopy Engine) -- same .get()-with-fallback
     # as DECK_MASK above: new field, no legacy-payload ambiguity to migrate.
     CANOPY_MASK = _paint_state.get("canopy") or _empty_mask(NX, NZ)
+    # ATTRACTOR_POINTS (2026-07-16, program-placement correlation logic) --
+    # same .get()-with-fallback as DECK_MASK/CANOPY_MASK: new field, no
+    # legacy-payload ambiguity to migrate ("no attractors baked yet" is
+    # exactly what an empty per-category dict already means).
+    ATTRACTOR_POINTS = _paint_state.get("attractor_points") or _empty_attractor_points()
 elif os.path.exists(SKETCH_CACHE_PATH):
     with open(SKETCH_CACHE_PATH) as f:
         _cache = json.load(f)
     SKETCH_WEIGHTS = _cache["weights"]
     HARDSCAPE_MASK = _cache.get("hardscape_mask") or _empty_mask(NX, NZ)
     WATER_MASK = _empty_mask(NX, NZ)
-    SHADE_MASK = _empty_mask(NX, NZ)
+    TREE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
     DECK_MASK = _empty_mask(NX, NZ)
     CANOPY_MASK = _empty_mask(NX, NZ)
+    ATTRACTOR_POINTS = _empty_attractor_points()
 else:
     SKETCH_WEIGHTS = _empty_mask(NX, NZ)
     HARDSCAPE_MASK = _empty_mask(NX, NZ)
     WATER_MASK = _empty_mask(NX, NZ)
-    SHADE_MASK = _empty_mask(NX, NZ)
+    TREE_MASK = _empty_mask(NX, NZ)
     GREENSCAPE_MASK = _empty_mask(NX, NZ)
     AMENITY_RESTING_MASK = _empty_mask(NX, NZ)
     DECK_MASK = _empty_mask(NX, NZ)
     CANOPY_MASK = _empty_mask(NX, NZ)
+    ATTRACTOR_POINTS = _empty_attractor_points()
 
 # The sketch image the paint canvas displays as its background -- starts
 # as whatever's already in data/sketches/ (same lookup blender_cockpit.py
@@ -240,13 +299,14 @@ class BakeGrids(BaseModel):
     JS against a 2D canvas instead of Python against a Blender Image.
     canyon and canopy are continuous weight grids (painted alpha IS the
     weight); the other five are boolean zone masks, already thresholded
-    client-side. water/shade split 2026-07-11 (was one combined
-    water_shade field) -- see terracing_engine.py's Voxel docstring.
+    client-side. water/trees split 2026-07-11 (was one combined
+    water_shade field; the "trees" field itself was named "shade" until
+    the 2026-07-16 rename) -- see terracing_engine.py's Voxel docstring.
     """
     canyon: list[list[float]]
     hardscape: list[list[bool]]
     water: list[list[bool]]
-    shade: list[list[bool]]
+    trees: list[list[bool]]
     greenscape: list[list[bool]]
     amenity_resting: list[list[bool]]
     # 2026-07-13 "remove top slab" excavation/hardscape decouple: a
@@ -268,37 +328,47 @@ class BakeGrids(BaseModel):
     # no equivalent color-segmented signal to convert -- "no canopy painted"
     # is exactly what an empty default means, same reasoning as deck's.
     canopy: list[list[float]] = Field(default_factory=lambda: _empty_mask(NX, NZ))
+    # 2026-07-16 program-placement correlation logic: discrete major/minor
+    # attractor (+ amphitheatre) marker positions, in site-feet -- NOT an
+    # area mask like the seven grids above. Defaulted like deck/canopy: only
+    # logic/legacy_diagram_bridge.py's preview_import() has an equivalent
+    # signal to forward (see ingest_diagram_svg.extract_attractor_points());
+    # freehand painting has no discrete-point concept, so "not provided"
+    # correctly means "no attractors this bake."
+    attractor_points: dict[str, list[dict]] = Field(default_factory=_empty_attractor_points)
 
 
 def _save_paint_state():
-    """Persist all 8 live grids to PAINT_STATE_PATH (2026-07-10 persistence
-    supplement, water/shade split 2026-07-11, deck mask 2026-07-13, canopy
-    mask 2026-07-13) so a backend restart doesn't lose painted work --
-    previously bake() only updated the in-memory globals, never written
-    anywhere. See _atomic_write_json for the actual write mechanics (shared
-    with the one-time bootstrap migration above)."""
+    """Persist all live grids (+ attractor points) to PAINT_STATE_PATH
+    (2026-07-10 persistence supplement, water/trees split 2026-07-11, deck
+    mask 2026-07-13, canopy mask 2026-07-13, attractor points 2026-07-16) so
+    a backend restart doesn't lose painted work -- previously bake() only
+    updated the in-memory globals, never written anywhere. See
+    _atomic_write_json for the actual write mechanics (shared with the
+    one-time bootstrap migration above)."""
     _atomic_write_json(PAINT_STATE_PATH, {
-        "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water": WATER_MASK, "shade": SHADE_MASK,
+        "canyon": SKETCH_WEIGHTS, "hardscape": HARDSCAPE_MASK, "water": WATER_MASK, "trees": TREE_MASK,
         "greenscape": GREENSCAPE_MASK, "amenity_resting": AMENITY_RESTING_MASK, "deck": DECK_MASK,
-        "canopy": CANOPY_MASK,
+        "canopy": CANOPY_MASK, "attractor_points": ATTRACTOR_POINTS,
     })
 
 
 def bake(grids: BakeGrids):
-    """Overwrite the eight live grids from a completed paint session and
-    persist them (see _save_paint_state). Does NOT trigger a rebuild itself
-    -- the frontend calls /rebuild right after, reusing its existing
-    rebuild path rather than duplicating it here with a second copy of the
-    current slider params."""
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, DECK_MASK, CANOPY_MASK
+    """Overwrite the live grids (+ attractor points) from a completed paint
+    session and persist them (see _save_paint_state). Does NOT trigger a
+    rebuild itself -- the frontend calls /rebuild right after, reusing its
+    existing rebuild path rather than duplicating it here with a second copy
+    of the current slider params."""
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, TREE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, DECK_MASK, CANOPY_MASK, ATTRACTOR_POINTS
     SKETCH_WEIGHTS = grids.canyon
     HARDSCAPE_MASK = grids.hardscape
     WATER_MASK = grids.water
-    SHADE_MASK = grids.shade
+    TREE_MASK = grids.trees
     GREENSCAPE_MASK = grids.greenscape
     AMENITY_RESTING_MASK = grids.amenity_resting
     DECK_MASK = grids.deck
     CANOPY_MASK = grids.canopy
+    ATTRACTOR_POINTS = grids.attractor_points
     _save_paint_state()
     return {
         "status": "ok",
@@ -306,19 +376,23 @@ def bake(grids: BakeGrids):
             "canyon": sum(1 for row in SKETCH_WEIGHTS for v in row if v > 0.01),
             "hardscape": sum(1 for row in HARDSCAPE_MASK for v in row if v),
             "water": sum(1 for row in WATER_MASK for v in row if v),
-            "shade": sum(1 for row in SHADE_MASK for v in row if v),
+            "trees": sum(1 for row in TREE_MASK for v in row if v),
             "greenscape": sum(1 for row in GREENSCAPE_MASK for v in row if v),
             "amenity_resting": sum(1 for row in AMENITY_RESTING_MASK for v in row if v),
             "deck": sum(1 for row in DECK_MASK for v in row if v),
             "canopy": sum(1 for row in CANOPY_MASK for v in row if v > 0.01),
+            **{f"{cat}_count": len(pts) for cat, pts in ATTRACTOR_POINTS.items()},
         },
     }
 
 
 class BuildingSpec(BaseModel):
-    """One user-parameterized building mass -- see BuildingMassEngine's
+    """One parameterized building mass -- see BuildingMassEngine's
     docstring for why this is parameterized rather than read from
-    data/building_heights.json (wrong coordinate frame, off-site data)."""
+    data/building_heights.json (wrong coordinate frame, off-site data).
+    2026-07-17: the only live producer is rebuild()'s program_box_specs
+    (server-computed from real program placement) -- manual user-typed
+    buildings were removed as redundant with that."""
     x_ft: float
     y_ft: float
     width_ft: float = 40.0
@@ -326,17 +400,23 @@ class BuildingSpec(BaseModel):
     height_ft: float = 20.0
     setback_ft: float = 0.0
     # Base elevation the building's footprint actually sits on (2026-07-13
-    # "remove top slab" feature) -- 0.0 (grade) unless a program-placement-
-    # derived building_spec supplies its own real floor_elev_ft. User-placed
-    # buildings (via the UI/API, not program placement) default to grade,
-    # same pre-existing behavior as before this field existed.
+    # "remove top slab" feature) -- 0.0 (grade) unless program placement
+    # supplies its own real per-bay floor_elev_ft (see rebuild()'s
+    # program_box_specs). User-placed buildings (via the UI/API, not
+    # program placement) default to grade, same pre-existing behavior as
+    # before this field existed.
     z_ft: float = 0.0
 
 
 class RebuildParams(BaseModel):
     sketch_alpha: float = 0.75
     canyon_width: int = 3
-    canyon_depth: int = 1
+    # 2026-07-17 demand-driven excavation: bumped 1 -> 4 (36ft raw, clamped
+    # to the real 30ft column-height cap) to match frontend/src/App.jsx's
+    # DEFAULT_PARAMS -- keeps this Pydantic default (used by get_bay_grid()
+    # and any caller that omits canyon_depth) in sync with what the live UI
+    # actually sends, so "out of the box" means the same thing either way.
+    canyon_depth: int = 4
     material_mode: str = "STEEL"
     shoring_density: float = 1.0
     use_real_amenity_data: bool = AMENITY_CSV_PATH is not None
@@ -349,7 +429,6 @@ class RebuildParams(BaseModel):
     # silently overriding the designer's dig.
     data_alpha: float = 1.0
     use_real_noise_data: bool = NOISE_CSV_PATH is not None
-    buildings: list[BuildingSpec] = []
     # 2026-07-13 "remove top slab" feature: forces excavation to clear the
     # SURFACE slab everywhere except designer-protected (painted hardscape)
     # cells -- see terracing_engine.py's TerracingEngine.remove_top_slab/
@@ -411,6 +490,9 @@ def _serialize_specs(specs):
             # 2026-07-16 Canopy Redesign -- unit surface normal, only set for
             # "panel"-shape kinds (canopy_panel). None for everything else.
             "normal_x": s.normal_x, "normal_y": s.normal_y, "normal_z": s.normal_z,
+            # 2026-07-16 program_boxes per-program coloring -- see
+            # StructuralElement.program_item's own docstring.
+            "program_item": s.program_item,
         }
         for s in specs
     ]
@@ -432,18 +514,19 @@ def _run_pipeline(params: RebuildParams):
     "protect this," so a second switch to also enable that protection was
     redundant, dead-looking UI.
 
-    Building mass is deliberately NOT computed here (2026-07-12) even
-    though params.buildings is available -- program-zone-derived building
-    specs (see logic/program_placement.py's building_spec) are only knowable
-    *after* engine/voxels exist (they come from placing programs onto the
-    bay grid), and building mass has zero feedback into excavation/framing/
-    typology (purely additive). Rather than call the bay-grid/program-zone
-    derivation from inside here (which would need its own engine/voxels and
-    reintroduce exactly the double-pipeline-run problem
-    _bay_grid_from_engine()/_program_zones_from_engine() exist to avoid),
-    rebuild() computes buildings itself, after this returns, from both
-    params.buildings and the programmatic zones it derives from this same
-    engine/voxels.
+    Building mass is deliberately NOT computed here (2026-07-12; manual
+    user-placed buildings removed entirely 2026-07-17, redundant with
+    program-zone-derived massing) -- program-zone-derived building specs
+    (see rebuild()'s per-bay program_box_specs, built from each zone's
+    "bays" list) are only knowable *after* engine/voxels exist (they come
+    from placing programs onto the bay grid), and building mass has zero
+    feedback into excavation/framing/typology (purely additive). Rather
+    than call the bay-grid/program-zone derivation from inside here (which
+    would need its own engine/voxels and reintroduce exactly the
+    double-pipeline-run problem _bay_grid_from_engine()/
+    _program_zones_from_engine() exist to avoid), rebuild() computes
+    program_box_specs itself, after this returns, from the programmatic
+    zones it derives from this same engine/voxels.
 
     Returns (engine, voxels, typology_specs, base_specs, meta) -- voxels is
     the flat, already-classified list engine.run() returns (every voxel,
@@ -459,8 +542,25 @@ def _run_pipeline(params: RebuildParams):
     buildings -- see above.
     """
     hardscape_regions = [{"mask": HARDSCAPE_MASK}]
+
+    # 2026-07-17 demand-driven excavation ceiling -- see ACTIVE_RECREATION_
+    # SITE_FRACTION's own comment for the real ASPO-sourced 40% basis.
+    # Floored at 1.0 (never shrinks canyon_depth's own baseline) -- this
+    # only ever RAISES the ceiling when real active-recreation program
+    # demand exceeds what the site's own real standard allots it.
+    total_active_demand_sf = sum(
+        p["target_sf"] for p in load_programs(exclude_ids=params.disabled_programs)
+        if p["category"] in ACTIVE_RECREATION_CATEGORIES
+    )
+    active_recreation_budget_sf = (
+        REAL_GEOMETRY["site"]["width_ft"] * REAL_GEOMETRY["site"]["length_ft"] * ACTIVE_RECREATION_SITE_FRACTION
+    )
+    excavation_scale = max(1.0, total_active_demand_sf / active_recreation_budget_sf)
+
     transit_falloff_ft = params.canyon_width * STRUCTURAL_BAY_FT
-    max_canyon_depth_ft = min(params.canyon_depth * 9.0, REAL_GEOMETRY.get("column_height_ft", 30.0))
+    max_canyon_depth_ft = min(
+        params.canyon_depth * 9.0 * excavation_scale, REAL_GEOMETRY.get("column_height_ft", 30.0)
+    )
 
     # Mirrors blender_cockpit.py's rebuild_all(): None -> TerracingEngine
     # falls back to its own DEFAULT_DEFICIT_HOTSPOTS placeholder. Only
@@ -485,10 +585,10 @@ def _run_pipeline(params: RebuildParams):
 
     engine = TerracingEngine(
         REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=params.sketch_alpha,
-        hardscape_regions=hardscape_regions,
+        deficit_alpha=1.0, hardscape_regions=hardscape_regions,
         transit_falloff_ft=transit_falloff_ft, max_canyon_depth_ft=max_canyon_depth_ft,
         water_regions=[{"mask": WATER_MASK}],
-        shade_regions=[{"mask": SHADE_MASK}],
+        tree_regions=[{"mask": TREE_MASK}],
         greenscape_regions=[{"mask": GREENSCAPE_MASK}],
         amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}],
         deck_regions=[{"mask": DECK_MASK}],
@@ -510,6 +610,12 @@ def _run_pipeline(params: RebuildParams):
 
     meta = {
         "max_canyon_depth_ft": max_canyon_depth_ft,
+        # 2026-07-17 demand-driven excavation ceiling -- see
+        # ACTIVE_RECREATION_SITE_FRACTION's own comment. 1.0 means dormant
+        # (today's real program list doesn't exceed the real ASPO-sourced
+        # active-recreation budget), >1.0 means it's actively raising
+        # max_canyon_depth_ft above canyon_depth's own slider-derived value.
+        "excavation_scale": excavation_scale,
         "used_real_amenity_data": deficit_hotspots is not None,
         "used_real_foot_traffic_data": foot_traffic_hotspots is not None,
         "used_real_noise_data": noise_hotspots is not None,
@@ -575,6 +681,25 @@ def _bay_floor_elevations(engine, voxels, nx_bays, nz_bays, bays_per_side=3):
     return out
 
 
+def _attractor_proximity_bays(bay_cells, points, radius_ft=ATTRACTOR_INFLUENCE_RADIUS_FT):
+    """{(gx, gy): 0..1} proximity-to-nearest-point falloff for one attractor
+    category (2026-07-16 program-placement correlation logic) -- 1.0 AT a
+    point, linearly down to 0.0 at radius_ft away, 0.0 for every bay if
+    `points` is empty (nothing painted/imported yet). `points` entries are
+    {"x_ft":.., "y_ft":..} in site-feet (ingest_diagram_svg.extract_
+    attractor_points()'s output shape); "y_ft" here means the plan z-axis,
+    same convention BuildingSpec.y_ft and every painted mask already use --
+    matched against each bay's own (x_ft, z_ft) center, NOT a vertical
+    coordinate."""
+    if not points:
+        return {idx: 0.0 for idx in bay_cells}
+    out = {}
+    for idx, cell in bay_cells.items():
+        nearest = min(math.hypot(cell.x_ft - p["x_ft"], cell.z_ft - p["y_ft"]) for p in points)
+        out[idx] = max(0.0, 1.0 - nearest / radius_ft)
+    return out
+
+
 def _bay_grid_from_engine(engine, voxels):
     """
     Body of get_bay_grid(), extracted (2026-07-12) to take an already-
@@ -606,6 +731,12 @@ def _bay_grid_from_engine(engine, voxels):
     hardscape_bay = aggregate_grid_to_bays(HARDSCAPE_MASK, nx_bays, nz_bays)
     amenity_resting_bay = aggregate_grid_to_bays(AMENITY_RESTING_MASK, nx_bays, nz_bays)
     water_bay = aggregate_grid_to_bays(WATER_MASK, nx_bays, nz_bays)
+    # 2026-07-16 program-placement correlation logic: TREE_MASK aggregated
+    # the same way as the other painted masks -- the closest live "this area
+    # will be shaded" proxy (trees are literally the shade-producing typology
+    # asset), distinct from CANOPY_MASK (architectural canopy structure, a
+    # separate system) -- see [[memorymachine_shade_trees_canopy_naming]].
+    trees_bay = aggregate_grid_to_bays(TREE_MASK, nx_bays, nz_bays)
     transit_bay = aggregate_grid_to_bays(voxel_attr_grid(voxels, engine.nx, engine.nz, "transit_influence"),
                                           nx_bays, nz_bays)
     deficit_bay = aggregate_grid_to_bays(voxel_attr_grid(voxels, engine.nx, engine.nz, "deficit_influence"),
@@ -614,6 +745,13 @@ def _bay_grid_from_engine(engine, voxels):
     # own docstring for why this is a separate mode-based aggregation, not
     # another aggregate_grid_to_bays() mean.
     floor_elev_bay = _bay_floor_elevations(engine, voxels, nx_bays, nz_bays)
+    # 2026-07-16 program-placement correlation logic: per-bay 0..1 proximity
+    # to the nearest major/minor attractor marker (see bake()/BakeGrids'
+    # attractor_points, sourced from a diagram import) -- see
+    # _attractor_proximity_bays()'s own docstring for the falloff math.
+    # amphitheatre points are persisted but not scored here (out of scope).
+    major_attractor_bay = _attractor_proximity_bays(bay_cells, ATTRACTOR_POINTS.get("major_attractor") or [])
+    minor_attractor_bay = _attractor_proximity_bays(bay_cells, ATTRACTOR_POINTS.get("minor_attractor") or [])
 
     bays = [
         {
@@ -621,13 +759,25 @@ def _bay_grid_from_engine(engine, voxels):
             "column_id": cell.column_id, "is_buildable": cell.is_buildable,
             "greenscape": greenscape_bay[gx][gy], "hardscape": hardscape_bay[gx][gy],
             "amenity_resting": amenity_resting_bay[gx][gy], "water": water_bay[gx][gy],
+            "trees": trees_bay[gx][gy],
             "transit_influence": transit_bay[gx][gy], "deficit_influence": deficit_bay[gx][gy],
             "floor_elev_ft": floor_elev_bay[gx][gy],
+            "major_attractor_proximity": major_attractor_bay[(gx, gy)],
+            "minor_attractor_proximity": minor_attractor_bay[(gx, gy)],
         }
         for (gx, gy), cell in bay_cells.items()
     ]
 
-    return {"nx_bays": nx_bays, "nz_bays": nz_bays, "bay_ft": STRUCTURAL_BAY_FT, "bays": bays}
+    return {
+        "nx_bays": nx_bays, "nz_bays": nz_bays, "bay_ft": STRUCTURAL_BAY_FT, "bays": bays,
+        # 2026-07-17 restroom "host attachment" placement -- the real
+        # surveyed metro entrance, passed through the bay_grid dict rather
+        # than as a loose param so logic/program_placement.py stays
+        # decoupled from pershing_api/REAL_GEOMETRY (it only ever reads
+        # bay_grid, same as every other spatial signal it consumes).
+        "metro_entrance": {"x_ft": REAL_GEOMETRY["secondary_entrance_anchor"]["x"],
+                            "z_ft": REAL_GEOMETRY["secondary_entrance_anchor"]["z"]},
+    }
 
 
 def get_bay_grid():
@@ -681,7 +831,7 @@ def get_program_zones():
 
 
 _QUADRANT_FEATURES = [
-    ("is_shade", "SHADE"), ("is_water", "WATER"), ("is_greenscape", "GREENSCAPE"),
+    ("is_tree", "TREES"), ("is_water", "WATER"), ("is_greenscape", "GREENSCAPE"),
     ("is_amenity_resting", "AMENITY_RESTING"), ("is_hardscape", "HARDSCAPE"),
 ]
 
@@ -751,16 +901,28 @@ def rebuild(params: RebuildParams):
     """Returns JSON voxels + structural/typology specs for the frontend to
     render however it likes (Three.js instancing, etc).
 
-    Buildings (2026-07-12): params.buildings (user-placed, via the UI/API)
-    render unconditionally as real structural mass, merged into all_specs
-    -- these are explicit manual placements, not tied to any program zone.
+    Manual user-placed buildings (2026-07-12) were removed entirely
+    2026-07-17 -- redundant with program-zone box massing below, which
+    covers the same "building_mass" visual with real program-driven
+    placement instead of an arbitrary typed-in box with no connection to
+    any program or real data.
 
-    Program-zone box massing (2026-07-16 rework): EVERY placed program zone
-    now gets a building_spec (see logic/program_placement.py's place_programs()
-    -- previously only enrichment_civic/health_care zones did), sized to
-    that zone's real claimed bay footprint, not a separate target_sf-
-    derived shape. Returned as its OWN "program_boxes" response field,
-    NOT merged into all_specs -- these are an OPTIONAL placeholder-massing
+    Program-zone box massing (2026-07-16 rework, per-bay extrusion): each
+    placed program zone's box massing is now ONE building_mass box PER
+    CLAIMED BAY (zone["bays"], the exact same [gx, gy, floor_elev_ft] list
+    the flat-plane ProgramZoneFootprint already renders from), not one
+    bounding box per zone -- confirmed live that a single bounding box
+    misrepresents any zone with an irregular/non-contiguous claimed shape
+    (it doesn't match what the flat-plane view shows, and for split zones
+    it bridges gaps that were never actually claimed). Each bay box is
+    extruded from that bay's own real floor_elev_ft up by
+    REAL_LEVEL_HEIGHT_FT (one real level), doubled for programs flagged
+    program_requirements.json's "double_height": true (public_gym,
+    skatepark -- vertical-clearance programs named explicitly by the user,
+    not inferred). This makes program_boxes a real sizing/massing study
+    (accurate footprint + accurate real-world level height), not just a
+    placeholder volume. Returned as its OWN "program_boxes" response field,
+    NOT merged into base_specs -- these are an OPTIONAL placeholder-massing
     preview (Viewport.jsx's "Program Boxes" toggle), independent of both
     "Program Zones" (the existing flat-plane footprint markers) and
     "Structural" (which would otherwise force every program's box on
@@ -771,16 +933,32 @@ def rebuild(params: RebuildParams):
 
     zones = _program_zones_from_engine(engine, voxels, disabled_programs=params.disabled_programs)["zones"]
 
-    manual_buildings = BuildingMassEngine([b.model_dump() for b in params.buildings]).run()
-    all_specs = base_specs + manual_buildings
-
     program_box_specs = [
-        BuildingSpec(**z["building_spec"]) for z in zones if z["building_spec"]
+        BuildingSpec(
+            x_ft=gx * STRUCTURAL_BAY_FT,
+            y_ft=gy * STRUCTURAL_BAY_FT,
+            width_ft=STRUCTURAL_BAY_FT,
+            depth_ft=STRUCTURAL_BAY_FT,
+            height_ft=REAL_LEVEL_HEIGHT_FT * (2 if zone.get("double_height") else 1),
+            z_ft=floor_elev_ft,
+        )
+        for zone in zones
+        for gx, gy, floor_elev_ft in zone["bays"]
+    ]
+    # Which program each box in program_box_specs belongs to, same order as
+    # the comprehension above -- BuildingMassEngine.run() below builds fresh
+    # StructuralElements from BuildingSpec (which has no program identity of
+    # its own), so this gets zipped back on afterward rather than threaded
+    # through BuildingSpec.
+    program_box_items = [
+        zone["program_item"] for zone in zones for _ in zone["bays"]
     ]
     program_boxes = BuildingMassEngine([b.model_dump() for b in program_box_specs]).run()
+    for spec, program_item in zip(program_boxes, program_box_items):
+        spec.program_item = program_item
 
     kind_counts = {}
-    for s in all_specs:
+    for s in base_specs:
         kind_counts[s.kind] = kind_counts.get(s.kind, 0) + 1
 
     return {
@@ -791,7 +969,7 @@ def rebuild(params: RebuildParams):
             }
             for v in voxels
         ],
-        "structural": _serialize_specs(all_specs),
+        "structural": _serialize_specs(base_specs),
         # 2026-07-16: every placed program zone's optional placeholder box
         # (see this function's own docstring for why these are kept OUT of
         # "structural"/kind_counts above, not merged in).
@@ -800,6 +978,11 @@ def rebuild(params: RebuildParams):
         # rebuild instead of only fetching them once at mount (they were
         # already computed above for the buildings step, so this is free).
         "program_zones": zones,
+        # 2026-07-16 program-placement correlation logic: cheap passthrough
+        # (already live in-memory) so the frontend can render major/minor
+        # attractor markers -- see _attractor_proximity_bays() for how these
+        # now also influence WHERE program_zones/program_boxes above land.
+        "attractor_points": ATTRACTOR_POINTS,
         # 2026-07-12: grounding data for "The Metabolist" critique -- see
         # _build_spatial_summary()'s docstring for why this is included
         # here (cheap) but the actual LLM call is a separate endpoint (slow).
@@ -810,6 +993,7 @@ def rebuild(params: RebuildParams):
         "used_real_noise_data": meta["used_real_noise_data"],
         "slab_harvest_tons": meta["slab_harvest_tons"],
         "max_canyon_depth_ft": meta["max_canyon_depth_ft"],
+        "excavation_scale": meta["excavation_scale"],
         "voxel_ft": VOXEL_FT,
         # Real slab/column solids extracted directly from live Rhino (2026-07-09
         # real-slab-graph supplement, see plan doc) -- fixed geometry, doesn't
@@ -842,18 +1026,18 @@ def rebuild(params: RebuildParams):
             for key, entry in meta["real_slab_fragments"].items()
         },
         # Material-categorized cut sheet (2026-07-09 cut-sheet supplement) --
-        # flattens all_specs (this rebuild's actual procedural elements) plus
-        # the real slabs/columns into count/area/volume/linear-length per
-        # kind, grouped by material family. Recomputed every rebuild since
-        # all_specs depends on the live excavation/shoring params.
+        # flattens base_specs (this rebuild's actual procedural elements)
+        # plus the real slabs/columns into count/area/volume/linear-length
+        # per kind, grouped by material family. Recomputed every rebuild
+        # since base_specs depends on the live excavation/shoring params.
         "cut_sheet": build_cut_sheet_manifest(
-            all_specs, REAL_GEOMETRY.get("real_slabs", []), REAL_GEOMETRY.get("real_columns", [])),
+            base_specs, REAL_GEOMETRY.get("real_slabs", []), REAL_GEOMETRY.get("real_columns", [])),
     }
 
 
 class NetworkParams(BaseModel):
     motivator_weights: dict[str, float] = {
-        "shade": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+        "trees": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
         # Placed program-zone entrances (2026-07-12) -- see grow_network().
         "program": 1.0,
     }
@@ -1044,7 +1228,7 @@ class RemixPrecedentRequest(BaseModel):
 # concept), so no layer infers that role automatically -- see
 # remix_precedent()'s docstring.
 _ROLE_BY_LAYER_SUBSTRING = [
-    ("SHADE", "shade"), ("GREEN", "greenscape"), ("WATER", "water"),
+    ("SHADE", "trees"), ("GREEN", "greenscape"), ("WATER", "water"),
     ("ATTRACTOR", "amenity_resting"), ("UNIQUE", "amenity_resting"),
 ]
 
@@ -1054,6 +1238,57 @@ def _infer_role(layer_id):
         if substr in layer_id:
             return role
     return "hardscape"
+
+
+def _deficit_weighted_location_weights():
+    """
+    Buckets the live bay grid's deficit_influence field (see
+    _bay_grid_from_engine()'s own docstring -- real amenity-deficit survey
+    data when a CSV is loaded, terracing_engine.py's DEFAULT_DEFICIT_HOTSPOTS
+    placeholder otherwise, same signal either way) into the same 9 cardinal
+    zones ingest_diagram_svg.LOCATION_OFFSET_FRAC defines, for
+    random_spatial_seed()'s location_weights param.
+
+    Conversion: each bay's corner-origin (x_ft, z_ft) (see
+    terracing_engine.build_bay_grid()) is re-centered into the same
+    site-fraction convention LOCATION_OFFSET_FRAC's keys already use
+    (East/South positive, West/North negative, Center at origin) --
+    x_frac=(x_ft - width_ft/2)/width_ft, y_frac=(z_ft - length_ft/2)/length_ft
+    -- then assigned to its nearest LOCATION_OFFSET_FRAC bucket by Euclidean
+    distance in frac-space. Deficit scores in a bucket are summed.
+
+    2026-07-17: this reuses the exact frac convention remix_layers()/
+    rasterize_precedent_layers() already use to PLACE a chosen layer, so
+    the round-trip (read deficit here in real feet -> bucket into a
+    LOCATION string -> later re-expand that same LOCATION string back into
+    a frac offset for placement) is self-consistent regardless of which
+    literal compass direction each bucket "really" is -- a weight computed
+    for "North" gets placed back at the exact same frac position "North"
+    always resolves to, so a real deficit hotspot and its resulting
+    amenity placement always land in the same real-world region even if
+    the North/South/East/West label attached to that region turns out to
+    be flipped from true compass orientation. Worth a live sanity check
+    (does the highest-weighted bucket's placed output actually land near
+    the real highest-deficit bays) rather than trusting this comment alone.
+    """
+    bay_grid = get_bay_grid()
+    width_ft = REAL_GEOMETRY["site"]["width_ft"]
+    length_ft = REAL_GEOMETRY["site"]["length_ft"]
+
+    weights = {loc: 0.0 for loc in ingest_diagram_svg.LOCATION_OFFSET_FRAC}
+    locations = list(ingest_diagram_svg.LOCATION_OFFSET_FRAC.items())
+
+    for bay in bay_grid["bays"]:
+        x_frac = (bay["x_ft"] - width_ft / 2) / width_ft
+        y_frac = (bay["z_ft"] - length_ft / 2) / length_ft
+
+        nearest_loc = min(
+            locations,
+            key=lambda kv: (kv[1][0] - x_frac) ** 2 + (kv[1][1] - y_frac) ** 2,
+        )[0]
+        weights[nearest_loc] += bay.get("deficit_influence") or 0.0
+
+    return weights
 
 
 def remix_precedent(payload: RemixPrecedentRequest):
@@ -1074,7 +1309,7 @@ def remix_precedent(payload: RemixPrecedentRequest):
     transform offsets, the exact shape static/js/state.js's MemoryState.stack
     already knows how to render and sample. The only genuinely NEW piece
     here is _infer_role(): tagging each selected layer with which of the
-    six live paint-mask categories (hardscape/water/shade/greenscape/
+    six live paint-mask categories (hardscape/water/trees/greenscape/
     amenity_resting -- "excavation"/canyon has no automatic inference, not
     part of the OLD app's taxonomy) it should feed into once applied.
 
@@ -1088,21 +1323,58 @@ def remix_precedent(payload: RemixPrecedentRequest):
     SAME pattern legacy_diagram_bridge.preview_import() already
     established (client calls bakePaint(grids) directly once the user
     confirms, no separate "apply" endpoint needed).
+
+    2026-07-17: an empty/blank prompt skips the Ollama round-trip entirely
+    and calls logic.ai_synthesizer.random_spatial_seed() directly -- a
+    fast, no-AI "random remix" across the 5 precedent sites, still
+    respecting the Recreation & Parks guideline percentage mix (see that
+    function's docstring). Its PROG_01/amenity location pick is further
+    weighted toward the live bay grid's real deficit-hotspot data via
+    _deficit_weighted_location_weights(), so an empty-prompt remix's
+    amenities land where the 3D side's own amenity-deficit scoring already
+    says the site is underserved, not purely at random.
     """
-    seed_items, narrative = generate_spatial_seed(payload.prompt)
+    prompt = (payload.prompt or "").strip()
+    if prompt:
+        seed_items, narrative = generate_spatial_seed(prompt)
+    else:
+        gm_data = guideline_manager.parse()
+        zonal_metadata = gm_data.get("metadata", {})
+        guidelines = gm_data.get("guidelines", {})
+        available_sites = [
+            f[:-4] for f in os.listdir(ingest_diagram_svg.PRECEDENT_SVG_DIR)
+            if f.lower().endswith(".svg")
+        ] if os.path.exists(ingest_diagram_svg.PRECEDENT_SVG_DIR) else [
+            "PershingSquare", "ParcVillette", "ZaryadyePark", "Schouwburgplein", "GardensBytheBay"
+        ]
+        location_weights = _deficit_weighted_location_weights()
+        seed_items = random_spatial_seed(zonal_metadata, available_sites, guidelines, location_weights)
+        narrative = (
+            "Random remix across all 5 precedent sites, balanced toward the Recreation & Parks "
+            "guideline mix, with amenity placement biased toward the site's real deficit hotspots."
+        )
     composed = remix_layers(seed_items)
     layers = [{**item, "role": _infer_role(item["layerId"])} for item in composed]
 
     grids, resolved_count = ingest_diagram_svg.rasterize_precedent_layers(layers, nx=NX, nz=NZ, voxel_ft=VOXEL_FT)
     counts = {
         key: sum(row.count(True) for row in grids[key])
-        for key in ("hardscape", "water", "shade", "greenscape", "amenity_resting")
+        for key in ("hardscape", "water", "trees", "greenscape", "amenity_resting")
     }
+
+    # 2026-07-17: any MAJOR_ATTRACTORS/MINOR_ATTRACTORS/AMPHITHEATRE layers
+    # in the pick (previously always aliased away, see remix_layers()'s
+    # LAYER_SITE_MEMBERSHIP comment) now resolve to real point markers here,
+    # same shape/consumer as the diagram-import path's extract_attractor_points()
+    # -- flows into _bay_grid_from_engine()'s attractor-proximity scoring on
+    # bake(), same as a manually-composed diagram.
+    attractor_points = ingest_diagram_svg.extract_attractor_points_from_composed_layers(layers)
 
     return {
         "narrative": narrative, "layers": layers,
         "grids": grids, "counts": counts,
         "resolved_layers": resolved_count, "requested_layers": len(layers),
+        "attractor_points": attractor_points,
     }
 
 

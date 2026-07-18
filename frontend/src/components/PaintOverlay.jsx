@@ -388,7 +388,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
     if (!diagramPreview) return;
     setDiagramBaking(true);
     try {
-      const result = await bakePaint(diagramPreview.grids);
+      const result = await bakePaint(diagramPreview.grids, diagramPreview.attractor_points);
       log?.(`baked from diagram ${diagramPreview.filename}: ${JSON.stringify(result.counts)}`);
       await onBaked?.();
       onClose?.();

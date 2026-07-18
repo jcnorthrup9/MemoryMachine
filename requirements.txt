@@ -11,3 +11,6 @@ manifold3d
 fast-simplification
 ezdxf
 matplotlib
+mcp
+requests
+chromadb

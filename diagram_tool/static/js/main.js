@@ -468,7 +468,11 @@ async function init() {
   try {
     const res  = await fetch('/api/guidelines');
     const data = await res.json();
-    const g = data.guidelines || data;
+    // /api/guidelines nests the parsed table under data.data.guidelines
+    // (see diagram_tool/app.py's get_guidelines()) -- reading data.guidelines
+    // directly always missed, silently keeping the hardcoded defaults below
+    // no matter what urban_design_guidelines.md actually said.
+    const g = data.data?.guidelines || data.guidelines || {};
     const remap = {
       Softscape:  'SOFT',
       Hardscape:  'HARD',

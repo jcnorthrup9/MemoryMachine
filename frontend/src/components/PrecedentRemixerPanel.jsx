@@ -14,7 +14,7 @@ import { remixPrecedent, bakePaint } from '../api.js';
 // endpoint needed, same as DiagramInputPanel's handleBake().
 
 const ROLE_LABELS = {
-  hardscape: 'Hardscape', water: 'Water', shade: 'Shade',
+  hardscape: 'Hardscape', water: 'Water', trees: 'Trees',
   greenscape: 'Greenscape', amenity_resting: 'Amenity / Rest',
 };
 
@@ -25,9 +25,12 @@ export default function PrecedentRemixerPanel({ onClose, onBaked, log }) {
   const [result, setResult] = useState(null); // { narrative, layers, grids, counts, resolved_layers, requested_layers }
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) return;
     setGenerating(true);
     try {
+      // Empty prompt (2026-07-17) -- server-side remix_precedent() treats a
+      // blank string as "random remix": skips Ollama entirely and picks
+      // algorithmically, guideline-weighted, with amenity placement biased
+      // toward real deficit hotspots. Not a no-op anymore.
       const res = await remixPrecedent(prompt.trim());
       setResult(res);
       log?.(`precedent remix: ${res.resolved_layers}/${res.requested_layers} layers resolved, ${JSON.stringify(res.counts)}`);
@@ -42,7 +45,7 @@ export default function PrecedentRemixerPanel({ onClose, onBaked, log }) {
     if (!result?.grids) return;
     setBaking(true);
     try {
-      const bakeResult = await bakePaint(result.grids);
+      const bakeResult = await bakePaint(result.grids, result.attractor_points);
       log?.(`baked from precedent remix: ${JSON.stringify(bakeResult.counts)}`);
       await onBaked?.();
       onClose?.();
@@ -71,20 +74,22 @@ export default function PrecedentRemixerPanel({ onClose, onBaked, log }) {
             Describe the atmosphere you want and an AI curator selects layers from the precedent
             library (Parc de la Villette, Zaryadye Park, Schouwburgplein, Gardens by the Bay, ...) to
             match, rasterized directly onto the real paint masks -- review below, then bake to apply.
+            Leave it blank and hit Generate for a random remix instead -- still balanced toward the
+            Recreation & Parks guideline mix, with amenities biased toward real deficit hotspots.
           </p>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. a quiet shady park with water features for reflection"
+            placeholder="e.g. a quiet shady park with water features for reflection -- or leave blank to randomize"
             rows={3}
             className="w-full bg-background border border-border p-2 font-mono-sm text-mono-sm text-on-surface resize-none"
           />
           <button
             onClick={handleGenerate}
-            disabled={generating || !prompt.trim()}
+            disabled={generating}
             className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {generating ? 'Curating...' : 'Generate'}
+            {generating ? 'Curating...' : prompt.trim() ? 'Generate' : 'Random Remix'}
           </button>
 
           {result && (
@@ -117,6 +122,18 @@ export default function PrecedentRemixerPanel({ onClose, onBaked, log }) {
                   </div>
                 ))}
               </div>
+              {result.attractor_points && Object.values(result.attractor_points).some((pts) => pts.length > 0) && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono-sm text-[11px] text-on-surface-variant">
+                  {Object.entries(result.attractor_points)
+                    .filter(([, pts]) => pts.length > 0)
+                    .map(([key, pts]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="uppercase">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-accent">{pts.length} marker{pts.length === 1 ? '' : 's'}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
               <button
                 onClick={handleBake}
                 disabled={baking || Object.values(result.counts).every((c) => c === 0)}

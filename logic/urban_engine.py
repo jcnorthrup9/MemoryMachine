@@ -141,20 +141,32 @@ def remix_layers(seed_items):
                 if canonical not in valid_sites:
                     valid_sites.append(canonical)
 
-    # Layers that only exist in specific SVGs — always route to their canonical site
-    LAYER_SITE_AFFINITY = {
-        "SHADE":            "Schouwburgplein",
-        "HARDSCAPE":        "Schouwburgplein",   # also in ZaryadyePark
-        "AMPHITHEATRE":     "ZaryadyePark",
-        # Bug fix #2: MAJOR/MINOR_ATTRACTORS don't exist — alias to UNIQUE_ELEMENTS
-        "MAJOR_ATTRACTORS": "PershingSquare",
-        "MINOR_ATTRACTORS": "PershingSquare",
-    }
-
-    # Bug fix #2: layer name aliases — remap to the geometry that actually exists
-    LAYER_ALIAS = {
-        "MAJOR_ATTRACTORS": "UNIQUE_ELEMENTS",
-        "MINOR_ATTRACTORS": "UNIQUE_ELEMENTS",
+    # Layers that only exist in specific SVGs — route to a site that actually
+    # has them. 2026-07-17: replaced the old single-site hardcode (every
+    # HARDSCAPE pick forced to Schouwburgplein, every AMPHITHEATRE pick
+    # forced to ZaryadyePark) with the real per-layer membership, verified
+    # by grepping <g id="..."> out of every file in PrecedentSVG/. The old
+    # map collapsed AI/random site variety onto one site per layer even
+    # though HARDSCAPE exists in 3 of 5 sites and AMPHITHEATRE in 4 of 5 --
+    # a real contributor to "the remixes look the same every few pulls".
+    #
+    # MAJOR_ATTRACTORS/MINOR_ATTRACTORS were previously force-aliased to
+    # UNIQUE_ELEMENTS below on the premise that they "don't exist" -- false,
+    # confirmed by the same SVG grep: MAJOR_ATTRACTORS is real in
+    # ParcVillette/Schouwburgplein/ZaryadyePark, MINOR_ATTRACTORS in
+    # GardensBytheBay/ParcVillette/Schouwburgplein. Preserving them as their
+    # own layers (rather than aliasing away) is what lets a diagram's real
+    # attractor-marker positions reach ingest_diagram_svg's
+    # extract_attractor_points_from_composed_layers() and actually flow
+    # into 3D program placement -- aliasing them to UNIQUE_ELEMENTS (a
+    # plain area-fill layer, not a point marker) silently dropped that.
+    LAYER_SITE_MEMBERSHIP = {
+        "SHADE":            ["Schouwburgplein"],
+        "HARDSCAPE":        ["PershingSquare", "Schouwburgplein", "ZaryadyePark"],
+        "AMPHITHEATRE":     ["GardensBytheBay", "PershingSquare", "Schouwburgplein", "ZaryadyePark"],
+        "UNIQUE_ELEMENTS":  ["PershingSquare", "Schouwburgplein"],
+        "MAJOR_ATTRACTORS": ["ParcVillette", "Schouwburgplein", "ZaryadyePark"],
+        "MINOR_ATTRACTORS": ["GardensBytheBay", "ParcVillette", "Schouwburgplein"],
     }
 
     # Bug fix #1: cardinal location -> FRACTIONAL offsets (2026-07-16,
@@ -177,9 +189,6 @@ def remix_layers(seed_items):
         layer     = item.get("layer", "GREEN_SPACE")
         location  = item.get("location", "Center")
 
-        # Bug fix #2: alias before validity check
-        layer = LAYER_ALIAS.get(layer, layer)
-
         if layer not in valid_layers:
             layer = "GREEN_SPACE"
 
@@ -187,9 +196,13 @@ def remix_layers(seed_items):
         raw_key = raw_site.replace("_", "").replace(" ", "").lower()
         site = SITE_NAME_CANONICAL.get(raw_key, raw_site)
 
-        # Override site if the layer only exists in a specific SVG
-        if layer in LAYER_SITE_AFFINITY:
-            site = LAYER_SITE_AFFINITY[layer]
+        # Override site only if the current pick doesn't actually have this
+        # layer -- preserves the AI's/random pick's site whenever it's
+        # already valid, instead of always overwriting it.
+        if layer in LAYER_SITE_MEMBERSHIP:
+            valid_for_layer = LAYER_SITE_MEMBERSHIP[layer]
+            if site not in valid_for_layer:
+                site = random.choice(valid_for_layer)
         elif site not in valid_sites:
             site = "PershingSquare"
 
@@ -215,19 +228,3 @@ def remix_layers(seed_items):
             "primitive": prim
         })
     return composed
-
-def apply_zonal_grid(stack_items: list):
-    """
-    Calculates the current programmatic coverage percentage 
-    to feed back into the HUD (Zonal Constraints).
-    """
-    total_area = 800 * 600 # Total site bounding box area
-    coverage = {"SOFT": 0, "HARD": 0, "PROG": 0, "BLUE": 0}
-    
-    for item in stack_items:
-        area = item.get("width", 1) * item.get("height", 1)
-        layer_type = item.get("layer", "").split('_')[0]
-        if layer_type in coverage:
-            coverage[layer_type] += (area / total_area) * 100
-            
-    return coverage
