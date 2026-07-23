@@ -5,7 +5,7 @@ import ParamPanel from './components/ParamPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
 import PaintOverlay from './components/PaintOverlay.jsx';
 import LineArtOverlay from './components/LineArtOverlay.jsx';
-import PrecedentRemixerPanel from './components/PrecedentRemixerPanel.jsx';
+import SpatializerPanel from './components/SpatializerPanel.jsx';
 import JurorChatBar from './components/JurorChatBar.jsx';
 import ArchivePanel from './components/ArchivePanel.jsx';
 import DiagnosticsPanel from './components/DiagnosticsPanel.jsx';
@@ -82,7 +82,6 @@ export default function App() {
   // Source tab picks sketch-painting vs. diagram-import internally (used
   // to be two separate buttons/dialogs, paintCategory + showDiagramInput).
   const [showPaint, setShowPaint] = useState(false);
-  const [showPrecedentRemixer, setShowPrecedentRemixer] = useState(false);
   const [blenderBuild, setBlenderBuild] = useState({ status: 'idle', objUrl: null, svgUrl: null, error: null, durationS: null });
   const [lineartEnabled, setLineartEnabled] = useState(false);
   const [showLineArt, setShowLineArt] = useState(false);
@@ -547,6 +546,14 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden">
       <Header activeTab={activeTab} onSelectTab={setActiveTab} />
       <div className="flex flex-1 overflow-hidden">
+        {activeTab === 'SPATIALIZE' && (
+          <SpatializerPanel
+            onBaked={async () => {
+              await doRebuild(params);
+            }}
+            log={log}
+          />
+        )}
         {activeTab === 'RECONSTRUCT' && (
           <>
             <main className="flex-1 flex flex-col overflow-hidden">
@@ -613,7 +620,6 @@ export default function App() {
               onGenerateCanopy={handleGenerateCanopy}
               generatingCanopy={generatingCanopy}
               canopyResult={canopyResult}
-              onOpenPrecedentRemixer={() => setShowPrecedentRemixer(true)}
             />
           </>
         )}
@@ -641,15 +647,6 @@ export default function App() {
       )}
       {showLineArt && (
         <LineArtOverlay svgUrl={blenderBuild.svgUrl} onClose={() => setShowLineArt(false)} />
-      )}
-      {showPrecedentRemixer && (
-        <PrecedentRemixerPanel
-          onClose={() => setShowPrecedentRemixer(false)}
-          onBaked={async () => {
-            await doRebuild(params);
-          }}
-          log={log}
-        />
       )}
     </div>
   );

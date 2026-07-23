@@ -1,4 +1,4 @@
-const TABS = ['RECONSTRUCT', 'ARCHIVE', 'DIAGNOSTICS'];
+const TABS = ['SPATIALIZE', 'RECONSTRUCT', 'ARCHIVE', 'DIAGNOSTICS'];
 
 export default function Header({ activeTab, onSelectTab }) {
   return (

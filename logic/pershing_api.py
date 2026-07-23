@@ -53,13 +53,6 @@ from circulation_network import CirculationNetworkEngine  # noqa: E402
 # route handler), which would otherwise shadow the imported module of the
 # same name at module scope.
 from logic import juror_chat as juror_chat_agent  # noqa: E402
-# Precedent Remixer (2026-07-12): reuses the OLD app's already-built,
-# already-working AI layer-picker (generate_spatial_seed, which itself
-# falls back Gemini -> local Ollama, see ai_synthesizer.query_ai) and
-# offset composer (remix_layers) rather than re-deriving either -- see
-# remix_precedent() below for what's actually NEW here.
-from logic.ai_synthesizer import generate_spatial_seed, random_spatial_seed  # noqa: E402
-from logic.urban_engine import remix_layers, guideline_manager  # noqa: E402
 import ingest_diagram_svg  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
@@ -1215,18 +1208,13 @@ def critique(payload: CritiqueRequest):
     return {"critique": juror_chat_agent.critique_design(payload.spatial_summary)}
 
 
-class RemixPrecedentRequest(BaseModel):
-    prompt: str
-
-
 # Same layerId substring convention static/js/state.js's getProgramStats()
 # classification uses (SHADE/GREEN/WATER/ATTRACTOR|UNIQUE, else hardscape)
 # -- reused here so a precedent layer's inferred paint-mask role matches
 # what a human would expect from that layer's own visual category, not a
 # new, separate taxonomy. "excavation"/canyon has no equivalent in the OLD
 # app's SOFT/HARD/PROG/BLUE/SHADE categories (canyon is a NEW-app-only
-# concept), so no layer infers that role automatically -- see
-# remix_precedent()'s docstring.
+# concept), so no layer infers that role automatically.
 _ROLE_BY_LAYER_SUBSTRING = [
     ("SHADE", "trees"), ("GREEN", "greenscape"), ("WATER", "water"),
     ("ATTRACTOR", "amenity_resting"), ("UNIQUE", "amenity_resting"),
@@ -1291,69 +1279,27 @@ def _deficit_weighted_location_weights():
     return weights
 
 
-def remix_precedent(payload: RemixPrecedentRequest):
+def _compose_layers_to_3d(composed):
     """
-    "Precedent Remixer" (2026-07-12) -- MVP first slice of the workflow
-    discussed in the 2026-07-12 Gemini planning session (see
-    archive/memoryMachine/STRATEGY_SUMMARY_07122026.md), replacing the OLD
-    app's dead-end (image-only, no editable data model) diagram generator
-    with one whose output can actually drive this app's live paint-mask
-    pipeline.
+    Shared tail of remix_precedent() (and now import_2d_generation() below):
+    tags each composed layer (site/layerId/transform, e.g. remix_layers()'s
+    output OR a saved root-app /api/generate spatial_seed) with a paint-mask
+    role, then rasterizes onto the voxel grid and extracts attractor
+    markers. Factored out 2026-07-22 so a second caller (importing an
+    already-saved 2D generation) doesn't duplicate this exact sequence.
 
-    Reuses two already-built, already-working pieces rather than
-    re-deriving either: logic.ai_synthesizer.generate_spatial_seed() (the
-    OLD app's LLM layer-picker -- Gemini API if configured, else falls back
-    to local Ollama, see its own query_ai()) selects up to 5 precedent
-    layers + cardinal placements for the given text prompt; logic.
-    urban_engine.remix_layers() converts that into concrete site/layerId/
-    transform offsets, the exact shape static/js/state.js's MemoryState.stack
-    already knows how to render and sample. The only genuinely NEW piece
-    here is _infer_role(): tagging each selected layer with which of the
-    six live paint-mask categories (hardscape/water/trees/greenscape/
-    amenity_resting -- "excavation"/canyon has no automatic inference, not
-    part of the OLD app's taxonomy) it should feed into once applied.
+    Each role's polygons OR independently (rasterize_precedent_layers()'s
+    default behavior) -- an overlapping cell CAN be True in multiple roles
+    at once. Most such combinations still fall through to
+    terracing_engine.py's own per-module rules; spatialize_preview() below
+    applies one deliberate, specific treatment on top of this (Hardscape ∩
+    Water -> canyon rupture, see apply_hardscape_water_overlap()) rather
+    than this shared helper picking a generic winner -- a generic
+    "occlusion" pass was tried and reverted (2026-07-23): it silently
+    erased the very overlap signal a designed per-pair effect needs to see.
 
-    2026-07-16: the "does NOT yet rasterize" gap this docstring used to
-    describe is closed -- ingest_diagram_svg.rasterize_precedent_layers()
-    now converts the composed layer stack (precedent SVG-unit space, via
-    each site's own boundary bbox) into real site feet and rasterizes onto
-    the voxel grid, reusing this app's already-calibrated BoundaryAffine
-    rather than a new bridge. Returns `grids`/`counts`/`resolved_layers`
-    alongside narrative/layers so the frontend can preview-then-bake, the
-    SAME pattern legacy_diagram_bridge.preview_import() already
-    established (client calls bakePaint(grids) directly once the user
-    confirms, no separate "apply" endpoint needed).
-
-    2026-07-17: an empty/blank prompt skips the Ollama round-trip entirely
-    and calls logic.ai_synthesizer.random_spatial_seed() directly -- a
-    fast, no-AI "random remix" across the 5 precedent sites, still
-    respecting the Recreation & Parks guideline percentage mix (see that
-    function's docstring). Its PROG_01/amenity location pick is further
-    weighted toward the live bay grid's real deficit-hotspot data via
-    _deficit_weighted_location_weights(), so an empty-prompt remix's
-    amenities land where the 3D side's own amenity-deficit scoring already
-    says the site is underserved, not purely at random.
+    Returns (layers_with_role, grids, counts, attractor_points, resolved_count).
     """
-    prompt = (payload.prompt or "").strip()
-    if prompt:
-        seed_items, narrative = generate_spatial_seed(prompt)
-    else:
-        gm_data = guideline_manager.parse()
-        zonal_metadata = gm_data.get("metadata", {})
-        guidelines = gm_data.get("guidelines", {})
-        available_sites = [
-            f[:-4] for f in os.listdir(ingest_diagram_svg.PRECEDENT_SVG_DIR)
-            if f.lower().endswith(".svg")
-        ] if os.path.exists(ingest_diagram_svg.PRECEDENT_SVG_DIR) else [
-            "PershingSquare", "ParcVillette", "ZaryadyePark", "Schouwburgplein", "GardensBytheBay"
-        ]
-        location_weights = _deficit_weighted_location_weights()
-        seed_items = random_spatial_seed(zonal_metadata, available_sites, guidelines, location_weights)
-        narrative = (
-            "Random remix across all 5 precedent sites, balanced toward the Recreation & Parks "
-            "guideline mix, with amenity placement biased toward the site's real deficit hotspots."
-        )
-    composed = remix_layers(seed_items)
     layers = [{**item, "role": _infer_role(item["layerId"])} for item in composed]
 
     grids, resolved_count = ingest_diagram_svg.rasterize_precedent_layers(layers, nx=NX, nz=NZ, voxel_ft=VOXEL_FT)
@@ -1370,12 +1316,152 @@ def remix_precedent(payload: RemixPrecedentRequest):
     # bake(), same as a manually-composed diagram.
     attractor_points = ingest_diagram_svg.extract_attractor_points_from_composed_layers(layers)
 
+    return layers, grids, counts, attractor_points, resolved_count
+
+
+# ---------------------------------------------------------------------------
+# Import a saved 2D-app generation (2026-07-22)
+# ---------------------------------------------------------------------------
+# The root "Digital Palimpsest" 2D app (app.py, port 8000) already saves each
+# GET/POST /api/generate call's full spatial_seed as
+# archive/diagrams/generated/memory_machine_generation_<epoch_ms>.json (see
+# app.py's generate_memory_node()). That spatial_seed is EXACTLY remix_layers()'s
+# output shape (site/layerId/transform per item) -- the same shape
+# remix_precedent() above already knows how to 3D-ify via
+# _compose_layers_to_3d(). So importing a past 2D generation needs no SVG
+# re-parsing/pixel classification at all (unlike legacy_diagram_bridge.py's
+# JPG/SVG-image ingestion path, built for diagram_tool's exports, which
+# don't carry structured layer data) -- just load the JSON and reuse the
+# exact same rasterization tail remix_precedent() already uses.
+GENERATIONS_DIR = os.path.join(BASE_DIR, "archive", "diagrams", "generated")
+
+
+class Preview2DGenerationRequest(BaseModel):
+    filename: str
+
+
+def list_2d_generations(limit=20):
+    """Recent memory_machine_generation_*.json records from the 2D app,
+    newest first by mtime -- same pattern as
+    legacy_diagram_bridge.list_recent_diagrams(), different source dir/glob."""
+    import glob
+    pattern = os.path.join(GENERATIONS_DIR, "memory_machine_generation_*.json")
+    paths = glob.glob(pattern)
+    paths.sort(key=os.path.getmtime, reverse=True)
+    result = []
+    for p in paths[:limit]:
+        try:
+            with open(p, encoding="utf-8") as f:
+                record = json.load(f)
+        except Exception:
+            continue
+        result.append({
+            "filename": os.path.basename(p),
+            "mtime": os.path.getmtime(p),
+            "prompt": record.get("prompt", ""),
+            "narrative": record.get("narrative", ""),
+        })
+    return result
+
+
+def preview_2d_generation(filename):
+    """
+    Load one archived 2D-app generation and run it through the same
+    role-inference + rasterization + attractor-extraction pipeline
+    remix_precedent() uses, so the 3D Pershing Metabolizer can preview-then-
+    bake() a layout the 2D GEN button already produced -- same response
+    shape as remix_precedent() (narrative/layers/grids/counts/
+    attractor_points) so an existing frontend consumer of that shape needs
+    minimal changes to also handle this path.
+
+    `filename` is resolved via os.path.basename() only -- same
+    path-traversal guard save_uploaded_sketch()/legacy_diagram_bridge.
+    preview_import() already use, never trust a client-supplied filename as
+    a path.
+    """
+    safe_name = os.path.basename(filename)
+    if not safe_name:
+        raise ValueError("empty filename")
+    path = os.path.join(GENERATIONS_DIR, safe_name)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"no such generation record: {safe_name}")
+
+    with open(path, encoding="utf-8") as f:
+        record = json.load(f)
+
+    composed = record.get("spatial_seed") or []
+    # The 2D app's own BOUNDARY base_seed item (app.py's generate_memory_node())
+    # carries no real site/layerId content for the 3D pipeline -- it's a
+    # client-render anchor only, same reason remix_precedent()'s own
+    # composed list never includes one.
+    composed = [item for item in composed if item.get("layerId") != "BOUNDARY"]
+
+    layers, grids, counts, attractor_points, resolved_count = _compose_layers_to_3d(composed)
+
     return {
-        "narrative": narrative, "layers": layers,
+        "filename": safe_name,
+        "prompt": record.get("prompt", ""),
+        "narrative": record.get("narrative", ""),
+        "layers": layers,
         "grids": grids, "counts": counts,
         "resolved_layers": resolved_count, "requested_layers": len(layers),
         "attractor_points": attractor_points,
     }
+
+
+# ---------------------------------------------------------------------------
+# Live "SPATIALIZE" tab (2026-07-23) -- 2D authoring ported natively into the
+# 3D Pershing Metabolizer React app (frontend/src/components/SpatializerPanel.jsx)
+# ---------------------------------------------------------------------------
+# preview_2d_generation() above works from an already-saved JSON file. The
+# live-authoring tab has its stack in memory (React state) and shouldn't need
+# a save-then-reload round-trip just to preview a bake -- this takes the
+# spatial_seed straight from the request body instead.
+class SpatializePreviewRequest(BaseModel):
+    spatial_seed: list
+
+
+def spatialize_preview(spatial_seed):
+    """
+    Same pipeline as preview_2d_generation(), minus the file load: takes
+    the live SPATIALIZE canvas's in-memory stack directly.
+
+    2026-07-23: also applies apply_hardscape_water_overlap() -- the first
+    of what's meant to become several deliberate, category-specific
+    treatments for overlapping 2D layers (see that function's docstring
+    for why "just pick one category and discard the other" -- an earlier
+    approach here, since reverted -- was the wrong move: it erases the
+    exact signal a designed overlap effect needs to see). Recomputes
+    `counts` afterward since the overlap pass can change hardscape/canyon.
+    """
+    composed = [item for item in (spatial_seed or []) if item.get("layerId") != "BOUNDARY"]
+    layers, grids, _stale_counts, attractor_points, resolved_count = _compose_layers_to_3d(composed)
+
+    grids, overlap_cells = ingest_diagram_svg.apply_hardscape_water_overlap(grids)
+    if overlap_cells:
+        print(f"      -> [SPATIALIZE] {overlap_cells} cell(s) ruptured (hardscape ∩ water overlap)")
+    counts = {
+        key: sum(row.count(True) for row in grids[key])
+        for key in ("hardscape", "water", "trees", "greenscape", "amenity_resting")
+    }
+
+    return {
+        "layers": layers,
+        "grids": grids, "counts": counts,
+        "resolved_layers": resolved_count, "requested_layers": len(layers),
+        "attractor_points": attractor_points,
+    }
+
+
+def get_deficit_weights():
+    """Public wrapper around _deficit_weighted_location_weights() -- that
+    function was previously only ever called internally (by
+    remix_precedent()'s empty-prompt path and app.py's /api/generate
+    deficit-weighting step); this exposes it directly for the SPATIALIZE
+    tab's live deficit-hotspot overlay, so the user can see where the 3D
+    side says amenities are needed WHILE composing, not just as an
+    invisible bias discovered after the fact."""
+    return _deficit_weighted_location_weights()
 
 
 class ArchiveSaveRequest(BaseModel):

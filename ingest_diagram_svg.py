@@ -414,6 +414,53 @@ def rasterize_zone_polygons(category_polygons_ft, nx, nz, voxel_ft):
     }
 
 
+# Intentional overlap effects (2026-07-23) -- see spatialize_preview()'s
+# docstring in logic/pershing_api.py for the full reasoning. First (and so
+# far only) case: HARDSCAPE + WATER overlapping in a 2D diagram becomes a
+# deliberate rupture -- water breaking through pavement -- rather than
+# silently resolving via terracing_engine.py's implicit hardscape-veto-wins
+# rule. Other pairs (hardscape+greenscape as a blended material, etc.) are
+# explicitly future iterations, not handled here yet.
+OVERLAP_CANYON_WEIGHT = 0.85  # tunable; passes through _effective_influence()'s clamp01
+
+
+def apply_hardscape_water_overlap(grids):
+    """
+    Mutates and returns `grids` (the standard 6-key rasterize_zone_polygons()
+    shape) in place: wherever `hardscape` and `water` are BOTH True for a
+    cell, treat it as a deliberate rupture instead of leaving it to
+    terracing_engine.py's implicit resolution.
+
+    Why "leaving it to terracing_engine.py" wouldn't work at all here, not
+    just "wouldn't look right": _z_for_voxel() (terracing_engine.py
+    ~line 429) has `elif v.is_hardscape: return 0.0` -- an UNCONDITIONAL
+    early return, checked before the canyon/sketch_weight blend a few lines
+    later is ever reached. So a cell left with hardscape=True cannot be
+    excavated by ANY canyon weight, however high -- the veto silences it
+    completely. This function clears `hardscape` on overlap cells (this
+    cell is no longer "designer-protected, stay flat"), leaves `water`
+    True (so once the canyon weight below actually excavates it below
+    grade, _classify_typology()'s existing `if v.z_ft < 0 and v.is_water:
+    return "GROTTO"` rule picks it up automatically -- no new typology
+    needed), and sets `canyon` to OVERLAP_CANYON_WEIGHT so
+    _effective_influence() has something to actually dig with.
+
+    Returns (grids, overlap_cell_count) -- the count is purely informational
+    (e.g. for a log line), not used by the mutation itself.
+    """
+    hardscape = np.array(grids["hardscape"], dtype=bool)
+    water = np.array(grids["water"], dtype=bool)
+    canyon = np.array(grids["canyon"], dtype=float)
+
+    overlap = hardscape & water
+    hardscape = hardscape & ~overlap
+    canyon = np.where(overlap, OVERLAP_CANYON_WEIGHT, canyon)
+
+    grids["hardscape"] = hardscape.tolist()
+    grids["canyon"] = canyon.tolist()
+    return grids, int(overlap.sum())
+
+
 def convert_svg_to_paint_state(svg_path, nx=None, nz=None, voxel_ft=VOXEL_FT):
     """Full pipeline for one SVG export: parse -> detect boundary/rectify
     -> classify placed zones by id (filled shapes only) -> transform each
@@ -583,7 +630,12 @@ def rasterize_precedent_layers(composed_layers, nx=None, nz=None, voxel_ft=VOXEL
     5. Rasterize per role via rasterize_zone_polygons (point-in-polygon at
        each voxel cell's center) -- multiple layers sharing a role OR
        together (a cell counts if ANY same-role layer covers it), same
-       "any stroke marks it" semantics manual painting already has.
+       "any stroke marks it" semantics manual painting already has. A cell
+       CAN end up True in multiple DIFFERENT roles if their layers overlap
+       -- see spatialize_preview() (logic/pershing_api.py) and
+       apply_hardscape_water_overlap() below for the one overlap pair that
+       currently gets a deliberate, specific treatment; everything else
+       still falls through to terracing_engine.py's own per-module rules.
 
     Layers whose site/layerId don't resolve to real geometry (missing SVG,
     layer id not found, empty polygon list) are silently skipped, not

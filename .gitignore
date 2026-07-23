@@ -63,3 +63,11 @@ assets/
 
 # Syncthing's own internal folder marker -- never project content
 .stfolder/
+
+# Syncthing conflict-copy artifacts (2026-07-23) -- e.g.
+# app.sync-conflict-20260722-145331-5FAKSDB.py, produced automatically when
+# two machines' Syncthing instances see a file change at close to the same
+# time. Never intentional project content; a batch of 60 of these had
+# accumulated untracked before this rule was added (quarantined to
+# archive/_sync_conflicts_20260722/, not deleted).
+*.sync-conflict-*

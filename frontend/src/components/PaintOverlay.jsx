@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSketchInfo, uploadSketch, bakePaint, listLegacyDiagrams, previewLegacyImport } from '../api.js';
+import {
+  getSketchInfo, uploadSketch, bakePaint, listLegacyDiagrams, previewLegacyImport,
+  list2DGenerations, preview2DGeneration,
+} from '../api.js';
 import { PAINT_CATEGORIES as CATEGORIES } from '../paintCategories.js';
 
 // Unified "Paint" dialog (2026-07-16, merging what used to be two separate
@@ -93,6 +96,7 @@ function drawDiagramPreview(canvas, grids) {
 const SOURCE_TABS = [
   { key: 'sketch', label: 'Sketch' },
   { key: 'diagram', label: 'Diagram' },
+  { key: '2d-gen', label: '2D Generations' },
 ];
 
 export default function PaintOverlay({ config, initialCategory, onClose, onBaked, log }) {
@@ -399,6 +403,74 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
     }
   }, [diagramPreview, log, onBaked, onClose]);
 
+  // ---- 2D Generations mode state ----
+  // Imports a saved root-app (port 8000) /api/generate call -- structured
+  // site/layerId/transform data, not a rasterized image, so the backend
+  // (logic/pershing_api.py's preview_2d_generation()) reuses the exact same
+  // rasterization pipeline remix_precedent() already uses, no SVG/pixel
+  // parsing involved. Same list/preview/bake shape as Diagram mode above,
+  // just no thumbnail image (there isn't one) -- the prompt text stands in.
+  const [generations, setGenerations] = useState([]);
+  const [loadingGenList, setLoadingGenList] = useState(true);
+  const [selectedGeneration, setSelectedGeneration] = useState(null);
+  const [generationPreview, setGenerationPreview] = useState(null); // { filename, prompt, narrative, grids, counts, attractor_points }
+  const [loadingGenerationPreview, setLoadingGenerationPreview] = useState(false);
+  const [generationBaking, setGenerationBaking] = useState(false);
+  const generationCanvasRef = useRef(null);
+
+  useEffect(() => {
+    if (source !== '2d-gen') return;
+    let cancelled = false;
+    setLoadingGenList(true);
+    list2DGenerations()
+      .then((list) => {
+        if (!cancelled) setGenerations(list);
+      })
+      .catch((err) => log?.(String(err), 'error'))
+      .finally(() => {
+        if (!cancelled) setLoadingGenList(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, log]);
+
+  useEffect(() => {
+    drawDiagramPreview(generationCanvasRef.current, generationPreview?.grids);
+  }, [generationPreview]);
+
+  const handleSelectGeneration = useCallback(
+    async (filename) => {
+      setSelectedGeneration(filename);
+      setGenerationPreview(null);
+      setLoadingGenerationPreview(true);
+      try {
+        const result = await preview2DGeneration(filename);
+        setGenerationPreview(result);
+      } catch (err) {
+        log?.(String(err), 'error');
+      } finally {
+        setLoadingGenerationPreview(false);
+      }
+    },
+    [log],
+  );
+
+  const handleBakeGeneration = useCallback(async () => {
+    if (!generationPreview) return;
+    setGenerationBaking(true);
+    try {
+      const result = await bakePaint(generationPreview.grids, generationPreview.attractor_points);
+      log?.(`baked from 2D generation ${generationPreview.filename}: ${JSON.stringify(result.counts)}`);
+      await onBaked?.();
+      onClose?.();
+    } catch (err) {
+      log?.(String(err), 'error');
+    } finally {
+      setGenerationBaking(false);
+    }
+  }, [generationPreview, log, onBaked, onClose]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
       <div className="bg-surface border border-border max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
@@ -528,7 +600,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
               </button>
             </aside>
           </div>
-        ) : (
+        ) : source === 'diagram' ? (
           <>
             <div className="flex flex-1 overflow-hidden">
               <aside className="w-64 border-r border-border p-container space-y-2 overflow-y-auto shrink-0">
@@ -593,6 +665,78 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
                 className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {diagramBaking ? 'BAKING...' : 'BAKE THIS DIAGRAM + REBUILD'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-1 overflow-hidden">
+              <aside className="w-64 border-r border-border p-container space-y-2 overflow-y-auto shrink-0">
+                <label className="font-mono-sm text-mono-sm text-on-surface-variant uppercase block">
+                  Recent 2D Generations
+                </label>
+                {loadingGenList ? (
+                  <p className="font-mono-sm text-[11px] text-on-surface-variant">Loading...</p>
+                ) : generations.length === 0 ? (
+                  <p className="font-mono-sm text-[11px] text-on-surface-variant">
+                    No 2D generations found -- hit GEN in the Digital Palimpsest app (port 8000) first.
+                  </p>
+                ) : (
+                  generations.map((g) => (
+                    <button
+                      key={g.filename}
+                      onClick={() => handleSelectGeneration(g.filename)}
+                      className={`w-full text-left border p-2 ${
+                        selectedGeneration === g.filename
+                          ? 'border-accent'
+                          : 'border-border hover:border-on-surface-variant'
+                      }`}
+                    >
+                      <span className="font-mono-sm text-[10px] text-on-surface-variant block line-clamp-2">
+                        {g.prompt || '(empty prompt)'}
+                      </span>
+                      <span className="font-mono-sm text-[9px] text-on-surface-variant/60 block mt-1">
+                        {new Date(g.mtime * 1000).toLocaleString()}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </aside>
+
+              <div className="flex-1 overflow-auto flex flex-col items-center justify-center bg-background p-4 gap-4">
+                {loadingGenerationPreview ? (
+                  <p className="font-mono-sm text-mono-sm text-on-surface-variant">Converting...</p>
+                ) : generationPreview ? (
+                  <>
+                    <canvas ref={generationCanvasRef} className="border border-border max-w-full max-h-full" />
+                    <p className="font-mono-sm text-[11px] text-on-surface-variant max-w-md text-center">
+                      {generationPreview.narrative}
+                    </p>
+                    <div className="font-mono-sm text-[11px] text-on-surface-variant">
+                      {Object.entries(generationPreview.counts)
+                        .filter(([k]) => k !== 'canyon')
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join('  ')}
+                    </div>
+                    <div className="font-mono-sm text-[10px] text-on-surface-variant/60">
+                      {generationPreview.resolved_layers}/{generationPreview.requested_layers} layers resolved
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-mono-sm text-mono-sm text-on-surface-variant">
+                    Select a generation to preview its converted regions.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-container border-t border-border">
+              <button
+                onClick={handleBakeGeneration}
+                disabled={!generationPreview || generationBaking}
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {generationBaking ? 'BAKING...' : 'BAKE THIS GENERATION + REBUILD'}
               </button>
             </div>
           </>

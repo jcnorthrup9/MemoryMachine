@@ -148,20 +148,6 @@ export async function critiqueDesign(spatialSummary) {
   return res.json();
 }
 
-// "Precedent Remixer" MVP (see PrecedentRemixerPanel.jsx) -- AI-curated
-// precedent layer selection for a text prompt. Preview-only in this pass
-// (see logic/pershing_api.py's remix_precedent() docstring for why applying
-// these layers to the live paint masks isn't wired up yet).
-export async function remixPrecedent(prompt) {
-  const res = await fetch('/api/pershing/remix-precedent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
-  });
-  if (!res.ok) throw new Error(`remix precedent failed: ${res.status}`);
-  return res.json();
-}
-
 // Diagram Input mode (2026-07-16: the "Diagram" tab inside PaintOverlay.jsx's
 // unified Paint dialog, folded in from the former standalone
 // DiagramInputPanel.jsx) -- reads colors off an existing legacy-diagram
@@ -181,6 +167,76 @@ export async function previewLegacyImport(filename) {
     body: JSON.stringify({ filename }),
   });
   if (!res.ok) throw new Error(`legacy diagram preview failed: ${res.status}`);
+  return res.json();
+}
+
+// SPATIALIZE tab (2026-07-23) -- 2D authoring ported natively into this
+// app. generateSpatialSeed() hits the root app's own /api/generate
+// (reachable here too since it's the same FastAPI process the /api proxy
+// prefix already covers) -- same AI-curated layer-pick endpoint
+// static/main.js's GEN button calls, now also driving this app's live
+// canvas. spatializePreview()/getDeficitWeights() are new
+// logic/pershing_api.py endpoints: the former previews a live (in-memory,
+// not yet saved) spatial_seed through the same role-inference +
+// occlusion-aware rasterization pipeline preview_2d_generation() uses for
+// a saved one; the latter exposes the real amenity-deficit-hotspot signal
+// directly for a live overlay while composing.
+// Same endpoint static/main.js's fetchSVG() uses -- returns the raw
+// precedent-site SVG text (BOUNDARY/GREEN_SPACE/HARDSCAPE/etc. groups) that
+// spatializerEngine.js's render()/getProgramStats() parse directly.
+export async function fetchSiteSVG(siteId) {
+  const res = await fetch(`/api/diagram-data/${siteId}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.svg;
+}
+
+export async function generateSpatialSeed(prompt) {
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error(`generate failed: ${res.status}`);
+  return res.json();
+}
+
+export async function spatializePreview(spatialSeed) {
+  const res = await fetch('/api/pershing/spatialize-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spatial_seed: spatialSeed }),
+  });
+  if (!res.ok) throw new Error(`spatialize preview failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getDeficitWeights() {
+  const res = await fetch('/api/pershing/deficit-weights');
+  if (!res.ok) throw new Error(`deficit weights fetch failed: ${res.status}`);
+  return res.json();
+}
+
+// Import a saved 2D-app ("Digital Palimpsest", port 8000) generation
+// (2026-07-22) -- same read-only list/preview shape as the Diagram Input
+// mode above, but the source is a structured spatial_seed record
+// (site/layerId/transform per layer), not a rasterized/vector diagram
+// export, so no color-classification step happens server-side at all (see
+// logic/pershing_api.py's preview_2d_generation() docstring). Committing a
+// previewed generation reuses bakePaint() above unchanged.
+export async function list2DGenerations() {
+  const res = await fetch('/api/pershing/2d-generations');
+  if (!res.ok) throw new Error(`2D generation list fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function preview2DGeneration(filename) {
+  const res = await fetch('/api/pershing/2d-generations/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  });
+  if (!res.ok) throw new Error(`2D generation preview failed: ${res.status}`);
   return res.json();
 }
 

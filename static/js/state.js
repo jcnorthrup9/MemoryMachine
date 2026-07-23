@@ -60,6 +60,29 @@ function _extractVertices(el) {
   return new Float32Array(nums.slice(0, len));
 }
 
+/**
+ * True if this element is actually filled (fill != none/absent/empty) --
+ * same semantic ingest_diagram_svg.py's _has_real_fill() already enforces
+ * server-side. Required, not optional: a stroke-only shape (e.g. one of
+ * PEDESTRIAN_PATH's 583 dash segments in the real site SVG, or any of
+ * PARKING/STREET's pure linework) has no real area, but _extractVertices()
+ * above happily returns a vertex loop for anything with >=3 points
+ * regardless of fill -- getProgramStats() would then force-close and fill
+ * it on the stats canvas, counting decorative dash-marks as solid
+ * Hardscape area. This is also why the HUD previously didn't match what's
+ * visually drawn: engine2D.js's context-group rendering forces fill:none
+ * on every locked base layer (STREET/PARKING/PEDESTRIAN_PATH/etc. always
+ * render as thin outlines only), but getProgramStats() had no equivalent
+ * check and was filling their real underlying geometry regardless.
+ */
+function _hasRealFill(el) {
+  let fill = el.getAttribute('fill') || '';
+  const style = el.getAttribute('style') || '';
+  const m = /fill\s*:\s*([^;]+)/.exec(style);
+  if (m) fill = m[1].trim();
+  return fill !== '' && fill !== 'none';
+}
+
 // ── OCCLUSION-CORRECT STATS RASTERIZATION ──────────────────────────────────
 // 2026-07-12: replaces the old Shoelace-area-summed-per-category approach,
 // which had no z-order occlusion -- an overlapping SHADE canopy over a
@@ -84,6 +107,16 @@ const _STATS_CATEGORY_COLORS = {
   PROG:  [255, 152, 0],    // #FF9800
   BLUE:  [3, 169, 244],    // #03A9F4
 };
+
+// Sentinel fill for the real (possibly rotated) BOUNDARY polygon, painted
+// onto the stats canvas BEFORE any category -- see getProgramStats()'s
+// totalPixels comment for why this exists: a rotated boundary's own
+// axis-aligned bbox (Pershing Square's real boundary measures ~48% of its
+// own bbox area) is NOT the same shape as the site, so dividing by the
+// full canvas area silently deflates every percentage by ~2x. Distinct
+// from every _STATS_CATEGORY_COLORS value so it can't be miscounted as a
+// real category.
+const _SITE_MASK_COLOR = [1, 1, 1];
 
 // ── STATE OBJECT ─────────────────────────────────────────────────────────────
 
@@ -118,6 +151,13 @@ const MemoryState = {
   // ── 5.5 BASE CONTEXT ─────────────────────────────────────────────────────
   baseCleared: false,
 
+  // ── 5.6 SITE GRID (spatial organizer overlay) ────────────────────────────
+  // Deliberately separate from `stack` -- a visual/organizing aid, not a
+  // paintable layer. Must stay untouched by getProgramStats()'s pixel tally.
+  // null when hidden; set to the /api/site-grid response's `grid` object
+  // (see logic/site_grid.py) when the grid toggle is on.
+  siteGrid: null,
+
   // ── 6. STATE HELPERS ─────────────────────────────────────────────────────
 
   /**
@@ -143,6 +183,7 @@ const MemoryState = {
     const polys = [];
     layerG.querySelectorAll('path, polyline, polygon, rect, circle, line')
           .forEach(p => {
+            if (!_hasRealFill(p)) return; // stroke-only linework contributes no area
             const verts = _extractVertices(p);
             if (verts) polys.push(verts);
           });
@@ -181,12 +222,43 @@ const MemoryState = {
     canvas.height = STATS_CANVAS_H;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     // World (site-boundary) space -> canvas pixel space, 1:1 over the full
-    // canvas -- this also gives boundary clipping for free: anything
-    // drawn outside baseBBox lands outside [0,W]x[0,H], which <canvas>
-    // already clips natively, so the old AABB-overlap-ratio clip code is
-    // no longer needed.
+    // canvas -- anything drawn outside baseBBox lands outside [0,W]x[0,H],
+    // which <canvas> clips natively, so no separate AABB-overlap-ratio clip
+    // is needed for THAT. But baseBBox is the boundary's axis-aligned bbox,
+    // not the boundary's own (possibly rotated) shape -- Pershing Square's
+    // real boundary polygon measures only ~48% of its own bbox area, so
+    // totalPixels must come from the boundary MASK painted below, not
+    // STATS_CANVAS_W*STATS_CANVAS_H, or every percentage silently deflates
+    // by ~2x from counting bbox corners that are never part of the site.
     const px = (wx) => ((wx - baseBBox.x) / baseBBox.w) * STATS_CANVAS_W;
     const py = (wy) => ((wy - baseBBox.y) / baseBBox.h) * STATS_CANVAS_H;
+
+    // Paint the real BOUNDARY polygon first, as a sentinel mask -- same
+    // point-extraction convention as engine2D.js's buildBoundaryClipPath()
+    // (concatenate every number from every <path> under the BOUNDARY group,
+    // in document order; Rhino/CAD exports emit boundary segments in
+    // perimeter order, so this traces a valid closed loop without needing
+    // per-segment endpoint matching).
+    const boundaryG = baseEl.querySelector('g[id*="BOUNDARY"]') || baseEl.querySelector('g[id="BOUNDARY"]');
+    if (boundaryG) {
+      const bPts = [];
+      boundaryG.querySelectorAll('path').forEach(p => {
+        const d = p.getAttribute('d') || '';
+        const matches = d.matchAll(/(-?\d+\.?\d*(?:e[-+]?\d+)?)/gi);
+        for (const m of matches) bPts.push(parseFloat(m[0]));
+      });
+      if (bPts.length >= 6) {
+        const [sr, sg, sb] = _SITE_MASK_COLOR;
+        ctx.fillStyle = `rgb(${sr},${sg},${sb})`;
+        ctx.beginPath();
+        for (let i = 0; i < bPts.length - 1; i += 2) {
+          const x = px(bPts[i]), y = py(bPts[i + 1]);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
 
     // Stack order = z-order (later index drawn later = topmost), same
     // convention as engine2D.js's own forEach+appendChild rendering.
@@ -241,8 +313,14 @@ const MemoryState = {
 
     const { data } = ctx.getImageData(0, 0, STATS_CANVAS_W, STATS_CANVAS_H);
     const pixelCounts = { SOFT: 0, SHADE: 0, HARD: 0, PROG: 0, BLUE: 0 };
+    // Every painted pixel (site mask OR any category drawn over it) counts
+    // toward the real site area -- this is the boundary's TRUE pixel count,
+    // not STATS_CANVAS_W*STATS_CANVAS_H (which includes the bbox corners
+    // outside a rotated boundary; see the mask-painting comment above).
+    let siteMaskPixels = 0;
     for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] === 0) continue; // untouched pixel -- no category painted here
+      if (data[i + 3] === 0) continue; // untouched pixel -- outside the site entirely
+      siteMaskPixels++;
       for (const type in _STATS_CATEGORY_COLORS) {
         const [cr, cg, cb] = _STATS_CATEGORY_COLORS[type];
         if (data[i] === cr && data[i + 1] === cg && data[i + 2] === cb) {
@@ -252,7 +330,10 @@ const MemoryState = {
       }
     }
 
-    const totalPixels = STATS_CANVAS_W * STATS_CANVAS_H;
+    // Fallback to the full canvas only if the boundary mask painted nothing
+    // at all (e.g. no BOUNDARY group found) -- keeps this from ever
+    // dividing by zero rather than silently reproducing the bbox-area bug.
+    const totalPixels = siteMaskPixels || (STATS_CANVAS_W * STATS_CANVAS_H);
     return {
       SOFT:  (pixelCounts.SOFT  / totalPixels) * 100,
       SHADE: (pixelCounts.SHADE / totalPixels) * 100,

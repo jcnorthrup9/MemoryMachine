@@ -64,7 +64,6 @@ export default function ParamPanel({
   onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
   onGrowNetwork, growingNetwork, networkResult,
   canopyParams, onCanopyParamsChange, onGenerateCanopy, generatingCanopy, canopyResult,
-  onOpenPrecedentRemixer,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
@@ -100,20 +99,14 @@ export default function ParamPanel({
           Design Input
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Paint freehand on the sketch photo, or import colors from an exported legacy diagram -- both
-          feed the same live design masks, pick the source inside the dialog.
+          Paint freehand on the sketch photo, or import colors from an exported legacy diagram or a
+          saved 2D generation -- all feed the same live design masks, pick the source inside the dialog.
         </p>
         <button
           onClick={() => onPaint?.()}
           className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
         >
           Paint
-        </button>
-        <button
-          onClick={() => onOpenPrecedentRemixer?.()}
-          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
-        >
-          Precedent Remixer
         </button>
       </div>
 
