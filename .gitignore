@@ -63,9 +63,13 @@ outputs/drawings_export/
 # Headless-Blender build test runs (2026-07-24) -- one .obj/.mtl pair per
 # job_id, regenerated on every "Build in Blender" click during testing;
 # ballooned to 1.2GB+ uncommitted. outputs/pershing_archive/ (real saved
-# build iterations, ArchivePanel.jsx) and outputs/rhino/ are NOT included
-# here -- distinct from this throwaway test-build output.
+# build iterations, ArchivePanel.jsx) is NOT included here -- distinct
+# from this throwaway test-build output.
 outputs/blender_headless/
+# Rhino .3dm export test artifacts (2026-07-24) -- individual files can
+# exceed GitHub's 50MB recommended max (flagged on push); same "not
+# source, regenerable" reasoning as outputs/blender_headless/ above.
+outputs/rhino/
 # Loose debug-capture files dropped directly in outputs/ during ad-hoc
 # testing (screenshots, one-off .mtl/.csv checks) -- outputs/*/ subfolders
 # are unaffected by this single-* glob.
