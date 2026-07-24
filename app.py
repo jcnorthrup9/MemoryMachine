@@ -22,10 +22,14 @@ from logic.ai_synthesizer import (
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
 from logic.pershing_api import (
-    RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, JurorChatRequest, CritiqueRequest,
+    RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, GenerateDrawingsRequest,
+    SaveDrawingRequest, JurorChatRequest, CritiqueRequest,
     get_config as pershing_get_config,
     rebuild as pershing_rebuild, grow_network as pershing_grow_network,
+    carve_network_canyon as pershing_carve_network_canyon,
     generate_canopy as pershing_generate_canopy,
+    generate_drawings as pershing_generate_drawings,
+    save_drawing as pershing_save_drawing,
     juror_chat as pershing_juror_chat, critique as pershing_critique,
     get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
     bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
@@ -42,6 +46,7 @@ from logic.pershing_api import (
     SpatializePreviewRequest,
     spatialize_preview as pershing_spatialize_preview,
     get_deficit_weights as pershing_get_deficit_weights_public,
+    get_deficit_hotspots as pershing_get_deficit_hotspots,
 )
 from logic.site_grid import build_site_grid
 from logic import pershing_blender
@@ -141,6 +146,46 @@ app.mount("/blender-headless-output", StaticFiles(directory=pershing_blender.OUT
 # only exists once diagram_tool/ has actually exported something to it.
 if os.path.exists(LEGACY_DIAGRAM_DIR):
     app.mount("/legacy-diagrams", StaticFiles(directory=LEGACY_DIAGRAM_DIR), name="legacy-diagrams")
+
+def archive_generation_record(prompt, narrative, spatial_seed, diagram=""):
+    """Writes a memory_machine_generation_<ms>.json record -- same shape/dir/
+    naming convention (archive/diagrams/generated/, millisecond timestamp)
+    every 2D-generation consumer already expects (list_2d_generations(),
+    preview_2d_generation() in logic/pershing_api.py), so anything archived
+    here shows up in the SPATIALIZE tab's "Recent 2D Generations" panel for
+    free -- no separate list/read path needed.
+
+    Extracted (2026-07-24) from generate_memory_node()'s own inline archive
+    step so a second caller (pershing_archive_route below, "Save Build" in
+    RECONSTRUCT) can write the exact same record shape for whatever diagram
+    was live in SPATIALIZE at save time, instead of a build only ever living
+    in outputs/pershing_archive/ with no trace back to the 2D layout that
+    produced it -- closing the loop the user asked for: diagram -> bake ->
+    3D build -> save should keep the diagram discoverable from the 2D side
+    too, not just the 3D one.
+
+    Best-effort: a write failure here shouldn't fail the caller's own
+    action (a generation, or a build save) -- same tolerance the original
+    inline version already had."""
+    try:
+        archive_dir = os.path.join(BASE_DIR, 'archive', 'diagrams', 'generated')
+        os.makedirs(archive_dir, exist_ok=True)
+        timestamp_ms = int(time.time() * 1000)
+        record = {
+            "timestamp_ms": timestamp_ms,
+            "prompt": prompt,
+            "narrative": narrative,
+            "diagram": diagram,
+            "spatial_seed": spatial_seed,
+        }
+        record_path = os.path.join(archive_dir, f"memory_machine_generation_{timestamp_ms}.json")
+        with open(record_path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2)
+        return os.path.basename(record_path)
+    except Exception as e:
+        print(f"      -> [GENERATION ARCHIVE ERROR] {e}")
+        return None
+
 
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
@@ -436,26 +481,9 @@ async def generate_memory_node(payload: MemoryPrompt):
     # auto-export (static/main.js's autoExportEnabled pipeline) -- that only
     # ever saved the rendered image, never the prompt/narrative/layer picks
     # that produced it, so past generations couldn't be reviewed or
-    # reconstructed. Same archive dir, same millisecond-timestamp naming
-    # convention as the JS side's `memory_machine_${mode}_${timestamp}` files,
-    # so a generation's JSON and its image exports sort/group together.
-    # Best-effort: a write failure here shouldn't fail the actual generation.
-    try:
-        archive_dir = os.path.join(BASE_DIR, 'archive', 'diagrams', 'generated')
-        os.makedirs(archive_dir, exist_ok=True)
-        timestamp_ms = int(time.time() * 1000)
-        record = {
-            "timestamp_ms": timestamp_ms,
-            "prompt": prompt,
-            "narrative": ai_narrative,
-            "diagram": diagram,
-            "spatial_seed": spatial_seed,
-        }
-        record_path = os.path.join(archive_dir, f"memory_machine_generation_{timestamp_ms}.json")
-        with open(record_path, "w", encoding="utf-8") as f:
-            json.dump(record, f, indent=2)
-    except Exception as e:
-        print(f"      -> [GENERATION ARCHIVE ERROR] {e}")
+    # reconstructed. Best-effort: a write failure here shouldn't fail the
+    # actual generation.
+    archive_generation_record(prompt, ai_narrative, spatial_seed, diagram)
 
     return {
         "status": "success",
@@ -671,6 +699,18 @@ async def pershing_grow_network_route(payload: GrowNetworkRequest):
     return pershing_grow_network(payload)
 
 
+@app.post("/api/pershing/carve-network-canyon")
+async def pershing_carve_network_canyon_route(payload: GrowNetworkRequest):
+    """Carves a canyon along the grown circulation network's primary trunk
+    into the live SKETCH_WEIGHTS -- explicit, deliberate action (unlike
+    network growth itself, automatic since 2026-07-23) since carving
+    reshapes terrain that growth itself reads from; see
+    carve_network_canyon()'s own docstring for why auto-carving on every
+    rebuild would risk a drift loop. Frontend calls /rebuild right after,
+    same pattern bake() already establishes."""
+    return pershing_carve_network_canyon(payload)
+
+
 @app.post("/api/pershing/generate-canopy")
 async def pershing_generate_canopy_route(payload: GenerateCanopyRequest):
     """Generates the organic panelized canopy roof + branching supports
@@ -679,6 +719,23 @@ async def pershing_generate_canopy_route(payload: GenerateCanopyRequest):
     docstring for why this doesn't need the async job-polling pattern the
     Blender build tier below uses)."""
     return pershing_generate_canopy(payload)
+
+
+@app.post("/api/pershing/generate-drawings")
+async def pershing_generate_drawings_route(payload: GenerateDrawingsRequest):
+    """Renders one of the Drawings tab's 3 styles (lineweight/color/diagram)
+    against whatever terrain/program params the frontend currently has set
+    -- explicit action, synchronous (see generate_drawings()'s own
+    docstring)."""
+    return pershing_generate_drawings(payload)
+
+
+@app.post("/api/pershing/save-drawing")
+async def pershing_save_drawing_route(payload: SaveDrawingRequest):
+    """Writes the current Drawings tab style/view to disk as SVG+PNG+DXF --
+    see save_drawing()'s own docstring for why DXF, not PNG, is what
+    actually preserves layers/colors for CAD import)."""
+    return pershing_save_drawing(payload)
 
 
 @app.post("/api/pershing/juror-chat")
@@ -746,6 +803,25 @@ async def pershing_2d_generations_preview(payload: Preview2DGenerationRequest):
         return JSONResponse(status_code=404, content={"error": str(e)})
 
 
+class ArchiveGenerationRequest(BaseModel):
+    prompt: str = ""
+    narrative: str = ""
+    spatial_seed: list = []
+
+
+# "Save Build" -> "Recent 2D Generations" bridge (2026-07-24) -- App.jsx's
+# handleSaveBuild calls this (in addition to its own /api/pershing/archive
+# 3D-snapshot save) with whatever SPATIALIZE diagram was live at save time,
+# so the diagram that produced a saved build stays discoverable from the 2D
+# side too -- see archive_generation_record()'s own docstring for the full
+# "why." Silently a no-op (empty spatial_seed) when the build wasn't
+# produced via SPATIALIZE at all (e.g. freehand painting only).
+@app.post("/api/archive-generation")
+async def archive_generation_route(payload: ArchiveGenerationRequest):
+    filename = archive_generation_record(payload.prompt, payload.narrative, payload.spatial_seed)
+    return {"filename": filename}
+
+
 # SPATIALIZE tab (2026-07-23) -- 2D authoring ported natively into the 3D
 # React app. Same preview-then-bake shape as the 2d-generations routes
 # above, but takes the live in-memory spatial_seed directly (no saved-file
@@ -761,9 +837,19 @@ async def pershing_deficit_weights_route():
     return pershing_get_deficit_weights_public()
 
 
+@app.get("/api/pershing/deficit-hotspots")
+async def pershing_deficit_hotspots_route(top_n: int = 12):
+    """Real per-bay deficit-hotspot positions (not the coarse 9-cardinal-
+    point summary /deficit-weights returns) -- see
+    get_deficit_hotspots()'s own docstring. Used by SPATIALIZE's live
+    overlay so hotspot circles sit at their actual site positions."""
+    return pershing_get_deficit_hotspots(top_n)
+
+
 @app.post("/api/pershing/blender-build")
 async def pershing_blender_build_route(
     payload: dict, lineart: bool = False, view_dir: str = None, include_real_context: bool = False,
+    tag: str = None,
 ):
     """Kicks off the headless-Blender "build" tier (see
     logic/pershing_blender.py) on whatever rebuild result the frontend
@@ -783,7 +869,7 @@ async def pershing_blender_build_route(
     live OrbitControls camera direction."""
     view_dir_tuple = tuple(float(v) for v in view_dir.split(",")) if view_dir else None
     job_id = pershing_blender.start_build_job(
-        payload, lineart=lineart, view_dir=view_dir_tuple, include_real_context=include_real_context)
+        payload, lineart=lineart, view_dir=view_dir_tuple, include_real_context=include_real_context, tag=tag)
     return {"job_id": job_id, "status": "queued"}
 
 

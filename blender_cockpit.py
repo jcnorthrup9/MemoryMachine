@@ -269,7 +269,7 @@ def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
     bm.faces.new(ring_bottom[::-1])
 
 
-def _add_panel(bm, center, normal, width, depth, thickness):
+def _add_panel(bm, center, normal, width, depth, thickness, rotation_deg=0.0):
     """Flat individually-oriented plate (canopy_panel) -- 2026-07-16 Canopy
     Redesign. Same u/v basis construction _add_cylinder above already uses
     (world-Z unless the direction vector is nearly vertical, i.e. abs(.z)
@@ -281,11 +281,18 @@ def _add_panel(bm, center, normal, width, depth, thickness):
     Y there BY DESIGN, not a discrepancy -- both must still tilt the same
     real panel the same way once compared side by side, see the Canopy
     Redesign plan's cross-tool handedness verification step, do not skip
-    it if this is ever touched again)."""
+    it if this is ever touched again).
+
+    rotation_deg (2026-07-24, site_grid panel faceting) spins u/v around n
+    AFTER the tilt basis is built -- the in-plane seam orientation from
+    logic/canopy_engine.py's build_site_grid()-driven panel grid, mirrored
+    in Viewport.jsx's CanopyPanelInstances via u.applyAxisAngle(normal, ...)."""
     center_v = mathutils.Vector(center)
     n = mathutils.Vector(normal).normalized()
     ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
     u = ref.cross(n).normalized()
+    if rotation_deg:
+        u = mathutils.Matrix.Rotation(math.radians(rotation_deg), 3, n) @ u
     v = n.cross(u).normalized()
     hw, hd, ht = width / 2, depth / 2, thickness / 2
     bottom, top = [], []
@@ -336,7 +343,8 @@ def build_structural_meshes(coll, specs):
             elif kind in _PANEL_KINDS:
                 normal = (spec.normal_x or 0.0, spec.normal_y or 0.0, spec.normal_z or 1.0)
                 _add_panel(bm, (spec.x_ft, spec.y_ft, spec.z_top_ft), normal,
-                           spec.scale, spec.scale_y if spec.scale_y is not None else spec.scale, spec.height_ft)
+                           spec.scale, spec.scale_y if spec.scale_y is not None else spec.scale, spec.height_ft,
+                           rotation_deg=spec.rotation_deg)
             elif kind in _VERTICAL_CYLINDER_KINDS:
                 p0 = (spec.x_ft, spec.y_ft, spec.z_top_ft - spec.height_ft)
                 p1 = (spec.x_ft, spec.y_ft, spec.z_top_ft)

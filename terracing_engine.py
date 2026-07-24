@@ -1264,8 +1264,13 @@ class StructuralFramingEngine:
             gy = int(col["z"] // self.voxel_ft)
             v = self._voxel_at(gx, gy)
             levels = self._levels_breached(v) if v is not None else 0
-            if levels == 0:
-                continue  # real excavation never reached this column -- nothing to brace
+            # 2026-07-23: gated to levels>=2 (not >0) -- a single breached
+            # level (e.g. just removing the top slab, which alone drives
+            # levels to 1 almost site-wide via _z_for_voxel's forced clamp)
+            # doesn't warrant dedicated bracing in real shoring design;
+            # internal bracing tiers get added once excavation goes deeper.
+            if levels < 2:
+                continue  # shallow (<2 levels) excavation -- nothing to brace yet
             exposure[key] = levels
 
             for lvl in range(levels):
@@ -1374,7 +1379,9 @@ class StructuralFramingEngine:
             for gy in range(nz):
                 v = self.te.voxels[gx][gy]
                 levels = self._levels_breached(v)
-                if levels == 0:
+                # See steel_frame_specs()'s matching comment -- shallow
+                # (<2 levels) excavation doesn't warrant timber framing either.
+                if levels < 2:
                     continue
                 for sx in range(n):
                     for sy in range(n):

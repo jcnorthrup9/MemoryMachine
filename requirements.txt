@@ -6,6 +6,7 @@ python-multipart
 pillow
 opencv-python-headless
 trimesh
+scipy
 rtree
 manifold3d
 fast-simplification

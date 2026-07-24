@@ -772,3 +772,97 @@ def extract_attractor_points_from_composed_layers(composed_layers):
             result[category].append({"x_ft": float(x_ft), "y_ft": float(y_ft)})
 
     return result
+
+
+# sample_attraction_points()'s own docstring caps its whole attractor budget
+# at "tens-to-~150 points" for growth-loop performance -- a raw path
+# layer's vertex list can run into the hundreds (PEDESTRIAN_PATH's real
+# dash-segment count in the actual site SVG is ~583), so this downsamples
+# well below that ceiling rather than flooding the growth loop with
+# near-duplicate points from one drawn path.
+PATH_HINT_MAX_POINTS = 20
+
+
+def extract_path_hints_from_composed_layers(composed_layers):
+    """
+    Companion to extract_attractor_points_from_composed_layers() -- same
+    composed layer stack, same per-item load/fit-scale/rotate/translate/
+    affine pipeline, but pulls points from PEDESTRIAN_PATH-role
+    ("path_hint", see logic/pershing_api.py's _ROLE_BY_LAYER_SUBSTRING)
+    layers' geometry, for circulation_network.sample_attraction_points()'s
+    path_hints param -- so a hand-drawn 2D path can bias where the
+    procedural circulation network grows instead of being silently
+    discarded (PEDESTRIAN_PATH previously had zero special handling
+    anywhere in the 2D->3D bridge).
+
+    Uses _group_vertices() (ALL shape vertices, concatenated), NOT
+    _group_polygons() (fill-required) the way extract_attractor_points_
+    from_composed_layers() above does -- a path is inherently linework,
+    often stroke-only with no real fill at all. Confirmed via the real
+    PershingSquare.svg: PEDESTRIAN_PATH is ~583 stroke-only dash segments
+    with almost no filled shapes, so requiring fill here would silently
+    extract nothing for a typical path layer.
+
+    Downsamples each layer's point set to PATH_HINT_MAX_POINTS, evenly
+    spaced along the ORIGINAL vertex order (not random) -- keeps the
+    sampled points roughly tracing the path's actual shape instead of
+    clustering wherever the source SVG happened to place denser vertices
+    (e.g. tighter curves get denser vertices in a typical Rhino export).
+
+    Returns [{"x_ft":.., "y_ft":..}, ...] -- unlike attractor_points (which
+    buckets by category), path hints are all one motivator, so a flat list
+    is enough.
+    """
+    _require_calibration()
+    real_geometry = _load_real_geometry()
+    site_width_ft = real_geometry["site"]["width_ft"]
+    site_length_ft = real_geometry["site"]["length_ft"]
+
+    pershing_root = _load_precedent_svg("PershingSquare")
+    pcx, pcy, pw, ph = _boundary_bbox_center_and_size(pershing_root)
+    affine, _pts, _angle = detect_boundary_affine_from_svg(
+        pershing_root, site_width_ft, site_length_ft, FLIP_X, FLIP_Y)
+
+    results = []
+
+    for item in composed_layers:
+        if item.get("role") != "path_hint":
+            continue
+
+        try:
+            src_root = _load_precedent_svg(item["site"])
+        except FileNotFoundError:
+            continue
+        layer_g = _find_layer_group(src_root, item["layerId"])
+        if layer_g is None:
+            continue
+        pts_px = _group_vertices(layer_g)
+        if len(pts_px) == 0:
+            continue
+
+        scx, scy, sw, sh = _boundary_bbox_center_and_size(src_root)
+        fit_scale = min(pw / (sw or 1.0), ph / (sh or 1.0))
+        t = item.get("transform") or {}
+        final_scale = fit_scale * (t.get("scale") or 1.0)
+        rot = np.radians(t.get("rot") or 0.0)
+        cos_r, sin_r = np.cos(rot), np.sin(rot)
+        offset_x = pcx + (t.get("x_frac") or 0.0) * pw
+        offset_y = pcy + (t.get("y_frac") or 0.0) * ph
+
+        shifted = pts_px - np.array([scx, scy])
+        rotated = np.stack([
+            shifted[:, 0] * cos_r - shifted[:, 1] * sin_r,
+            shifted[:, 0] * sin_r + shifted[:, 1] * cos_r,
+        ], axis=1)
+        placed_px = rotated * final_scale + np.array([offset_x, offset_y])
+        placed_ft = affine.transform(placed_px)
+
+        n = len(placed_ft)
+        if n > PATH_HINT_MAX_POINTS:
+            idx = np.linspace(0, n - 1, PATH_HINT_MAX_POINTS).astype(int)
+            placed_ft = placed_ft[idx]
+
+        for x_ft, y_ft in placed_ft:
+            results.append({"x_ft": float(x_ft), "y_ft": float(y_ft)})
+
+    return results

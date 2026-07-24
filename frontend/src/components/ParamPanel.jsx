@@ -58,11 +58,11 @@ const LAYER_TOGGLES = [
 ];
 
 export default function ParamPanel({
-  config, params, onParamsChange, onPaint, onRebuild, slabHarvestTons, kindCounts,
+  config, params, onParamsChange, onRebuild, slabHarvestTons, kindCounts,
   usedRealAmenityData, usedRealFootTrafficData, usedRealNoiseData, circulationVoxelCount, sanctuaryVoxelCount,
   rebuilding, visibleLayers, onToggleLayer, blenderBuild,
   onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
-  onGrowNetwork, growingNetwork, networkResult,
+  networkResult, onCarveCanyon, carvingCanyon,
   canopyParams, onCanopyParamsChange, onGenerateCanopy, generatingCanopy, canopyResult,
 }) {
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
@@ -92,22 +92,6 @@ export default function ParamPanel({
           onChange={set('sketch_alpha')}
           format={(v) => `${Math.round(v * 100)}%`}
         />
-      </div>
-
-      <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
-          Design Input
-        </h4>
-        <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Paint freehand on the sketch photo, or import colors from an exported legacy diagram or a
-          saved 2D generation -- all feed the same live design masks, pick the source inside the dialog.
-        </p>
-        <button
-          onClick={() => onPaint?.()}
-          className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
-        >
-          Paint
-        </button>
       </div>
 
       <div className="p-container border-b border-border space-y-2">
@@ -185,9 +169,10 @@ export default function ParamPanel({
           Canopy Engine
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
-          Panels only appear where the "Canopy" paint brush has been painted -- these sliders control the
-          wave/crest shape and support columns, not where it exists. Explicit action, separate from the live
-          rebuild loop above (real per-cell panel/support generation, not instant per-voxel math).
+          Panels auto-cover green space, sports/recreation, and outdoor program zones (real shade-relevant
+          categories) a few moments after program placement changes -- the "Canopy" paint brush still works
+          as an additional override, it's just no longer required. These sliders control the wave/crest
+          shape and support columns, not where it exists -- tweak them, then click below to regenerate now.
         </p>
         <Slider
           label="Base Height (ft)"
@@ -262,6 +247,14 @@ export default function ParamPanel({
           onChange={setCanopyField('panel_pitch_ft')}
         />
         <Slider
+          label="Panel Grid Rotation (deg)"
+          value={canopyParams.panel_grid_rotation_deg}
+          min={0}
+          max={90}
+          step={1}
+          onChange={setCanopyField('panel_grid_rotation_deg')}
+        />
+        <Slider
           label="Support Tie-Back Tolerance (ft)"
           value={canopyParams.support_tie_back_tolerance_ft}
           min={0}
@@ -272,9 +265,10 @@ export default function ParamPanel({
         <button
           onClick={onGenerateCanopy}
           disabled={generatingCanopy || !onGenerateCanopy}
+          title="Canopy also regenerates automatically a few moments after program zones change -- this forces it now, e.g. after tweaking the shape sliders above."
           className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          {generatingCanopy ? 'Generating...' : 'Generate Canopy'}
+          {generatingCanopy ? 'Generating...' : 'Regenerate Canopy Now'}
         </button>
         {canopyResult && (
           <div className="font-mono-sm text-[11px] text-on-surface-variant space-y-1">
@@ -285,7 +279,10 @@ export default function ParamPanel({
               </span>
             </div>
             {(canopyResult.kind_counts.canopy_panel ?? 0) === 0 && (
-              <div className="text-error">nothing painted yet -- paint the Canopy brush first</div>
+              <div className="text-error">
+                no green_space/sports_recreation/outdoor zones placed yet, and nothing painted -- place
+                program or paint the Canopy brush to give it something to cover
+              </div>
             )}
           </div>
         )}
@@ -467,8 +464,7 @@ export default function ParamPanel({
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
           Grows a real pedestrian network outward from the site's entrances toward weighted motivators --
-          explicit action, separate from the live rebuild loop above (a real growth simulation, not
-          instant per-voxel math).
+          regrows automatically with every rebuild, including whenever a motivator weight below changes.
         </p>
         {MOTIVATOR_LABELS.map(([key, label]) => (
           <Slider
@@ -489,13 +485,6 @@ export default function ParamPanel({
           step={1}
           onChange={setNetworkField('step_ft')}
         />
-        <button
-          onClick={onGrowNetwork}
-          disabled={growingNetwork || !onGrowNetwork}
-          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
-        >
-          {growingNetwork ? 'Growing...' : 'Grow Network'}
-        </button>
         {networkResult && (
           <div className="font-mono-sm text-[11px] text-on-surface-variant space-y-1">
             <div>nodes: <span className="text-accent">{networkResult.node_count}</span></div>
@@ -508,6 +497,17 @@ export default function ParamPanel({
             <div>attractors unconsumed: <span className="text-accent">{networkResult.attractors_unconsumed}</span></div>
           </div>
         )}
+        <p className="font-mono-sm text-[11px] text-on-surface-variant pt-1">
+          Carve a canyon along the network's primary trunk only (not every twig) -- deliberate, explicit
+          action, unlike growth above: it reshapes the terrain, so it doesn't auto-run on every rebuild.
+        </p>
+        <button
+          onClick={onCarveCanyon}
+          disabled={carvingCanyon || !onCarveCanyon || !networkResult}
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          {carvingCanyon ? 'Carving...' : 'Carve Canyon Along Path'}
+        </button>
       </div>
 
       <div className="p-container mt-auto">

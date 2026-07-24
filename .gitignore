@@ -59,7 +59,25 @@ db/
 output/
 outputs/vector_export_test/
 outputs/stylized_export_test/
+outputs/drawings_export/
+# Headless-Blender build test runs (2026-07-24) -- one .obj/.mtl pair per
+# job_id, regenerated on every "Build in Blender" click during testing;
+# ballooned to 1.2GB+ uncommitted. outputs/pershing_archive/ (real saved
+# build iterations, ArchivePanel.jsx) and outputs/rhino/ are NOT included
+# here -- distinct from this throwaway test-build output.
+outputs/blender_headless/
+# Loose debug-capture files dropped directly in outputs/ during ad-hoc
+# testing (screenshots, one-off .mtl/.csv checks) -- outputs/*/ subfolders
+# are unaffected by this single-* glob.
+outputs/*.png
+outputs/*.mtl
+outputs/*.csv
+outputs/cockpit/*.bak
 assets/
+
+# App-test screenshots captured during manual QA passes -- large (60+ JPGs,
+# 57MB), disposable, not source (2026-07-24).
+archive/workflowScreenshots/
 
 # Syncthing's own internal folder marker -- never project content
 .stfolder/

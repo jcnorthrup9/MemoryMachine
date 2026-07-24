@@ -1,12 +1,13 @@
 import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCamera, Text, Billboard } from '@react-three/drei';
+import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCamera, Text, Billboard, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import StaticContext from './StaticContext.jsx';
 import BlenderBuild from './BlenderBuild.jsx';
 import { exportViewPng } from '../api.js';
 import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES, showsOutline, castsShadows } from '../shading.js';
 import KIND_REGISTRY from '../kindRegistry.json';
+import { computeZones, pointInZone, clipStructuralSpec, clipRectBounds } from '../siteZones.js';
 
 // Rounds an instance count up to the next power of 2 (min 8) -- 2026-07-10,
 // paired with the count-in-key remount fix above each <Instances> block.
@@ -1003,6 +1004,15 @@ function CanopyPanelInstances({ specs, siteLengthFt, shadingMode }) {
     const worldUp = new THREE.Vector3(0, 1, 0);
     const ref = Math.abs(normal.y) < 0.9 ? worldUp : new THREE.Vector3(1, 0, 0);
     const u = new THREE.Vector3().crossVectors(ref, normal).normalize();
+    // In-plane spin around the normal (2026-07-24, site_grid panel
+    // faceting) -- rotation_deg is otherwise unused by panel-shape kinds
+    // (only the tilt from normal_x/y/z mattered before), so this is the one
+    // place the panel-grid rotation dialed in on the ParamPanel slider
+    // actually reorients the visible seams, not just the tilt. Mirrors
+    // blender_cockpit.py/pershing_headless_build.py's _add_panel.
+    if (s.rotation_deg) {
+      u.applyAxisAngle(normal, (s.rotation_deg * Math.PI) / 180);
+    }
     const v = new THREE.Vector3().crossVectors(normal, u).normalize();
     const basis = new THREE.Matrix4().makeBasis(u, v, normal);
     const quaternion = new THREE.Quaternion().setFromRotationMatrix(basis).toArray();
@@ -1325,10 +1335,60 @@ function ProgramLegend({ zones }) {
   );
 }
 
+// Site-chunk export overlay (2026-07-23) -- 9 zones (3x3, see siteZones.js)
+// drawn as a hoverable/clickable red-outlined grid over the
+// ground plane. Each zone is a flat hit-plane (for pointer events) plus a
+// closed red line loop (the actual visible boundary) -- kept as two
+// separate meshes rather than one, since a transparent fill mesh alone
+// reads too subtly as "a grid" until you're already hovering it.
+function ZoneGrid({ zones, siteLengthFt, hoveredZone, selectedZone, onHover, onSelect }) {
+  return (
+    <group>
+      {zones.map((zone) => {
+        const isSelected = selectedZone === zone.id;
+        const isHovered = hoveredZone === zone.id;
+        const cx = (zone.xMin + zone.xMax) / 2;
+        const cy = (zone.yMin + zone.yMax) / 2;
+        const w = zone.xMax - zone.xMin;
+        const h = zone.yMax - zone.yMin;
+        const [x, y, z] = toThree(cx, cy, 0.5, siteLengthFt);
+        const corners = [
+          toThree(zone.xMin, zone.yMin, 0.6, siteLengthFt),
+          toThree(zone.xMax, zone.yMin, 0.6, siteLengthFt),
+          toThree(zone.xMax, zone.yMax, 0.6, siteLengthFt),
+          toThree(zone.xMin, zone.yMax, 0.6, siteLengthFt),
+          toThree(zone.xMin, zone.yMin, 0.6, siteLengthFt),
+        ];
+        return (
+          <group key={zone.id}>
+            <mesh
+              position={[x, y, z]}
+              scale={[w, 1, h]}
+              onPointerOver={(e) => { e.stopPropagation(); onHover(zone.id); }}
+              onPointerOut={(e) => { e.stopPropagation(); onHover((cur) => (cur === zone.id ? null : cur)); }}
+              onClick={(e) => { e.stopPropagation(); onSelect(isSelected ? null : zone.id); }}
+            >
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial
+                color="#ff3b30"
+                transparent
+                opacity={isSelected ? 0.3 : isHovered ? 0.18 : 0.02}
+                depthWrite={false}
+              />
+            </mesh>
+            <Line points={corners} color="#ff3b30" lineWidth={isSelected || isHovered ? 3 : 1.5} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 export default function Viewport({
   data, programZones, bayFt, networkSpecs, canopyResult, siteWidthFt, siteLengthFt, voxelFt, blenderObjUrl,
   blenderSvgUrl, onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild,
   savingBuild, removeTopSlab, onToggleRemoveTopSlab, visibleLayers,
+  zonesEnabled, onToggleZones, selectedZoneId, onSelectZone, onExportZone, exportingZone,
 }) {
   const loadBuildInputRef = useRef(null);
   const [shadingMode, setShadingMode] = useState('colored');
@@ -1359,12 +1419,92 @@ export default function Viewport({
   const showTopSlab = !removeTopSlab;
   const [viewMode, setViewMode] = useState('perspective');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
+  const [hoveredZone, setHoveredZone] = useState(null);
   const canvasRef = useRef(null);
   const controlsRef = useRef(null);
   // toThree()'s Z range is now [0, siteLengthFt] (fixed 2026-07-09, see
   // toThree's own comment) -- center must sit at the midpoint of THAT
   // range, not the old (buggy) [-siteLengthFt, 0] range's midpoint.
   const center = [siteWidthFt / 2, 0, siteLengthFt / 2];
+
+  // Site-chunk zones (2026-07-23, true per-object clipping 2026-07-24) --
+  // when a zone is selected, every real geometry source (voxels, structural
+  // framing/canopy/network, program_boxes, real slabs/columns/fragments) is
+  // clipped down to that zone's footprint -- not just filtered by a single
+  // anchor point -- so a strut, canopy branch, or circulation path crossing
+  // the boundary gets cut cleanly at the edge instead of sticking out past
+  // it or vanishing wholesale. See siteZones.js's clipStructuralSpec/
+  // clipRectBounds for the actual line/box/point clip logic. What's
+  // isolated on screen now matches exactly what "Export Zone" (App.jsx's
+  // handleExportZone) sends to the Blender build -- ramp_meshes (real
+  // imported Rhino triangle meshes, not parametric specs) are the one
+  // exception, excluded from the export entirely rather than left unclipped
+  // (see handleExportZone's own comment).
+  const zones = useMemo(() => computeZones(siteWidthFt, siteLengthFt), [siteWidthFt, siteLengthFt]);
+  const activeZone = zones.find((z) => z.id === selectedZoneId) || null;
+  const isolatedData = useMemo(() => {
+    if (!data || !activeZone) return data;
+    const clipSpecs = (specs) => (specs || [])
+      .map((s) => clipStructuralSpec(s, activeZone))
+      .filter(Boolean);
+    return {
+      ...data,
+      voxels: data.voxels.filter((v) =>
+        pointInZone(v.gx * voxelFt + voxelFt / 2, v.gy * voxelFt + voxelFt / 2, activeZone)),
+      structural: clipSpecs(data.structural),
+      program_boxes: clipSpecs(data.program_boxes),
+      real_columns: (data.real_columns || []).filter((c) => pointInZone(c.x, c.z, activeZone)),
+      real_slabs: (data.real_slabs || [])
+        .map((slab) => {
+          const xs = slab.top_corners_ft.map((c) => c[0]);
+          const ys = slab.top_corners_ft.map((c) => c[1]);
+          const clipped = clipRectBounds(Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys), activeZone);
+          if (!clipped) return null;
+          const z = slab.top_corners_ft[0][2];
+          return {
+            ...slab,
+            top_corners_ft: [
+              [clipped.xMin, clipped.yMin, z], [clipped.xMax, clipped.yMin, z],
+              [clipped.xMax, clipped.yMax, z], [clipped.xMin, clipped.yMax, z],
+            ],
+            area_ft2: (clipped.xMax - clipped.xMin) * (clipped.yMax - clipped.yMin),
+          };
+        })
+        .filter(Boolean),
+      real_slab_fragments: Object.fromEntries(
+        Object.entries(data.real_slab_fragments || {}).map(([key, entry]) => [
+          key,
+          { ...entry, remaining: entry.remaining.filter(([wx, wy]) => pointInZone(wx, wy, activeZone)) },
+        ]),
+      ),
+      // attractor_points is a viewport-only visualization aid (Blender's
+      // export never reads it, see blender/pershing_headless_build.py) --
+      // filtered here purely so the isolated preview doesn't show marker
+      // spheres floating outside the visible chunk, not because it affects
+      // what actually gets exported.
+      attractor_points: Object.fromEntries(
+        Object.entries(data.attractor_points || {}).map(([cat, pts]) => [
+          cat, pts.filter((p) => pointInZone(p.x_ft, p.y_ft, activeZone)),
+        ]),
+      ),
+    };
+  }, [data, activeZone, voxelFt]);
+  const isolatedNetworkSpecs = useMemo(() => {
+    if (!activeZone || !networkSpecs) return networkSpecs;
+    return networkSpecs.map((s) => clipStructuralSpec(s, activeZone)).filter(Boolean);
+  }, [networkSpecs, activeZone]);
+  // canopyResult is its own top-level response (Generate Canopy's explicit
+  // action), not part of `data` -- clipped separately here so panels/branch
+  // supports crossing the boundary get cut the same way structural framing
+  // does, instead of the isolation preview leaving canopy untouched.
+  const isolatedCanopyResult = useMemo(() => {
+    if (!activeZone || !canopyResult) return canopyResult;
+    return {
+      ...canopyResult,
+      canopy_panels: (canopyResult.canopy_panels || []).map((s) => clipStructuralSpec(s, activeZone)).filter(Boolean),
+      canopy_columns: (canopyResult.canopy_columns || []).map((s) => clipStructuralSpec(s, activeZone)).filter(Boolean),
+    };
+  }, [canopyResult, activeZone]);
   // Toggle only actually swaps the layer once a build exists -- with no
   // blenderObjUrl yet, always fall back to the live instanced view rather
   // than rendering nothing.
@@ -1485,46 +1625,46 @@ export default function Viewport({
           <BlenderBuild objUrl={blenderObjUrl} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         ) : (
           <>
-            {visibleLayers.realContext && data && (
+            {visibleLayers.realContext && isolatedData && (
               <RealSlabs
-                slabs={data.real_slabs}
-                fragments={data.real_slab_fragments}
+                slabs={isolatedData.real_slabs}
+                fragments={isolatedData.real_slab_fragments}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
                 showTopSlab={showTopSlab}
               />
             )}
-            {visibleLayers.realContext && data && (
-              <RealColumns columns={data.real_columns} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+            {visibleLayers.realContext && isolatedData && (
+              <RealColumns columns={isolatedData.real_columns} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
             )}
-            {visibleLayers.structural && data && (
+            {visibleLayers.structural && isolatedData && (
               <StructuralInstances
-                specs={data.structural}
+                specs={isolatedData.structural}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
                 showSalvage={showSalvage}
               />
             )}
-            {visibleLayers.greenscape && data && (
+            {visibleLayers.greenscape && isolatedData && (
               <GreenscapeGround
-                voxels={data.voxels}
+                voxels={isolatedData.voxels}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
               />
             )}
-            {visibleLayers.trees && data && (
+            {visibleLayers.trees && isolatedData && (
               <TreeGround
-                voxels={data.voxels}
+                voxels={isolatedData.voxels}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
               />
             )}
-            {visibleLayers.circulation && data && (
+            {visibleLayers.circulation && isolatedData && (
               <CirculationSurface
-                voxels={data.voxels}
+                voxels={isolatedData.voxels}
                 voxelFt={voxelFt}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
@@ -1541,23 +1681,23 @@ export default function Viewport({
                 revived, gate it on visibleLayers.canopy too and read
                 canopyResult.canopy_height_matrix, not data.canopy_height_matrix
                 (removed, canopy no longer runs inside rebuild()). */}
-            {visibleLayers.canopy && canopyResult && (
+            {visibleLayers.canopy && isolatedCanopyResult && (
               <>
                 <CanopyPanelInstances
-                  specs={canopyResult.canopy_panels}
+                  specs={isolatedCanopyResult.canopy_panels}
                   siteLengthFt={siteLengthFt}
                   shadingMode={shadingMode}
                 />
                 <CylinderInstances
-                  specs={canopyResult.canopy_columns}
+                  specs={isolatedCanopyResult.canopy_columns}
                   siteLengthFt={siteLengthFt}
                   shadingMode={shadingMode}
                 />
               </>
             )}
-            {visibleLayers.structural && networkSpecs && (
+            {visibleLayers.structural && isolatedNetworkSpecs && (
               <StructuralInstances
-                specs={networkSpecs}
+                specs={isolatedNetworkSpecs}
                 siteLengthFt={siteLengthFt}
                 shadingMode={shadingMode}
                 showSalvage={showSalvage}
@@ -1568,7 +1708,9 @@ export default function Viewport({
         {visibleLayers.staticContext && (
           <StaticContext siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
         )}
-        <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
+        {/* Gated on the same LABELS toggle as program-zone labels (2026-07-24)
+            -- previously rendered unconditionally regardless of that toggle. */}
+        {showLabels && <StreetLabels siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />}
         {/* Program Zones + Program Boxes (2026-07-16 rework) -- the SAME
             program-zone data in two mutually-exclusive render modes, not
             two independently-stackable layers: "Program Zones" is the
@@ -1589,11 +1731,21 @@ export default function Viewport({
             showFootprint={!visibleLayers.programBoxes}
           />
         )}
-        {visibleLayers.programZones && visibleLayers.programBoxes && data?.program_boxes && (
-          <BoxInstances specs={data.program_boxes} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={false} />
+        {visibleLayers.programZones && visibleLayers.programBoxes && isolatedData?.program_boxes && (
+          <BoxInstances specs={isolatedData.program_boxes} siteLengthFt={siteLengthFt} shadingMode={shadingMode} showSalvage={false} />
         )}
-        {visibleLayers.attractors && data?.attractor_points && (
-          <AttractorMarkers points={data.attractor_points} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        {visibleLayers.attractors && isolatedData?.attractor_points && (
+          <AttractorMarkers points={isolatedData.attractor_points} siteLengthFt={siteLengthFt} shadingMode={shadingMode} />
+        )}
+        {zonesEnabled && (
+          <ZoneGrid
+            zones={zones}
+            siteLengthFt={siteLengthFt}
+            hoveredZone={hoveredZone}
+            selectedZone={selectedZoneId}
+            onHover={setHoveredZone}
+            onSelect={onSelectZone}
+          />
         )}
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
@@ -1677,6 +1829,32 @@ export default function Viewport({
             ))}
           </div>
         </div>
+        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">ZONES</span>
+          <div className="flex">
+            {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
+              <button
+                key={String(opt.key)}
+                onClick={() => onToggleZones?.(opt.key)}
+                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                  zonesEnabled === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {zonesEnabled && activeZone && (
+          <button
+            onClick={() => onExportZone?.(activeZone)}
+            disabled={exportingZone}
+            title={`Builds an OBJ in Blender containing only ${activeZone.label}'s voxels/structure/program boxes.`}
+            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {exportingZone ? 'Exporting...' : `Export ${activeZone.label}`}
+          </button>
+        )}
         <button
           onClick={handleExport}
           disabled={exportingVectorView}

@@ -94,40 +94,38 @@ export function fracToPixel(svgCache, xFrac, yFrac) {
   return { x: (xFrac || 0) * bbox.w, y: (yFrac || 0) * bbox.h };
 }
 
-// Same 9-bucket cardinal convention as logic/urban_engine.py's
-// LOCATION_OFFSET_FRAC / ingest_diagram_svg.py's LOCATION_OFFSET_FRAC --
-// fraction of the site boundary's own size, 0.0 at center. Duplicated here
-// (not fetched) since it's a small, stable constant and this overlay is
-// purely visual reference, not itself a placement decision.
-const CARDINAL_FRAC = {
-  Center: [0, 0], North: [0, -0.3], South: [0, 0.3], East: [0.3, 0], West: [-0.3, 0],
-  'North-East': [0.22, -0.22], 'North-West': [-0.22, -0.22],
-  'South-East': [0.22, 0.22], 'South-West': [-0.22, 0.22],
-};
-
 /**
- * Live 3D amenity-deficit-hotspot overlay (GET /api/pershing/deficit-weights
- * -- logic/pershing_api.py's get_deficit_weights(), the same signal
- * biasing 2D amenity placement server-side) so the deficit data is visible
- * WHILE composing, not just an invisible bias discovered after GEN.
+ * Live 3D amenity-deficit-hotspot overlay (GET /api/pershing/deficit-hotspots
+ * -- logic/pershing_api.py's get_deficit_hotspots(), the real per-bay
+ * deficit positions, NOT the coarse 9-cardinal-point summary
+ * /deficit-weights returns -- see that function's docstring for why
+ * bucketing into 9 fixed points was throwing away real position data) so
+ * hotspot circles sit where the deficits actually ARE, not a synthetic
+ * fixed grid, while composing.
+ *
+ * deficitHotspots: array of {x_frac, y_frac, weight}, already sorted
+ * strongest-first and capped server-side (top_n) to a legible count --
+ * no further filtering/sorting needed here. Both circle SIZE and opacity
+ * scale with weight (normalized against the strongest hotspot in the set)
+ * so severity reads at a glance, not just position.
  */
-export function renderDeficitOverlay(svg, ns, bbox, deficitWeights) {
-  if (!deficitWeights) return;
+export function renderDeficitOverlay(svg, ns, bbox, deficitHotspots) {
+  if (!deficitHotspots || deficitHotspots.length === 0) return;
   const cx = bbox.x + bbox.w / 2;
   const cy = bbox.y + bbox.h / 2;
-  const maxW = Math.max(...Object.values(deficitWeights), 0.001);
-  const r = Math.min(bbox.w, bbox.h) * 0.16;
+  const maxW = Math.max(...deficitHotspots.map((p) => p.weight), 0.001);
+  const maxR = Math.min(bbox.w, bbox.h) * 0.14;
+  const minR = maxR * 0.35;
 
   const g = document.createElementNS(ns, 'g');
   g.setAttribute('class', 'deficit-overlay');
-  Object.entries(CARDINAL_FRAC).forEach(([loc, [xf, yf]]) => {
-    const w = deficitWeights[loc] || 0;
-    const intensity = w / maxW;
+  deficitHotspots.forEach(({ x_frac: xf, y_frac: yf, weight }) => {
+    const intensity = weight / maxW;
     const circle = document.createElementNS(ns, 'circle');
     circle.setAttribute('cx', cx + xf * bbox.w);
     circle.setAttribute('cy', cy + yf * bbox.h);
-    circle.setAttribute('r', r);
-    circle.setAttribute('fill', `rgba(255,70,70,${(0.06 + intensity * 0.34).toFixed(3)})`);
+    circle.setAttribute('r', minR + (maxR - minR) * intensity);
+    circle.setAttribute('fill', `rgba(255,70,70,${(0.1 + intensity * 0.4).toFixed(3)})`);
     circle.setAttribute('stroke', 'none');
     g.appendChild(circle);
   });
@@ -138,10 +136,10 @@ export function renderDeficitOverlay(svg, ns, bbox, deficitWeights) {
  * Renders the 2D canvas into `container` (a DOM node, e.g. from a React
  * ref) from the given state. Mirrors engine2D.js's render() minus the
  * site-grid overlay (removed from the root app's UI per user request) and
- * the light/dark theme branch (this app is dark-only). `deficitWeights`
+ * the light/dark theme branch (this app is dark-only). `deficitHotspots`
  * (optional) draws the hotspot overlay -- see renderDeficitOverlay().
  */
-export function render(container, { svgCache, stack, baseCleared, deficitWeights }) {
+export function render(container, { svgCache, stack, baseCleared, deficitHotspots }) {
   const baseSVG = svgCache['PershingSquare'];
   if (!baseSVG || !container) return;
 
@@ -198,7 +196,7 @@ export function render(container, { svgCache, stack, baseCleared, deficitWeights
 
   // Drawn right after context, before the intervention stack -- a
   // background tint the generated layers render on top of.
-  renderDeficitOverlay(svg, ns, bbox, deficitWeights);
+  renderDeficitOverlay(svg, ns, bbox, deficitHotspots);
 
   if (baseCleared) {
     const bndG = baseSVGEl.querySelector('g[id*="BOUNDARY"]') || baseSVGEl.querySelector('g[id="BOUNDARY"]');

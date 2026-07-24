@@ -20,17 +20,19 @@ pass is Grasshopper's job downstream, not reimplemented in Python.
 CATEGORY_BUILDING = "BUILDING"
 CATEGORY_CIRCULATION = "CIRCULATION"
 CATEGORY_LANDSCAPE = "LANDSCAPE"
-CATEGORY_PATHS = "PATHS"
+CATEGORY_HARDSCAPE = "HARDSCAPE"  # renamed 2026-07-23 from "PATHS" -- was
+# confusable with the CIRCULATION layer (the actual pedestrian path network);
+# this category is painted hardscape/paved surfaces (plazas etc.), not paths.
 
-CATEGORIES = (CATEGORY_BUILDING, CATEGORY_CIRCULATION, CATEGORY_LANDSCAPE, CATEGORY_PATHS)
+CATEGORIES = (CATEGORY_BUILDING, CATEGORY_CIRCULATION, CATEGORY_LANDSCAPE, CATEGORY_HARDSCAPE)
 
 # Standard site-plan color convention (per user confirmation): magenta
-# buildings, blue circulation, green landscape, yellow paths/hardscape.
+# buildings, blue circulation, green landscape, yellow hardscape.
 STYLE_COLORS_HEX = {
     CATEGORY_BUILDING: "#FF00AA",
     CATEGORY_CIRCULATION: "#29B6F6",
     CATEGORY_LANDSCAPE: "#66BB6A",
-    CATEGORY_PATHS: "#FDD835",
+    CATEGORY_HARDSCAPE: "#FDD835",
 }
 
 # AutoCAD Color Index approximations of the same palette -- DXF's basic
@@ -39,7 +41,7 @@ STYLE_COLORS_ACI = {
     CATEGORY_BUILDING: 6,    # magenta
     CATEGORY_CIRCULATION: 5, # blue
     CATEGORY_LANDSCAPE: 3,   # green
-    CATEGORY_PATHS: 2,       # yellow
+    CATEGORY_HARDSCAPE: 2,   # yellow
 }
 
 
@@ -54,13 +56,14 @@ def _building_footprint(building_spec):
     return corners + [corners[0]]
 
 
-def _merge_grid_rectangles(cells):
+def merge_grid_rectangles(cells):
     """Greedy rectangle-merge over a set of (gx, gy) grid indices -- turns
     "one square per voxel" into "one rectangle per contiguous same-category
     region." Small, self-contained, independently written (not imported
     from vector_export.py) to keep this module fully decoupled from the
     existing export path, per the isolation requirement this whole file
-    exists to satisfy."""
+    exists to satisfy. Public (not underscore-prefixed): drawing_styles.py
+    reuses this for its own CONTOURS layer rather than duplicating it."""
     remaining = set(cells)
     rects = []
     while remaining:
@@ -78,7 +81,7 @@ def _merge_grid_rectangles(cells):
     return rects
 
 
-def _grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft):
+def grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft):
     x0, y0 = gx0 * voxel_ft, gy0 * voxel_ft
     x1, y1 = (gx1 + 1) * voxel_ft, (gy1 + 1) * voxel_ft
     corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
@@ -109,10 +112,10 @@ def categorize_site_geometry(program_boxes, circulation_specs, voxels, voxel_ft)
 
     greenscape_cells = [(v.gx, v.gy) for v in voxels if v.is_greenscape]
     hardscape_cells = [(v.gx, v.gy) for v in voxels if v.is_hardscape]
-    for gx0, gy0, gx1, gy1 in _merge_grid_rectangles(greenscape_cells):
-        categorized[CATEGORY_LANDSCAPE].append(_grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft))
-    for gx0, gy0, gx1, gy1 in _merge_grid_rectangles(hardscape_cells):
-        categorized[CATEGORY_PATHS].append(_grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft))
+    for gx0, gy0, gx1, gy1 in merge_grid_rectangles(greenscape_cells):
+        categorized[CATEGORY_LANDSCAPE].append(grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft))
+    for gx0, gy0, gx1, gy1 in merge_grid_rectangles(hardscape_cells):
+        categorized[CATEGORY_HARDSCAPE].append(grid_rect_polygon(gx0, gy0, gx1, gy1, voxel_ft))
 
     return categorized
 
