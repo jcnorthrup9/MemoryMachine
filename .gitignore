@@ -83,6 +83,13 @@ assets/
 # 57MB), disposable, not source (2026-07-24).
 archive/workflowScreenshots/
 
+# Blender project files (2026-07-25) -- large binary assets (12-52MB each
+# for the 3 already tracked before this rule), synced peer-to-peer via
+# Syncthing between machines instead. Includes high-fidelity asset kit
+# libraries (e.g. blender/park_amenities/) and .blend1 autosave backups.
+*.blend
+*.blend1
+
 # Syncthing's own internal folder marker -- never project content
 .stfolder/
 
