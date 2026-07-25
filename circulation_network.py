@@ -42,6 +42,12 @@ DEFAULT_MOTIVATOR_WEIGHTS = {
     "trees": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
     # Placed program-zone entrances (2026-07-12) -- see sample_attraction_points()'s zones loop.
     "program": 1.0,
+    # 2D-diagram PEDESTRIAN_PATH layers (2026-07-23) -- see
+    # sample_attraction_points()'s path_hints param. A drawn path biases
+    # growth toward/through it without literally injecting geometry, same
+    # "become an attractor/weight, not overridden geometry" pattern every
+    # other 2D-diagram signal in this app already uses.
+    "path_hint": 1.0,
 }
 DEFAULT_STEP_FT = 15.0
 DEFAULT_MAX_ITERATIONS = 300
@@ -114,7 +120,8 @@ _AMENITY_MOTIVATOR = {
 
 
 def sample_attraction_points(engine, typology_specs, motivator_weights=None,
-                              field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None):
+                              field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None,
+                              path_hints=None):
     """
     Builds a manageable (tens-to-~150-point) set of weighted, motivator-
     labeled Attractors from the same real per-voxel fields/placed amenities
@@ -135,6 +142,16 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
     same full-strength/no-threshold treatment as the amenity loop below, so
     pedestrian paths actually connect to placed amenities, not just painted
     masks.
+
+    path_hints (2026-07-23, optional): points sampled from a 2D-diagram
+    PEDESTRIAN_PATH layer's own geometry (see
+    ingest_diagram_svg.extract_path_hints_from_composed_layers(), persisted
+    as logic/pershing_api.py's PATH_HINT_POINTS global) -- each becomes a
+    strong fixed "path_hint" attractor, same full-strength/no-threshold
+    treatment as program zone entrances above, so a hand-drawn 2D path
+    actually pulls growth toward/through it instead of being silently
+    discarded (PEDESTRIAN_PATH previously had zero special handling in the
+    2D->3D bridge at all).
     """
     weights = {**DEFAULT_MOTIVATOR_WEIGHTS, **(motivator_weights or {})}
     buckets = {}  # (bucket_key, motivator) -> list of (wx, wy, value)
@@ -188,6 +205,10 @@ def sample_attraction_points(engine, typology_specs, motivator_weights=None,
         attractors.append(Attractor(entrance["x_ft"], entrance["y_ft"],
                                      1.0 * weights.get("program", 1.0), "program"))
 
+    for hint in (path_hints or []):
+        attractors.append(Attractor(hint["x_ft"], hint["y_ft"],
+                                     1.0 * weights.get("path_hint", 1.0), "path_hint"))
+
     return attractors
 
 
@@ -206,7 +227,7 @@ class CirculationNetworkEngine:
     def __init__(self, real_geometry, terracing_engine, typology_specs,
                  motivator_weights=None, step_ft=DEFAULT_STEP_FT,
                  max_iterations=DEFAULT_MAX_ITERATIONS,
-                 field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None):
+                 field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None, path_hints=None):
         self.rg = real_geometry
         self.te = terracing_engine
         self.step_ft = step_ft
@@ -220,7 +241,8 @@ class CirculationNetworkEngine:
         self.kill_radius_ft = 1.2 * step_ft
 
         self.attractors = sample_attraction_points(
-            terracing_engine, typology_specs, motivator_weights, field_threshold, zones=zones)
+            terracing_engine, typology_specs, motivator_weights, field_threshold,
+            zones=zones, path_hints=path_hints)
 
         root_z = _voxel_at(terracing_engine, terracing_engine.entrance_x, terracing_engine.entrance_y).z_ft
         self.nodes = [NetworkNode(0, terracing_engine.entrance_x, terracing_engine.entrance_y, root_z,
@@ -412,3 +434,72 @@ class CirculationNetworkEngine:
         self._grow()
         self._compute_flow()
         return self._classify_edges() + self._detect_lookouts()
+
+
+# --- Canyon-carve along the primary trunk (2026-07-23) ---------------------
+# Explicit action (POST /api/pershing/carve-network-canyon), NOT part of
+# automatic network growth -- see logic/pershing_api.py's carve_network_canyon()
+# docstring for why carving stays a deliberate one-time commit even though
+# growth itself became automatic on 2026-07-23 (auto-carving on every
+# debounced rebuild would risk a drift loop: carve reshapes terrain -> next
+# auto-regrow sees new terrain -> path shifts -> recarve drifts further).
+_PATH_KINDS = {"footpath", "ramp", "escalator", "footpath_bridge", "ramp_bridge", "escalator_bridge"}
+NETWORK_CANYON_WEIGHT = 0.85  # tunable; passes through _effective_influence()'s clamp01, same magnitude as ingest_diagram_svg.OVERLAP_CANYON_WEIGHT for a comparably "strong but not maximal" cut
+
+
+def rasterize_network_canyon(specs, nx, nz, voxel_ft, flow_percentile=75):
+    """
+    Carves a canyon corridor along the grown network's primary trunk only --
+    NOT the whole tree (see the plan discussion this session: "every
+    segment, no threshold" cuts dozens of thin cracks across most of the
+    site, since Space Colonization trees are structurally lopsided, many
+    thin twigs and few thick trunk segments; a percentile-based flow
+    threshold instead selects the small number of segments that actually
+    read as "the path," matching the original ask -- a canyon running from
+    the Metro entrance to a placed amenity, not a fractured lattice).
+
+    Uses each qualifying segment's own already-computed radius_ft (see
+    CirculationNetworkEngine._classify_edges -- BASE_PATH_RADIUS_FT +
+    FLOW_WIDTH_PER_UNIT_FT * flow, clamped) as BOTH the selection signal
+    (radius_ft is a monotonic function of flow, so thresholding by radius_ft
+    percentile is equivalent to thresholding by flow) AND the corridor half-
+    width, so the carved cut naturally tapers the same way the rendered path
+    width already does -- one signal drives both, they can't visually drift
+    apart.
+
+    Returns an (nx, nz) numpy array of canyon weight (0 or
+    NETWORK_CANYON_WEIGHT per cell, cell-wise max where segments overlap) --
+    caller is responsible for merging this against any existing canyon
+    source (also via max, never overwrite -- see carve_network_canyon()).
+    lookout_point (a single-point spec, no x2/y2/z2) and any non-path kind
+    are excluded, only real two-point path segments contribute.
+    """
+    path_specs = [s for s in specs if s.kind in _PATH_KINDS]
+    if not path_specs:
+        return np.zeros((nx, nz))
+
+    radii = np.array([s.radius_ft for s in path_specs])
+    threshold = np.percentile(radii, flow_percentile)
+    trunk_specs = [s for s in path_specs if s.radius_ft >= threshold]
+
+    gx_centers = (np.arange(nx) + 0.5) * voxel_ft
+    gy_centers = (np.arange(nz) + 0.5) * voxel_ft
+    gxx, gyy = np.meshgrid(gx_centers, gy_centers, indexing="ij")
+    grid_pts = np.stack([gxx.ravel(), gyy.ravel()], axis=1)  # (N, 2)
+
+    canyon = np.zeros(len(grid_pts))
+    for s in trunk_specs:
+        p1 = np.array([s.x_ft, s.y_ft])
+        p2 = np.array([s.x2_ft, s.y2_ft])
+        seg = p2 - p1
+        seg_len2 = seg.dot(seg)
+        if seg_len2 < 1e-9:
+            dist = np.linalg.norm(grid_pts - p1, axis=1)
+        else:
+            t = np.clip(((grid_pts - p1) @ seg) / seg_len2, 0.0, 1.0)
+            proj = p1 + t[:, None] * seg
+            dist = np.linalg.norm(grid_pts - proj, axis=1)
+        inside = dist <= s.radius_ft
+        canyon = np.maximum(canyon, np.where(inside, NETWORK_CANYON_WEIGHT, 0.0))
+
+    return canyon.reshape(nx, nz)

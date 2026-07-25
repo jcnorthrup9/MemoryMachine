@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSketchInfo, uploadSketch, bakePaint, listLegacyDiagrams, previewLegacyImport } from '../api.js';
+import {
+  getSketchInfo, uploadSketch, bakePaint, listLegacyDiagrams, previewLegacyImport,
+} from '../api.js';
 import { PAINT_CATEGORIES as CATEGORIES } from '../paintCategories.js';
+import { PREVIEW_CELL_PX, drawDiagramPreview } from '../diagramGridPreview.js';
 
 // Unified "Paint" dialog (2026-07-16, merging what used to be two separate
 // entry points -- this component's own freehand sketch-painting, and the
@@ -18,7 +21,6 @@ import { PAINT_CATEGORIES as CATEGORIES } from '../paintCategories.js';
 // five are boolean zone masks (thresholded at bake time), each with its own
 // tint so overlapping strokes stay visually distinguishable.
 const BOOLEAN_THRESHOLD = 0.4;
-const PREVIEW_CELL_PX = 6;
 
 // X is NOT flipped (real_x = col/w * W) -- Y still is (real_y = (1 - row/h) * L).
 // Fixed 2026-07-10: this previously mirrored X the same way sketch_weight_mapper.py's
@@ -57,37 +59,6 @@ function sampleGrid(imageData, w, h, nx, nz, siteWidthFt, siteLengthFt) {
     grid.push(row);
   }
   return grid;
-}
-
-// Ported from DiagramInputPanel.jsx unchanged.
-function drawDiagramPreview(canvas, grids) {
-  if (!canvas || !grids) return;
-  const nx = grids.hardscape.length;
-  const nz = grids.hardscape[0].length;
-  canvas.width = nx * PREVIEW_CELL_PX;
-  canvas.height = nz * PREVIEW_CELL_PX;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // Same category order as the sketch canvas's own composite() below --
-  // later entries draw on top, matching how overlapping painted strokes
-  // already resolve there.
-  for (const cat of CATEGORIES) {
-    if (cat.key === 'canyon' || cat.key === 'canopy') continue; // continuous weights, not boolean regions -- no fill color to preview here
-    const grid = grids[cat.key];
-    if (!grid) continue;
-    ctx.fillStyle = cat.color;
-    for (let gx = 0; gx < nx; gx++) {
-      for (let gy = 0; gy < nz; gy++) {
-        if (!grid[gx][gy]) continue;
-        // row 0 at top = ymax (5th St), matching vector_export.py's
-        // STREET_LABELS convention and ingest_legacy_diagram.py's own
-        // render_debug_preview.
-        const py = nz - 1 - gy;
-        ctx.fillRect(gx * PREVIEW_CELL_PX, py * PREVIEW_CELL_PX, PREVIEW_CELL_PX, PREVIEW_CELL_PX);
-      }
-    }
-  }
 }
 
 const SOURCE_TABS = [
@@ -528,7 +499,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
               </button>
             </aside>
           </div>
-        ) : (
+        ) : source === 'diagram' ? (
           <>
             <div className="flex flex-1 overflow-hidden">
               <aside className="w-64 border-r border-border p-container space-y-2 overflow-y-auto shrink-0">
@@ -596,7 +567,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
               </button>
             </div>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

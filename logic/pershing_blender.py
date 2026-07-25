@@ -22,6 +22,7 @@ avoids re-solving an already-solved problem.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -164,7 +165,7 @@ def _run_build(job_id, input_path, output_path, svg_path, timeout, view_dir=None
 
 
 def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bool = False,
-                     view_dir=None, include_real_context: bool = False) -> str:
+                     view_dir=None, include_real_context: bool = False, tag: str = None) -> str:
     """Kicks off a headless Blender build in a background thread and
     returns immediately with a job id -- the caller (FastAPI route) polls
     get_job() for status instead of blocking the request on the subprocess.
@@ -185,7 +186,14 @@ def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bo
 
     Acquired here (main thread), released in _run_build (background
     thread) once that job actually finishes -- threading.Lock has no
-    per-thread ownership requirement, so that split is safe."""
+    per-thread ownership requirement, so that split is safe.
+
+    tag (2026-07-24, site-chunk export): an optional short label folded into
+    the output filename (e.g. "zone-3") so a zone export is identifiable
+    among other builds in OUTPUT_DIR by filename alone, instead of every
+    build producing an identical-looking pershing_<job_id>.obj regardless of
+    what it actually contains. Sanitized to [a-z0-9-_] only -- this becomes
+    part of a filesystem path, never trust it verbatim."""
     job_id = uuid.uuid4().hex[:12]
 
     if not _BUILD_LOCK.acquire(blocking=False):
@@ -196,9 +204,11 @@ def start_build_job(payload: dict, timeout: int = DEFAULT_TIMEOUT_S, lineart: bo
         }
         return job_id
 
+    safe_tag = re.sub(r"[^a-zA-Z0-9_-]", "", tag)[:40] if tag else None
+    stem = f"pershing_{safe_tag}_{job_id}" if safe_tag else f"pershing_{job_id}"
     input_path = os.path.join(OUTPUT_DIR, f"input_{job_id}.json")
-    output_path = os.path.join(OUTPUT_DIR, f"pershing_{job_id}.obj")
-    svg_path = os.path.join(OUTPUT_DIR, f"pershing_{job_id}.svg") if lineart else None
+    output_path = os.path.join(OUTPUT_DIR, f"{stem}.obj")
+    svg_path = os.path.join(OUTPUT_DIR, f"{stem}.svg") if lineart else None
 
     with open(input_path, "w") as f:
         json.dump(payload, f)

@@ -213,7 +213,7 @@ def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
     bm.faces.new(ring_bottom[::-1])
 
 
-def _add_panel(bm, center, normal, width, depth, thickness):
+def _add_panel(bm, center, normal, width, depth, thickness, rotation_deg=0.0):
     """Flat individually-oriented plate (canopy_panel) -- 2026-07-16 Canopy
     Redesign. Straight port of blender_cockpit.py's _add_panel (same u/v
     basis _add_cylinder/_add_ribbon above already use: ref=(0,0,1) unless
@@ -225,11 +225,17 @@ def _add_panel(bm, center, normal, width, depth, thickness):
     here vs Y there BY DESIGN, not a discrepancy). See that component's own
     comment for why this must be checked cross-tool if ever touched
     again -- this exact bug class (position/direction mirror mismatches)
-    has shipped once already in this codebase."""
+    has shipped once already in this codebase.
+
+    rotation_deg (2026-07-24, site_grid panel faceting) spins u/v around n
+    AFTER the tilt basis is built -- keep this in lockstep with
+    blender_cockpit.py's _add_panel, straight-port convention as above."""
     center_v = mathutils.Vector(center)
     n = mathutils.Vector(normal).normalized()
     ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
     u = ref.cross(n).normalized()
+    if rotation_deg:
+        u = mathutils.Matrix.Rotation(math.radians(rotation_deg), 3, n) @ u
     v = n.cross(u).normalized()
     hw, hd, ht = width / 2, depth / 2, thickness / 2
     bottom, top = [], []
@@ -269,6 +275,26 @@ def build_canopy_mesh(mesh, height_matrix, voxel_ft, puncture_mask=None):
     bm.free()
 
 
+def _add_box(bm, cx, cy, cz, half_x, half_y, half_z):
+    """Simple axis-aligned box centered at (cx, cy, cz) -- used below for
+    real-slab excavation fragments (one box per surviving voxel cell, same
+    box-per-cell approach Viewport.jsx's RealSlabFragments already uses on
+    the live-view side). Winding isn't hand-tuned per face -- the caller
+    already runs bmesh.ops.recalc_face_normals afterward, same as every
+    other real-context mesh this module builds."""
+    v = {}
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            for sz in (-1, 1):
+                v[(sx, sy, sz)] = bm.verts.new((cx + sx * half_x, cy + sy * half_y, cz + sz * half_z))
+    bm.faces.new((v[(-1, -1, -1)], v[(1, -1, -1)], v[(1, 1, -1)], v[(-1, 1, -1)]))  # bottom
+    bm.faces.new((v[(-1, -1, 1)], v[(-1, 1, 1)], v[(1, 1, 1)], v[(1, -1, 1)]))      # top
+    bm.faces.new((v[(-1, -1, -1)], v[(-1, 1, -1)], v[(-1, 1, 1)], v[(-1, -1, 1)]))  # -x
+    bm.faces.new((v[(1, -1, -1)], v[(1, -1, 1)], v[(1, 1, 1)], v[(1, 1, -1)]))      # +x
+    bm.faces.new((v[(-1, -1, -1)], v[(-1, -1, 1)], v[(1, -1, 1)], v[(1, -1, -1)]))  # -y
+    bm.faces.new((v[(-1, 1, -1)], v[(1, 1, -1)], v[(1, 1, 1)], v[(-1, 1, 1)]))      # +y
+
+
 def _order_quad_corners_xy(corners):
     """Sort 4 [x,y,z] corners into a non-crossing loop by angle around
     their own centroid (plan XY only; Z tags along unchanged) -- same
@@ -303,7 +329,8 @@ def _add_slab_plate(bm, slab):
         bm.faces.new([verts[i] for i in q])
 
 
-def build_real_context_meshes(coll, real_columns, real_slabs, obj_name="mm_real_context"):
+def build_real_context_meshes(coll, real_columns, real_slabs, real_slab_fragments=None,
+                               remove_top_slab=False, voxel_ft=None, obj_name="mm_real_context"):
     """
     Real column/slab geometry -- built as simple native Blender primitives
     directly from real_geometry position/dimension data (real_columns[].x/
@@ -330,6 +357,19 @@ def build_real_context_meshes(coll, real_columns, real_slabs, obj_name="mm_real_
     name -- harmless if both run in the same invocation (Blender just
     auto-suffixes the second object), not deduplicated since that combo is
     a rare, explicit opt-in.
+
+    2026-07-24 (accuracy fix -- exported OBJ didn't match the live viewport
+    once anything had been excavated): previously drew EVERY slab as its
+    full intact plate unconditionally. Viewport.jsx's RealSlabs() applies
+    three rules this now replicates: (1) a floor_slab only renders as its
+    full plate when nothing's been dug from it -- once excavation reaches
+    it, it switches to one small box per real slab cell that survived
+    (RealSlabFragments, sourced from real_slab_fragments()'s own per-voxel
+    remaining/removed classification) -- falls back to the full plate here
+    if fragments/voxel_ft weren't supplied (e.g. an old saved payload);
+    (2) every other kind (ramp_slab etc) always keeps rendering as the
+    single intact plate; (3) the single topmost slab is skipped entirely
+    when remove_top_slab is set.
     """
     mesh = bpy.data.meshes.new(obj_name)
     obj = bpy.data.objects.new(obj_name, mesh)
@@ -341,7 +381,19 @@ def build_real_context_meshes(coll, real_columns, real_slabs, obj_name="mm_real_
         p0 = (col["x"], col["z"], col["bottom_ft"])
         p1 = (col["x"], col["z"], col["top_ft"])
         _add_cylinder(bm, p0, p1, radius, segments=12)
+
+    top_z = max((s["z_top_ft"] for s in real_slabs), default=None)
     for slab in real_slabs:
+        if remove_top_slab and slab["z_top_ft"] == top_z:
+            continue
+        fragments = (real_slab_fragments or {}).get(slab.get("key"))
+        if slab.get("kind") == "floor_slab" and fragments is not None and voxel_ft:
+            half = voxel_ft / 2
+            cz = slab["z_top_ft"] - slab["thickness_ft"] / 2
+            for cell in fragments.get("remaining", []):
+                wx, wy = cell[0], cell[1]
+                _add_box(bm, wx, wy, cz, half, half, slab["thickness_ft"] / 2)
+            continue
         _add_slab_plate(bm, slab)
 
     if bm.verts:
@@ -357,7 +409,23 @@ def build_ramp_meshes(coll, ramp_meshes):
     per-level {vertices: flat [x,y,z,...], faces: flat [i0,i1,i2,...]}), so
     no primitive simplification is needed -- just build the real faces
     directly. One object per cluster (all of that cluster's levels
-    concatenated), named mm_real_ramp_<cluster>."""
+    concatenated), named mm_real_ramp_<cluster>.
+
+    2026-07-24 fix ("ramps exported 90 degrees off"): that flat vertex list
+    is raw Rhino OBJ-convention (Y-up: index 1 = height, index 2 = the
+    second plan axis) -- see PershingMetabolizer_Prototype/
+    extract_real_geometry.py's mesh_site_local(), which stores ramp_meshes
+    straight from the source OBJ with no axis remap at all. Every OTHER
+    consumer of this same {vertices, faces} shape already accounts for
+    that: vector_export.py's _obj_to_site() docstring spells it out
+    verbatim -- "Convert a flat [x,y,z,...] OBJ-convention (Y-up) vertex
+    list to this module's Z-up site-local convention: (x, y_obj, z_obj) ->
+    (x, z_obj, y_obj)". This function previously built verts directly as
+    (verts[i], verts[i+1], verts[i+2]) with no such swap, silently treating
+    Rhino's height axis as this app's second plan axis and vice versa --
+    for a spiral ramp (winds around a vertical axis while ascending), that
+    reads exactly as "rotated 90 degrees" rather than an obviously-wrong
+    flattened mess, which is why it went unnoticed until now."""
     for cluster_name, levels in ramp_meshes.items():
         obj_name = f"mm_real_ramp_{cluster_name}"
         mesh = bpy.data.meshes.new(obj_name)
@@ -367,7 +435,7 @@ def build_ramp_meshes(coll, ramp_meshes):
         bm = bmesh.new()
         for level in levels:
             verts = level["vertices"]
-            level_verts = [bm.verts.new((verts[i], verts[i + 1], verts[i + 2]))
+            level_verts = [bm.verts.new((verts[i], verts[i + 2], verts[i + 1]))
                             for i in range(0, len(verts), 3)]
             faces = level["faces"]
             for i in range(0, len(faces), 3):
@@ -413,7 +481,7 @@ def build_structural_meshes(coll, specs):
                 scale = spec.get("scale", 1.0)
                 scale_y = spec.get("scale_y") or scale
                 _add_panel(bm, (spec["x_ft"], spec["y_ft"], spec["z_top_ft"]), normal,
-                           scale, scale_y, spec["height_ft"])
+                           scale, scale_y, spec["height_ft"], rotation_deg=spec.get("rotation_deg", 0.0))
             elif kind in _VERTICAL_CYLINDER_KINDS:
                 p0 = (spec["x_ft"], spec["y_ft"], spec["z_top_ft"] - spec["height_ft"])
                 p1 = (spec["x_ft"], spec["y_ft"], spec["z_top_ft"])
@@ -680,6 +748,9 @@ def main():
     bpy.context.scene.collection.children.link(real_coll)
     build_real_context_meshes(
         real_coll, payload.get("real_columns", []), payload.get("real_slabs", []),
+        real_slab_fragments=payload.get("real_slab_fragments"),
+        remove_top_slab=payload.get("remove_top_slab", False),
+        voxel_ft=payload.get("voxel_ft"),
         obj_name=REAL_CONTEXT_COLLECTION_NAME)
 
     if payload.get("ramp_meshes"):
@@ -740,7 +811,10 @@ def main():
             lineart_real_coll = bpy.data.collections.new("mm_real_context")
             bpy.context.scene.collection.children.link(lineart_real_coll)
             build_real_context_meshes(
-                lineart_real_coll, payload.get("real_columns", []), payload.get("real_slabs", []))
+                lineart_real_coll, payload.get("real_columns", []), payload.get("real_slabs", []),
+                real_slab_fragments=payload.get("real_slab_fragments"),
+                remove_top_slab=payload.get("remove_top_slab", False),
+                voxel_ft=payload.get("voxel_ft"))
         view_dir = tuple(float(v) for v in args.view_dir.split(",")) if args.view_dir else None
         build_line_art(args.lineart_output, view_dir=view_dir)
 

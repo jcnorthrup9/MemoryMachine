@@ -85,6 +85,42 @@ def _weighted_choice(items, weights):
     return items[-1]
 
 
+def apply_deficit_weighting(seed_items, zonal_metadata, deficit_weights):
+    """
+    Post-processes generate_spatial_seed()'s AI-curated picks (or its
+    algorithmic-fallback picks) so PROG-category items (zonal_metadata["PROG"]
+    -- MAJOR_ATTRACTORS/MINOR_ATTRACTORS/UNIQUE_ELEMENTS) land at a
+    deficit-weighted location instead of whatever the LLM/fallback picked,
+    reusing the same _weighted_choice() random_spatial_seed() already uses
+    for its own PROG placement bias.
+
+    Mirrors remix_precedent()'s existing empty-prompt deficit-weighting
+    (logic/pershing_api.py's _deficit_weighted_location_weights() feeding
+    random_spatial_seed()'s location_weights param) but applied to EVERY
+    generate_spatial_seed() call, prompted or not -- so the 2D diagram's
+    amenity placement is always grounded in the same real deficit-hotspot
+    signal the 3D side already uses, not just for the no-prompt random path.
+
+    Only overrides PROG picks; SOFT/HARD/BLUE locations are left exactly as
+    the AI/fallback chose them.
+    """
+    if not seed_items or not deficit_weights:
+        return seed_items
+
+    prog_layers = set(zonal_metadata.get("PROG", []))
+    if not prog_layers:
+        return seed_items
+
+    locations = list(deficit_weights.keys())
+    weights = list(deficit_weights.values())
+
+    for item in seed_items:
+        if item.get("layer") in prog_layers:
+            item["location"] = _weighted_choice(locations, weights)
+
+    return seed_items
+
+
 def random_spatial_seed(zonal_metadata, available_sites, guidelines, location_weights=None):
     """
     Non-AI, algorithmic layer picker -- the old "Algorithmic Safety Net"

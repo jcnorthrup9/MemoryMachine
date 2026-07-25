@@ -2,10 +2,19 @@
 logic/canopy_engine.py
 -----------------------
 CanopyEngine -- an organic, doubly-curved canopy roof made of individually
-oriented panels, generated ONLY where the user has painted the `canopy`
-brush (a footprint, not an intensity dial -- see the module-level note
-below), held up by branching support columns tying back to real structural
-columns or grade.
+oriented panels, generated wherever the painted `canopy` brush OR the
+automatic program-correlated coverage mask says "covered" (a footprint, not
+an intensity dial -- see the module-level note below and
+_auto_coverage_mask()'s docstring), held up by branching support columns
+tying back to real structural columns or grade.
+
+Automated coverage (2026-07-23): painting canopy by hand used to be
+required before anything would generate at all. _auto_coverage_mask() now
+seeds coverage automatically around green_space/sports_recreation/outdoor
+program zones (the categories data/program_requirements.json's own
+_shade_meta documents as shade-relevant), max-merged against the painted
+mask -- painting still works as an addable override, it's just no longer a
+prerequisite.
 
 Rebuilt 2026-07-16, replacing the original 2026-07-13 version (flat 27ft
 rectilinear beam grid, height entirely gated by paint so it was flat
@@ -58,10 +67,22 @@ Python, not worth breaking that convention.
 import math
 
 from terracing_engine import STRUCTURAL_BAY_FT, StructuralElement, clamp01, voxel_attr_grid
+from logic.site_grid import build_site_grid
 
 # civic/sports category strings, per logic/program_placement.py's real
 # program_requirements.json categories.
 DEFAULT_CIVIC_SPORTS_CATEGORIES = ("sports_recreation", "enrichment_civic")
+
+# Shade-relevant program categories (2026-07-23 automated canopy) -- per
+# data/program_requirements.json's own "_shade_meta" note: "shade_target_pct
+# applies only to surface-level/open program (green_space, sports_recreation,
+# outdoor); enrichment_civic and health_care entries are enclosed cassette
+# program, so shade is not applicable." Deliberately a DIFFERENT set from
+# DEFAULT_CIVIC_SPORTS_CATEGORIES above -- that one answers "which zones
+# deserve height/massing drama," this one answers "which zones are outdoor
+# and heat-exposed enough to need automatic canopy coverage." Drives
+# _auto_coverage_mask() below, not the height sculpt term.
+DEFAULT_SHADE_COVERAGE_CATEGORIES = ("green_space", "sports_recreation", "outdoor")
 
 # Support-column tube radii -- trunk heavier than branches, same round-tube
 # reasoning the original canopy_beam kind documented (a real canopy/support
@@ -71,6 +92,46 @@ TRUNK_RADIUS_FT = 0.6
 BRANCH_RADIUS_FT = 0.4
 
 
+def zone_centroids_and_radii(zones, categories, voxel_ft, radius_scale, bay_ft=STRUCTURAL_BAY_FT):
+    """One (cx_ft, cy_ft, radius_ft) per zone matching `categories` --
+    centroid and half-span of its bay-index bounding box (zone["bays"] =
+    [[gx, gy, floor_elev_ft], ...] per program_placement.place_programs()'s
+    documented return shape), radius padded by radius_scale so a zone's
+    influence extends a bit past its own footprint rather than stopping
+    exactly at its edge (pass 1.0 for no padding). Replaces the original
+    _program_zone_boost()'s hard 0/1 grid -- same design intent ("crest over
+    program zones"), continuous instead of a flat plateau.
+
+    Module-level (2026-07-24, previously a CanopyEngine method) -- reused by
+    logic/pershing_api.py's tree auto-seeding (_auto_seed_trees()) with its
+    own category set and radius_scale, so both features share this exact
+    geometry instead of a second, possibly-drifting copy. CanopyEngine calls
+    this twice itself: once with civic_sports_categories for the height-
+    sculpt term, once with shade_coverage_categories for
+    _auto_coverage_mask()'s footprint correlation -- same geometry, three
+    different "which zones matter, how far does their influence reach"
+    answers now, not just two."""
+    bays_per_side = round(bay_ft / voxel_ft)
+    zone_info = []
+    for zone in zones:
+        if zone["category"] not in categories:
+            continue
+        bays = zone["bays"]
+        if not bays:
+            continue
+        gxs = [b[0] for b in bays]
+        gys = [b[1] for b in bays]
+        min_x_ft = min(gxs) * bays_per_side * voxel_ft
+        max_x_ft = (max(gxs) + 1) * bays_per_side * voxel_ft
+        min_y_ft = min(gys) * bays_per_side * voxel_ft
+        max_y_ft = (max(gys) + 1) * bays_per_side * voxel_ft
+        cx = (min_x_ft + max_x_ft) / 2
+        cy = (min_y_ft + max_y_ft) / 2
+        span = max(max_x_ft - min_x_ft, max_y_ft - min_y_ft, bay_ft)
+        zone_info.append((cx, cy, (span / 2) * radius_scale))
+    return zone_info
+
+
 class CanopyEngine:
     def __init__(self, real_geometry, terracing_engine, voxels, zones, canopy_mask,
                  base_height_ft, wave_amplitude_ft, wave_length_x_ft, wave_length_y_ft,
@@ -78,7 +139,9 @@ class CanopyEngine:
                  sculpt_radius_scale, smoothing_iterations, puncture_threshold,
                  panel_pitch_ft, panel_thickness_ft, fork_height_fraction, fork_spread_ft,
                  column_search_radius_ft, footprint_paint_threshold, support_tie_back_tolerance_ft,
-                 civic_sports_categories=DEFAULT_CIVIC_SPORTS_CATEGORIES):
+                 panel_grid_rotation_deg=0.0,
+                 civic_sports_categories=DEFAULT_CIVIC_SPORTS_CATEGORIES,
+                 shade_coverage_categories=DEFAULT_SHADE_COVERAGE_CATEGORIES):
         self.rg = real_geometry
         self.te = terracing_engine
         self.voxels = voxels
@@ -102,36 +165,18 @@ class CanopyEngine:
         self.column_search_radius_ft = column_search_radius_ft
         self.footprint_paint_threshold = footprint_paint_threshold
         self.support_tie_back_tolerance_ft = support_tie_back_tolerance_ft
+        self.panel_grid_rotation_deg = panel_grid_rotation_deg
         self.civic_sports_categories = set(civic_sports_categories)
+        self.shade_coverage_categories = set(shade_coverage_categories)
 
-    def _zone_centroids_and_radii(self, nx, nz, voxel_ft, bay_ft=STRUCTURAL_BAY_FT):
-        """One (cx_ft, cy_ft, radius_ft) per civic/sports zone -- centroid and
-        half-span of its bay-index bounding box (zone["bays"] = [[gx, gy,
-        floor_elev_ft], ...] per program_placement.place_programs()'s
-        documented return shape), radius padded by sculpt_radius_scale so
-        the crest's falloff extends a bit past the zone's own footprint
-        rather than stopping exactly at its edge. Replaces the original
-        _program_zone_boost()'s hard 0/1 grid -- same design intent ("crest
-        over program zones"), continuous instead of a flat plateau."""
-        bays_per_side = round(bay_ft / voxel_ft)
-        zone_info = []
-        for zone in self.zones:
-            if zone["category"] not in self.civic_sports_categories:
-                continue
-            bays = zone["bays"]
-            if not bays:
-                continue
-            gxs = [b[0] for b in bays]
-            gys = [b[1] for b in bays]
-            min_x_ft = min(gxs) * bays_per_side * voxel_ft
-            max_x_ft = (max(gxs) + 1) * bays_per_side * voxel_ft
-            min_y_ft = min(gys) * bays_per_side * voxel_ft
-            max_y_ft = (max(gys) + 1) * bays_per_side * voxel_ft
-            cx = (min_x_ft + max_x_ft) / 2
-            cy = (min_y_ft + max_y_ft) / 2
-            span = max(max_x_ft - min_x_ft, max_y_ft - min_y_ft, bay_ft)
-            zone_info.append((cx, cy, (span / 2) * self.sculpt_radius_scale))
-        return zone_info
+    def _zone_centroids_and_radii(self, nx, nz, voxel_ft, categories, bay_ft=STRUCTURAL_BAY_FT):
+        """One (cx_ft, cy_ft, radius_ft) per zone matching `categories` --
+        see the standalone zone_centroids_and_radii() below (module-level
+        since 2026-07-24, extracted so logic/pershing_api.py's tree
+        auto-seeding can reuse the exact same bay-index-bbox math instead of
+        a second, possibly-drifting copy) for the actual geometry. This is
+        just a thin instance-state wrapper (self.zones/self.sculpt_radius_scale)."""
+        return zone_centroids_and_radii(self.zones, categories, voxel_ft, self.sculpt_radius_scale, bay_ft)
 
     def _base_height_matrix(self, z_grid, zone_info, nx, nz, voxel_ft):
         """height[gx][gy] = base_height_ft + wave_term + sculpt_term -
@@ -191,15 +236,43 @@ class CanopyEngine:
             cur = nxt
         return cur
 
-    def _footprint_mask(self, nx, nz, threshold):
-        """Boolean nx x nz grid: True wherever painted canopy_mask exceeds
-        threshold. This is the ONLY thing canopy_mask controls now -- does a
-        panel/support get generated here at all -- completely decoupled
-        from the height equation above, which no longer reads canopy_mask.
+    def _footprint_mask(self, mask, nx, nz, threshold):
+        """Boolean nx x nz grid: True wherever `mask` (painted canopy_mask
+        max-merged with the auto program-coverage mask, see run()) exceeds
+        threshold. This is the ONLY thing that controls whether a
+        panel/support gets generated here at all -- completely decoupled
+        from the height equation above, which never reads either mask.
         Threshold is deliberately low (default 0.05): any deliberate brush
-        stroke should count as "painted here," not require a fully-opaque
-        stroke."""
-        return [[self.canopy_mask[gx][gy] > threshold for gy in range(nz)] for gx in range(nx)]
+        stroke (or, now, any auto-covered cell, which is always exactly 1.0)
+        should count as "covered here," not require a fully-opaque stroke."""
+        return [[mask[gx][gy] > threshold for gy in range(nz)] for gx in range(nx)]
+
+    def _auto_coverage_mask(self, nx, nz, voxel_ft, coverage_zone_info):
+        """Continuous nx x nz grid, weight 1.0 inside each shade-coverage
+        zone's radius (green_space/sports_recreation/outdoor -- see
+        DEFAULT_SHADE_COVERAGE_CATEGORIES), 0.0 elsewhere. Merged via max
+        against the painted canopy_mask in run() (2026-07-23) so a program
+        zone that real shade standards say should be covered gets canopy
+        automatically, without requiring the user to paint it first --
+        painting still layers on top as an addable override, never erased by
+        this (same max-merge, never-erase pattern already established by
+        circulation_network.rasterize_network_canyon). Bounded to each
+        zone's own bounding box rather than scanning the whole grid per
+        zone -- cheap even with several zones on a several-thousand-cell
+        site."""
+        mask = [[0.0] * nz for _ in range(nx)]
+        for cx, cy, radius in coverage_zone_info:
+            gx_min = max(0, int((cx - radius) // voxel_ft))
+            gx_max = min(nx - 1, int((cx + radius) // voxel_ft))
+            gy_min = max(0, int((cy - radius) // voxel_ft))
+            gy_max = min(nz - 1, int((cy + radius) // voxel_ft))
+            for gx in range(gx_min, gx_max + 1):
+                x_ft = gx * voxel_ft + voxel_ft / 2
+                for gy in range(gy_min, gy_max + 1):
+                    y_ft = gy * voxel_ft + voxel_ft / 2
+                    if math.hypot(x_ft - cx, y_ft - cy) <= radius:
+                        mask[gx][gy] = 1.0
+        return mask
 
     def _dilate_mask(self, mask, nx, nz, tolerance_ft, voxel_ft):
         """Expand True cells outward by round(tolerance_ft / voxel_ft)
@@ -273,47 +346,53 @@ class CanopyEngine:
         return mask[gx][gy]
 
     def _panel_specs(self, height_matrix, footprint_mask, puncture_mask, nx, nz, voxel_ft,
-                      site_width_ft, site_length_ft, panel_pitch_ft, panel_thickness_ft):
-        """One canopy_panel StructuralElement per panel-grid cell that falls
-        inside the painted footprint (skipped entirely otherwise -- this IS
-        "canopy only exists where painted") and outside any puncture hole.
-        Normal computed via central differences on the bilinear sampler;
-        ragged boundary remainder (site dims not an exact multiple of
-        panel_pitch_ft) is dropped, not clipped -- acceptable v1 edge
-        cosmetic, consistent with this app's existing tolerance for
-        abstraction over literal precision elsewhere (e.g. no column
-        keep-out zones)."""
-        panel_nx = int(site_width_ft // panel_pitch_ft)
-        panel_nz = int(site_length_ft // panel_pitch_ft)
+                      site_width_ft, site_length_ft, panel_pitch_ft, panel_thickness_ft,
+                      panel_grid_rotation_deg):
+        """One canopy_panel StructuralElement per cell of a build_site_grid()
+        overlay (logic/site_grid.py -- the same rotatable spatial-organizer
+        grid the 2D Digital Palimpsest canvas overlays via /api/site-grid,
+        reused here so panel seams can be dialed to any angle instead of
+        always axis-aligned) that falls inside the painted footprint
+        (skipped entirely otherwise -- this IS "canopy only exists where
+        painted") and outside any puncture hole. Normal computed via central
+        differences on the bilinear sampler; each panel also carries
+        panel_grid_rotation_deg as its own rotation_deg so renderers can spin
+        the panel's in-plane u/v basis to match, not just tilt it (see
+        StructuralElement.rotation_deg's docstring). build_site_grid() only
+        returns cells whose center falls inside the site rectangle, so the
+        previous "ragged boundary remainder dropped, not clipped" behavior
+        carries over unchanged -- acceptable v1 edge cosmetic, consistent
+        with this app's existing tolerance for abstraction over literal
+        precision elsewhere (e.g. no column keep-out zones)."""
+        grid = build_site_grid(site_width_ft, site_length_ft, panel_pitch_ft, panel_grid_rotation_deg)
         h = panel_pitch_ft / 2.0
         specs = []
-        for i in range(panel_nx):
-            x_ft = i * panel_pitch_ft + panel_pitch_ft / 2
-            for j in range(panel_nz):
-                y_ft = j * panel_pitch_ft + panel_pitch_ft / 2
+        for cell in grid["cells"]:
+            x_ft, y_ft = cell["x_ft"], cell["z_ft"]
 
-                if not self._mask_at(footprint_mask, x_ft, y_ft, voxel_ft, nx, nz):
-                    continue
-                if self._mask_at(puncture_mask, x_ft, y_ft, voxel_ft, nx, nz):
-                    continue
+            if not self._mask_at(footprint_mask, x_ft, y_ft, voxel_ft, nx, nz):
+                continue
+            if self._mask_at(puncture_mask, x_ft, y_ft, voxel_ft, nx, nz):
+                continue
 
-                z_ft = self._sample_bilinear(height_matrix, x_ft, y_ft, voxel_ft, nx, nz)
-                dzdx = (
-                    self._sample_bilinear(height_matrix, x_ft + h, y_ft, voxel_ft, nx, nz)
-                    - self._sample_bilinear(height_matrix, x_ft - h, y_ft, voxel_ft, nx, nz)
-                ) / (2 * h)
-                dzdy = (
-                    self._sample_bilinear(height_matrix, x_ft, y_ft + h, voxel_ft, nx, nz)
-                    - self._sample_bilinear(height_matrix, x_ft, y_ft - h, voxel_ft, nx, nz)
-                ) / (2 * h)
-                nrm_x, nrm_y, nrm_z = -dzdx, -dzdy, 1.0
-                length = math.sqrt(nrm_x ** 2 + nrm_y ** 2 + nrm_z ** 2)
-                nrm_x, nrm_y, nrm_z = nrm_x / length, nrm_y / length, nrm_z / length
+            z_ft = self._sample_bilinear(height_matrix, x_ft, y_ft, voxel_ft, nx, nz)
+            dzdx = (
+                self._sample_bilinear(height_matrix, x_ft + h, y_ft, voxel_ft, nx, nz)
+                - self._sample_bilinear(height_matrix, x_ft - h, y_ft, voxel_ft, nx, nz)
+            ) / (2 * h)
+            dzdy = (
+                self._sample_bilinear(height_matrix, x_ft, y_ft + h, voxel_ft, nx, nz)
+                - self._sample_bilinear(height_matrix, x_ft, y_ft - h, voxel_ft, nx, nz)
+            ) / (2 * h)
+            nrm_x, nrm_y, nrm_z = -dzdx, -dzdy, 1.0
+            length = math.sqrt(nrm_x ** 2 + nrm_y ** 2 + nrm_z ** 2)
+            nrm_x, nrm_y, nrm_z = nrm_x / length, nrm_y / length, nrm_z / length
 
-                specs.append(StructuralElement(
-                    "canopy_panel", x_ft, y_ft, z_ft, panel_thickness_ft,
-                    scale=panel_pitch_ft, scale_y=panel_pitch_ft,
-                    normal_x=nrm_x, normal_y=nrm_y, normal_z=nrm_z))
+            specs.append(StructuralElement(
+                "canopy_panel", x_ft, y_ft, z_ft, panel_thickness_ft,
+                scale=panel_pitch_ft, scale_y=panel_pitch_ft,
+                rotation_deg=panel_grid_rotation_deg,
+                normal_x=nrm_x, normal_y=nrm_y, normal_z=nrm_z))
         return specs
 
     def _nearest_real_column(self, x_ft, y_ft, radius_ft):
@@ -401,18 +480,29 @@ class CanopyEngine:
         site_length_ft = self.rg["site"]["length_ft"]
 
         z_grid = voxel_attr_grid(self.voxels, nx, nz, "z_ft")
-        zone_info = self._zone_centroids_and_radii(nx, nz, voxel_ft)
+        zone_info = self._zone_centroids_and_radii(nx, nz, voxel_ft, self.civic_sports_categories)
+        coverage_zone_info = self._zone_centroids_and_radii(nx, nz, voxel_ft, self.shade_coverage_categories)
 
         flat_height = self._base_height_matrix(z_grid, zone_info, nx, nz, voxel_ft)
         smoothed = self._smooth(flat_height, nx, nz, self.smoothing_iterations)
         height_matrix = [smoothed[gx * nz:(gx + 1) * nz] for gx in range(nx)]
 
-        footprint_mask = self._footprint_mask(nx, nz, self.footprint_paint_threshold)
+        # 2026-07-23: footprint existence now comes from whichever is higher,
+        # painted canopy_mask OR the auto program-correlated coverage mask --
+        # see _auto_coverage_mask()'s own docstring for the max-merge/
+        # never-erase reasoning.
+        auto_coverage = self._auto_coverage_mask(nx, nz, voxel_ft, coverage_zone_info)
+        merged_mask = [
+            [max(self.canopy_mask[gx][gy], auto_coverage[gx][gy]) for gy in range(nz)]
+            for gx in range(nx)
+        ]
+        footprint_mask = self._footprint_mask(merged_mask, nx, nz, self.footprint_paint_threshold)
         puncture_mask = self._puncture_mask(nx, nz)
 
         panel_specs = self._panel_specs(
             height_matrix, footprint_mask, puncture_mask, nx, nz, voxel_ft,
-            site_width_ft, site_length_ft, self.panel_pitch_ft, self.panel_thickness_ft)
+            site_width_ft, site_length_ft, self.panel_pitch_ft, self.panel_thickness_ft,
+            self.panel_grid_rotation_deg)
         support_specs = self._support_specs(
             height_matrix, footprint_mask, nx, nz, voxel_ft, STRUCTURAL_BAY_FT,
             self.support_tie_back_tolerance_ft, self.column_search_radius_ft,

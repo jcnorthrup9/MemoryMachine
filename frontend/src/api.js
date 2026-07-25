@@ -37,11 +37,17 @@ export async function uploadSketch(file) {
 // an equivalent signal (freehand painting has no discrete-point concept).
 // Spreading `undefined` here is dropped by JSON.stringify, so the backend's
 // BakeGrids default (empty per-category lists) applies unchanged when omitted.
-export async function bakePaint(grids, attractorPoints) {
+// pathHints (2026-07-23, PEDESTRIAN_PATH 2D-diagram bridge): optional, same
+// spreading-drops-undefined reasoning as attractorPoints above -- only
+// SPATIALIZE/2D-generation preview responses have an equivalent signal
+// (logic/ingest_diagram_svg.extract_path_hints_from_composed_layers());
+// freehand painting has no path concept, so the backend's BakeGrids default
+// (empty list) applies unchanged when omitted.
+export async function bakePaint(grids, attractorPoints, pathHints) {
   const res = await fetch('/api/pershing/bake', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...grids, attractor_points: attractorPoints }),
+    body: JSON.stringify({ ...grids, attractor_points: attractorPoints, path_hints: pathHints }),
   });
   if (!res.ok) throw new Error(`bake failed: ${res.status}`);
   return res.json();
@@ -57,11 +63,16 @@ export async function bakePaint(grids, attractorPoints) {
 // (see logic/pershing_blender.py's start_build_job docstring) -- viewDir
 // is a [x,y,z] array in the backend's Z-up site-local frame (Viewport.jsx
 // derives this from the live OrbitControls camera direction).
-export async function startBlenderBuild(rebuildResult, lineart = false, viewDir = null, includeRealContext = false) {
+//
+// tag (2026-07-24, site-chunk export): optional short label folded into the
+// output filename server-side (e.g. "zone-3") so a zone export doesn't look
+// identical to every other build in outputs/blender_headless/ by filename.
+export async function startBlenderBuild(rebuildResult, lineart = false, viewDir = null, includeRealContext = false, tag = null) {
   const params = new URLSearchParams();
   if (lineart) params.set('lineart', 'true');
   if (viewDir) params.set('view_dir', viewDir.join(','));
   if (includeRealContext) params.set('include_real_context', 'true');
+  if (tag) params.set('tag', tag);
   const qs = params.toString();
   const url = qs ? `/api/pershing/blender-build?${qs}` : '/api/pershing/blender-build';
   const res = await fetch(url, {
@@ -108,6 +119,22 @@ export async function growNetwork(rebuildParams, networkParams) {
   return res.json();
 }
 
+// Carves a canyon along the grown network's primary trunk into the live
+// paint state -- explicit, deliberate action (unlike network growth itself,
+// automatic since 2026-07-23) since carving reshapes terrain the next
+// auto-regrow would read from; see logic/pershing_api.py's
+// carve_network_canyon() docstring for the drift-loop reasoning. Caller
+// should follow with rebuild() to see the result, same as bakePaint().
+export async function carveNetworkCanyon(rebuildParams, networkParams) {
+  const res = await fetch('/api/pershing/carve-network-canyon', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild: rebuildParams, network: networkParams }),
+  });
+  if (!res.ok) throw new Error(`carve network canyon failed: ${res.status}`);
+  return res.json();
+}
+
 // Generates the organic panelized canopy roof + branching supports against
 // the given terrain params -- synchronous explicit action, same reasoning
 // as growNetwork() above (see logic/pershing_api.py's generate_canopy()
@@ -119,6 +146,33 @@ export async function generateCanopy(rebuildParams, canopyParams) {
     body: JSON.stringify({ rebuild: rebuildParams, canopy: canopyParams }),
   });
   if (!res.ok) throw new Error(`generate canopy failed: ${res.status}`);
+  return res.json();
+}
+
+// Renders one of the Drawings tab's 3 styles (lineweight/color/diagram)
+// against the given terrain params -- synchronous explicit action, same
+// reasoning as generateCanopy() above (see logic/pershing_api.py's
+// generate_drawings() docstring).
+export async function generateDrawings(rebuildParams, drawingParams) {
+  const res = await fetch('/api/pershing/generate-drawings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild: rebuildParams, drawing: drawingParams }),
+  });
+  if (!res.ok) throw new Error(`generate drawings failed: ${res.status}`);
+  return res.json();
+}
+
+// Writes the current Drawings tab style/view to disk as SVG+PNG+DXF -- see
+// logic/pershing_api.py's save_drawing() docstring for why DXF, not PNG, is
+// what actually preserves layers/colors.
+export async function saveDrawing(rebuildParams, drawingParams, label = '') {
+  const res = await fetch('/api/pershing/save-drawing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rebuild: rebuildParams, drawing: drawingParams, label }),
+  });
+  if (!res.ok) throw new Error(`save drawing failed: ${res.status}`);
   return res.json();
 }
 
@@ -148,20 +202,6 @@ export async function critiqueDesign(spatialSummary) {
   return res.json();
 }
 
-// "Precedent Remixer" MVP (see PrecedentRemixerPanel.jsx) -- AI-curated
-// precedent layer selection for a text prompt. Preview-only in this pass
-// (see logic/pershing_api.py's remix_precedent() docstring for why applying
-// these layers to the live paint masks isn't wired up yet).
-export async function remixPrecedent(prompt) {
-  const res = await fetch('/api/pershing/remix-precedent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt }),
-  });
-  if (!res.ok) throw new Error(`remix precedent failed: ${res.status}`);
-  return res.json();
-}
-
 // Diagram Input mode (2026-07-16: the "Diagram" tab inside PaintOverlay.jsx's
 // unified Paint dialog, folded in from the former standalone
 // DiagramInputPanel.jsx) -- reads colors off an existing legacy-diagram
@@ -181,6 +221,99 @@ export async function previewLegacyImport(filename) {
     body: JSON.stringify({ filename }),
   });
   if (!res.ok) throw new Error(`legacy diagram preview failed: ${res.status}`);
+  return res.json();
+}
+
+// SPATIALIZE tab (2026-07-23) -- 2D authoring ported natively into this
+// app. generateSpatialSeed() hits the root app's own /api/generate
+// (reachable here too since it's the same FastAPI process the /api proxy
+// prefix already covers) -- same AI-curated layer-pick endpoint
+// static/main.js's GEN button calls, now also driving this app's live
+// canvas. spatializePreview()/getDeficitHotspots() are new
+// logic/pershing_api.py endpoints: the former previews a live (in-memory,
+// not yet saved) spatial_seed through the same role-inference +
+// occlusion-aware rasterization pipeline preview_2d_generation() uses for
+// a saved one; the latter exposes the real amenity-deficit-hotspot signal
+// directly for a live overlay while composing.
+// Same endpoint static/main.js's fetchSVG() uses -- returns the raw
+// precedent-site SVG text (BOUNDARY/GREEN_SPACE/HARDSCAPE/etc. groups) that
+// spatializerEngine.js's render()/getProgramStats() parse directly.
+export async function fetchSiteSVG(siteId) {
+  const res = await fetch(`/api/diagram-data/${siteId}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.svg;
+}
+
+export async function generateSpatialSeed(prompt) {
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error(`generate failed: ${res.status}`);
+  return res.json();
+}
+
+export async function spatializePreview(spatialSeed) {
+  const res = await fetch('/api/pershing/spatialize-preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spatial_seed: spatialSeed }),
+  });
+  if (!res.ok) throw new Error(`spatialize preview failed: ${res.status}`);
+  return res.json();
+}
+
+// Real per-bay deficit-hotspot positions (2026-07-23) -- NOT the coarse
+// 9-cardinal-point summary /api/pershing/deficit-weights returns (that
+// endpoint still backs AI placement scoring server-side; this is the only
+// frontend consumer of deficit data now). See logic/pershing_api.py's
+// get_deficit_hotspots() docstring for why SPATIALIZE's live overlay uses
+// this instead: bucketing into 9 fixed points was throwing away real
+// position data this same signal carries.
+export async function getDeficitHotspots(topN = 12) {
+  const res = await fetch(`/api/pershing/deficit-hotspots?top_n=${topN}`);
+  if (!res.ok) throw new Error(`deficit hotspots fetch failed: ${res.status}`);
+  return res.json();
+}
+
+// Import a saved 2D-app ("Digital Palimpsest", port 8000) generation
+// (2026-07-22) -- same read-only list/preview shape as the Diagram Input
+// mode above, but the source is a structured spatial_seed record
+// (site/layerId/transform per layer), not a rasterized/vector diagram
+// export, so no color-classification step happens server-side at all (see
+// logic/pershing_api.py's preview_2d_generation() docstring). Committing a
+// previewed generation reuses bakePaint() above unchanged.
+export async function list2DGenerations() {
+  const res = await fetch('/api/pershing/2d-generations');
+  if (!res.ok) throw new Error(`2D generation list fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function preview2DGeneration(filename) {
+  const res = await fetch('/api/pershing/2d-generations/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename }),
+  });
+  if (!res.ok) throw new Error(`2D generation preview failed: ${res.status}`);
+  return res.json();
+}
+
+// "Save Build" -> "Recent 2D Generations" bridge (2026-07-24) -- App.jsx's
+// handleSaveBuild calls this with whatever SPATIALIZE diagram was live at
+// save time, writing the same memory_machine_generation_*.json shape
+// list2DGenerations()/preview2DGeneration() above already read, so a build
+// saved from RECONSTRUCT shows up back in SPATIALIZE's "Recent 2D
+// Generations" panel too -- see app.py's archive_generation_record().
+export async function archiveGeneration(prompt, narrative, spatialSeed) {
+  const res = await fetch('/api/archive-generation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, narrative, spatial_seed: spatialSeed }),
+  });
+  if (!res.ok) throw new Error(`archive generation failed: ${res.status}`);
   return res.json();
 }
 
