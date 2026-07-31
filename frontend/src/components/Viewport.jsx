@@ -1308,7 +1308,7 @@ function ProgramLegend({ zones }) {
   const placedZones = zones.filter((z) => z.bays.length > 0);
   if (placedZones.length === 0) return null;
   return (
-    <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col max-h-[70vh] overflow-y-auto">
+    <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col max-h-[70vh] overflow-y-auto">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="flex items-center justify-between gap-3 px-3 pt-2 pb-1 text-on-surface-variant hover:text-on-surface"
@@ -1749,7 +1749,7 @@ export default function Viewport({
         )}
       </Canvas>
       <div className="absolute top-4 left-4 flex gap-4">
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">VIEW</span>
           <div className="flex">
             {Object.entries(VIEW_PRESETS).map(([key, p]) => (
@@ -1765,7 +1765,7 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">SHADING</span>
           <div className="flex">
             {SHADING_MODES.map((m) => (
@@ -1781,7 +1781,7 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">SALVAGE</span>
           <div className="flex">
             {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
@@ -1797,7 +1797,7 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">TOP SLAB</span>
           <div className="flex">
             {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
@@ -1813,7 +1813,7 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LABELS</span>
           <div className="flex">
             {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
@@ -1829,7 +1829,7 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">ZONES</span>
           <div className="flex">
             {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
@@ -1850,7 +1850,7 @@ export default function Viewport({
             onClick={() => onExportZone?.(activeZone)}
             disabled={exportingZone}
             title={`Builds an OBJ in Blender containing only ${activeZone.label}'s voxels/structure/program boxes.`}
-            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {exportingZone ? 'Exporting...' : `Export ${activeZone.label}`}
           </button>
@@ -1863,7 +1863,7 @@ export default function Viewport({
               ? 'Downloads a PNG screenshot. Vector linework export needs an orthographic view mode (Axo/Plan/Front/Side).'
               : 'Downloads a PNG screenshot and a vector linework SVG (Blender Line Art, real geometry, depth-layered).'
           }
-          className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {exportingVectorView ? 'Exporting Linework...' : 'Export Current View'}
         </button>
@@ -1871,14 +1871,14 @@ export default function Viewport({
           onClick={onSaveBuild}
           disabled={!canSaveBuild || savingBuild}
           title="Saves the current build (params, geometry, network, program zones) into the repo's build archive (outputs/pershing_archive/) -- browse or recall it from the ARCHIVE tab."
-          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {savingBuild ? 'Saving...' : 'Save Build'}
         </button>
         <button
           onClick={() => loadBuildInputRef.current?.click()}
           title="Load a previously saved build JSON file to recall that exact iteration."
-          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start hover:brightness-110 transition-all active:scale-[0.98]"
+          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98]"
         >
           Load Build
         </button>
@@ -1896,7 +1896,7 @@ export default function Viewport({
         {blenderObjUrl && (
           <button
             onClick={() => setShowBlenderBuild((v) => !v)}
-            className={`px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start border transition-all active:scale-[0.98] ${
+            className={`px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start border transition-all active:scale-[0.98] ${
               showBlenderBuild ? 'bg-accent text-background border-accent' : 'border-accent text-accent hover:bg-accent hover:text-background'
             }`}
           >
@@ -1906,7 +1906,7 @@ export default function Viewport({
         {blenderSvgUrl && (
           <button
             onClick={onShowLineArt}
-            className="px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest self-start border border-accent text-accent hover:bg-accent hover:text-background transition-all active:scale-[0.98]"
+            className="px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start border border-accent text-accent hover:bg-accent hover:text-background transition-all active:scale-[0.98]"
           >
             View Line Art
           </button>

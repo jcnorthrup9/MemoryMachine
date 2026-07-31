@@ -330,7 +330,7 @@ def _add_slab_plate(bm, slab):
 
 
 def build_real_context_meshes(coll, real_columns, real_slabs, real_slab_fragments=None,
-                               remove_top_slab=False, voxel_ft=None, obj_name="mm_real_context"):
+                               voxel_ft=None, obj_name="mm_real_context"):
     """
     Real column/slab geometry -- built as simple native Blender primitives
     directly from real_geometry position/dimension data (real_columns[].x/
@@ -368,8 +368,15 @@ def build_real_context_meshes(coll, real_columns, real_slabs, real_slab_fragment
     remaining/removed classification) -- falls back to the full plate here
     if fragments/voxel_ft weren't supplied (e.g. an old saved payload);
     (2) every other kind (ramp_slab etc) always keeps rendering as the
-    single intact plate; (3) the single topmost slab is skipped entirely
-    when remove_top_slab is set.
+    single intact plate; (3) the single topmost slab is always skipped
+    entirely (2026-07-30: was previously conditional on a remove_top_slab
+    flag whose default disagreed between this script and the live app --
+    App.jsx defaults it True, but this script and logic/pershing_api.py's
+    RebuildParams both defaulted False, so any payload bypassing the live
+    app's normal export path -- an archived build replay, a hand-built
+    payload -- silently let the top slab back into the OBJ. The top slab
+    is a live-viewport-only concept; it should never reach Rhino, so this
+    is now unconditional rather than a mis-defaulted toggle).
     """
     mesh = bpy.data.meshes.new(obj_name)
     obj = bpy.data.objects.new(obj_name, mesh)
@@ -384,7 +391,7 @@ def build_real_context_meshes(coll, real_columns, real_slabs, real_slab_fragment
 
     top_z = max((s["z_top_ft"] for s in real_slabs), default=None)
     for slab in real_slabs:
-        if remove_top_slab and slab["z_top_ft"] == top_z:
+        if slab["z_top_ft"] == top_z:
             continue
         fragments = (real_slab_fragments or {}).get(slab.get("key"))
         if slab.get("kind") == "floor_slab" and fragments is not None and voxel_ft:
@@ -749,7 +756,6 @@ def main():
     build_real_context_meshes(
         real_coll, payload.get("real_columns", []), payload.get("real_slabs", []),
         real_slab_fragments=payload.get("real_slab_fragments"),
-        remove_top_slab=payload.get("remove_top_slab", False),
         voxel_ft=payload.get("voxel_ft"),
         obj_name=REAL_CONTEXT_COLLECTION_NAME)
 
@@ -813,7 +819,6 @@ def main():
             build_real_context_meshes(
                 lineart_real_coll, payload.get("real_columns", []), payload.get("real_slabs", []),
                 real_slab_fragments=payload.get("real_slab_fragments"),
-                remove_top_slab=payload.get("remove_top_slab", False),
                 voxel_ft=payload.get("voxel_ft"))
         view_dir = tuple(float(v) for v in args.view_dir.split(",")) if args.view_dir else None
         build_line_art(args.lineart_output, view_dir=view_dir)

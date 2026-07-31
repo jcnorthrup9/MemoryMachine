@@ -166,6 +166,49 @@ RESTROOM_PROXIMITY_WEIGHTS = {
     "restrooms_recreation": (2.0, 8.0),
 }
 
+# 2026-07-30 program-to-program correlation (distinct from both mechanisms
+# above): RESTROOM_PROXIMITY_WEIGHTS pulls toward a whole CATEGORY set
+# (GATHERING_CATEGORIES) and is hard-gated to category == "support_amenity";
+# this instead pulls one SPECIFIC dependent program toward one or more
+# specific HOST program ids, regardless of category, since "workout
+# equipment should cluster near the gym" is about that one relationship,
+# not "outdoor programs in general should cluster near sports_recreation
+# programs in general" (there's no reason e.g. a picnic site should get
+# pulled toward the gym just for sharing workout_equipment's "outdoor"
+# category). Keyed by the DEPENDENT program's id -> (host ids to pull
+# toward, pull strength). Reuses _gathering_proximity_bonus()'s same
+# falloff math and GATHERING_PROXIMITY_RADIUS_FT, just against a
+# specific host's claimed bays instead of a whole category's.
+PROGRAM_PROXIMITY_WEIGHTS = {
+    # 2026-07-30: 6.0 (RESTROOM_PROXIMITY_WEIGHTS' rough scale) turned out too
+    # weak here to change ANY placement outcome against the real bay grid --
+    # confirmed by direct comparison (identical bay picks at weight 0 and 6).
+    # 15.0 is the smallest value that reliably produces a real, stable effect
+    # (mean distance from workout_equipment's bays to the nearest public_gym
+    # bay dropped from 56.1ft to 30.7ft, 2 of 3 bays landing directly adjacent
+    # to gym instead of 0; unchanged from 15.0 up through 30.0, so this isn't
+    # a fragile threshold).
+    "workout_equipment": {"host_ids": ("public_gym",), "weight": 15.0},
+}
+
+
+def _host_bays_by_ids(results, ids):
+    """Union of bay-index sets already claimed by any placed program whose
+    id is in `ids` (see PROGRAM_PROXIMITY_WEIGHTS) -- None if none of them
+    have placed anything yet (e.g. the host was disabled via the enable/
+    disable checklist, or simply hasn't been reached yet in `programs`'
+    priority order)."""
+    bay_sets = [
+        {(gx, gy) for gx, gy, _ in r["bays"]}
+        for r in results if r.get("id") in ids and r["bays"]
+    ]
+    if not bay_sets:
+        return None
+    union = set()
+    for s in bay_sets:
+        union |= s
+    return union
+
 
 def _gathering_proximity_bonus(bay, gathering_bay_centers, radius_ft=GATHERING_PROXIMITY_RADIUS_FT):
     """0..1 falloff to the NEAREST bay already claimed by an earlier program
@@ -371,8 +414,8 @@ def place_programs(bay_grid, programs):
     the garage's levels instead of concentrating on whichever single level
     scores best overall.
 
-    Returns a list of {program_item, category, need_level, bays, achieved_sf,
-    target_sf, fulfilled} dicts, one per input program, in the same priority
+    Returns a list of {id, program_item, category, need_level, bays,
+    achieved_sf, target_sf, fulfilled} dicts, one per input program, in the same priority
     order they were placed. Each bays entry is [gx, gy, floor_elev_ft] (not
     just [gx, gy]) since a program can now legitimately span more than one
     real elevation -- see floor_elev_ft below for the single-value (seed-
@@ -402,6 +445,23 @@ def place_programs(bay_grid, programs):
             for r in results if r["category"] in GATHERING_CATEGORIES
             for gx, gy, _ in r["bays"]
         ] if gathering_weight else []
+
+        # 2026-07-30 program-to-program correlation -- see
+        # PROGRAM_PROXIMITY_WEIGHTS' own comment. proximity_bay_centers stays
+        # empty (no bonus) until the specific host program(s) this program
+        # cares about have actually placed something in `results`.
+        proximity_weight = 0.0
+        proximity_bay_centers = []
+        prox_cfg = PROGRAM_PROXIMITY_WEIGHTS.get(program["id"])
+        if prox_cfg:
+            host_bays = _host_bays_by_ids(results, prox_cfg["host_ids"])
+            if host_bays:
+                proximity_weight = prox_cfg["weight"]
+                proximity_bay_centers = [
+                    (bays_by_index[idx]["x_ft"], bays_by_index[idx]["z_ft"])
+                    for idx in host_bays
+                ]
+
         candidates = {
             idx: _bay_score(bay, category, shade_target_pct, transit_weight)
             for idx, bay in bays_by_index.items()
@@ -421,6 +481,11 @@ def place_programs(bay_grid, programs):
         if gathering_weight:
             candidates = {
                 idx: s + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
+                for idx, s in candidates.items()
+            }
+        if proximity_weight:
+            candidates = {
+                idx: s + proximity_weight * _gathering_proximity_bonus(bays_by_index[idx], proximity_bay_centers)
                 for idx, s in candidates.items()
             }
 
@@ -486,7 +551,8 @@ def place_programs(bay_grid, programs):
                         if score is not None:
                             bonus = (_aspect_ratio_bonus(current_island, idx, target_ratio)
                                      + _level_spread_bonus(bays_by_index[idx], claimed_levels)
-                                     + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers))
+                                     + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
+                                     + proximity_weight * _gathering_proximity_bonus(bays_by_index[idx], proximity_bay_centers))
                             frontier[idx] = score + bonus
                 if frontier:
                     best = max(frontier, key=frontier.get)
@@ -510,6 +576,7 @@ def place_programs(bay_grid, programs):
                 remaining = {
                     idx: s + _level_spread_bonus(bays_by_index[idx], claimed_levels)
                           + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
+                          + proximity_weight * _gathering_proximity_bonus(bays_by_index[idx], proximity_bay_centers)
                     for idx, s in remaining.items() if s is not None
                 }
                 if not remaining:
@@ -565,6 +632,7 @@ def place_programs(bay_grid, programs):
 
         achieved_sf = len(placed_bays) * BAY_AREA_SF
         results.append({
+            "id": program["id"],
             "program_item": program["label"],
             "category": category,
             "need_level": program["need_level"],

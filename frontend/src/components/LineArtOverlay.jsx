@@ -17,7 +17,7 @@ export default function LineArtOverlay({ svgUrl, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
-      <div className="bg-surface border border-border max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-container border-b border-border">
           <h3 className="font-headline-md text-headline-md text-primary">LINE ART</h3>
           <div className="flex items-center gap-2">
@@ -30,7 +30,7 @@ export default function LineArtOverlay({ svgUrl, onClose }) {
             </a>
             <button
               onClick={onClose}
-              className="px-3 py-1 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
+              className="px-3 py-1 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface rounded"
             >
               Close
             </button>

@@ -138,6 +138,11 @@ export default function App() {
   const vectorExportPollRef = useRef(null);
   const zoneExportPollRef = useRef(null);
   const blenderPollRef = useRef(null);
+  // 2026-07-30: one-shot guard so restoreSnapshot's setParams call doesn't
+  // trigger the debounced rebuild effect below into silently overwriting
+  // the just-restored snapshot with a fresh live recompute -- see
+  // restoreSnapshot's own comment for the full race.
+  const skipNextRebuildRef = useRef(false);
 
   const log = useCallback((text, level = 'info') => {
     setLogs((prev) => [...prev.slice(-49), { time: timeNow(), text, level }]);
@@ -573,6 +578,17 @@ export default function App() {
   // ref flag and fired 3 rebuilds on mount instead of 1.
   useEffect(() => {
     if (!config) return;
+    // 2026-07-30: restoreSnapshot sets this synchronously right before its
+    // own setParams/setNetworkParams calls, which otherwise change this
+    // effect's own deps and would fire a rebuild ~200ms after a restore,
+    // clobbering the just-restored data with a fresh live recompute.
+    // React 18 batches restoreSnapshot's several setState calls into one
+    // re-render, so this effect only runs (and is skipped) once per
+    // restore -- normal param changes afterward are never affected.
+    if (skipNextRebuildRef.current) {
+      skipNextRebuildRef.current = false;
+      return;
+    }
     // 2026-07-23: also fires on networkParams changes now that growth runs
     // inline with every rebuild (see doRebuild/RebuildParams.network) --
     // widened from [params, config] so a motivator-weight/step_ft tweak
@@ -715,6 +731,17 @@ export default function App() {
   const restoreSnapshot = useCallback(
     (snapshot) => {
       if (!snapshot.data) throw new Error("missing 'data' field -- not a valid build snapshot");
+      // 2026-07-30: setParams below changes the debounced rebuild effect's
+      // own dependency, which used to fire ~200ms later and silently
+      // overwrite the setData(snapshot.data) below with a fresh live
+      // recompute against CURRENT server-side paint masks/sliders --
+      // defeating the whole point of this function (see its own comment
+      // above: recall exactly what was saved, not a re-run of the
+      // pipeline). Concretely: a slab the snapshot had marked removed
+      // could silently reappear if the live masks no longer excavated it.
+      // Setting this ref synchronously, before the state updates below,
+      // skips exactly that one auto-triggered rebuild.
+      skipNextRebuildRef.current = true;
       if (snapshot.params) setParams(snapshot.params);
       if (snapshot.network_params) setNetworkParams(snapshot.network_params);
       if (snapshot.canopy_params) setCanopyParams(snapshot.canopy_params);

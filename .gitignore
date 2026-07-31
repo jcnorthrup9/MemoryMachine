@@ -56,7 +56,10 @@ archive/diagrams/generated/
 archive/diagrams/generated.zip
 archive/diagrams/generatedDiagramsColor/
 db/
-output/
+# Demo Mode headless-Blender STL runs -- formerly the top-level output/blender/
+# folder, merged into outputs/ (2026-07-30) to stop having two lookalike
+# output roots. Same "regenerable test output" reasoning as output/ was.
+outputs/blender/
 outputs/vector_export_test/
 outputs/stylized_export_test/
 outputs/drawings_export/

@@ -39,12 +39,12 @@ export default function JurorChatBar({ onSend }) {
         onKeyDown={handleKeyDown}
         placeholder="Ask about this design..."
         disabled={sending}
-        className="flex-1 bg-background border border-border font-mono-sm text-mono-sm px-3 py-2 focus:ring-0 focus:border-accent text-on-surface outline-none disabled:opacity-50"
+        className="flex-1 bg-background border border-border font-mono-sm text-mono-sm px-3 py-2 focus:ring-0 focus:border-accent text-on-surface outline-none disabled:opacity-50 rounded"
       />
       <button
         onClick={handleSend}
         disabled={sending || !input.trim()}
-        className="px-4 py-2 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+        className="px-4 py-2 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
       >
         {sending ? '...' : 'Ask'}
       </button>

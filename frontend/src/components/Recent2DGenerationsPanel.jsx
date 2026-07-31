@@ -151,7 +151,7 @@ export default function Recent2DGenerationsPanel({ onBaked, onLoad, log, refresh
           onClick={handleBakeGeneration}
           disabled={!generationPreview || generationBaking}
           title="Bakes into the live 3D paint masks AND loads this generation's diagram into the SPATIALIZE canvas to the left."
-          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {generationBaking ? 'BAKING...' : 'LOAD + BAKE THIS GENERATION'}
         </button>

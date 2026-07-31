@@ -95,51 +95,12 @@ export function fracToPixel(svgCache, xFrac, yFrac) {
 }
 
 /**
- * Live 3D amenity-deficit-hotspot overlay (GET /api/pershing/deficit-hotspots
- * -- logic/pershing_api.py's get_deficit_hotspots(), the real per-bay
- * deficit positions, NOT the coarse 9-cardinal-point summary
- * /deficit-weights returns -- see that function's docstring for why
- * bucketing into 9 fixed points was throwing away real position data) so
- * hotspot circles sit where the deficits actually ARE, not a synthetic
- * fixed grid, while composing.
- *
- * deficitHotspots: array of {x_frac, y_frac, weight}, already sorted
- * strongest-first and capped server-side (top_n) to a legible count --
- * no further filtering/sorting needed here. Both circle SIZE and opacity
- * scale with weight (normalized against the strongest hotspot in the set)
- * so severity reads at a glance, not just position.
- */
-export function renderDeficitOverlay(svg, ns, bbox, deficitHotspots) {
-  if (!deficitHotspots || deficitHotspots.length === 0) return;
-  const cx = bbox.x + bbox.w / 2;
-  const cy = bbox.y + bbox.h / 2;
-  const maxW = Math.max(...deficitHotspots.map((p) => p.weight), 0.001);
-  const maxR = Math.min(bbox.w, bbox.h) * 0.14;
-  const minR = maxR * 0.35;
-
-  const g = document.createElementNS(ns, 'g');
-  g.setAttribute('class', 'deficit-overlay');
-  deficitHotspots.forEach(({ x_frac: xf, y_frac: yf, weight }) => {
-    const intensity = weight / maxW;
-    const circle = document.createElementNS(ns, 'circle');
-    circle.setAttribute('cx', cx + xf * bbox.w);
-    circle.setAttribute('cy', cy + yf * bbox.h);
-    circle.setAttribute('r', minR + (maxR - minR) * intensity);
-    circle.setAttribute('fill', `rgba(255,70,70,${(0.1 + intensity * 0.4).toFixed(3)})`);
-    circle.setAttribute('stroke', 'none');
-    g.appendChild(circle);
-  });
-  svg.appendChild(g);
-}
-
-/**
  * Renders the 2D canvas into `container` (a DOM node, e.g. from a React
  * ref) from the given state. Mirrors engine2D.js's render() minus the
  * site-grid overlay (removed from the root app's UI per user request) and
- * the light/dark theme branch (this app is dark-only). `deficitHotspots`
- * (optional) draws the hotspot overlay -- see renderDeficitOverlay().
+ * the light/dark theme branch (this app is dark-only).
  */
-export function render(container, { svgCache, stack, baseCleared, deficitHotspots }) {
+export function render(container, { svgCache, stack, baseCleared }) {
   const baseSVG = svgCache['PershingSquare'];
   if (!baseSVG || !container) return;
 
@@ -193,10 +154,6 @@ export function render(container, { svgCache, stack, baseCleared, deficitHotspot
     }
   });
   svg.appendChild(contextGroup);
-
-  // Drawn right after context, before the intervention stack -- a
-  // background tint the generated layers render on top of.
-  renderDeficitOverlay(svg, ns, bbox, deficitHotspots);
 
   if (baseCleared) {
     const bndG = baseSVGEl.querySelector('g[id*="BOUNDARY"]') || baseSVGEl.querySelector('g[id="BOUNDARY"]');

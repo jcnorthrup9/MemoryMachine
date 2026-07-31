@@ -229,12 +229,10 @@ export async function previewLegacyImport(filename) {
 // (reachable here too since it's the same FastAPI process the /api proxy
 // prefix already covers) -- same AI-curated layer-pick endpoint
 // static/main.js's GEN button calls, now also driving this app's live
-// canvas. spatializePreview()/getDeficitHotspots() are new
-// logic/pershing_api.py endpoints: the former previews a live (in-memory,
-// not yet saved) spatial_seed through the same role-inference +
-// occlusion-aware rasterization pipeline preview_2d_generation() uses for
-// a saved one; the latter exposes the real amenity-deficit-hotspot signal
-// directly for a live overlay while composing.
+// canvas. spatializePreview() is a new logic/pershing_api.py endpoint that
+// previews a live (in-memory, not yet saved) spatial_seed through the same
+// role-inference + occlusion-aware rasterization pipeline
+// preview_2d_generation() uses for a saved one.
 // Same endpoint static/main.js's fetchSVG() uses -- returns the raw
 // precedent-site SVG text (BOUNDARY/GREEN_SPACE/HARDSCAPE/etc. groups) that
 // spatializerEngine.js's render()/getProgramStats() parse directly.
@@ -262,19 +260,6 @@ export async function spatializePreview(spatialSeed) {
     body: JSON.stringify({ spatial_seed: spatialSeed }),
   });
   if (!res.ok) throw new Error(`spatialize preview failed: ${res.status}`);
-  return res.json();
-}
-
-// Real per-bay deficit-hotspot positions (2026-07-23) -- NOT the coarse
-// 9-cardinal-point summary /api/pershing/deficit-weights returns (that
-// endpoint still backs AI placement scoring server-side; this is the only
-// frontend consumer of deficit data now). See logic/pershing_api.py's
-// get_deficit_hotspots() docstring for why SPATIALIZE's live overlay uses
-// this instead: bucketing into 9 fixed points was throwing away real
-// position data this same signal carries.
-export async function getDeficitHotspots(topN = 12) {
-  const res = await fetch(`/api/pershing/deficit-hotspots?top_n=${topN}`);
-  if (!res.ok) throw new Error(`deficit hotspots fetch failed: ${res.status}`);
   return res.json();
 }
 

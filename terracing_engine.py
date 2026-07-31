@@ -1450,6 +1450,19 @@ TREE_CANOPY_RADIUS_FT = 6.0
 # always produce the same layout.
 TREE_GRID_SPACING = 3
 
+# Minimum distance between placed restroom_pod instances (2026-07-30) --
+# sanctuary_specs() previously placed one per qualifying voxel with no
+# spacing check at all, unlike its siblings (TREE_GRID_SPACING above,
+# grotto_specs()'s misted_columns dedup below). Since SANCTUARY typology
+# (painted mask intersection) and transit_influence > 0.5 (a ~152ft disc
+# around the single entrance anchor) are both geometrically compact, their
+# overlap is often just a handful of contiguous voxels -- every one getting
+# its own restroom_pod produced tightly clustered pairs/trios. A greedy
+# min-spacing filter (not grid-modulo thinning like trees) is used instead
+# so a small qualifying patch still guarantees at least one restroom rather
+# than risking zero if none of its voxels land on a modulo grid.
+RESTROOM_MIN_SPACING_FT = 75.0
+
 
 class TypologyAssetEngine:
     """
@@ -1510,17 +1523,33 @@ class TypologyAssetEngine:
         additions on top of the baseline bench, not exclusive alternatives,
         so density of each naturally follows the rule across a real
         SANCTUARY zone spanning multiple levels.
+
+        restroom_pod placement is deliberately two-pass: gather every
+        shallow/near-circulation candidate first, then greedily keep only
+        ones at least RESTROOM_MIN_SPACING_FT from every already-kept one
+        (see that constant's comment) -- without this, restrooms only ever
+        appear where the SANCTUARY paint and the entrance-proximity disc
+        happen to overlap, which is usually a small tight patch, producing
+        a couple of restrooms stacked right on top of each other.
         """
         specs = []
+        restroom_candidates = []
         for row in self.te.voxels:
             for v in row:
                 if v.typology != "SANCTUARY":
                     continue
                 specs.append(StructuralElement("bench_assembly", v.wx, v.wy, v.z_ft, 1.5))
                 if v.level >= -1 and v.transit_influence > 0.5:
-                    specs.append(StructuralElement("restroom_pod", v.wx, v.wy, v.z_ft, 8.0))
+                    restroom_candidates.append(v)
                 if v.level <= -2:
                     specs.append(StructuralElement("fountain", v.wx, v.wy, v.z_ft, 3.0))
+
+        placed_restrooms = []
+        for v in restroom_candidates:
+            if all(math.hypot(v.wx - px, v.wy - py) >= RESTROOM_MIN_SPACING_FT
+                   for px, py in placed_restrooms):
+                placed_restrooms.append((v.wx, v.wy))
+                specs.append(StructuralElement("restroom_pod", v.wx, v.wy, v.z_ft, 8.0))
         return specs
 
     def tree_specs(self):

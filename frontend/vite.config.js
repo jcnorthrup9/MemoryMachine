@@ -39,7 +39,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '127.0.0.1', // this PC's "localhost" DNS resolution is broken -- bind the literal loopback address, not the hostname
-    port: 5173,
+    port: 5174, // moved off 5173 2026-07-30 -- see start_metabolizer.bat
     proxy: API_PROXY,
   },
   preview: {

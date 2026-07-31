@@ -372,12 +372,12 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
-      <div className="bg-surface border border-border max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-container border-b border-border">
           <h3 className="font-headline-md text-headline-md text-primary">PAINT</h3>
           <button
             onClick={onClose}
-            className="px-3 py-1 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
+            className="px-3 py-1 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface rounded"
           >
             Close
           </button>
@@ -388,7 +388,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
             <button
               key={t.key}
               onClick={() => setSource(t.key)}
-              className={`px-4 py-2 font-mono-sm text-mono-sm uppercase tracking-widest border-b-2 ${
+              className={`px-4 py-2 font-mono-sm text-mono-sm uppercase tracking-widest rounded border-b-2 ${
                 source === t.key
                   ? 'border-accent text-accent'
                   : 'border-transparent text-on-surface-variant hover:text-on-surface'
@@ -485,7 +485,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
 
               <button
                 onClick={handleClear}
-                className="w-full px-3 py-2 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface"
+                className="w-full px-3 py-2 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface rounded"
               >
                 Clear {CATEGORIES.find((c) => c.key === category)?.label}
               </button>
@@ -493,7 +493,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
               <button
                 onClick={() => handleBake(true)}
                 disabled={baking || !imgSize}
-                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {baking ? 'BAKING...' : 'BAKE + REBUILD'}
               </button>
@@ -561,7 +561,7 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
               <button
                 onClick={handleBakeDiagram}
                 disabled={!diagramPreview || diagramBaking}
-                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {diagramBaking ? 'BAKING...' : 'BAKE THIS DIAGRAM + REBUILD'}
               </button>

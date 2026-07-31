@@ -1,7 +1,7 @@
 function Section({ title, children }) {
   return (
     <div className="p-container border-b border-border space-y-4">
-      <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+      <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
         {title}
       </h4>
       {children}
@@ -22,6 +22,48 @@ function Empty({ children }) {
   return <p className="font-mono-sm text-mono-sm text-on-surface-variant opacity-60">{children}</p>;
 }
 
+// Ported from drawing_styles.py's PROGRAM_COLOR (the DRAWINGS page's former
+// "DIAGRAM" style, now rendered natively here instead -- see
+// ProgramDistribution below) / Viewport.jsx's own copy -- same duplicated
+// source-of-truth pattern this codebase already uses for that map.
+const PROGRAM_COLOR = {
+  'Green Space & Park Infrastructure': '#2e7d32',
+  'Community Garden': '#9ccc65',
+  'Soccer Field': '#d32f2f',
+  'Public Gym': '#7b1fa2',
+  'Skatepark': '#303f9f',
+  'Volleyball Court': '#00838f',
+  'Computer / Tech Space': '#1565c0',
+  'Classrooms / Study Rooms': '#0288d1',
+  'Music Practice Space': '#5e35b1',
+  'Arts & Crafts Studio': '#00acc1',
+  'Playground': '#558b2f',
+  'Picnic / Grill Site': '#00695c',
+  'Workout Equipment': '#9e9d24',
+  'Individual Practice Office': '#e91e63',
+  'Veterinary': '#f06292',
+  'Restrooms (Metro Entrance)': '#546e7a',
+  'Restrooms (Recreation Cluster)': '#6d4c41',
+};
+const PROGRAM_FALLBACK_COLOR = '#9e9e9e';
+
+// Bar width is proportional to claimed bay count (same "space claimed"
+// meaning as drawing_styles.py's _diagram_rows band_width), not achieved_sf
+// -- bay count is what's directly comparable across programs regardless of
+// each program's own target/achieved sf scale.
+function ProgramBar({ item, bayCount, maxBayCount, color }) {
+  const pct = maxBayCount > 0 ? (bayCount / maxBayCount) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono-sm text-[10px] text-on-surface-variant w-40 truncate shrink-0">{item}</span>
+      <div className="flex-1 h-2 bg-border/40">
+        <div className="h-2" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+      <span className="font-mono-sm text-[10px] text-accent w-10 text-right shrink-0">{bayCount}</span>
+    </div>
+  );
+}
+
 // DIAGNOSTICS tab: surfaces data already computed server-side (config,
 // rebuild(), grow_network(), get_program_zones()) but previously only used
 // as grounding context for the juror chat or not shown at all -- a
@@ -33,6 +75,7 @@ export default function DiagnosticsPanel({ config, data, networkData, programZon
   const networkKindCounts = networkData?.kind_counts ?? {};
   const zones = programZones?.zones ?? [];
   const placedZones = zones.filter((z) => z.bays.length > 0);
+  const maxBays = Math.max(1, ...placedZones.map((z) => z.bays.length));
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">
@@ -112,6 +155,26 @@ export default function DiagnosticsPanel({ config, data, networkData, programZon
               ))}
             </div>
           </>
+        ) : (
+          <Empty>program zones not loaded yet.</Empty>
+        )}
+      </Section>
+
+      <Section title="Program Distribution">
+        {placedZones.length > 0 ? (
+          <div className="space-y-2">
+            {[...placedZones]
+              .sort((a, b) => b.bays.length - a.bays.length)
+              .map((z) => (
+                <ProgramBar
+                  key={z.program_item}
+                  item={z.program_item}
+                  bayCount={z.bays.length}
+                  maxBayCount={maxBays}
+                  color={PROGRAM_COLOR[z.program_item] || PROGRAM_FALLBACK_COLOR}
+                />
+              ))}
+          </div>
         ) : (
           <Empty>program zones not loaded yet.</Empty>
         )}

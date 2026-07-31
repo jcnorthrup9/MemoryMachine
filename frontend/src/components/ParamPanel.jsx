@@ -95,7 +95,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-2">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Layers
         </h4>
         {LAYER_TOGGLES.map(({ key, label, indent }) => (
@@ -118,7 +118,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-6">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Structural Framing Engine
         </h4>
         <Slider
@@ -144,7 +144,7 @@ export default function ParamPanel({
           <select
             value={params.material_mode}
             onChange={(e) => set('material_mode')(e.target.value)}
-            className="w-full bg-background border border-border font-mono-sm text-mono-sm p-3 focus:ring-0 focus:border-accent text-on-surface outline-none appearance-none cursor-pointer"
+            className="w-full bg-background border border-border font-mono-sm text-mono-sm p-3 focus:ring-0 focus:border-accent text-on-surface outline-none appearance-none cursor-pointer rounded"
           >
             <option value="STEEL">STEEL</option>
             <option value="WOOD">WOOD</option>
@@ -165,7 +165,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Canopy Engine
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -266,7 +266,7 @@ export default function ParamPanel({
           onClick={onGenerateCanopy}
           disabled={generatingCanopy || !onGenerateCanopy}
           title="Canopy also regenerates automatically a few moments after program zones change -- this forces it now, e.g. after tweaking the shape sliders above."
-          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {generatingCanopy ? 'Generating...' : 'Regenerate Canopy Now'}
         </button>
@@ -289,7 +289,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Programs
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -317,7 +317,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Amenity Deficit
         </h4>
         <label className="flex items-center gap-2 font-mono-sm text-mono-sm text-on-surface-variant cursor-pointer">
@@ -349,7 +349,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Foot Traffic / Circulation
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -383,7 +383,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Noise / Sanctuary Quiet
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -427,7 +427,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Full-Fidelity Build (Headless Blender)
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -446,7 +446,7 @@ export default function ParamPanel({
         <button
           onClick={onBuildInBlender}
           disabled={blenderBusy || !onBuildInBlender}
-          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {BLENDER_BUILD_LABEL[blenderBuild?.status ?? 'idle']}
         </button>
@@ -459,7 +459,7 @@ export default function ParamPanel({
       </div>
 
       <div className="p-container border-b border-border space-y-3">
-        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+        <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
           Circulation Growth Network
         </h4>
         <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -504,7 +504,7 @@ export default function ParamPanel({
         <button
           onClick={onCarveCanyon}
           disabled={carvingCanyon || !onCarveCanyon || !networkResult}
-          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {carvingCanyon ? 'Carving...' : 'Carve Canyon Along Path'}
         </button>
@@ -514,7 +514,7 @@ export default function ParamPanel({
         <button
           onClick={onRebuild}
           disabled={rebuilding}
-          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {rebuilding ? 'REBUILDING...' : 'REBUILD'}
         </button>

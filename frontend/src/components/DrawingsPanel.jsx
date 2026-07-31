@@ -4,10 +4,12 @@ import { generateDrawings, saveDrawing, listArchive, getArchivedBuild } from '..
 // Mirrors Viewport.jsx's SHADING bar exactly (bg-surface/80 backdrop-blur
 // chip, caps label, button row with the same active/inactive ternary) --
 // see Viewport.jsx's SHADING_MODES bar for the pattern this was copied from.
+// DIAGRAM (abstract stacked program bands) moved to DIAGNOSTICS' "Program
+// Distribution" section (2026-07-25) -- native bars matching that tab's own
+// formatting instead of a separate style toggle here.
 const DRAWING_STYLES = [
   { key: 'lineweight', label: 'LINEWEIGHT' },
   { key: 'color', label: 'COLOR' },
-  { key: 'diagram', label: 'DIAGRAM' },
 ];
 
 // Only style="lineweight" has real 3D mesh geometry behind it (COLOR is
@@ -145,7 +147,7 @@ export default function DrawingsPanel({ params, log }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
       <div className="absolute top-4 left-4 flex gap-4 z-10">
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">STYLE</span>
           <div className="flex">
             {DRAWING_STYLES.map((s) => (
@@ -165,7 +167,7 @@ export default function DrawingsPanel({ params, log }) {
         </div>
 
         {isLineweight && (
-          <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
             <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">VIEW</span>
             <div className="flex">
               {DRAWING_VIEWS.map((v) => (
@@ -186,7 +188,7 @@ export default function DrawingsPanel({ params, log }) {
         )}
 
         {isLineweight && drawingParams.view === 'plan' && (
-          <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+          <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
             <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LEVEL</span>
             <select
               value={drawingParams.level}
@@ -200,7 +202,7 @@ export default function DrawingsPanel({ params, log }) {
           </div>
         )}
 
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">PROJECT</span>
           <select
             value={projectSource}
@@ -216,7 +218,7 @@ export default function DrawingsPanel({ params, log }) {
           </select>
         </div>
 
-        <div className="bg-surface/80 backdrop-blur-sm border border-border flex flex-col">
+        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
           <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LABELS</span>
           <div className="flex">
             {[
@@ -241,7 +243,7 @@ export default function DrawingsPanel({ params, log }) {
         <button
           onClick={() => generate(activeParams, drawingParams)}
           disabled={loading}
-          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-primary disabled:opacity-50 self-start"
+          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-primary disabled:opacity-50 self-start rounded"
         >
           {loading ? 'GENERATING...' : 'REFRESH'}
         </button>
@@ -249,7 +251,7 @@ export default function DrawingsPanel({ params, log }) {
         <button
           onClick={handleSave}
           disabled={saving || !svg}
-          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-accent disabled:opacity-50 self-start"
+          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-accent disabled:opacity-50 self-start rounded"
         >
           {saving ? 'SAVING...' : 'SAVE / EXPORT'}
         </button>

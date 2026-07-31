@@ -39,10 +39,22 @@ import bpy
 import mathutils
 import numpy as np
 
-REPO_ROOT = r"D:\MemoryMachine"
+# Was hardcoded to r"D:\MemoryMachine" -- broke running this on any machine
+# where the repo isn't checked out on D: (e.g. this one, C:\Users\jcnor\
+# MemoryMachine). Derived from this script's own location instead, same as
+# every other module in this repo already does with BASE_DIR/__file__.
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 REAL_GEOMETRY_PATH = os.path.join(REPO_ROOT, "PershingMetabolizer_Prototype", "real_geometry.json")
 SKETCH_CACHE_PATH = os.path.join(REPO_ROOT, "outputs", "cockpit", "sketch_weights_cache.json")
 CONTEXT_OBJ_PATH = os.path.join(REPO_ROOT, "outputs", "vector_export_test", "site_named.obj")
+
+# Hi-Fi restroom_pod prototype (2026-07-30) -- first attempt at bridging the
+# procedural placeholder engine to the real asset kit split out of
+# blender/park_amenities/kit_library.blend earlier this session. See
+# terracing_engine.py's TypologyAssetEngine.sanctuary_specs() for where
+# restroom_pod StructuralElements actually get generated.
+RESTROOM_ASSET_PATH = os.path.join(REPO_ROOT, "assets", "restrooms", "restrooms.blend")
+RESTROOM_COLLECTION_NAME = "AMENITY_Restrooms"
 
 # Same axonometric convention as vector_export.py's AXO_VIEW_DIR / _axo_basis /
 # mirror_mesh_y -- numerically verified 2026-07-05 (entrance projects to the
@@ -107,7 +119,14 @@ AMENITY_RESTING_MASK = _empty_mask()
 CANOPY_MASK = _empty_mask()
 
 AMENITY_CSV_PATH = find_latest_csv()
-SKETCH_IMAGE_PATH = find_latest_sketch()
+# find_latest_sketch's own default folder is hardcoded to D:\MemoryMachine
+# (unguarded os.listdir -- crashes with WinError 3 off that drive, unlike
+# find_latest_csv which already checks os.path.isdir first). Passing the
+# real repo-relative folder explicitly here, same REPO_ROOT/__file__
+# portability fix already applied to this file's own paths above -- not
+# touching sketch_weight_mapper.py itself since it's shared by other
+# callers this prototype isn't scoped to fix.
+SKETCH_IMAGE_PATH = find_latest_sketch(folder=os.path.join(REPO_ROOT, "data", "sketches"))
 
 # Slider bound for mm_canyon_width -- how many 27ft bays span the site's
 # short axis, derived from the same real site dims StructuralFramingEngine
@@ -360,6 +379,106 @@ def build_structural_meshes(coll, specs):
         bm.free()
 
 
+RESTROOM_UNIT_SCALE = None       # Blender-units-per-real-foot, calibrated at load; None = asset unavailable
+RESTROOM_LOCAL_CENTER_XY = (0.0, 0.0)
+RESTROOM_LOCAL_MIN_Z = 0.0
+
+
+def _load_restroom_asset():
+    """One-time link of assets/restrooms/restrooms.blend's AMENITY_Restrooms
+    collection, plus a runtime bounding-box measurement to calibrate a
+    uniform scale factor (by height, same convention harvest/import_assets.py
+    uses on the Rhino side: scale_factor = target_height / current_height)
+    rather than hardcoding a number that would silently go stale the next
+    time the asset is re-exported via Blender MCP.
+
+    Guarded the same way import_static_context() is (bpy.data lookup, not a
+    Python flag) -- this whole file re-executes top-to-bottom on every MCP
+    execute_blender_code / headless run, but bpy.data itself persists.
+    Degrades to RESTROOM_UNIT_SCALE = None on any failure so rebuild_all
+    never crashes just because the asset file isn't synced on this machine.
+    """
+    global RESTROOM_UNIT_SCALE, RESTROOM_LOCAL_CENTER_XY, RESTROOM_LOCAL_MIN_Z
+
+    coll = bpy.data.collections.get(RESTROOM_COLLECTION_NAME)
+    if coll is None or coll.library is None:
+        if not os.path.exists(RESTROOM_ASSET_PATH):
+            print(f"[cockpit] no hi-fi restroom asset at {RESTROOM_ASSET_PATH}, staying box-only")
+            RESTROOM_UNIT_SCALE = None
+            return
+        with bpy.data.libraries.load(RESTROOM_ASSET_PATH, link=True) as (data_from, data_to):
+            if RESTROOM_COLLECTION_NAME in data_from.collections:
+                data_to.collections = [RESTROOM_COLLECTION_NAME]
+        coll = bpy.data.collections.get(RESTROOM_COLLECTION_NAME)
+
+    if coll is None:
+        print(f"[cockpit] {RESTROOM_COLLECTION_NAME} not found in {RESTROOM_ASSET_PATH}")
+        RESTROOM_UNIT_SCALE = None
+        return
+
+    bbox_min = mathutils.Vector((math.inf, math.inf, math.inf))
+    bbox_max = mathutils.Vector((-math.inf, -math.inf, -math.inf))
+    for obj in coll.all_objects:
+        if obj.type not in {'MESH', 'CURVE', 'SURFACE'}:
+            continue
+        for corner in obj.bound_box:
+            w = obj.matrix_world @ mathutils.Vector(corner)
+            bbox_min = mathutils.Vector((min(bbox_min.x, w.x), min(bbox_min.y, w.y), min(bbox_min.z, w.z)))
+            bbox_max = mathutils.Vector((max(bbox_max.x, w.x), max(bbox_max.y, w.y), max(bbox_max.z, w.z)))
+
+    measured_height = bbox_max.z - bbox_min.z
+    if measured_height <= 1e-6:
+        print("[cockpit] hi-fi restroom bbox degenerate (no mesh objects found?), staying box-only")
+        RESTROOM_UNIT_SCALE = None
+        return
+
+    RESTROOM_UNIT_SCALE = 1.0 / measured_height
+    RESTROOM_LOCAL_CENTER_XY = ((bbox_min.x + bbox_max.x) / 2.0, (bbox_min.y + bbox_max.y) / 2.0)
+    RESTROOM_LOCAL_MIN_Z = bbox_min.z
+    print(f"[cockpit] hi-fi restroom calibrated: measured size "
+          f"{(bbox_max.x - bbox_min.x, bbox_max.y - bbox_min.y, measured_height)}, "
+          f"unit_scale={RESTROOM_UNIT_SCALE:.4f} BU/ft")
+
+
+def build_hifi_instances(coll, specs, kind="restroom_pod"):
+    """Companion to build_structural_meshes for kinds that have a matching
+    hi-fi asset linked in -- one Empty (instance_type='COLLECTION') per
+    spec, reused across rebuilds by name rather than deleted/recreated
+    (mirrors build_structural_meshes's per-kind mesh reuse), with trailing
+    stale empties removed when the spec count shrinks or the toggle is
+    switched off (matches=[] in that case)."""
+    matches = [s for s in specs if s.kind == kind]
+    restroom_coll = bpy.data.collections.get(RESTROOM_COLLECTION_NAME)
+    if restroom_coll is None or RESTROOM_UNIT_SCALE is None:
+        matches = []
+
+    for i, spec in enumerate(matches):
+        obj_name = f"mm_hifi_restroom_pod_{i}"
+        obj = bpy.data.objects.get(obj_name)
+        if obj is None:
+            obj = bpy.data.objects.new(obj_name, None)
+            obj.empty_display_type = 'PLAIN_AXES'
+            obj.empty_display_size = 2.0
+            coll.objects.link(obj)
+        obj.instance_type = 'COLLECTION'
+        obj.instance_collection = restroom_coll
+        scale_factor = spec.height_ft * RESTROOM_UNIT_SCALE
+        obj.location = (
+            spec.x_ft - scale_factor * RESTROOM_LOCAL_CENTER_XY[0],
+            spec.y_ft - scale_factor * RESTROOM_LOCAL_CENTER_XY[1],
+            (spec.z_top_ft - spec.height_ft) - scale_factor * RESTROOM_LOCAL_MIN_Z,
+        )
+        obj.scale = (scale_factor, scale_factor, scale_factor)
+
+    i = len(matches)
+    while True:
+        stale = bpy.data.objects.get(f"mm_hifi_restroom_pod_{i}")
+        if stale is None:
+            break
+        bpy.data.objects.remove(stale, do_unlink=True)
+        i += 1
+
+
 def _add_box(bm, cx, cy, cz, sx, sy, sz):
     hx, hy, hz = sx / 2, sy / 2, sz / 2
     coords = (
@@ -522,7 +641,13 @@ def rebuild_all(scene):
     _height_matrix, _puncture_mask, panel_specs, support_specs = canopy.run()
     all_specs = all_specs + panel_specs + support_specs
 
-    build_structural_meshes(coll, all_specs)
+    if scene.mm_hifi_restrooms_enabled:
+        mesh_specs = [s for s in all_specs if s.kind != "restroom_pod"]
+        hifi_specs = all_specs
+    else:
+        mesh_specs, hifi_specs = all_specs, []
+    build_structural_meshes(coll, mesh_specs)
+    build_hifi_instances(coll, hifi_specs)
 
     # Glass CanopyOverlay-equivalent mesh (build_canopy_mesh) disabled
     # 2026-07-16, same reasoning as Viewport.jsx's CanopyOverlay on the
@@ -961,6 +1086,12 @@ class MM_PT_cockpit(bpy.types.Panel):
         canopy_box.prop(context.scene, "mm_canopy_smoothing_iterations", slider=True)
         canopy_box.prop(context.scene, "mm_canopy_puncture_threshold", slider=True)
 
+        hifi_box = self.layout.box()
+        hifi_box.label(text="Hi-Fi Assets (Prototype)")
+        hifi_box.prop(context.scene, "mm_hifi_restrooms_enabled")
+        hifi_box.label(text=(f"restrooms.blend scale: {RESTROOM_UNIT_SCALE:.4f} BU/ft" if RESTROOM_UNIT_SCALE
+                              else "restrooms.blend not loaded"))
+
         box2 = self.layout.box()
         box2.label(text="Live Sketch (Paint on Photo)")
         if SKETCH_IMAGE_PATH is None:
@@ -1047,6 +1178,12 @@ def register():
         default=0.5, min=0.0, max=1.0,
         update=_on_canopy_update,
     )
+    bpy.types.Scene.mm_hifi_restrooms_enabled = bpy.props.BoolProperty(
+        name="Hi-Fi Restrooms (Prototype)",
+        description="Swap restroom_pod placeholder boxes for the linked assets/restrooms/restrooms.blend asset",
+        default=False,
+        update=_on_structural_update,
+    )
     for cls in (MM_PT_cockpit, MM_OT_paint_category, MM_OT_bake_paint):
         if cls.__name__ in dir(bpy.types):
             bpy.utils.unregister_class(getattr(bpy.types, cls.__name__))
@@ -1068,10 +1205,12 @@ def unregister():
     del bpy.types.Scene.mm_canopy_wave_amplitude
     del bpy.types.Scene.mm_canopy_smoothing_iterations
     del bpy.types.Scene.mm_canopy_puncture_threshold
+    del bpy.types.Scene.mm_hifi_restrooms_enabled
 
 
 register()
 import_static_context()
 setup_paint_canvas()
+_load_restroom_asset()
 rebuild_all(bpy.context.scene)
 setup_axo_view(REAL_GEOMETRY)

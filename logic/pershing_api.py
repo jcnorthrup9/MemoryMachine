@@ -1945,6 +1945,12 @@ def list_archived_builds():
             "slab_harvest_tons": data.get("slab_harvest_tons"),
             "instance_count": sum(data.get("kind_counts", {}).values()),
             "program_zone_count": len(program_zones.get("zones", [])),
+            # Small (a handful of stamp entries, unlike voxels/structural
+            # above) -- included so the ARCHIVE gallery can render a diagram
+            # thumbnail via spatialize_preview() without a second
+            # get_archived_build() round-trip per card. Empty when the build
+            # was produced by painting directly rather than via SPATIALIZE.
+            "spatial_seed": record.get("spatial_seed") or [],
         })
     return entries
 

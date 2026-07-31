@@ -9,7 +9,7 @@ Called by POST /api/demo-generate in app.py.
 Env vars (all optional — sensible defaults set below):
   BLENDER_PATH           path to blender.exe  (default: searches PATH then common installs)
   GENERATOR_SCRIPT_PATH  path to pershing_square_generator.py
-  BLENDER_OUTPUT_DIR     where to write the STL  (default: <project>/output/blender)
+  BLENDER_OUTPUT_DIR     where to write the STL  (default: <project>/outputs/blender)
 """
 
 import os
@@ -47,7 +47,7 @@ GENERATOR_PATH = os.environ.get(
 )
 OUTPUT_DIR = os.environ.get(
     "BLENDER_OUTPUT_DIR",
-    str(BASE_DIR / "output" / "blender")
+    str(BASE_DIR / "outputs" / "blender")
 )
 
 
@@ -65,7 +65,7 @@ def run_blender_demo(
     Returns:
         {
           "status": "success",
-          "stl_path": "D:/MemoryMachine/output/blender/Demo.stl",
+          "stl_path": "D:/MemoryMachine/outputs/blender/Demo.stl",
           "stl_url":  "/blender-output/Demo.stl",   ← served by FastAPI static mount
           "duration_s": 14.2
         }

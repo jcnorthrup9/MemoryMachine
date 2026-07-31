@@ -1,9 +1,9 @@
 export default function LogPanel({ entries }) {
   return (
-    <div className="h-40 border-t border-border bg-surface-container-lowest flex flex-col shrink-0">
-      <div className="px-4 py-2 border-b border-border flex justify-between items-center bg-surface-container">
-        <span className="font-mono-label text-mono-label text-primary uppercase">rebuild_log</span>
-        <span className="font-mono-label text-[10px] text-on-surface-variant">{entries.length} events</span>
+    <div className="h-40 border-t border-border bg-[#141313] flex flex-col shrink-0">
+      <div className="px-4 py-2 border-b border-[#262626] flex justify-between items-center bg-[#1c1b1b]">
+        <span className="font-mono-label text-mono-label text-white uppercase">rebuild_log</span>
+        <span className="font-mono-label text-[10px] text-[#c4c7c8]">{entries.length} events</span>
       </div>
       <div className="flex-1 p-3 font-mono-sm text-mono-sm overflow-y-auto text-accent space-y-1 bg-[#050505]">
         {entries.length === 0 && (

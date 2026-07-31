@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import { saveToArchive, listArchive, getArchivedBuild, deleteArchivedBuild } from '../api.js';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { saveToArchive, listArchive, getArchivedBuild, deleteArchivedBuild, spatializePreview } from '../api.js';
+import { drawDiagramPreview } from '../diagramGridPreview.js';
 
 function formatSavedAt(iso) {
   if (!iso) return 'unknown time';
@@ -8,6 +9,56 @@ function formatSavedAt(iso) {
   } catch {
     return iso;
   }
+}
+
+// Card thumbnail of the SPATIALIZE diagram that produced this build, if any
+// -- listArchive() now carries each entry's spatial_seed (small: a handful
+// of stamp entries, see list_archived_builds()'s docstring) alongside its
+// other lightweight summary fields, so this resolves it to grids the same
+// way Recent2DGenerationsPanel.jsx does for a live generation record,
+// just from the seed directly rather than a filename lookup. Builds
+// produced by painting directly (no SPATIALIZE diagram, the common case
+// today) have an empty spatial_seed and get a plain placeholder instead --
+// there's no diagram to show, painted masks are live server-side state
+// never captured in the snapshot (see App.jsx's buildSnapshot comment).
+function ArchiveThumbnail({ spatialSeed }) {
+  const canvasRef = useRef(null);
+  const [grids, setGrids] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!spatialSeed?.length) return;
+    let cancelled = false;
+    spatializePreview(spatialSeed)
+      .then((result) => { if (!cancelled) setGrids(result.grids); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [spatialSeed]);
+
+  useEffect(() => {
+    drawDiagramPreview(canvasRef.current, grids);
+  }, [grids]);
+
+  if (!spatialSeed?.length || failed) {
+    return (
+      <div className="h-32 rounded bg-surface-container-low border border-dashed border-border flex items-center justify-center">
+        <span className="font-mono-label text-[10px] text-on-surface-variant/60 uppercase">
+          {failed ? 'preview failed' : 'no diagram (painted)'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-32 rounded bg-surface-container-low border border-border overflow-hidden">
+      {!grids && (
+        <div className="h-full flex items-center justify-center">
+          <span className="font-mono-label text-[10px] text-on-surface-variant/60 uppercase">loading...</span>
+        </div>
+      )}
+      <canvas ref={canvasRef} className={`w-full h-full object-contain ${grids ? '' : 'hidden'}`} />
+    </div>
+  );
 }
 
 // ARCHIVE tab: a real gallery for build iterations, server-persisted
@@ -86,61 +137,64 @@ export default function ArchivePanel({ getSnapshot, onRestoreSnapshot, canSave, 
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Label this build (optional)"
-            className="flex-1 bg-surface-container-high border border-border px-3 py-2 font-mono-sm text-mono-sm text-primary placeholder:text-on-surface-variant/60"
+            className="flex-1 bg-surface-container-high border border-border px-3 py-2 font-mono-sm text-mono-sm text-primary placeholder:text-on-surface-variant/60 rounded"
           />
           <button
             onClick={handleSave}
             disabled={!canSave || saving}
-            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Current Build'}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-container">
         {loadingList && (
-          <div className="p-container font-mono-sm text-mono-sm text-on-surface-variant">loading archive...</div>
+          <div className="font-mono-sm text-mono-sm text-on-surface-variant">loading archive...</div>
         )}
         {!loadingList && entries.length === 0 && (
-          <div className="p-container font-mono-sm text-mono-sm text-on-surface-variant opacity-60">
+          <div className="font-mono-sm text-mono-sm text-on-surface-variant opacity-60">
             no archived builds yet -- save one above.
           </div>
         )}
-        {entries.map((entry) => (
-          <div
-            key={entry.filename}
-            className="px-container py-4 border-b border-border flex items-center justify-between gap-4"
-          >
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="font-mono-sm text-mono-sm font-bold text-primary truncate">
-                {entry.label || '(untitled)'}
-              </span>
-              <span className="font-mono-label text-[10px] text-on-surface-variant">
-                {formatSavedAt(entry.saved_at)}
-              </span>
-              <span className="font-mono-label text-[10px] text-on-surface-variant">
-                {entry.material_mode ?? '?'} &middot; {entry.instance_count ?? 0} instances &middot;{' '}
-                {entry.slab_harvest_tons != null ? `${entry.slab_harvest_tons.toFixed(0)}t slab` : 'no slab data'}
-                {entry.program_zone_count ? ` · ${entry.program_zone_count} program zones` : ''}
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-card-gap">
+          {entries.map((entry) => (
+            <div
+              key={entry.filename}
+              className="bg-surface border border-border rounded-lg p-5 hover:shadow-lg transition-all flex flex-col gap-3"
+            >
+              <ArchiveThumbnail spatialSeed={entry.spatial_seed} />
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="font-mono-sm text-mono-sm font-bold text-primary truncate">
+                  {entry.label || '(untitled)'}
+                </span>
+                <span className="font-mono-label text-[10px] text-on-surface-variant">
+                  {formatSavedAt(entry.saved_at)}
+                </span>
+                <span className="font-mono-label text-[10px] text-on-surface-variant">
+                  {entry.material_mode ?? '?'} &middot; {entry.instance_count ?? 0} instances &middot;{' '}
+                  {entry.slab_harvest_tons != null ? `${entry.slab_harvest_tons.toFixed(0)}t slab` : 'no slab data'}
+                  {entry.program_zone_count ? ` · ${entry.program_zone_count} program zones` : ''}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-auto">
+                <button
+                  onClick={() => handleLoad(entry.filename)}
+                  className="flex-1 bg-surface-container-high text-primary border border-border px-3 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98]"
+                >
+                  Load
+                </button>
+                <button
+                  onClick={() => handleDelete(entry.filename, entry.label)}
+                  className="bg-surface-container-high text-error border border-border px-3 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98]"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => handleLoad(entry.filename)}
-                className="bg-surface-container-high text-primary border border-border px-3 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98]"
-              >
-                Load
-              </button>
-              <button
-                onClick={() => handleDelete(entry.filename, entry.label)}
-                className="bg-surface-container-high text-error border border-border px-3 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98]"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

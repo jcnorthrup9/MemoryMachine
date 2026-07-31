@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchSiteSVG, generateSpatialSeed, spatializePreview, getDeficitHotspots, bakePaint } from '../api.js';
+import { fetchSiteSVG, generateSpatialSeed, spatializePreview, bakePaint } from '../api.js';
 import { render, getProgramStats, fracToPixel, getLayerColor } from '../spatializerEngine.js';
 import Recent2DGenerationsPanel from './Recent2DGenerationsPanel.jsx';
 
@@ -33,7 +33,6 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
   const [stack, setStack] = useState([]);
   const [baseCleared, setBaseCleared] = useState(false);
   const [narrative, setNarrative] = useState('');
-  const [deficitHotspots, setDeficitHotspots] = useState(null);
   const [svgVersion, setSvgVersion] = useState(0);
   // Bumped after a successful GEN (2026-07-24) so Recent2DGenerationsPanel
   // knows to re-fetch its list -- app.py's /api/generate route already
@@ -53,13 +52,10 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
     return svg;
   }, []);
 
-  // Load the base site + the live deficit-hotspot overlay on mount.
+  // Load the base site on mount.
   useEffect(() => {
     let cancelled = false;
     ensureSiteSVG('PershingSquare').catch((err) => !cancelled && log?.(String(err), 'error'));
-    getDeficitHotspots()
-      .then((w) => !cancelled && setDeficitHotspots(w))
-      .catch((err) => !cancelled && log?.(String(err), 'error'));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,12 +65,11 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
       svgCache: svgCacheRef.current,
       stack,
       baseCleared,
-      deficitHotspots,
     });
     // svgVersion is a synthetic dep -- svgCacheRef's contents changed even
     // though the ref identity didn't, so it has to be listed to re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [svgVersion, stack, baseCleared, deficitHotspots]);
+  }, [svgVersion, stack, baseCleared]);
 
   const stats = useMemo(
     () => getProgramStats({ svgCache: svgCacheRef.current, stack, pathCache: pathCacheRef.current }),
@@ -200,7 +195,7 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
   return (
     <div className="flex flex-1 overflow-hidden">
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div ref={containerRef} className="flex-1 bg-background" />
+        <div ref={containerRef} className="flex-1 min-h-0 bg-background" />
       </main>
 
       <aside className="w-80 border-l border-border p-container space-y-4 overflow-y-auto shrink-0">
@@ -216,20 +211,20 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="e.g. a quiet shady park with water features -- or leave blank to randomize"
           rows={3}
-          className="w-full bg-background border border-border p-2 font-mono-sm text-mono-sm text-on-surface resize-none"
+          className="w-full bg-background border border-border p-2 font-mono-sm text-mono-sm text-on-surface resize-none rounded"
         />
         <div className="flex gap-2">
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="flex-1 py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
+            className="flex-1 py-3 border border-accent text-accent font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:bg-accent hover:text-background transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {generating ? 'Generating...' : 'GEN'}
           </button>
           <button
             onClick={handleClear}
             disabled={stack.length === 0}
-            className="px-4 py-3 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface disabled:opacity-50"
+            className="px-4 py-3 border border-border font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-on-surface rounded disabled:opacity-50"
           >
             CLR
           </button>
@@ -242,7 +237,7 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
         )}
 
         <div className="space-y-2 border-t border-border pt-3">
-          <div className="font-mono-sm text-[10px] uppercase tracking-widest text-on-surface-variant/60">
+          <div className="font-mono-sm text-[10px] uppercase tracking-widest rounded text-on-surface-variant/60">
             Zonal Mix
           </div>
           {HUD_ROWS.map(({ key, label }) => (
@@ -264,13 +259,13 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
         <button
           onClick={handleBake}
           disabled={baking || stack.length === 0}
-          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="w-full py-3 bg-accent text-background font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {baking ? 'Baking...' : 'Bake + Rebuild'}
         </button>
 
         <div className="space-y-3 pt-4 border-t border-border">
-          <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest">
+          <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
             Design Input
           </h4>
           <p className="font-mono-sm text-[11px] text-on-surface-variant">
@@ -279,7 +274,7 @@ export default function SpatializerPanel({ onBaked, onPaint, log, onStackChange,
           </p>
           <button
             onClick={() => onPaint?.()}
-            className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors"
+            className="w-full px-4 py-2 border border-border text-on-surface-variant font-mono-sm text-mono-sm uppercase hover:border-accent hover:text-accent transition-colors rounded"
           >
             Paint
           </button>
