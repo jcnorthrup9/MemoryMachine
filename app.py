@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -7,50 +7,106 @@ import xml.etree.ElementTree as ET
 import sys
 import asyncio
 
+# Windows' default console codepage (cp1252) can't encode the emoji used in
+# a few startup log lines below, crashing the process before it can even
+# report the real error. Force UTF-8 stdout so those prints (and any
+# future ones) never take the whole app down over a log message.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # --- MODULAR LOGIC IMPORTS ---
 from logic.geometry_engine import build_geometries
 from logic.urban_engine import GuidelineManager, remix_layers, guideline_manager
 from logic.ai_synthesizer import (
-    generate_spatial_seed, generate_mermaid_diagram
+    generate_spatial_seed, generate_mermaid_diagram, apply_deficit_weighting
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
+from logic.version import get_version
+from logic.pershing_api import (
+    RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, GenerateDrawingsRequest,
+    SaveDrawingRequest, JurorChatRequest, CritiqueRequest,
+    get_config as pershing_get_config,
+    rebuild as pershing_rebuild, grow_network as pershing_grow_network,
+    carve_network_canyon as pershing_carve_network_canyon,
+    generate_canopy as pershing_generate_canopy,
+    generate_drawings as pershing_generate_drawings,
+    save_drawing as pershing_save_drawing,
+    juror_chat as pershing_juror_chat, critique as pershing_critique,
+    get_sketch_info as pershing_get_sketch_info, save_uploaded_sketch as pershing_save_uploaded_sketch,
+    bake as pershing_bake, SKETCH_DIR as PERSHING_SKETCH_DIR,
+    get_bay_grid as pershing_get_bay_grid, get_program_zones as pershing_get_program_zones,
+    ArchiveSaveRequest, save_build_to_archive as pershing_save_build_to_archive,
+    list_archived_builds as pershing_list_archived_builds,
+    get_archived_build as pershing_get_archived_build,
+    delete_archived_build as pershing_delete_archived_build,
+    _deficit_weighted_location_weights as pershing_get_deficit_weights,
+    REAL_GEOMETRY,
+    Preview2DGenerationRequest,
+    list_2d_generations as pershing_list_2d_generations,
+    preview_2d_generation as pershing_preview_2d_generation,
+    SpatializePreviewRequest,
+    spatialize_preview as pershing_spatialize_preview,
+    get_deficit_weights as pershing_get_deficit_weights_public,
+    get_deficit_hotspots as pershing_get_deficit_hotspots,
+)
+from logic.site_grid import build_site_grid
+from logic import pershing_blender
+from logic.legacy_diagram_bridge import (
+    PreviewLegacyDiagramRequest, list_recent_diagrams as pershing_list_legacy_diagrams,
+    preview_import as pershing_preview_legacy_diagram, DIAGRAM_DIR as LEGACY_DIAGRAM_DIR,
+)
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
+SVG_DIR = os.path.join(BASE_DIR, 'data', 'PershingMetabolizer', 'parkSVG', 'PrecedentSVG')
 
 app = FastAPI(title="Memory Machine API")
 
+# Dev-only CORS: the React/Vite frontend runs on its own dev-server port and
+# calls this API cross-origin. Local single-user tool, no auth boundary to
+# protect yet -- tighten this before any real deployment.
+#
+# Regex, not a fixed ["...:5173"] allowlist (2026-07-09 fix): Vite picks the
+# next free port whenever 5173 is already taken (e.g. a second dev server, a
+# stray process from an earlier session) -- with a hardcoded single-port
+# allowlist that silently mismatches origin, every fetch to this API gets
+# CORS-blocked, an unhandled rejection crashes whichever component made the
+# request (StaticContextGroup's OBJ fetch, in the reported case), and that
+# takes the whole WebGLRenderer down with it ("shows for a second then goes
+# black"). Matching any localhost/127.0.0.1 port keeps the same dev-only
+# security posture (still not a real origin allowlist) while not depending
+# on exactly one port being free.
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # --- AI & DB INITIALIZATION ---
+# 2026-07-17: decoupled from the Gemini/google-genai import -- this repo's
+# AI text-generation path is now Ollama-only (see logic/ai_synthesizer.py),
+# but AI_ENABLED was previously gated behind `from google import genai`
+# succeeding, which silently kept ChromaDB's real 4001-document review
+# corpus offline the whole time too (the "historical reviews" RAG context
+# in generate_spatial_seed() was always empty). ChromaDB now inits on its
+# own, independent of any Gemini/API-key availability.
 AI_ENABLED = False
-ai_client = None
 
 try:
     from dotenv import load_dotenv
-    from google import genai
     import chromadb
     load_dotenv(os.path.join(BASE_DIR, '.env'))
-    
-    # FIX: Your logs show both GOOGLE_API_KEY and GEMINI_API_KEY are set.
-    # Standard GOOGLE_API_KEYs often lack the GenAI API permission.
-    # We explicitly prioritize the AI Studio Key (GEMINI_API_KEY).
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    
-    if api_key:
-        # Initialize client for the google-genai SDK
-        ai_client = genai.Client(api_key=api_key)
-        
-        # Init ChromaDB
-        db_path = os.path.join(BASE_DIR, 'db')
-        chroma_client = chromadb.PersistentClient(path=db_path)
-        collection = chroma_client.get_or_create_collection(name="memory_machine_corpus")
-        
-        AI_ENABLED = True
-        print(f"✅ AI Services Online (Using Key: {'GEMINI' if os.environ.get('GEMINI_API_KEY') else 'GOOGLE'})")
-    else:
-        print("⚠️ No API Key found in .env")
+
+    db_path = os.path.join(BASE_DIR, 'db')
+    chroma_client = chromadb.PersistentClient(path=db_path)
+    collection = chroma_client.get_or_create_collection(name="memory_machine_corpus")
+
+    AI_ENABLED = True
+    print(f"✅ ChromaDB corpus online ({collection.count()} documents)")
 except Exception as e:
-    print(f"⚠️ AI Services Offline: {e}")
+    print(f"⚠️ ChromaDB unavailable: {e}")
 
 # Ensure static mount directories exist to prevent startup crashes
 os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
@@ -68,6 +124,70 @@ comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
 if os.path.exists(comfy_output_dir):
     app.mount("/comfy-output", StaticFiles(directory=comfy_output_dir), name="comfy-output")
 
+# Static real-world context (columns/tunnel/secondary_entrance/ramps) for
+# the Pershing viewport -- same site_named.obj blender_cockpit.py's
+# import_static_context() loads once for visual reference; it does not
+# participate in the live TerracingEngine rebuild.
+pershing_context_dir = os.path.join(BASE_DIR, "outputs", "vector_export_test")
+if os.path.exists(pershing_context_dir):
+    app.mount("/pershing-context", StaticFiles(directory=pershing_context_dir), name="pershing-context")
+
+# Serves whatever sketch photo is currently active (uploaded or pre-existing)
+# so the frontend's paint canvas can load it as an <img> background.
+app.mount("/pershing-sketch", StaticFiles(directory=PERSHING_SKETCH_DIR), name="pershing-sketch")
+
+# Serves OBJs produced by the headless-Blender "build" tier (see
+# logic/pershing_blender.py) -- distinct from /pershing-context, which
+# serves the one static, unchanging reference OBJ.
+app.mount("/blender-headless-output", StaticFiles(directory=pershing_blender.OUTPUT_DIR), name="blender-headless-output")
+
+# Serves diagram_tool/'s exported SVGs so DiagramInputPanel.jsx can show
+# thumbnails without a dedicated download endpoint -- same pattern as
+# /pershing-context above. Guarded by os.path.exists since this directory
+# only exists once diagram_tool/ has actually exported something to it.
+if os.path.exists(LEGACY_DIAGRAM_DIR):
+    app.mount("/legacy-diagrams", StaticFiles(directory=LEGACY_DIAGRAM_DIR), name="legacy-diagrams")
+
+def archive_generation_record(prompt, narrative, spatial_seed, diagram=""):
+    """Writes a memory_machine_generation_<ms>.json record -- same shape/dir/
+    naming convention (archive/diagrams/generated/, millisecond timestamp)
+    every 2D-generation consumer already expects (list_2d_generations(),
+    preview_2d_generation() in logic/pershing_api.py), so anything archived
+    here shows up in the SPATIALIZE tab's "Recent 2D Generations" panel for
+    free -- no separate list/read path needed.
+
+    Extracted (2026-07-24) from generate_memory_node()'s own inline archive
+    step so a second caller (pershing_archive_route below, "Save Build" in
+    RECONSTRUCT) can write the exact same record shape for whatever diagram
+    was live in SPATIALIZE at save time, instead of a build only ever living
+    in outputs/pershing_archive/ with no trace back to the 2D layout that
+    produced it -- closing the loop the user asked for: diagram -> bake ->
+    3D build -> save should keep the diagram discoverable from the 2D side
+    too, not just the 3D one.
+
+    Best-effort: a write failure here shouldn't fail the caller's own
+    action (a generation, or a build save) -- same tolerance the original
+    inline version already had."""
+    try:
+        archive_dir = os.path.join(BASE_DIR, 'archive', 'diagrams', 'generated')
+        os.makedirs(archive_dir, exist_ok=True)
+        timestamp_ms = int(time.time() * 1000)
+        record = {
+            "timestamp_ms": timestamp_ms,
+            "prompt": prompt,
+            "narrative": narrative,
+            "diagram": diagram,
+            "spatial_seed": spatial_seed,
+        }
+        record_path = os.path.join(archive_dir, f"memory_machine_generation_{timestamp_ms}.json")
+        with open(record_path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2)
+        return os.path.basename(record_path)
+    except Exception as e:
+        print(f"      -> [GENERATION ARCHIVE ERROR] {e}")
+        return None
+
+
 # --- DATA MODELS ---
 class MemoryPrompt(BaseModel): prompt: str
 
@@ -75,6 +195,10 @@ class ExportPayload(BaseModel):
     filename: str
     data: str
     type: str
+
+class ExportViewPngPayload(BaseModel):
+    filename: str
+    data: str  # data:image/png;base64,... straight from canvas.toDataURL()
 
 class CapturePayload(BaseModel):
     prompt: str
@@ -148,6 +272,20 @@ async def get_diagram(site: str):
     with open(target_path, encoding="utf-8") as f:
         return {"site": site, "svg": f.read()}
 
+@app.get("/api/site-grid")
+async def get_site_grid(cell_size_ft: float = 27.0, rotation_deg: float = 0.0):
+    """Rotatable spatial-organizer grid for the 2D diagram canvas -- see
+    logic/site_grid.py's module docstring. Site dimensions come from the
+    same REAL_GEOMETRY the 3D bay grid uses, so both grids stay anchored to
+    the same real-world site regardless of which SVG is loaded client-side."""
+    try:
+        width_ft = REAL_GEOMETRY["site"]["width_ft"]
+        length_ft = REAL_GEOMETRY["site"]["length_ft"]
+        grid = build_site_grid(width_ft, length_ft, cell_size_ft, rotation_deg)
+        return {"status": "success", "grid": grid}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.get("/api/guidelines")
 async def get_guidelines():
     """Exposes the parsed urban_design_guidelines.md to the frontend for the Zonal HUD."""
@@ -173,6 +311,24 @@ async def export_diagram(payload: ExportPayload):
             header, encoded = payload.data.split(",", 1)
             with open(filepath, "wb") as f:
                 f.write(base64.b64decode(encoded))
+        return {"status": "success", "path": filepath}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# "Export Current View" (Viewport.jsx) -- user asked (2026-07-17) for the
+# PNG screenshot to land next to the vector-linework SVG exports instead of
+# the browser's Downloads folder, with no save dialog. Same base64-dataURL
+# decode as export_diagram() above, different fixed target directory.
+PERSHING_EXPORT_PNG_DIR = os.path.join(BASE_DIR, "data", "PershingMetabolizer", "parkSVG", "remixedGeneratedPNGs")
+
+@app.post("/api/pershing/export-view-png")
+async def pershing_export_view_png(payload: ExportViewPngPayload):
+    os.makedirs(PERSHING_EXPORT_PNG_DIR, exist_ok=True)
+    filepath = os.path.join(PERSHING_EXPORT_PNG_DIR, os.path.basename(payload.filename))
+    try:
+        header, encoded = payload.data.split(",", 1)
+        with open(filepath, "wb") as f:
+            f.write(base64.b64decode(encoded))
         return {"status": "success", "path": filepath}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -261,7 +417,20 @@ async def generate_memory_node(payload: MemoryPrompt):
     
     # 2. AI Synthesis (Now routing to Local Ollama API)
     spatial_seed_raw, ai_narrative = generate_spatial_seed(prompt, matches)
-    
+
+    # 2.5 Ground the PROG (amenity/attractor) pick's location in the 3D
+    # side's real amenity-deficit signal -- same bridge remix_precedent()
+    # already uses for its empty-prompt path, applied here to every
+    # generate_spatial_seed() call so 2D placement reflects the same deficit
+    # data the 3D Pershing Metabolizer does. Best-effort: a slow/unavailable
+    # bay-grid rebuild shouldn't block the 2D generate flow.
+    try:
+        deficit_weights = pershing_get_deficit_weights()
+        gm_data = guideline_manager.parse()
+        spatial_seed_raw = apply_deficit_weighting(spatial_seed_raw, gm_data.get("metadata", {}), deficit_weights)
+    except Exception as e:
+        print(f"      -> [DEFICIT WEIGHTING ERROR] {e}")
+
     # 3. Remix
     spatial_seed = remix_layers(spatial_seed_raw)
     
@@ -308,6 +477,14 @@ async def generate_memory_node(payload: MemoryPrompt):
 
     # 4. Metadata
     diagram = generate_mermaid_diagram(prompt, matches, {"geometry_type": "Hybrid Assembly", "height_m": 15})
+
+    # 5. Archive the generation's own data alongside the frontend's SVG/JPG
+    # auto-export (static/main.js's autoExportEnabled pipeline) -- that only
+    # ever saved the rendered image, never the prompt/narrative/layer picks
+    # that produced it, so past generations couldn't be reviewed or
+    # reconstructed. Best-effort: a write failure here shouldn't fail the
+    # actual generation.
+    archive_generation_record(prompt, ai_narrative, spatial_seed, diagram)
 
     return {
         "status": "success",
@@ -459,6 +636,269 @@ async def comfy_render(payload: ComfyRenderPayload):
         "image_path": img_path,
         "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
     }
+
+
+@app.get("/api/version")
+async def api_version():
+    """Which commit this running backend was loaded from (2026-07-28).
+
+    Exists mainly to make process staleness diagnosable in seconds. Python
+    doesn't hot-reload, so a `logic/*.py` change has no effect until the
+    server is killed and restarted -- a failure mode this project has hit
+    repeatedly across its Syncthing-synced machines (see
+    HANDOFF_07242026's cross-machine investigation, where a stale process
+    was the eventual cause, and HANDOFF_07132026's "READ THIS FIRST").
+    Comparing this against `git rev-parse HEAD` on the same machine
+    answers "is the server running the code on disk?" directly.
+
+    Deliberately unauthenticated and read-only -- it exposes a commit hash
+    and branch name on a local single-user dev tool, nothing more.
+    """
+    return get_version()
+
+
+@app.get("/api/pershing/config")
+async def pershing_config():
+    return pershing_get_config()
+
+
+@app.get("/api/pershing/bay-grid")
+async def pershing_bay_grid_route():
+    """27ft structural bay grid + per-bay placement signals (painted/imported
+    masks primary, transit/deficit secondary) -- see get_bay_grid()'s
+    docstring. Consumed by the frontend's program-placement layer and by
+    logic/program_placement.py directly (not over HTTP) when run offline."""
+    return pershing_get_bay_grid()
+
+
+@app.get("/api/pershing/program-zones")
+async def pershing_program_zones_route():
+    """Bay-grid program placement (data/program_requirements.json's
+    NEEDED/Suggested items packed onto the bay grid) -- see
+    get_program_zones()'s docstring."""
+    return pershing_get_program_zones()
+
+
+@app.post("/api/pershing/archive")
+async def pershing_archive_save_route(payload: ArchiveSaveRequest):
+    """ARCHIVE tab: persist a build snapshot server-side (outputs/pershing_archive/)
+    -- see save_build_to_archive()'s docstring for how this differs from the
+    client-side-only "Save Build" download."""
+    return pershing_save_build_to_archive(payload)
+
+
+@app.get("/api/pershing/archive")
+async def pershing_archive_list_route():
+    return pershing_list_archived_builds()
+
+
+@app.get("/api/pershing/archive/{filename}")
+async def pershing_archive_get_route(filename: str):
+    try:
+        return pershing_get_archived_build(filename)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.delete("/api/pershing/archive/{filename}")
+async def pershing_archive_delete_route(filename: str):
+    return pershing_delete_archived_build(filename)
+
+
+@app.post("/api/pershing/rebuild")
+async def pershing_rebuild_route(params: RebuildParams):
+    return pershing_rebuild(params)
+
+
+@app.post("/api/pershing/grow-network")
+async def pershing_grow_network_route(payload: GrowNetworkRequest):
+    """Grows the Space Colonization pedestrian circulation network against
+    whatever terrain params the frontend currently has set -- synchronous
+    (see grow_network()'s own docstring for why this doesn't need the
+    async job-polling pattern the Blender build tier below uses)."""
+    return pershing_grow_network(payload)
+
+
+@app.post("/api/pershing/carve-network-canyon")
+async def pershing_carve_network_canyon_route(payload: GrowNetworkRequest):
+    """Carves a canyon along the grown circulation network's primary trunk
+    into the live SKETCH_WEIGHTS -- explicit, deliberate action (unlike
+    network growth itself, automatic since 2026-07-23) since carving
+    reshapes terrain that growth itself reads from; see
+    carve_network_canyon()'s own docstring for why auto-carving on every
+    rebuild would risk a drift loop. Frontend calls /rebuild right after,
+    same pattern bake() already establishes."""
+    return pershing_carve_network_canyon(payload)
+
+
+@app.post("/api/pershing/generate-canopy")
+async def pershing_generate_canopy_route(payload: GenerateCanopyRequest):
+    """Generates the organic panelized canopy roof + branching supports
+    against whatever terrain/program params the frontend currently has
+    set -- explicit action, synchronous (see generate_canopy()'s own
+    docstring for why this doesn't need the async job-polling pattern the
+    Blender build tier below uses)."""
+    return pershing_generate_canopy(payload)
+
+
+@app.post("/api/pershing/generate-drawings")
+async def pershing_generate_drawings_route(payload: GenerateDrawingsRequest):
+    """Renders one of the Drawings tab's 3 styles (lineweight/color/diagram)
+    against whatever terrain/program params the frontend currently has set
+    -- explicit action, synchronous (see generate_drawings()'s own
+    docstring)."""
+    return pershing_generate_drawings(payload)
+
+
+@app.post("/api/pershing/save-drawing")
+async def pershing_save_drawing_route(payload: SaveDrawingRequest):
+    """Writes the current Drawings tab style/view to disk as SVG+PNG+DXF --
+    see save_drawing()'s own docstring for why DXF, not PNG, is what
+    actually preserves layers/colors for CAD import)."""
+    return pershing_save_drawing(payload)
+
+
+@app.post("/api/pershing/juror-chat")
+async def pershing_juror_chat_route(payload: JurorChatRequest):
+    """Grounded Q&A for the live thesis-defense juror chat -- see
+    logic/juror_chat.py's module docstring for the reply/action contract."""
+    return pershing_juror_chat(payload)
+
+
+@app.post("/api/pershing/critique")
+async def pershing_critique_route(payload: CritiqueRequest):
+    """"The Metabolist" -- on-demand qualitative critique of the current
+    design, built from the spatial_summary rebuild() already returns. See
+    logic/juror_chat.py's CRITIC_PERSONA_SYSTEM_TEXT for the persona."""
+    return pershing_critique(payload)
+
+
+@app.get("/api/pershing/sketch")
+async def pershing_sketch_info():
+    return pershing_get_sketch_info()
+
+
+@app.post("/api/pershing/sketch/upload")
+async def pershing_sketch_upload(file: UploadFile = File(...)):
+    content = await file.read()
+    return pershing_save_uploaded_sketch(file.filename, content)
+
+
+@app.post("/api/pershing/bake")
+async def pershing_bake_route(grids: BakeGrids):
+    return pershing_bake(grids)
+
+
+# Diagram Input mode (2026-07-11) -- a separate design-input mechanism from
+# the paint canvas above, reading colors off an existing legacy-diagram
+# export instead of freehand brush strokes. Read-only preview; the frontend
+# commits via the EXISTING /api/pershing/bake route above with the returned
+# grids, so there's no parallel commit path to keep in sync.
+@app.get("/api/pershing/legacy-diagrams")
+async def pershing_legacy_diagrams_list():
+    return pershing_list_legacy_diagrams()
+
+
+@app.post("/api/pershing/legacy-diagrams/preview")
+async def pershing_legacy_diagrams_preview(payload: PreviewLegacyDiagramRequest):
+    return pershing_preview_legacy_diagram(payload.filename)
+
+
+# Import a saved 2D-app generation (2026-07-22) -- same read-only
+# list-then-preview-then-bake shape as the legacy-diagrams routes above, but
+# reading archive/diagrams/generated/memory_machine_generation_*.json
+# (written by generate_memory_node() below) instead of a rasterized/vector
+# diagram export. See logic/pershing_api.py's preview_2d_generation()
+# docstring for why this needs no SVG re-parsing at all.
+@app.get("/api/pershing/2d-generations")
+async def pershing_2d_generations_list():
+    return pershing_list_2d_generations()
+
+
+@app.post("/api/pershing/2d-generations/preview")
+async def pershing_2d_generations_preview(payload: Preview2DGenerationRequest):
+    try:
+        return pershing_preview_2d_generation(payload.filename)
+    except (ValueError, FileNotFoundError) as e:
+        return JSONResponse(status_code=404, content={"error": str(e)})
+
+
+class ArchiveGenerationRequest(BaseModel):
+    prompt: str = ""
+    narrative: str = ""
+    spatial_seed: list = []
+
+
+# "Save Build" -> "Recent 2D Generations" bridge (2026-07-24) -- App.jsx's
+# handleSaveBuild calls this (in addition to its own /api/pershing/archive
+# 3D-snapshot save) with whatever SPATIALIZE diagram was live at save time,
+# so the diagram that produced a saved build stays discoverable from the 2D
+# side too -- see archive_generation_record()'s own docstring for the full
+# "why." Silently a no-op (empty spatial_seed) when the build wasn't
+# produced via SPATIALIZE at all (e.g. freehand painting only).
+@app.post("/api/archive-generation")
+async def archive_generation_route(payload: ArchiveGenerationRequest):
+    filename = archive_generation_record(payload.prompt, payload.narrative, payload.spatial_seed)
+    return {"filename": filename}
+
+
+# SPATIALIZE tab (2026-07-23) -- 2D authoring ported natively into the 3D
+# React app. Same preview-then-bake shape as the 2d-generations routes
+# above, but takes the live in-memory spatial_seed directly (no saved-file
+# round-trip) and rasterizes with z-order occlusion, since the SPATIALIZE
+# canvas's stack order is an intentional authoring signal.
+@app.post("/api/pershing/spatialize-preview")
+async def pershing_spatialize_preview_route(payload: SpatializePreviewRequest):
+    return pershing_spatialize_preview(payload.spatial_seed)
+
+
+@app.get("/api/pershing/deficit-weights")
+async def pershing_deficit_weights_route():
+    return pershing_get_deficit_weights_public()
+
+
+@app.get("/api/pershing/deficit-hotspots")
+async def pershing_deficit_hotspots_route(top_n: int = 12):
+    """Real per-bay deficit-hotspot positions (not the coarse 9-cardinal-
+    point summary /deficit-weights returns) -- see
+    get_deficit_hotspots()'s own docstring. Used by SPATIALIZE's live
+    overlay so hotspot circles sit at their actual site positions."""
+    return pershing_get_deficit_hotspots(top_n)
+
+
+@app.post("/api/pershing/blender-build")
+async def pershing_blender_build_route(
+    payload: dict, lineart: bool = False, view_dir: str = None, include_real_context: bool = False,
+    tag: str = None,
+):
+    """Kicks off the headless-Blender "build" tier (see
+    logic/pershing_blender.py) on whatever rebuild result the frontend
+    currently has on screen -- payload is exactly the JSON /rebuild already
+    returned, passed straight through, so the built OBJ is guaranteed to
+    match what's visible, not a server-side recomputation that could drift
+    from it. Returns immediately; the browser polls the job-status route
+    below rather than blocking this request on the Blender subprocess.
+
+    lineart/view_dir/include_real_context are query params, not body
+    fields -- keeps the POST body exactly the raw rebuild-result dict,
+    unpolluted, since it's forwarded straight through to Blender as the
+    input JSON. view_dir is a comma-separated "x,y,z" string
+    (?view_dir=0.3,-0.6,0.75) -- only meaningful alongside lineart=true
+    (see pershing_blender.start_build_job's docstring); the frontend's
+    "Export Current View" trigger (Viewport.jsx) derives this from the
+    live OrbitControls camera direction."""
+    view_dir_tuple = tuple(float(v) for v in view_dir.split(",")) if view_dir else None
+    job_id = pershing_blender.start_build_job(
+        payload, lineart=lineart, view_dir=view_dir_tuple, include_real_context=include_real_context, tag=tag)
+    return {"job_id": job_id, "status": "queued"}
+
+
+@app.get("/api/pershing/blender-build/{job_id}")
+async def pershing_blender_build_status(job_id: str):
+    job = pershing_blender.get_job(job_id)
+    if job is None:
+        return JSONResponse(status_code=404, content={"error": "unknown job_id"})
+    return job
 
 
 if __name__ == "__main__":

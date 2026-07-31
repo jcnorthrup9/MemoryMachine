@@ -1,21 +1,42 @@
 @echo off
-:: Start the Pershing Metabolizer dev server from the repo root.
-:: Tests each Python candidate before using it (venv shims can exist but be broken).
-::
-:: URL: http://localhost:8000/PershingMetabolizer_Prototype/index.html
+REM Starts diagram_tool (Memory Machine // Diagram Tool) -- the standalone
+REM 2D diagram-authoring + AI Remix app, decoupled from the old Digital
+REM Palimpsest app (root index.html plus static main.js, served by app.py
+REM at http://127.0.0.1:8000/) and from Pershing Metabolizer itself
+REM (frontend plus app.py on port 8000). See diagram_tool/app.py's module
+REM docstring for how the three relate.
+REM
+REM 2026-07-28: the Palimpsest app is NOT launched via npm run dev -- that
+REM comment described a root-level vite scaffold (package name "temp-app")
+REM that was never wired to anything and has now been deleted. index.html
+REM loads /static/style.css and /static/main.js by absolute path, which
+REM only resolve under the FastAPI mount in app.py.
+REM
+REM 2026-07-17: repointed from a plain http.server serving the now-
+REM superseded PershingMetabolizer_Prototype/index.html to this, since that
+REM prototype is dead weight and this is what "open the app" should mean
+REM now. Needs fastapi/uvicorn/pydantic (see requirements.txt), unlike the
+REM old http.server target, so unlike before this script mainly relies on
+REM the venv rather than any stdlib-only Python on PATH.
+REM
+REM URL: http://127.0.0.1:8006
 
 set ROOT=%~dp0
 
-:: cd to repo root first — avoids trailing-backslash quoting issues with --directory
+REM cd to repo root first -- avoids trailing-backslash quoting issues
 cd /d "%ROOT%"
 
-:: Test a python candidate: if it runs --version cleanly, use it for the server.
 set VENV_PY=%ROOT%.venv\Scripts\python.exe
 if exist "%VENV_PY%" (
     "%VENV_PY%" --version >nul 2>&1
     if not errorlevel 1 (
         echo Using venv Python: %VENV_PY%
-        "%VENV_PY%" -m http.server 8000
+        start "Memory Machine - Diagram Tool" "%VENV_PY%" diagram_tool\app.py
+        REM ping as a portable delay -- unlike "timeout /t", it never
+        REM touches stdin, so it doesn't break when this script runs with
+        REM redirected/piped input (automation, remote invocation, etc).
+        ping -n 3 127.0.0.1 >nul
+        start "" http://127.0.0.1:8006
         goto :done
     )
     echo Venv Python exists but is broken, trying system Python...
@@ -23,41 +44,15 @@ if exist "%VENV_PY%" (
 
 python --version >nul 2>&1
 if not errorlevel 1 (
-    echo Using system python
-    python -m http.server 8000
+    echo Using system python -- if this fails with "No module named fastapi",
+    echo run: pip install -r requirements.txt   -- or fix the venv instead
+    start "Memory Machine - Diagram Tool" python diagram_tool\app.py
+    ping -n 3 127.0.0.1 >nul
+    start "" http://127.0.0.1:8006
     goto :done
 )
 
-python3 --version >nul 2>&1
-if not errorlevel 1 (
-    echo Using system python3
-    python3 -m http.server 8000
-    goto :done
-)
-
-py -3.12 --version >nul 2>&1
-if not errorlevel 1 (
-    echo Using py 3.12
-    py -3.12 -m http.server 8000
-    goto :done
-)
-
-py -3.11 --version >nul 2>&1
-if not errorlevel 1 (
-    echo Using py 3.11
-    py -3.11 -m http.server 8000
-    goto :done
-)
-
-:: Node.js fallback — npx serve works without any Python at all
-where npx >nul 2>&1
-if not errorlevel 1 (
-    echo No Python found, falling back to npx serve
-    cd /d "%ROOT%"
-    npx serve . -p 3000
-    goto :done
-)
-
-echo ERROR: No Python or Node.js found. Install either to run the dev server.
+echo ERROR: No Python found. Install Python 3.11+, then run:
+echo   pip install -r requirements.txt
 pause
 :done

@@ -1,0 +1,25 @@
+{
+  "_meta": "Single source of truth for per-program viewport/drawing colors (2026-07-28 consolidation pass). Previously duplicated by hand across three files that had to be kept in sync manually: frontend/src/components/Viewport.jsx (the original), drawing_styles.py (its own comment described itself as 'a duplicated source of truth, kept in sync manually'), and frontend/src/components/DiagnosticsPanel.jsx (a third copy added 2026-07-25 for the Program Distribution bars). Same consolidation, same reasoning, and same on-disk location as kindRegistry.json -- lives under frontend/src/ so Vite can import it as a build-time JSON asset; Python has no such restriction and just reads the file from disk. Keys are program_item LABELS (data/program_requirements.json's `label`), not ids, because that's what program-zone payloads carry through the pipeline.",
+  "_palette_rationale": "Grouped by hue family per category (red/purple/indigo/teal = sports_recreation, blue/violet/cyan = enrichment_civic, greens = green_space/outdoor, pinks = health_care, slate/brown = support_amenity) so category identity still reads at a glance while each program within a category stays genuinely distinct. Deliberately avoids the orange/amber/beige family already load-bearing elsewhere in the viewport (ramp_slab #e8a23c, floor_slab #c9c2b3, amenity fixtures #ff8c26, salvage #8a8580) -- the old sports_recreation orange (#ff9800) was easy to mistake for ramp/slab geometry, which is the 'yellow slab' investigation this map was a direct answer to.",
+  "_fallback_rationale": "fallback is used for any program_item not listed here (e.g. a data/program_requirements.json entry added later without a color picked yet) -- neutral grey, so it visually flags 'needs a color' rather than silently colliding with an existing category/kind color.",
+  "fallback": "#9e9e9e",
+  "programs": {
+    "Green Space & Park Infrastructure": "#2e7d32",
+    "Community Garden": "#9ccc65",
+    "Soccer Field": "#d32f2f",
+    "Public Gym": "#7b1fa2",
+    "Skatepark": "#303f9f",
+    "Volleyball Court": "#00838f",
+    "Computer / Tech Space": "#1565c0",
+    "Classrooms / Study Rooms": "#0288d1",
+    "Music Practice Space": "#5e35b1",
+    "Arts & Crafts Studio": "#00acc1",
+    "Playground": "#558b2f",
+    "Picnic / Grill Site": "#00695c",
+    "Workout Equipment": "#9e9d24",
+    "Individual Practice Office": "#e91e63",
+    "Veterinary": "#f06292",
+    "Restrooms (Metro Entrance)": "#546e7a",
+    "Restrooms (Recreation Cluster)": "#6d4c41"
+  }
+}

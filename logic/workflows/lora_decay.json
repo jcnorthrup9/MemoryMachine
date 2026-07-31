@@ -1,0 +1,84 @@
+{
+  "_comment": [
+    "ComfyUI API-format workflow for the LoRA decay series (2026-07-28).",
+    "",
+    "API format (flat dict keyed by node id, each with class_type + inputs) --",
+    "NOT the UI 'workflow.json' you get from Save in the web editor. This is",
+    "what POST /prompt expects, and what logic/comfy_client.queue_workflow()",
+    "already sends. If you edit this in the ComfyUI UI, re-export via",
+    "'Save (API Format)' or the node ids below will stop matching.",
+    "",
+    "Only vanilla nodes are used -- no custom node packs to install.",
+    "",
+    "Node ids that logic/lora_decay_series.py patches by name:",
+    "  1  CheckpointLoaderSimple : ckpt_name  (base model)",
+    "  2  LoraLoader             : lora_name, strength_model, strength_clip",
+    "  3  CLIPTextEncode         : text       (positive prompt)",
+    "  4  CLIPTextEncode         : text       (negative prompt)",
+    "  5  EmptyLatentImage       : width, height",
+    "  6  KSampler               : seed, steps, cfg, sampler_name, scheduler",
+    "  8  SaveImage              : filename_prefix",
+    "",
+    "The step-0 baseline is rendered by setting strength_model/strength_clip",
+    "to 0 rather than by deleting node 2. Keeping the graph topology byte-",
+    "identical across every frame means the only thing changing in the series",
+    "is the LoRA itself -- delete the node and you have also changed the",
+    "execution path, which is a second variable you did not intend."
+  ],
+
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "REPLACED_AT_RUNTIME" }
+  },
+  "2": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "lora_name": "REPLACED_AT_RUNTIME",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": ["1", 0],
+      "clip": ["1", 1]
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "pershingsq, aerial view",
+      "clip": ["2", 1]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "text, watermark, signature, border, frame",
+      "clip": ["2", 1]
+    }
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 1024, "height": 1024, "batch_size": 1 }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0,
+      "model": ["2", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["5", 0]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["6", 0], "vae": ["1", 2] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "filename_prefix": "lora_decay/frame", "images": ["7", 0] }
+  }
+}

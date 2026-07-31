@@ -1,0 +1,83 @@
+{
+  "_comment": [
+    "ComfyUI API-format img2img workflow for running a Pershing Metabolizer",
+    "viewport screenshot through the site's own trained LoRA (2026-07-28).",
+    "",
+    "What this is FOR, conceptually: the 3D viewport render is the design",
+    "proposal -- what the instrument computed from real data. The LoRA is the",
+    "site's remembered appearance, learned from its own photographic archive.",
+    "Running one through the other, with denoise as the mixing control, asks",
+    "how much of the proposal survives contact with the site's memory. At low",
+    "denoise the geometry holds and only surface/atmosphere is recalled; at",
+    "high denoise the memory overwrites the proposal entirely. That sweep is",
+    "the argument, and denoise is a fourth dial alongside sketch_alpha,",
+    "data_alpha and LoRA strength.",
+    "",
+    "Node ids (auto-detected by logic/lora_decay_series.py, listed for",
+    "reference only):",
+    "  1  CheckpointLoaderSimple",
+    "  2  LoraLoader",
+    "  3  CLIPTextEncode  (positive, via KSampler link)",
+    "  4  CLIPTextEncode  (negative, via KSampler link)",
+    "  6  KSampler        (denoise < 1.0 is what makes this img2img)",
+    "  8  SaveImage",
+    " 10  LoadImage       (filename is set after upload to ComfyUI's input/)",
+    " 11  VAEEncode       (image -> latent, replacing EmptyLatentImage)",
+    "",
+    "Uses only vanilla nodes. Export replacements with Save (API Format)."
+  ],
+
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "REPLACED_AT_RUNTIME" }
+  },
+  "2": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "lora_name": "REPLACED_AT_RUNTIME",
+      "strength_model": 1.0,
+      "strength_clip": 1.0,
+      "model": ["1", 0],
+      "clip": ["1", 1]
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "pershingsq, aerial view", "clip": ["2", 1] }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "text": "text, watermark, signature, border, frame", "clip": ["2", 1] }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "REPLACED_AT_RUNTIME", "upload": "image" }
+  },
+  "11": {
+    "class_type": "VAEEncode",
+    "inputs": { "pixels": ["10", 0], "vae": ["1", 2] }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.55,
+      "model": ["2", 0],
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "latent_image": ["11", 0]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["6", 0], "vae": ["1", 2] }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": { "filename_prefix": "lora_img2img/frame", "images": ["7", 0] }
+  }
+}

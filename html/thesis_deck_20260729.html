@@ -1,0 +1,468 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Machine That Forgets // Thesis Reframe 2026</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #e0e0e0;
+            --accent: #fff4ca;
+            --dim: #1e1e1e;
+            --muted: #555;
+            --border: #222;
+            --green: #88ff88;
+        }
+        body.light-mode {
+            --bg: #d8ecca;
+            --text: #111111;
+            --accent: #3d6b28;
+            --dim: #c4e0b2;
+            --muted: #5a7a4a;
+            --border: #a8c88a;
+            --green: #2d6e2d;
+        }
+        body.light-mode .viewer { background: var(--bg); }
+        body.light-mode p { color: #2a2a2a; }
+        body.light-mode .vignette { color: #2a2a2a; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .viewer {
+            width: 96vw;
+            max-width: 1800px;
+            height: 92vh;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spread-container { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+        .spread { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .spread.active { display: flex; }
+
+        .col { width: 50%; height: 100%; padding: 50px 55px; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+        .col.full { width: 100%; border-right: none; padding: 40px 70px; }
+
+        .slide-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; flex-shrink: 0; }
+        h1 { font-size: 1.9rem; color: var(--accent); text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 28px; letter-spacing: 3px; flex-shrink: 0; font-weight: normal; line-height: 1.2; }
+        h1.hero { font-size: 3.6rem; border-bottom: none; padding-bottom: 0; margin-bottom: 10px; letter-spacing: 5px; line-height: 1.08; }
+        h2 { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 16px; flex-shrink: 0; font-weight: normal; }
+        h3 { font-size: 0.85rem; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; flex-shrink: 0; font-weight: normal; }
+        p { font-size: 0.88rem; line-height: 1.75; color: #aaa; text-align: justify; text-align-last: left; }
+
+        .quote { border-left: 2px solid var(--accent); padding-left: 18px; margin-bottom: 26px; flex-shrink: 0; }
+        .quote-text { font-size: 1.05rem; color: var(--accent); line-height: 1.5; margin-bottom: 8px; }
+        .quote-source { font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+        .vignette { border-left: 1px solid var(--accent); padding-left: 16px; margin-bottom: 16px; font-size: 0.83rem; color: #aaa; line-height: 1.65; flex-shrink: 0; }
+        .vignette strong { color: var(--text); }
+
+        pre.mono { color: var(--green); font-size: 0.82rem; line-height: 1.65; white-space: pre-wrap; }
+
+        .rule { width: 100%; height: 1px; background: var(--border); margin: 18px 0; flex-shrink: 0; }
+
+        .ph { border: 1px dashed #252525; background: var(--bg); display: flex; align-items: center; justify-content: center; color: #2a2a2a; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 3px; text-align: center; padding: 16px; flex-shrink: 0; }
+        .ph.grow { flex: 1; min-height: 0; }
+        .ph:has(img) { border: none; background: none; padding: 0; }
+
+        .case-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; flex: 1; min-height: 0; }
+        .case-item { display: flex; flex-direction: column; overflow: hidden; }
+        .case-phase-tag { font-size: 0.6rem; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; line-height: 1.4; }
+
+        table.evidence { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+        table.evidence td, table.evidence th { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; line-height: 1.5; }
+        table.evidence th { color: var(--muted); font-weight: normal; text-transform: uppercase; letter-spacing: 1px; font-size: 0.62rem; }
+        table.evidence td.evidence-col { color: var(--green); font-size: 0.72rem; }
+        table.evidence td.shows-col { color: #aaa; }
+
+        .triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; flex: 1; min-height: 0; }
+        .triad-col { display: flex; flex-direction: column; padding: 0 24px; border-right: 1px solid var(--border); overflow: hidden; }
+        .triad-col:first-child { padding-left: 0; }
+        .triad-col:last-child { border-right: none; padding-right: 0; }
+        .triad-label { font-size: 0.68rem; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 12px; }
+
+        .slide-header-row { display: flex; align-items: baseline; gap: 24px; margin-bottom: 8px; flex-shrink: 0; }
+
+        /* header bar shared by every content slide */
+        .hdr { padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px; }
+        .hdr .num { font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap; }
+        .hdr .ttl { font-size:1.3rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace; }
+
+        /* histogram */
+        .hist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .hist-label { width: 190px; flex-shrink: 0; font-size: 0.72rem; color: #aaa; line-height: 1.3; }
+        .hist-label small { display:block; color: var(--muted); font-size: 0.62rem; letter-spacing: 1px; }
+        .hist-track { flex: 1; height: 22px; background: var(--dim); position: relative; }
+        .hist-fill { height: 100%; background: var(--muted); }
+        .hist-fill.hl { background: var(--accent); }
+        .hist-count { width: 40px; flex-shrink: 0; font-size: 0.85rem; color: var(--text); text-align: right; }
+        .hist-count.hl { color: var(--accent); font-weight: bold; }
+        .hist-callout { font-size: 0.68rem; color: var(--accent); letter-spacing: 1px; margin-left: 8px; white-space: nowrap; }
+
+        /* footer nav */
+        footer { padding: 11px 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--muted); background: var(--bg); flex-shrink: 0; letter-spacing: 1px; }
+        footer button { background: none; border: 1px solid var(--border); color: var(--text); padding: 4px 18px; cursor: pointer; font-family: inherit; font-size: 0.75rem; letter-spacing: 2px; transition: border-color 0.2s, background 0.2s; }
+        footer button:hover { border-color: #444; background: var(--dim); }
+
+        /* speaker notes overlay */
+        #notes-panel {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 10000;
+            max-height: 42vh; overflow-y: auto;
+            background: #0a0a0a; border-top: 2px solid var(--accent);
+            padding: 20px 60px; display: none;
+            font-family: 'Courier New', monospace;
+        }
+        #notes-panel.show { display: block; }
+        #notes-panel .notes-hdr { font-size: 0.65rem; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+        #notes-panel p { color: #ccc; font-size: 0.92rem; line-height: 1.7; text-align: left; max-width: 1400px; }
+        #notes-hint { position: fixed; bottom: 8px; right: 12px; font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; z-index: 9999; }
+    </style>
+</head>
+<body>
+<div class="viewer">
+    <div class="spread-container">
+
+        <!-- 00 STATEMENT -->
+        <div class="spread active" id="spread-1">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">00 // STATEMENT</span></div>
+                <div style="display:flex; flex:1; min-height:0;">
+                    <div class="col" style="justify-content:center;">
+                        <h1 class="hero">THE SEAM<br>IS THE<br>MATERIAL</h1>
+                        <div class="vignette" style="border-left-width:2px; font-size:1.05rem; margin-top:50px;">
+                            Every architect designs from incomplete information, and the discipline's two habits — erasure and preservation — exist to hide that. This thesis treats the seam between data, approximation, and invention as the material itself, and builds the instrument that hands it to the architect as a control.
+                        </div>
+                        <div style="margin-top:auto; font-size:0.68rem; color:#2a2a2a; letter-spacing:3px; line-height:2.2;">
+                            JOHN NORTHRUP<br>
+                            SCI-ARC // THESIS 2026<br>
+                            REFRAME OF "THE MACHINE THAT FORGETS"
+                        </div>
+                    </div>
+                    <div class="col" style="padding:24px;">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img src="../assets/precedents/pershing_square_satellite.jpg" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 01 THE TWO HABITS -->
+        <div class="spread" id="spread-2">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">01 // THE TWO HABITS</span><span class="ttl">Erasure &amp; Preservation</span></div>
+                <div class="col full" style="flex:1; min-height:0;">
+                    <div class="quote" style="margin-bottom:22px;">
+                        <div class="quote-text">"Treating degradation as failure leads to two dominant responses. The first is total erasure, demolition, and replacement. The second is rigid preservation... Both approaches misinterpret memory as something that can be stabilized, or even contained. In practice, memory always leaks."</div>
+                        <div class="quote-source">The Machine That Forgets — Architectural Memory</div>
+                    </div>
+                    <div class="case-grid">
+                        <div class="case-item">
+                            <div class="case-phase-tag">GARDEN SQUARE<br><small style="color:var(--muted)">1866–1917</small></div>
+                            <div class="ph grow" style="overflow:hidden;"><img src="../data/lora_datasets/pershing/raw/Central_Park_looking_north_toward_Fifth_and_Hill_Los_Angeles_3f63d85f.jpg" style="width:100%;height:100%;object-fit:cover;"></div>
+                        </div>
+                        <div class="case-item">
+                            <div class="case-phase-tag">PERSHING LAWN<br><small style="color:var(--muted)">1918–1951</small></div>
+                            <div class="ph grow" style="overflow:hidden;"><img src="../data/lora_datasets/pershing/raw/Pershing_Square_1941_jpg_cfb69a59.jpg" style="width:100%;height:100%;object-fit:cover;"></div>
+                        </div>
+                        <div class="case-item">
+                            <div class="case-phase-tag" style="color:#ff8888;">GARAGE DECK — ERASED<br><small style="color:var(--muted)">1952–1993</small></div>
+                            <div class="ph grow" style="overflow:hidden; border:1px solid #442222;"><img src="../data/lora_datasets/pershing/raw/Know_Your_City_No_4_Beethoven_statue_in_Pershing_Square_jpg_2128bb2e.jpg" style="width:100%;height:100%;object-fit:cover;"></div>
+                        </div>
+                        <div class="case-item">
+                            <div class="case-phase-tag" style="color:#ff8888;">LEGORRETA — ERASED<br><small style="color:var(--muted)">1994–2016</small></div>
+                            <div class="ph grow" style="overflow:hidden; border:1px solid #442222;"><img src="../data/lora_datasets/pershing/raw/Pershing_Square_LA_CA_jjron_22_03_2012_jpg_0e769f79.jpg" style="width:100%;height:100%;object-fit:cover;"></div>
+                        </div>
+                        <div class="case-item">
+                            <div class="case-phase-tag">PRESENT<br><small style="color:var(--muted)">2017–</small></div>
+                            <div class="ph grow" style="overflow:hidden;"><img src="../data/lora_datasets/pershing/raw/Pershing_Square_Los_Angeles_July_2022_JPG_e65d9e1d.jpg" style="width:100%;height:100%;object-fit:cover;"></div>
+                        </div>
+                    </div>
+                    <p style="margin-top:20px; flex-shrink:0;">Every prior layer of Pershing Square was itself a "total erasure" response. This thesis is the third position — tested on the one site that has already tried the other two, five times.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 02 THE PAPER VS THE PROJECT -->
+        <div class="spread" id="spread-3">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">02 // THE PAPER VS. THE PROJECT</span></div>
+                <div style="display:flex; flex:1; min-height:0;">
+                    <div class="col">
+                        <h2>The paper ends in defeat</h2>
+                        <div class="quote">
+                            <div class="quote-text">"We are lost in the collapse of structure as the noise of ambiguity overtakes us."</div>
+                            <div class="quote-source">Final line — section titled "Long Decline is Over"</div>
+                        </div>
+                        <p style="margin-top:20px;">The code argues the opposite. It is not a machine drowning in noise — it is an instrument obsessive about declaring which of its moves come from real data, which from placeholder, and which from the designer's hand.</p>
+                        <p style="margin-top:16px; color:var(--accent); font-size:0.95rem; text-align:left;">It declares the seam every time it cannot know something.</p>
+                    </div>
+                    <div class="col" style="justify-content:center;">
+                        <table class="evidence">
+                            <tr><th style="width:38%;">Evidence in the code</th><th>What it shows</th></tr>
+                            <tr><td class="evidence-col">DEFAULT_DEFICIT_HOTSPOTS<br><span style="color:var(--muted);font-size:0.65rem;">terracing_engine.py</span></td><td class="shows-col">placeholder amenity input, labelled as placeholder, pending real Section 2 data</td></tr>
+                            <tr><td class="evidence-col">"food" motivator dropped<br><span style="color:var(--muted);font-size:0.65rem;">circulation_network.py:23</span></td><td class="shows-col">"no real data source exists anywhere in this pipeline for it — not fabricated"</td></tr>
+                            <tr><td class="evidence-col">no cafe program invented<br><span style="color:var(--muted);font-size:0.65rem;">program_placement.py:53</span></td><td class="shows-col">"the real amenity_needs.csv assessment explicitly found no food-service deficit"</td></tr>
+                            <tr><td class="evidence-col">ACTIVE_RECREATION_SITE_FRACTION = 0.40<br><span style="color:var(--muted);font-size:0.65rem;">pershing_api.py:119</span></td><td class="shows-col">ASPO Planning Advisory Service Report No. 194 (1965), citing Butler's Standards for Municipal Recreation Areas</td></tr>
+                            <tr><td class="evidence-col">used_real_amenity_data<br><span style="color:var(--muted);font-size:0.65rem;">pershing_api.py:600 → UI</span></td><td class="shows-col">ships as a boolean on every rebuild — the seam is displayed, not hidden</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 03 THE BURIED SENTENCE -->
+        <div class="spread" id="spread-4">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">03 // THE BURIED SENTENCE</span></div>
+                <div class="col full" style="flex:1; justify-content:center; align-items:flex-start;">
+                    <div class="quote" style="max-width:1250px;">
+                        <div class="quote-text" style="font-size:1.6rem; line-height:1.5;">"The difference is not whether patterns are misrecognized, but how those misrecognitions are framed: as error to be erased, or as latent structure to be worked through."</div>
+                        <div class="quote-source">Architectural Apophenia — section 6 of 8</div>
+                    </div>
+                    <div class="quote" style="max-width:1250px; margin-top:10px;">
+                        <div class="quote-text" style="font-size:1.05rem;">"Design does not emerge from certainty, but from negotiating gaps."</div>
+                        <div class="quote-source">Architectural Memory</div>
+                    </div>
+                    <p style="max-width:1100px; margin-top:30px;">Structurally subordinate in the paper — a clause in section 6, with three sections still to come that retreat back into anxiety. Everything before it is setup. This thesis promotes it from a subordinate clause to the argument itself.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 04 THE INSTRUMENT -->
+        <div class="spread" id="spread-5">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">04 // THE INSTRUMENT</span></div>
+                <div style="display:flex; flex:1; min-height:0;">
+                    <div class="col">
+                        <div class="triad" style="flex:1;">
+                            <div class="triad-col">
+                                <div class="triad-label">Data</div>
+                                <p style="font-size:0.78rem;">real_geometry.json — surveyed from the actual 1952 structure. Site 354.22 × 602.53 ft. Column height 30 ft.</p>
+                            </div>
+                            <div class="triad-col">
+                                <div class="triad-label">Approximation</div>
+                                <p style="font-size:0.78rem;">DEFAULT_DEFICIT_HOTSPOTS — an explicitly diagrammatic placeholder, pending real Section 2 amenity data.</p>
+                            </div>
+                            <div class="triad-col">
+                                <div class="triad-label">Invention</div>
+                                <p style="font-size:0.78rem;">Painted masks — sketch_alpha sets how far the designer's hand outranks the data.</p>
+                            </div>
+                        </div>
+                        <div class="rule"></div>
+                        <p style="color:var(--accent); text-align:left;">used_real_amenity_data: false — a thesis claim rendered as a boolean, shipped to the live UI on every rebuild.</p>
+                    </div>
+                    <div class="col" style="padding:24px;">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img src="../outputs/drawings_export/color_plan_20260728_125309.png" style="width:100%;height:100%;object-fit:contain; background:#000;">
+                        </div>
+                        <div style="font-size:0.62rem; color:var(--muted); letter-spacing:1px; margin-top:8px; text-align:center;">LIVE EXPORT — color_plan_20260728_125309</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 05 MEMORY AS SPATIAL CONSTRAINT -->
+        <div class="spread" id="spread-6">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">05 // MEMORY AS SPATIAL CONSTRAINT</span></div>
+                <div style="display:flex; flex:1; min-height:0;">
+                    <div class="col">
+                        <div class="quote">
+                            <div class="quote-text">"Memory becomes a spatial constraint, a limitation on the interventions we may deem necessary."</div>
+                            <div class="quote-source">The Machine That Forgets — Architectural Memory</div>
+                        </div>
+                        <p style="margin:20px 0;">Excavation depth is capped by the real remembered structure of the 1950s parking garage. Not a metaphor — three lines of executable code.</p>
+                        <pre class="mono">max_canyon_depth_ft = min(
+    params.canyon_depth * 9.0 * excavation_scale,
+    REAL_GEOMETRY.get("column_height_ft", 30.0)
+)</pre>
+                        <p style="margin-top:20px; font-size:0.76rem;">column_height_ft = 30 — surveyed from the real column mesh, logic/pershing_api.py:592. Regression test: tests/test_pipeline_golden.py::test_excavation_never_exceeds_column_height</p>
+                    </div>
+                    <div class="col" style="padding:24px;">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img src="../outputs/drawings_export/color_section_20260725_140956.png" style="width:100%;height:100%;object-fit:contain; background:#000;">
+                        </div>
+                        <div style="font-size:0.62rem; color:var(--muted); letter-spacing:1px; margin-top:8px; text-align:center;">SECTION — the excavation cut against real column geometry</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 06 THE ARCHIVE ITSELF -->
+        <div class="spread" id="spread-7">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">06 // THE ARCHIVE ITSELF</span></div>
+                <div style="display:flex; flex:1; min-height:0;">
+                    <div class="col">
+                        <h2>108 images, 5 eras, Wikimedia Commons</h2>
+                        <div style="margin-top:10px;">
+                            <div class="hist-row">
+                                <div class="hist-label">Garden Square<small>1866–1917</small></div>
+                                <div class="hist-track"><div class="hist-fill" style="width:11.4%;"></div></div>
+                                <div class="hist-count">8</div>
+                            </div>
+                            <div class="hist-row">
+                                <div class="hist-label">Pershing Lawn<small>1918–1951</small></div>
+                                <div class="hist-track"><div class="hist-fill" style="width:11.4%;"></div></div>
+                                <div class="hist-count">8</div>
+                            </div>
+                            <div class="hist-row">
+                                <div class="hist-label" style="color:var(--accent);">Garage Deck<small style="color:var(--accent);">1952–1993 — excavated</small></div>
+                                <div class="hist-track"><div class="hist-fill hl" style="width:1.4%;"></div></div>
+                                <div class="hist-count hl">1</div>
+                                <div class="hist-callout">← the era being excavated</div>
+                            </div>
+                            <div class="hist-row">
+                                <div class="hist-label">Legorreta<small>1994–2016</small></div>
+                                <div class="hist-track"><div class="hist-fill" style="width:100%;"></div></div>
+                                <div class="hist-count">70</div>
+                            </div>
+                            <div class="hist-row">
+                                <div class="hist-label">Present<small>2017–</small></div>
+                                <div class="hist-track"><div class="hist-fill" style="width:30%;"></div></div>
+                                <div class="hist-count">21</div>
+                            </div>
+                        </div>
+                        <p style="margin-top:24px;">The public record of this site is overwhelmingly the last thirty years. This is not a dataset failure — it is a measurement of the archive.</p>
+                    </div>
+                    <div class="col" style="padding:24px;">
+                        <div class="ph grow" style="overflow:hidden;">
+                            <img src="../data/lora_datasets/pershing/raw/Know_Your_City_No_4_Beethoven_statue_in_Pershing_Square_jpg_2128bb2e.jpg" style="width:100%;height:100%;object-fit:contain; background:#000;">
+                        </div>
+                        <div style="font-size:0.62rem; color:var(--accent); letter-spacing:1px; margin-top:8px; text-align:center;">1 OF 108 — THE ONLY GARAGE-DECK-ERA PHOTOGRAPH FOUND</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 07 THE METHOD -->
+        <div class="spread" id="spread-8">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">07 // THE METHOD</span><span class="ttl" style="color:var(--muted); font-size:0.85rem;">stated, not yet rendered</span></div>
+                <div class="col full" style="flex:1; min-height:0;">
+                    <div class="quote" style="margin-bottom:20px;">
+                        <div class="quote-text">"The metadata has been misplaced, lost from the image, and the tags that once guided the user to clarity no longer exist."</div>
+                        <div class="quote-source">Machinic Hallucinations — the paper's own claim, now testable</div>
+                    </div>
+                    <table class="evidence">
+                        <tr><th style="width:16%;">Variant</th><th style="width:12%;">Images</th><th style="width:36%;">Captions</th><th>Role</th></tr>
+                        <tr><td class="evidence-col">coherent</td><td class="shows-col">65</td><td class="shows-col">legorreta only, era-tagged</td><td class="shows-col">single-era control — remembers correctly</td></tr>
+                        <tr><td class="evidence-col">collapsed</td><td class="shows-col">45</td><td class="shows-col">era tags stripped</td><td class="shows-col">the condition — trained, 2000 steps</td></tr>
+                        <tr><td class="evidence-col">controlled</td><td class="shows-col">45</td><td class="shows-col">era tags present</td><td class="shows-col">the dial — pending</td></tr>
+                    </table>
+                    <p style="margin-top:20px;">collapsed and controlled are byte-identical pixels. They differ only in their caption sidecars — isolating the loss of metadata alone as the cause of temporal collapse, not a change of imagery.</p>
+                    <p style="margin-top:14px; color:var(--accent); text-align:left;">Prompted with an era word, controlled should steer to that period; collapsed has never seen the word — it returns an averaged blur of all five eras at once. Same images, same prompt, same seed.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 08 THE THIRD POSITION -->
+        <div class="spread" id="spread-9">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div class="hdr"><span class="num">08 // THE THIRD POSITION</span></div>
+                <div class="col full" style="flex:1; justify-content:center;">
+                    <p style="font-size:1.05rem; max-width:1300px; color:#ccc; margin-bottom:22px;">This thesis takes the third position. The seam between what a design knows, what it approximates, and what it invents is not a defect to be concealed — it is the architectural material, and it can be made visible, adjustable, and authored.</p>
+                    <p style="font-size:1.05rem; max-width:1300px; color:#ccc; margin-bottom:22px;">Memory Machine is the instrument built to hold that position: a design pipeline for Pershing Square that generates real, buildable form from real data, and declares its own provenance at every step. Its parameters are not style controls but epistemic ones — <span style="color:var(--accent);">sketch_alpha</span> sets how far the designer's intent outranks the data; <span style="color:var(--accent);">data_alpha</span> sets how far measured noise may override painted intent.</p>
+                    <div class="quote" style="max-width:1300px; margin-top:10px;">
+                        <div class="quote-text" style="font-size:1.3rem;">Apophenia is not the failure this project guards against. It is the operation the project makes explicit, and hands back to the architect as a dial.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 09 DISCUSSION -->
+        <div class="spread" id="spread-10">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%; align-items:center; justify-content:center;">
+                <h1 class="hero" style="text-align:center;">DISCUSSION</h1>
+                <div class="vignette" style="border-left:none; text-align:center; padding-left:0; max-width:1100px; margin-top:30px; font-size:0.95rem;">
+                    Every architect designs from incomplete information, and the discipline's two habits — erasure and preservation — exist to hide that. This thesis treats the seam between data, approximation, and invention as the material itself.
+                </div>
+                <div style="margin-top:60px; font-size:0.68rem; color:#2a2a2a; letter-spacing:3px;">JOHN NORTHRUP // MEMORY MACHINE // SCI-ARC 2026</div>
+            </div>
+        </div>
+
+    </div><!-- /spread-container -->
+
+    <footer>
+        <div id="page-indicator">00 // STATEMENT — 1 of 10</div>
+        <div class="nav-controls">
+            <button onclick="prevSpread()">[ PREV ]</button>
+            <button onclick="nextSpread()">[ NEXT ]</button>
+        </div>
+    </footer>
+</div>
+
+<div id="notes-panel">
+    <div class="notes-hdr">Speaker Notes</div>
+    <p id="notes-text"></p>
+</div>
+<div id="notes-hint">[ N ] TOGGLE NOTES &nbsp; [ ← → ] NAVIGATE</div>
+
+<script>
+    const labels = [
+        "00 // STATEMENT",
+        "01 // THE TWO HABITS",
+        "02 // THE PAPER VS. THE PROJECT",
+        "03 // THE BURIED SENTENCE",
+        "04 // THE INSTRUMENT",
+        "05 // MEMORY AS SPATIAL CONSTRAINT",
+        "06 // THE ARCHIVE ITSELF",
+        "07 // THE METHOD",
+        "08 // THE THIRD POSITION",
+        "09 // DISCUSSION",
+    ];
+    const notes = [
+        "Deliver the statement slowly, in full — this is the spine of the whole talk. \"The seam between data, approximation, and invention\" is the phrase to plant now; you will return to erasure/preservation, then to the seam itself, then to the dial. If asked to summarize in one line later, this is the line.",
+        "Walk the five photos left to right. Land deliberately on \"erased\" twice: the 1952 garage cut into the lawn, and Legorreta's 1994 scheme now itself being demolished. The point: Pershing Square has already tried both of the discipline's habits, repeatedly, and both failed to hold. That's why it's the right site for a third position, not just a convenient one.",
+        "Read the paper's final line aloud, then pause before saying \"the code argues the opposite.\" Don't rush the table — pick two rows to actually walk (the ASPO citation and the used_real_amenity_data boolean are the strongest). Keep the laptop open in case a juror wants to see the boolean live in the running app.",
+        "Explain the structural location: this sentence sits in section 6 of 8, a subordinate clause, with three more sections after it that retreat back into anxiety and end in defeat. Say plainly: this deck is what happens if you take that clause as the actual thesis instead of a hedge.",
+        "Point at the drawing — this is a real export from the running pipeline, not a rendering for the deck. Walk data / approximation / invention as three real objects in the codebase, not three abstractions. End on the boolean line — it's the shortest, hardest piece of evidence you have.",
+        "This is the one direct dramatization of \"memory becomes a spatial constraint\" as executable code, not metaphor. Read the paper's line first, then reveal the code has the same shape. If pushed: the 30ft is a real surveyed column height, not a design choice.",
+        "This is the strongest single finding in the project and needed zero training to get. Be direct: harvested 108 images from Wikimedia Commons (only archive with a public API, per-file licence metadata, and a compliable bot policy), deduped by SHA-256 and perceptual hash. The garage-deck bar is one photograph — a statue shot from behind. Let that image sit on screen a beat before moving on.",
+        "Be upfront that this is method, not finished result — controlled hasn't finished training. Explain the ablation logic clearly: collapsed and controlled are pixel-identical, differing only in caption sidecars, which isolates metadata loss as the sole variable. State what the prompt test will show once both are trained, but don't claim you've already seen it.",
+        "This is the emotional and argumentative peak — deliver it slower than the rest of the deck. The last line reframes the paper's own ending: not \"we are lost in the collapse of structure,\" but noise handed back to the architect as an instrument with a dial. End here, let it land, then move to discussion.",
+        "Open floor. If someone raises the dementia/Caretaker material from the original paper, it was deliberately cut from this presentation — the clinical equivalence did the least argumentative work of the paper's four analogies and was the most exposed flank; the seam/provenance argument carries the thesis without it.",
+    ];
+    const total = labels.length;
+    let current = 1;
+    let notesVisible = false;
+
+    function showSpread(n) {
+        document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('spread-' + n);
+        if (el) el.classList.add('active');
+        document.getElementById('page-indicator').innerText = labels[n - 1] + ' — ' + n + ' of ' + total;
+        document.getElementById('notes-text').innerText = notes[n - 1];
+        current = n;
+    }
+    function nextSpread() { showSpread(current < total ? current + 1 : 1); }
+    function prevSpread() { showSpread(current > 1 ? current - 1 : total); }
+    function toggleNotes() {
+        notesVisible = !notesVisible;
+        document.getElementById('notes-panel').classList.toggle('show', notesVisible);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSpread();
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevSpread();
+        if (e.key === 'n' || e.key === 'N') toggleNotes();
+    });
+
+    showSpread(1);
+</script>
+</body>
+</html>

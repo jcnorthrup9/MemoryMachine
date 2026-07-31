@@ -1,0 +1,57 @@
+{
+  "counts": {
+    "program_boxes": 105,
+    "program_zones": 14,
+    "real_columns": 295,
+    "real_slabs": 22,
+    "spatial_summary": 19,
+    "structural": 11900,
+    "voxels": 2680,
+    "voxels_excavated": 959
+  },
+  "depth_ft": {
+    "max": 0.0,
+    "mean": -6.840672,
+    "min": -27.0
+  },
+  "hash": "21af167b98e69665",
+  "kind_counts": {
+    "bolt_flange_plate": 614,
+    "concrete_floor_block": 1615,
+    "concrete_retaining_block": 6802,
+    "gusset_plate": 614,
+    "steel_bolt": 1536,
+    "steel_collar_sleeve": 192,
+    "steel_strut": 307,
+    "steel_tie_rod": 68,
+    "steel_turnbuckle": 68,
+    "tree_canopy": 42,
+    "tree_trunk": 42
+  },
+  "scalars": {
+    "excavation_scale": 1.0,
+    "max_canyon_depth_ft": 30.0,
+    "slab_harvest_tons": 9811.125,
+    "used_real_amenity_data": false,
+    "used_real_foot_traffic_data": false,
+    "used_real_noise_data": false,
+    "voxel_ft": 9.0
+  },
+  "structural_kinds": {
+    "bolt_flange_plate": 614,
+    "concrete_floor_block": 1615,
+    "concrete_retaining_block": 6802,
+    "gusset_plate": 614,
+    "steel_bolt": 1536,
+    "steel_collar_sleeve": 192,
+    "steel_strut": 307,
+    "steel_tie_rod": 68,
+    "steel_turnbuckle": 68,
+    "tree_canopy": 42,
+    "tree_trunk": 42
+  },
+  "typologies": {
+    "<none>": 2667,
+    "CIRCULATION": 13
+  }
+}

@@ -496,6 +496,21 @@ async function fetchSVG(siteId) {
   return data.svg;
 }
 
+// urban_engine.py's remix_layers() emits transform.x_frac/y_frac (fraction of
+// the base boundary's own size) -- engine2D.js's renderer and state.js's
+// getProgramStats() both expect absolute transform.x/y in that SVG's native
+// units. Without this conversion, AI/remix-generated layers get NaN world
+// coordinates (silently dropped by <canvas>), so they render nothing and the
+// HUD never counts them. Same math as diagram_tool/static/js/remixChat.js's
+// _remixFracToPixel(), ported here since the root app never had it.
+function _fracToPixel(x_frac, y_frac) {
+  const baseSVG = MemoryState.svgCache['PershingSquare'];
+  if (!baseSVG || !window.Engine2D) return { x: 0, y: 0 };
+  const baseEl = window.Engine2D.parseSVG(baseSVG);
+  const bbox = window.Engine2D.getBoundaryBBox(baseEl);
+  return { x: (x_frac || 0) * bbox.w, y: (y_frac || 0) * bbox.h };
+}
+
 // ── AI GENERATION ────────────────────────────────────────────────────────────
 async function generate() {
   const input  = document.getElementById('prompt-input');
@@ -567,6 +582,12 @@ async function generate() {
 
       const newLayers = data.spatial_seed.map((seed, idx) => {
         const lId = seed.layerId || 'GREEN_SPACE';
+        const t = seed.transform || {};
+        // x_frac/y_frac (from urban_engine.py's remix_layers()) takes
+        // precedence over any literal x/y -- see _fracToPixel() above.
+        const { x, y } = ('x_frac' in t || 'y_frac' in t)
+          ? _fracToPixel(t.x_frac, t.y_frac)
+          : { x: t.x ?? 0, y: t.y ?? 0 };
         return {
           id: Date.now() + idx,
           site: seed.site || 'PershingSquare',
@@ -578,7 +599,7 @@ async function generate() {
           contextLayer: false,
           base_area_px:   seed.base_area_px   ?? 1,
           solved_area_px: seed.solved_area_px ?? 1,
-          transform: seed.transform || { x: 0, y: 0, scale: 1.0, rot: 0 }
+          transform: { x, y, scale: t.scale ?? 1.0, rot: t.rot ?? 0 }
         };
       });
       MemoryState.stack.push(...newLayers);
@@ -604,8 +625,10 @@ async function generate() {
         setStatus(`Generating ${interventionLayers.length} 3D element(s)…`, 'running');
         let doneCount = 0;
         interventionLayers.forEach(seed => {
-          const tx = seed.transform?.x ?? 0;
-          const ty = seed.transform?.y ?? 0;
+          const st = seed.transform || {};
+          const { x: tx, y: ty } = ('x_frac' in st || 'y_frac' in st)
+            ? _fracToPixel(st.x_frac, st.y_frac)
+            : { x: st.x ?? 0, y: st.y ?? 0 };
           const zonePrompt = `${prompt}. ${seed.label || seed.layerId} element, urban park, architectural scale model`;
           const endpoint = window.MemoryState.isDemoMode
             ? '/api/blender-demo'
@@ -1069,10 +1092,24 @@ function switchToTab(name) {
 }
 
 // ── LAYER COLOR UTILITY ──────────────────────────────────────────────────────
+// Converts a ZONE_MATERIALS numeric hex (e.g. 0xBCAAA4) to a CSS hex string
+// ('#bcaaa4'), so the 2D SVG/export legend and the 3D material recoloring
+// pull from the exact same constant instead of two copies that can drift.
+function _hexColor(numericHex) {
+  return `#${numericHex.toString(16).padStart(6, '0')}`;
+}
+
 /** Single source of truth for Rhino layer colors across generation and picker. */
 function _getLayerColor(layerId) {
   const id = (layerId || '').toUpperCase();
-  if (id.includes('GREEN') || id.includes('SHADE'))               return '#4CAF50';
+  // SHADE must be checked BEFORE the GREEN branch below (2026-07-11 fix):
+  // previously id.includes('SHADE') piggybacked on the GREEN branch, so
+  // SHADE rendered identically to GREEN_SPACE in every exported diagram --
+  // no export before this fix could ever carry a real shade signal. Now
+  // derives its color from ZONE_MATERIALS.SHADE directly (was already
+  // defined for 3D material recoloring, never wired to this 2D legend).
+  if (id.includes('SHADE'))                                        return _hexColor(ZONE_MATERIALS.SHADE.color);
+  if (id.includes('GREEN'))                                        return '#4CAF50';
   if (id.includes('WATER'))                                        return '#03A9F4';
   if (id.includes('ATTRACTOR') || id.includes('UNIQUE'))          return '#FF9800';
   return '#9E9E9E'; // STREET, PATH, BOUNDARY, PARKING, FURNITURE, etc.
@@ -1086,8 +1123,15 @@ function _getLayerColor(layerId) {
  */
 function _injectBaseContext() {
   // Infrastructure from Pershing Square (rendered via context-group, not intervention loop)
+  // GREEN_SPACE/WATER_FEATURES included alongside the hardscape layers below --
+  // engine2D.js's context-group draws all of these as visible base-park
+  // geometry regardless of stack contents (see its contextKeywords list), but
+  // the HUD's getProgramStats() only tallies MemoryState.stack items. Omitting
+  // them here meant the visible base lawn/water read as a hard 0% no matter
+  // what was on screen.
   const BASE_LAYERS = [
-    'BOUNDARY', 'STREET', 'PARKING', 'PEDESTRIAN_PATH', 'STREET_FURNITURE'
+    'BOUNDARY', 'STREET', 'PARKING', 'PEDESTRIAN_PATH', 'STREET_FURNITURE',
+    'GREEN_SPACE', 'WATER_FEATURES'
   ];
   // Remove any existing context items (idempotent re-injection)
   MemoryState.stack = MemoryState.stack.filter(i => !i.contextLayer);
@@ -1293,9 +1337,11 @@ async function init() {
   try {
     const res  = await fetch('/api/guidelines');
     const data = await res.json();
-    // Backend returns { guidelines: {Softscape,Hardscape,Active,Blue_Space}, ... }
-    // or flat { SOFT, HARD, PROG, BLUE } — handle both shapes
-    const g = data.guidelines || data;
+    // /api/guidelines nests the parsed table under data.data.guidelines
+    // (see app.py's get_guidelines()) -- reading data.guidelines directly
+    // always missed, silently keeping the hardcoded defaults below no
+    // matter what urban_design_guidelines.md actually said.
+    const g = data.data?.guidelines || data.guidelines || {};
     const remap = {
       Softscape:  'SOFT',
       Hardscape:  'HARD',

@@ -14,17 +14,31 @@ Ingestion contract this module assumes of the Rhino SVG export:
     sublayer <g> children -- searched recursively, not just direct children)
     as <circle> tags (plan view) or as single vertical <path> line segments,
     one per column (elevation view).
-  - The slab/site outline lives in a <g id="{slab_layer}"> group -- its
-    real footprint is taken from the combined bounding box of every <path>
-    found anywhere inside that group (including nested sublayers, e.g.
-    STRUC__Slabs::L1/L2/L3), not assumed to be one single outline path.
-    Fixed 2026-07-05: an earlier version took only the *first* <path> found,
-    which silently measured the wrong (small, unrelated) shape once the real
-    Rhino model started drawing STRUC__Slabs as several separate paths/
-    sublayers instead of one outline curve -- confirmed via a live Rhino MCP
-    check that the real column grid spacing in this SVG is isotropic
-    (dx_pt/dy_pt ratio ~0.9998), so the bug was this parsing assumption, not
-    a non-uniform page-fit scale.
+  - Site extent/origin is read from a <g id="{boundary_layer}"> group when
+    present (a purpose-drawn boundary curve, default id "BOUNDARY") --
+    PREFERRED over inferring it from the slab outline. Falls back to the
+    slab/site outline in a <g id="{slab_layer}"> group (combined bounding
+    box of every <path> found anywhere inside it, including nested
+    sublayers, e.g. STRUC__Slabs::L1/L2/L3) only when no boundary layer
+    exists in the export.
+    Switched to boundary-preferred 2026-07-08: the slab-bbox approach --
+    "combine every <path> anywhere inside this group into one bbox" -- was
+    fixed once already (2026-07-05, see below) but proved fragile again:
+    three separate real re-exports of the same site each gave a
+    DIFFERENTLY wrong site-dimension result (not the same bug recurring,
+    three distinct failure shapes), pointing to sensitivity to whatever
+    incidental geometry a given export sweeps into that group rather than
+    one fixable parsing assumption. A boundary curve doesn't have that
+    ambiguity -- it's drawn to mean exactly one thing.
+    The slab-bbox path is still fixed as originally corrected 2026-07-05:
+    an earlier version took only the *first* <path> found, which silently
+    measured the wrong (small, unrelated) shape once the real Rhino model
+    started drawing STRUC__Slabs as several separate paths/sublayers
+    instead of one outline curve -- confirmed via a live Rhino MCP check
+    that the real column grid spacing in this SVG is isotropic (dx_pt/dy_pt
+    ratio ~0.9998), so that bug was the parsing assumption, not a
+    non-uniform page-fit scale. Kept only as a fallback + cross-validation
+    reference now, not the primary source.
   - The SVG carries no reliable real-world scale on its own -- callers must
     supply one known on-center spacing (spacing_ft) to calibrate pt-to-ft.
     A single scale factor is valid as long as the export isn't stretched to
@@ -32,6 +46,19 @@ Ingestion contract this module assumes of the Rhino SVG export:
     checked so far) -- it does not need to be an unscaled/1:1 export; a
     fixed page size (e.g. matching the same sheet size used for hand
     sketches) works fine.
+  - An optional single marker <circle> anywhere inside a <g id="{entrance_layer}">
+    group (default "metroEntrance") gives a transit-entrance anchor point,
+    read the same way column circles are. Added 2026-07-08 specifically to
+    retire the live-Rhino-MCP-query workflow that had previously produced a
+    real, hard-to-catch bug (secondary_entrance_anchor's z was off by
+    ~532ft, see PIPELINE_STATUS_AND_NEXT_STEPS.md) -- a plain Rhino POINT
+    object was tried first and confirmed NOT to survive this SVG export at
+    all (Rhino's exporter has no fill/stroke to emit for a point with no
+    geometry), so a small circle is the marker convention, matching
+    columns. Cross-validated against the live-query value on the real site:
+    the two independent measurement paths agreed to within 2ft on a 600+ft
+    site. Optional and gracefully absent (returns None) for any export that
+    doesn't have this layer -- not every site needs a transit anchor.
 """
 import re
 import math
@@ -40,6 +67,8 @@ import xml.etree.ElementTree as ET
 
 DEFAULT_COLUMN_LAYER = "STRUC__Columns"
 DEFAULT_SLAB_LAYER = "STRUC__Slabs"
+DEFAULT_BOUNDARY_LAYER = "BOUNDARY"
+DEFAULT_ENTRANCE_LAYER = "metroEntrance"
 
 _SVG_NS = "{http://www.w3.org/2000/svg}"
 
@@ -74,18 +103,22 @@ def _cluster(values, tol=2.0):
 def load_structural_grid_from_svg(svg_path, spacing_ft,
                                    column_layer=DEFAULT_COLUMN_LAYER,
                                    slab_layer=DEFAULT_SLAB_LAYER,
+                                   boundary_layer=DEFAULT_BOUNDARY_LAYER,
+                                   entrance_layer=DEFAULT_ENTRANCE_LAYER,
                                    cluster_tol=2.0):
     """
-    Parse a structural column grid and slab outline out of a Rhino plan-view
-    SVG export (layers `column_layer` / `slab_layer`).
+    Parse a structural column grid and site extent out of a Rhino plan-view
+    SVG export (layers `column_layer` / `boundary_layer` / `slab_layer` /
+    `entrance_layer`).
 
     The SVG only carries abstract drawing units ("pt"), so the real-world
     scale is derived from a known on-center column spacing (spacing_ft) --
     this is the one site-specific fact the caller must supply; everything
     else here is generic parsing/derivation.
 
-    Origin (0,0) is anchored to the bottom-left corner of the slab bounding
-    box as drawn -- true compass orientation in the original Rhino file is
+    Origin (0,0) is anchored to the bottom-left corner of the site-extent
+    bounding box as drawn (boundary curve if present, slab outline
+    otherwise) -- true compass orientation in the original Rhino file is
     not confirmed, so flip axes at the call site if north/south end up
     reversed for a given site.
     """
@@ -105,13 +138,27 @@ def load_structural_grid_from_svg(svg_path, spacing_ft,
             seen.add(key)
             columns_pt.append((x, y))
 
-    # Site footprint = combined bounding box of every <path> anywhere inside
-    # the slab group (including nested sublayers like L1/L2/L3) -- NOT just
-    # the first path found, which may be a small unrelated decorative mark
-    # rather than a single full-site outline curve (see module docstring).
+    # Site footprint/origin: prefer a purpose-drawn BOUNDARY curve over
+    # inferring it from the slab outline's combined path bounding box --
+    # see module docstring for why the slab-bbox approach was demoted to a
+    # fallback (fragile in practice, three different real re-exports of the
+    # same site each broke a different way).
+    boundary_group = _find_group(root, boundary_layer)
+    boundary_corners = []
+    if boundary_group is not None:
+        boundary_paths = _all_descendant_ds(boundary_group, "path")
+        boundary_corners = [(float(a), float(b)) for d in boundary_paths
+                             for a, b in re.findall(r'([-\d.]+),([-\d.]+)', d)]
+
     slab_group = _find_group(root, slab_layer)
     slab_paths = _all_descendant_ds(slab_group, "path")
-    corners = [(float(a), float(b)) for d in slab_paths for a, b in re.findall(r'([-\d.]+),([-\d.]+)', d)]
+    slab_corners = [(float(a), float(b)) for d in slab_paths for a, b in re.findall(r'([-\d.]+),([-\d.]+)', d)]
+
+    if boundary_corners:
+        corners, extent_source = boundary_corners, "BOUNDARY"
+    else:
+        corners, extent_source = slab_corners, "STRUC__Slabs (no BOUNDARY layer found -- fallback)"
+
     min_x = min(c[0] for c in corners)
     max_x = max(c[0] for c in corners)
     min_y = min(c[1] for c in corners)
@@ -122,6 +169,52 @@ def load_structural_grid_from_svg(svg_path, spacing_ft,
     dx = statistics.median([cx_lines[i + 1] - cx_lines[i] for i in range(len(cx_lines) - 1)])
     dy = statistics.median([cy_lines[i + 1] - cy_lines[i] for i in range(len(cy_lines) - 1)])
     scale_ft_per_pt = spacing_ft / ((dx + dy) / 2.0)
+
+    site_width_ft = (max_x - min_x) * scale_ft_per_pt
+    site_height_ft = (max_y - min_y) * scale_ft_per_pt
+    print(f"[grid] site extent from {extent_source}: {site_width_ft:.2f} x {site_height_ft:.2f} ft")
+
+    # Cross-validate against the fallback source whenever both are present,
+    # even though BOUNDARY wins -- a silent switch-over gives no signal if
+    # the boundary curve itself is ever wrong someday. Same warn-don't-block
+    # pattern load_garage_depth_from_svg already uses for multi-elevation
+    # cross-validation below.
+    if boundary_corners and slab_corners:
+        s_min_x = min(c[0] for c in slab_corners); s_max_x = max(c[0] for c in slab_corners)
+        s_min_y = min(c[1] for c in slab_corners); s_max_y = max(c[1] for c in slab_corners)
+        slab_width_ft = (s_max_x - s_min_x) * scale_ft_per_pt
+        slab_height_ft = (s_max_y - s_min_y) * scale_ft_per_pt
+        spread_w = abs(slab_width_ft - site_width_ft)
+        spread_h = abs(slab_height_ft - site_height_ft)
+        if spread_w > 5.0 or spread_h > 5.0:
+            print(f"[grid][WARN] STRUC__Slabs-derived extent disagrees with BOUNDARY by "
+                  f"{spread_w:.1f}ft (width) / {spread_h:.1f}ft (height) -- "
+                  f"slab gives {slab_width_ft:.2f} x {slab_height_ft:.2f} ft. "
+                  f"Using BOUNDARY, but this gap is worth checking.")
+
+    # Transit-entrance anchor (optional): a single marker circle anywhere
+    # inside `entrance_layer`, converted through the same column-calibrated
+    # scale/origin as columns_ft. A plain Rhino POINT object was tried
+    # first and confirmed NOT to survive this SVG export at all (no fill/
+    # stroke to emit for a point with no geometry) -- a small circle is the
+    # working convention, same as columns. Cross-validated 2026-07-08
+    # against a live Rhino MCP query of the real connector geometry: the
+    # two independent measurement paths agreed to within 2ft on a 600+ft
+    # site (see PIPELINE_STATUS_AND_NEXT_STEPS.md). None if the layer is
+    # absent or empty -- not every site export will have this marker, and
+    # callers should treat that as "not provided," not an error.
+    entrance_anchor_ft = None
+    entrance_group = _find_group(root, entrance_layer)
+    if entrance_group is not None:
+        entrance_circles = [(float(c.get("cx")), float(c.get("cy")))
+                             for c in entrance_group.iter(_SVG_NS + "circle")]
+        if entrance_circles:
+            if len(entrance_circles) > 1:
+                print(f"[grid][WARN] {len(entrance_circles)} circles found in "
+                      f"{entrance_layer!r}, expected exactly one entrance-anchor "
+                      f"marker -- using the first.")
+            ex, ey = entrance_circles[0]
+            entrance_anchor_ft = ((ex - min_x) * scale_ft_per_pt, (max_y - ey) * scale_ft_per_pt)
 
     columns_ft = [((cx - min_x) * scale_ft_per_pt, (max_y - cy) * scale_ft_per_pt) for cx, cy in columns_pt]
 
@@ -140,8 +233,9 @@ def load_structural_grid_from_svg(svg_path, spacing_ft,
     return {
         "columns_ft": columns_ft,
         "gaps_ft": gaps_ft,
-        "site_width_ft": (max_x - min_x) * scale_ft_per_pt,
-        "site_height_ft": (max_y - min_y) * scale_ft_per_pt,
+        "site_width_ft": site_width_ft,
+        "site_height_ft": site_height_ft,
+        "entrance_anchor_ft": entrance_anchor_ft,
     }
 
 

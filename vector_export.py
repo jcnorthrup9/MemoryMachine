@@ -20,8 +20,19 @@ match architectural/DXF convention. real_geometry.json's meshes are Y-up
 (OBJ convention, already grade-shifted so y=0 is grade) -- every context mesh
 is converted via (x, y_obj, z_obj) -> (x, z_obj, y_obj) on load.
 """
+import math
+
 import numpy as np
-import trimesh
+
+# trimesh is a lazy, per-function import (2026-07-09 cut-sheet flatten
+# supplement) -- only the mesh-building/cutting functions below actually
+# need it (_mesh_from_real, build_terraced_solid, build_combined_mesh,
+# build_named_scene, mirror_mesh_y); the DXF/SVG/PNG export primitives and
+# the real_slab_plan_layers flatten (both pure 2D, no mesh construction)
+# don't. blender_cockpit.py's own docstring already flags trimesh as a real
+# friction point ("Deliberately does NOT import vector_export.py -- that
+# module needs trimesh") -- same reasoning sketch_weight_mapper.py/
+# amenity_deficit.py already use for their own heavier optional imports.
 
 LAYER_CUT = "LAYER_01_CUT"
 LAYER_PROJECTION = "LAYER_02_PROJECTION"
@@ -38,15 +49,22 @@ LAYER_COLORS = {
 }
 
 # Street-edge labels for plan/axo views, in this module's site-local (x, y)
-# frame. Corrected 2026-07-03 against the real Rhino model (previously
-# inherited an unverified south=z0/north=zmax assumption from a different,
-# separately-derived SVG dataset -- confirmed backwards for this OBJ-derived
-# data: the Metro entrance is at the NE corner, off Hill St, near 5th St).
+# frame. Re-corrected 2026-07-09: the 2026-07-03 assignment below (5TH
+# ST=y0) was itself derived from the metroConnection object's position at
+# the time, which was later found (2026-07-08/09) to be a stale, pre-fix
+# snapshot -- once the real Z-axis sign bug was fixed and the entrance
+# position was re-verified multiple independent ways against live Rhino
+# data (see PIPELINE_STATUS_AND_NEXT_STEPS.md's 2026-07-08/09 entries),
+# the entrance/tunnel land at y-MAX, not y0. User confirmed directly
+# (2026-07-09): the real Metro entrance/connector is at the 5th & Hill
+# corner, so 5TH ST is the ymax edge, not y0 -- swapped from the 07-03
+# assignment accordingly. HILL ST=xmax was never in question (X was
+# unaffected by the Z-axis bug, confirmed separately).
 STREET_LABELS = [
     ("OLIVE ST", "x0"),
     ("HILL ST", "xmax"),
-    ("5TH ST", "y0"),
-    ("6TH ST", "ymax"),
+    ("5TH ST", "ymax"),
+    ("6TH ST", "y0"),
 ]
 
 
@@ -73,20 +91,47 @@ def _obj_to_site(flat_verts):
 
 
 def _mesh_from_real(mesh_dict):
+    import trimesh
     verts = _obj_to_site(mesh_dict["vertices"])
     faces = np.array(mesh_dict["faces"], dtype=int).reshape(-1, 3)
     return trimesh.Trimesh(vertices=verts, faces=faces, process=False)
 
 
-def build_context_meshes(real_geometry):
+# The real column_prototype_mesh (Rhino export) is a ~2.2x2.2x30ft column
+# tessellated to 1984 faces -- a real Rhino NURBS-to-mesh tessellation
+# setting, not intentional detail (confirmed: not even watertight). Reused
+# per-instance across 294 real column positions, this alone was 583,296 of
+# the 587,456 total faces in the combined export mesh (99.3%) -- the actual
+# dominant cause of axonometric_projection's hidden-line-removal crashing
+# with a 27+ GiB memory allocation on the real site (2026-07-11 finding;
+# the terrain-mesh rewrite above fixed a real, separate problem but barely
+# moved this number). Decimating the ONE prototype mesh once, before
+# instancing 294 times, is cheap and preserves the column's real bounds/
+# silhouette (verified: extents unchanged within a few thousandths of a
+# foot at target=100) -- more than enough detail for a line drawing's
+# silhouette/crease edges, which don't need the original NURBS tessellation
+# density. Only affects THIS module's export output, not the live 3D
+# viewport (which loads real_geometry.json's meshes independently).
+COLUMN_DECIMATE_TARGET_FACES = 100
+
+
+def build_context_meshes(real_geometry, decimate_columns=True):
     """
     Real static structure from real_geometry.json, converted to site-local
     Z-up coordinates: one mesh per real column instance, plus the tunnel,
     secondary entrance, and both ramp clusters (3 levels each).
+
+    `decimate_columns`: simplify the column prototype (see
+    COLUMN_DECIMATE_TARGET_FACES comment above) before instancing -- default
+    True since every current caller needs the lighter mesh for hidden-line
+    removal to complete at all; kept as a parameter (not hardcoded) in case
+    a future caller needs the original full-fidelity column geometry.
     """
     meshes = {}
 
     proto = _mesh_from_real(real_geometry["column_prototype_mesh"])
+    if decimate_columns:
+        proto = proto.simplify_quadric_decimation(face_count=COLUMN_DECIMATE_TARGET_FACES)
     columns = []
     for c in real_geometry["column_positions"]:
         m = proto.copy()
@@ -96,6 +141,7 @@ def build_context_meshes(real_geometry):
 
     meshes["tunnel"] = _mesh_from_real(real_geometry["tunnel_mesh"])
     meshes["secondary_entrance"] = _mesh_from_real(real_geometry["secondary_entrance_mesh"])
+    meshes["metro_connector"] = _mesh_from_real(real_geometry["metro_connector_mesh"])
 
     ramps = []
     for cluster in real_geometry["ramp_meshes"].values():
@@ -106,46 +152,258 @@ def build_context_meshes(real_geometry):
     return meshes
 
 
-def build_terraced_solid(engine, voxels, floor_margin_ft=10.0):
-    """
-    Build a real 3D "terrain" solid from the terracing engine's stepped
-    depth field: one watertight box per voxel, running from that voxel's
-    own top (grade for untouched cells, its excavation depth otherwise)
-    DOWN to a shared floor reference below the deepest possible cut. Every
-    voxel's TOP face therefore sits exactly at its own elevation, facing
-    upward -- a real, addressable tread surface at every terrace step
-    (including the flat plaza "step" at grade), which is what the Botanical
-    Attractor Module's per-level surface conditions (see terracing_engine.py
-    Voxel.level) are meant to attach to.
+# --- Hybrid real-slab + greedy-mesh terrain reconstruction (2026-07-11) ---
+#
+# build_terraced_solid's original approach -- one trimesh.creation.box() per
+# voxel, unconditionally, regardless of whether excavation ever touched that
+# cell -- produces a mesh with massive numbers of exactly-touching, coplanar
+# faces between adjacent same-elevation voxels (the full real site: 618,900
+# faces). This isn't just wasteful: it crashes axonometric_projection()'s
+# hidden-line-removal outright (confirmed via direct testing: a
+# numpy._core._exceptions._ArrayMemoryError trying to allocate 27+ GiB during
+# trimesh's ray-triangle candidate search -- a real, pre-existing trimesh/
+# rtree performance pathology with dense grids of touching boxes, confirmed
+# via scaling tests: 400 touching boxes completes in ~7s, ~2680 crashes).
+#
+# The fix reuses data StructuralFramingEngine.real_slab_fragments() already
+# computes (which voxel cells are still "remaining" vs "removed" per real,
+# Rhino-extracted slab plate -- already load-bearing for the frontend's
+# RealSlabFragments rendering and the slab-harvest-tonnage math, but
+# previously never consumed here) instead of reconstructing an approximate
+# voxel-box terrain from scratch:
+#   - Cells still covered by a real slab -> that slab's own thin plate
+#     geometry (its real top_corners_ft/thickness_ft), boolean-cut where
+#     excavated -- accurate shape, and dramatically fewer faces than a full-
+#     depth box grid (a real slab is one thin plate, not thousands of boxes).
+#   - Cells with no real precedent (excavated deeper than every real slab
+#     present at that XY, or outside every real slab's footprint --
+#     genuinely new/designed terracing) -> greedy-merged boxes (adjacent
+#     same-elevation cells combined into the fewest rectangles before
+#     extruding), still running full-depth to the shared floor so new/
+#     designed excavation still reads as one solid stepped canyon.
+# See terracing_engine.py's StructuralFramingEngine.classify_terrain_cells
+# for the per-cell classification this all depends on.
 
-    Deliberately NOT a shaft running from grade down to each voxel's own
-    depth (an earlier version was) -- that buried every voxel's exposed
-    surface at grade, so only vertical shaft walls were ever visible from
-    an oblique angle, never real flat treads looking down from above.
+
+def _merge_voxel_rectangles(cells):
     """
-    parts = []
+    Greedy rectangle-merge over a set of (gx, gy) grid indices (already
+    filtered to one homogeneous group -- one elevation, or one slab's
+    removed set) -- turns "one box per voxel" into "one box per merged
+    region." NOT globally minimal in rectangle count (that's the harder
+    largest-rectangle-in-histogram problem); this greedy strip-growing
+    approach is simple, fast, and effective on the kind of large contiguous
+    blocks real terrace/slab data actually produces (Voxel.z_ft is already
+    a STEPPED value, not a smooth continuum, so most same-band regions
+    genuinely are large contiguous rectangles already). Worst case (e.g. a
+    checkerboard pattern) degrades to one rectangle per cell -- never worse
+    than the original per-voxel approach, just usually far better.
+
+    Returns a list of inclusive grid-index rectangles (gx0, gy0, gx1, gy1).
+    """
+    remaining = set(cells)
+    rects = []
+    while remaining:
+        gx0, gy0 = min(remaining)
+        gx1 = gx0
+        while (gx1 + 1, gy0) in remaining:
+            gx1 += 1
+        gy1 = gy0
+        while all((gx, gy1 + 1) in remaining for gx in range(gx0, gx1 + 1)):
+            gy1 += 1
+        rects.append((gx0, gy0, gx1, gy1))
+        for gx in range(gx0, gx1 + 1):
+            for gy in range(gy0, gy1 + 1):
+                remaining.discard((gx, gy))
+    return rects
+
+
+def _extrude_grid_rect(gx0, gy0, gx1, gy1, vf, z_top, z_bottom):
+    """One box spanning grid cells [gx0,gx1] x [gy0,gy1] inclusive (voxel_ft
+    units), extruded from z_bottom up to z_top -- replaces build_terraced_
+    solid's old per-voxel trimesh.creation.box() call site, now called once
+    per _merge_voxel_rectangles() result instead of once per voxel."""
+    import trimesh
+    width = (gx1 - gx0 + 1) * vf
+    depth = (gy1 - gy0 + 1) * vf
+    height = z_top - z_bottom
+    box = trimesh.creation.box(extents=[width, depth, height])
+    cx = gx0 * vf + width / 2
+    cy = gy0 * vf + depth / 2
+    cz = z_bottom + height / 2
+    box.apply_translation([cx, cy, cz])
+    return box
+
+
+def _order_quad_corners(corners):
+    """Sort 4 [x,y,z] corners into a non-crossing loop by angle around
+    their own centroid (plan XY only; Z tags along unchanged) -- mirrors
+    Viewport.jsx's orderQuadCorners, since Rhino's Brep.Vertices order for
+    a planar face isn't guaranteed to trace a boundary loop (raster/grid
+    order empirically), which would triangulate into a crossed/bowtie quad
+    used directly."""
+    cx = sum(c[0] for c in corners) / len(corners)
+    cy = sum(c[1] for c in corners) / len(corners)
+    return sorted(corners, key=lambda c: math.atan2(c[1] - cy, c[0] - cx))
+
+
+# top(0,1,2,3) / bottom(4,5,6,7), matching corner order on both faces (bottom
+# is top shifted straight down in Z) -- identical convention to Viewport.jsx's
+# SLAB_PLATE_INDICES, kept in sync deliberately so the live viewport and this
+# export path render the exact same plate shape.
+_SLAB_PLATE_INDICES = [
+    0, 1, 2, 0, 2, 3,       # top
+    4, 6, 5, 4, 7, 6,       # bottom (reversed winding)
+    0, 4, 1, 1, 4, 5,       # side 0-1
+    1, 5, 2, 2, 5, 6,       # side 1-2
+    2, 6, 3, 3, 6, 7,       # side 2-3
+    3, 7, 0, 0, 7, 4,       # side 3-0
+]
+
+
+def _build_slab_plate_mesh(slab, removed_cells, vf, pad_ft=0.5):
+    """
+    One real slab plate, built from its own top_corners_ft/thickness_ft (a
+    thin plate, NOT a full-depth voxel-box approximation), boolean-cut where
+    removed_cells (a list of (gx, gy) grid indices, already merged into few
+    rectangles) were excavated away -- ONE batched trimesh.boolean.difference
+    call per slab, not one per removed cell.
+
+    Bottom face offset straight down in world Z by thickness_ft (not along
+    the tilted normal) -- same simplification Viewport.jsx's RealSlabPlate
+    already uses and documents: at real ramp tilt angles (~1.7deg here,
+    cos(1.7deg) > 0.9995) the difference is sub-1/8" over a 1ft-thick plate.
+
+    Cutter boxes are oversized by pad_ft in XY and in Z beyond the plate's
+    own thickness -- exact-coincident faces at a cut boundary are exactly
+    the kind of degenerate case that make manifold boolean engines fail or
+    produce garbage, so the cutter deliberately fully and unambiguously
+    penetrates the plate.
+
+    Returns None only if removed_cells covers the whole plate (nothing
+    left -- caller should skip this slab). If the boolean cut fails or
+    produces a non-watertight/empty result (realistic for tilted ramp_slab
+    geometry), falls back to the ORIGINAL UNCUT plate with a printed
+    warning -- never crashes the whole export over one problematic slab,
+    never silently drops a real structural element by returning None here.
+    """
+    import trimesh
+
+    ordered = _order_quad_corners(slab["top_corners_ft"])
+    top = [tuple(c) for c in ordered]
+    thickness = slab["thickness_ft"]
+    bottom = [(x, y, z - thickness) for x, y, z in top]
+    verts = top + bottom
+    faces = [_SLAB_PLATE_INDICES[i:i + 3] for i in range(0, len(_SLAB_PLATE_INDICES), 3)]
+    plate = trimesh.Trimesh(vertices=verts, faces=faces, process=True)
+
+    if not removed_cells:
+        return plate
+
+    cutters = []
+    z_top = slab["z_top_ft"] + thickness + pad_ft
+    z_bottom = slab["z_top_ft"] - thickness - pad_ft
+    for gx0, gy0, gx1, gy1 in _merge_voxel_rectangles(removed_cells):
+        width = (gx1 - gx0 + 1) * vf + pad_ft
+        depth = (gy1 - gy0 + 1) * vf + pad_ft
+        cutter = trimesh.creation.box(extents=[width, depth, z_top - z_bottom])
+        cx = gx0 * vf + (gx1 - gx0 + 1) * vf / 2
+        cy = gy0 * vf + (gy1 - gy0 + 1) * vf / 2
+        cz = (z_top + z_bottom) / 2
+        cutter.apply_translation([cx, cy, cz])
+        cutters.append(cutter)
+
+    label = f"{slab.get('parent', '?')}@{slab.get('z_top_ft', '?')}"
+    try:
+        result = trimesh.boolean.difference([plate, *cutters], engine="manifold")
+        if result is None or len(result.faces) == 0 or not result.is_watertight or result.volume <= 0:
+            raise ValueError(f"non-watertight or empty result (is_watertight="
+                              f"{getattr(result, 'is_watertight', None)}, "
+                              f"faces={len(result.faces) if result is not None else 0})")
+        return result
+    except Exception as exc:  # noqa: BLE001 -- one slab's CSG failure must not sink the whole export
+        print(f"WARNING: boolean cut failed for real slab {label}, keeping uncut plate: {exc}")
+        return plate
+
+
+def build_real_slab_meshes(real_geometry, engine, framing_engine=None):
+    """
+    One thin, boolean-cut mesh per real slab plate, using
+    StructuralFramingEngine.real_slab_fragments()'s already-computed
+    remaining/removed classification instead of reconstructing an
+    approximate voxel-box terrain from scratch. Returns {slab_key: mesh},
+    omitting any slab with zero remaining area (fully excavated away).
+
+    `framing_engine`: pass an already-constructed StructuralFramingEngine
+    to avoid rebuilding the column<->slab graph when the caller already has
+    one; builds its own otherwise.
+    """
+    from terracing_engine import StructuralFramingEngine
+
+    if framing_engine is None:
+        framing_engine = StructuralFramingEngine(real_geometry, engine)
+    fragments = framing_engine.real_slab_fragments()
+
+    meshes = {}
+    for key, entry in fragments.items():
+        if len(entry["remaining"]) == 0:
+            continue
+        removed_cells = [(gx, gy) for gx, gy, _wx, _wy in entry["removed"]]
+        mesh = _build_slab_plate_mesh(entry["slab"], removed_cells, engine.voxel_ft)
+        if mesh is not None:
+            meshes[key] = mesh
+    return meshes
+
+
+def build_terraced_solid(engine, voxels, real_geometry, floor_margin_ft=10.0):
+    """
+    Build the site's terrain mesh as a hybrid of real slab plates (where
+    real Rhino-extracted structure exists and is at least partially
+    exposed) plus greedy-merged boxes (for cells with no real precedent --
+    genuinely new/designed terracing deeper than every real slab present at
+    that XY). See the module-level comment above this section for the full
+    rationale -- this replaces the old one-box-per-voxel-unconditionally
+    approach, which produced a mesh too dense for axonometric_projection's
+    hidden-line-removal to complete on the real site.
+
+    Fallback cells (no real slab classification) keep running full-depth to
+    a shared floor_z (same convention/value as the original implementation)
+    so genuinely new/designed excavation still reads as one solid stepped
+    canyon -- only real slabs become thin plates, by explicit design
+    decision (a cut between two real garage levels now correctly shows real
+    void there instead of solid material, matching how an actual parking
+    garage has real floor-to-floor voids).
+    """
+    import trimesh
+    from terracing_engine import StructuralFramingEngine
+
     vf = engine.voxel_ft
     floor_z = -(engine.max_canyon_depth_ft + floor_margin_ft)
 
-    for v in voxels:
-        top = v.z_ft
-        height = top - floor_z
-        if height <= 0:
-            continue
-        box = trimesh.creation.box(extents=[vf, vf, height])
-        cx = v.gx * vf + vf / 2
-        cy = v.gy * vf + vf / 2
-        cz = top - height / 2
-        box.apply_translation([cx, cy, cz])
-        parts.append(box)
+    framing = StructuralFramingEngine(real_geometry, engine)
+    fragments = framing.real_slab_fragments()
+    cell_class = framing.classify_terrain_cells(fragments)
+    slab_meshes = build_real_slab_meshes(real_geometry, engine, framing)
 
-    return trimesh.util.concatenate(parts)
+    by_z = {}
+    for v in voxels:
+        if cell_class.get((v.gx, v.gy)) is not None:
+            continue  # covered by a real slab plate above
+        by_z.setdefault(v.z_ft, []).append((v.gx, v.gy))
+
+    fallback_boxes = []
+    for z_top, cells in by_z.items():
+        for gx0, gy0, gx1, gy1 in _merge_voxel_rectangles(cells):
+            fallback_boxes.append(_extrude_grid_rect(gx0, gy0, gx1, gy1, vf, z_top, floor_z))
+
+    return trimesh.util.concatenate([*slab_meshes.values(), *fallback_boxes])
 
 
 def build_combined_mesh(real_geometry, engine, voxels):
+    import trimesh
     context = build_context_meshes(real_geometry)
-    terrace = build_terraced_solid(engine, voxels)
-    all_meshes = [terrace, context["tunnel"], context["secondary_entrance"]]
+    terrace = build_terraced_solid(engine, voxels, real_geometry)
+    all_meshes = [terrace, context["tunnel"], context["secondary_entrance"], context["metro_connector"]]
     all_meshes.extend(context["columns"])
     all_meshes.extend(context["ramps"])
     return trimesh.util.concatenate(all_meshes)
@@ -162,12 +420,14 @@ def build_named_scene(real_geometry, engine, voxels):
     only sees one object); exporting a Scene preserves per-part names as
     separate Blender objects on import.
     """
+    import trimesh
     context = build_context_meshes(real_geometry)
-    terrace = build_terraced_solid(engine, voxels)
+    terrace = build_terraced_solid(engine, voxels, real_geometry)
     scene = trimesh.Scene()
     scene.add_geometry(terrace, node_name="terrace", geom_name="terrace")
     scene.add_geometry(context["tunnel"], node_name="tunnel", geom_name="tunnel")
     scene.add_geometry(context["secondary_entrance"], node_name="secondary_entrance", geom_name="secondary_entrance")
+    scene.add_geometry(context["metro_connector"], node_name="metro_connector", geom_name="metro_connector")
     scene.add_geometry(trimesh.util.concatenate(context["columns"]), node_name="columns", geom_name="columns")
     scene.add_geometry(trimesh.util.concatenate(context["ramps"]), node_name="ramps", geom_name="ramps")
     return scene
@@ -183,6 +443,7 @@ def mirror_mesh_y(mesh, site_length_ft):
     axo_label_points mirror_y) -- section/plan cuts don't need this, they
     have their own post-projection mirror_y in export_dxf/export_svg.
     """
+    import trimesh
     verts = mesh.vertices.copy()
     verts[:, 1] = site_length_ft - verts[:, 1]
     faces = mesh.faces[:, ::-1]
@@ -382,6 +643,91 @@ def path3d_to_2d_segments(path3d):
 def grid_layer_points(real_geometry):
     """LAYER_04_GRID reference points: real column centers, (x, y_length)."""
     return [(c["x"], c["z"]) for c in real_geometry["column_positions"]]
+
+
+def _order_quad_corners_xy(corners_xy):
+    """Sort 4 (x, y) corners by angle around their own centroid so they trace
+    a proper non-crossing loop -- same fix as Viewport.jsx's
+    orderQuadCorners, needed for the same reason: Rhino's real per-plate
+    corner order (real_slabs[i]["top_corners_ft"], see the real-slab-graph
+    supplement) is a raster/grid order, not a boundary loop, and using it
+    directly would draw a crossed/bowtie polygon."""
+    cx = sum(p[0] for p in corners_xy) / len(corners_xy)
+    cy = sum(p[1] for p in corners_xy) / len(corners_xy)
+    import math as _math
+    return sorted(corners_xy, key=lambda p: _math.atan2(p[1] - cy, p[0] - cx))
+
+
+def _circle_polyline(cx, cy, radius, segments=16):
+    import math as _math
+    pts = [
+        (cx + radius * _math.cos(2 * _math.pi * i / segments),
+         cy + radius * _math.sin(2 * _math.pi * i / segments))
+        for i in range(segments)
+    ]
+    return pts + [pts[0]]
+
+
+def real_slab_plan_layers(real_geometry):
+    """Flattened structural plan of the REAL slabs/columns (2026-07-09
+    cut-sheet flatten supplement) -- one DXF/SVG layer per real level
+    ("SLABS_L1"/"SLABS_L2"/"SLABS_L3", each holding that level's real
+    floor_slab + ramp_slab footprints as closed polygons, plan-projected --
+    dropping z is exact for footprint purposes even for the tilted ramp_slab
+    plates, since their tilt is purely vertical/length-plane, never in-plan,
+    same fact build_column_slab_graph relies on) plus one "COLUMNS" layer
+    (real per-column circles at real diameter, not centroid points like the
+    older grid_layer_points above).
+
+    This is a real quantity/schedule drawing, not a CNC nesting layout --
+    cast concrete slabs and existing columns are the wrong scale to "nest"
+    on a stock sheet; a labeled plan is what a contractor actually uses for
+    these two material families. True nested cut-layouts for the smaller
+    shop-fabricated kinds (steel plates, timber members) are a separate,
+    later step once their real fabrication method is decided (per the plan
+    doc).
+
+    Returns (layers, labels) ready for export_dxf/export_svg/export_png.
+    """
+    layers = {}
+    labels = []
+
+    for slab in real_geometry.get("real_slabs", []):
+        layer_name = f"SLABS_{slab['level']}"
+        corners_xy = _order_quad_corners_xy([(c[0], c[1]) for c in slab["top_corners_ft"]])
+        polygon = corners_xy + [corners_xy[0]]
+        layers.setdefault(layer_name, []).append(polygon)
+        cx = sum(p[0] for p in corners_xy) / len(corners_xy)
+        cy = sum(p[1] for p in corners_xy) / len(corners_xy)
+        tag = "RAMP" if slab["kind"] == "ramp_slab" else "SLAB"
+        labels.append((
+            f"{slab['parent']} [{tag}] {slab['area_ft2']:.0f}sf x {slab['thickness_ft']*12:.0f}\"",
+            (cx, cy),
+        ))
+
+    columns = real_geometry.get("real_columns", [])
+    if columns:
+        layers["COLUMNS"] = [_circle_polyline(c["x"], c["z"], c["diameter_ft"] / 2) for c in columns]
+        labels.append((
+            f"{len(columns)} real columns, {columns[0]['diameter_ft']:.2f}ft dia typ.",
+            (columns[0]["x"], columns[0]["z"]),
+        ))
+
+    return layers, labels
+
+
+def export_real_slab_plan(real_geometry, out_path, fmt="dxf", mirror_y=False):
+    """Convenience wrapper: real_slab_plan_layers() -> export_dxf/svg/png.
+    fmt: "dxf", "svg", or "png"."""
+    layers, labels = real_slab_plan_layers(real_geometry)
+    title = "Real Slab/Column Plan -- Pershing Metabolizer"
+    if fmt == "dxf":
+        return export_dxf(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    if fmt == "svg":
+        return export_svg(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    if fmt == "png":
+        return export_png(out_path, layers, title=title, labels=labels, mirror_y=mirror_y)
+    raise ValueError(f"unknown fmt {fmt!r}, expected dxf/svg/png")
 
 
 def format_elevation_ft(z_ft):

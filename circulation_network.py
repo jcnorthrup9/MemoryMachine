@@ -1,0 +1,505 @@
+"""
+Memory Machine -- Circulation Network Engine (organic pedestrian path growth).
+
+Grows a real pedestrian circulation network outward from the site's real
+Metro station entrance using the Space Colonization Algorithm (Runions et
+al. 2007): a single root node grows step-by-step toward the averaged
+direction of nearby weighted "attraction points" (sampled from the same
+real per-voxel data TerracingEngine/TypologyAssetEngine already compute in
+terracing_engine.py), consuming each attraction point once a branch gets
+close enough. Produces StructuralElement specs that fit the SAME
+kind-lookup-table triple every other feature in this pipeline already
+uses -- footpath/ramp/escalator/*_bridge as two-point line segments
+(identical mechanism to steel_strut/timber_beam), lookout_point as a
+single-point box.
+
+Deliberately NOT a Physarum/slime-mold multi-agent simulation (loops,
+redundant connections) -- per project decision 2026-07-09, Space
+Colonization's single-rooted, naturally hierarchical branching (trunk ->
+branches -> twigs) maps more directly onto "grow paths OUT of the existing
+metro entrance" and onto a real primary/secondary/tertiary path hierarchy
+a designer can act on.
+
+Scope, per the same 2026-07-09 decision: "food" is dropped as a motivator
+(no real data source exists anywhere in this pipeline for it -- not
+fabricated), and "exercise" is folded into "rest" (the codebase's own
+is_amenity_resting/SANCTUARY typology already don't distinguish the two).
+Column-avoidance and switchback/stair geometry for steep segments are also
+out of scope -- escalator classification is the deliberately simple
+mechanical-assist answer for grades a plain path/ramp can't handle.
+Multi-root growth (from ramps/tunnel/street edges too) is left for later --
+v1 is single-rooted at the metro entrance per the explicit ask.
+"""
+import math
+from dataclasses import dataclass
+
+import numpy as np
+
+from terracing_engine import StructuralElement
+
+# --- Tunable-by-UI defaults (see logic/pershing_api.py's NetworkParams) ---
+DEFAULT_MOTIVATOR_WEIGHTS = {
+    "trees": 1.0, "water": 1.0, "rest": 1.0, "foot_traffic": 1.0, "deficit": 1.0,
+    # Placed program-zone entrances (2026-07-12) -- see sample_attraction_points()'s zones loop.
+    "program": 1.0,
+    # 2D-diagram PEDESTRIAN_PATH layers (2026-07-23) -- see
+    # sample_attraction_points()'s path_hints param. A drawn path biases
+    # growth toward/through it without literally injecting geometry, same
+    # "become an attractor/weight, not overridden geometry" pattern every
+    # other 2D-diagram signal in this app already uses.
+    "path_hint": 1.0,
+}
+DEFAULT_STEP_FT = 15.0
+DEFAULT_MAX_ITERATIONS = 300
+
+# --- Hardcoded engineering/aesthetic constants (not UI knobs -- real-world
+# anchors or rendering choices, not design-intent a reviewer would expect
+# exposed as sliders) ---
+FIELD_ATTRACTOR_THRESHOLD = 0.4      # min field value to become an attractor
+BUCKET_VOXELS = 3                    # dedup bucket size; * 9ft voxel == 27ft == STRUCTURAL_BAY_FT
+FOOTPATH_MAX_GRADE = 0.05            # 1:20 -- plain walking surface, no assist needed
+RAMP_MAX_GRADE = 1.0 / 12.0          # 1:12 -- ADA max ramp grade
+BRIDGE_CLEARANCE_FT = 6.0            # min headroom under a "floating" deck to count as a real bridge
+BRIDGE_SAMPLE_COUNT = 5
+BASE_PATH_RADIUS_FT = 1.5
+MAX_PATH_RADIUS_FT = 6.0
+FLOW_WIDTH_PER_UNIT_FT = 0.15
+LOOKOUT_PERIMETER_MARGIN_FT = 18.0   # 2 voxels
+LOOKOUT_PLATFORM_HEIGHT_FT = 1.0
+STALL_EPS_FRAC = 0.1                 # fraction of step_ft; skip a new node this close to its parent
+
+
+@dataclass
+class Attractor:
+    x: float
+    y: float
+    strength: float
+    motivator: str
+    consumed: bool = False
+
+
+@dataclass
+class NetworkNode:
+    id: int
+    x: float
+    y: float
+    z_ft: float
+    parent_id: int = None
+    captured: int = 0
+    flow: int = 0
+    # Which root this node (or, for a non-root node, its whole branch)
+    # traces back to -- "metro_entrance" for the one real, surveyed entry,
+    # "site_edge" for the fabricated-but-plausible boundary entries added
+    # 2026-07-12 (see __init__). Only ever set directly on roots
+    # (parent_id is None); non-root nodes inherit it from their parent in
+    # _grow() so the whole branch stays taggable.
+    source: str = "metro_entrance"
+
+
+def _voxel_at(engine, x, y):
+    """Nearest-voxel lookup for an arbitrary real-feet (x, y) -- same grid
+    convention every other real-feet -> voxel lookup in this pipeline uses."""
+    gx = min(max(int(x // engine.voxel_ft), 0), engine.nx - 1)
+    gy = min(max(int(y // engine.voxel_ft), 0), engine.nz - 1)
+    return engine.voxels[gx][gy]
+
+
+def _bucket_key(x, y, engine):
+    bucket_ft = engine.voxel_ft * BUCKET_VOXELS
+    return (int(x // bucket_ft), int(y // bucket_ft))
+
+
+# Fixed built-amenity kinds (from TypologyAssetEngine.run()'s already-placed
+# specs) treated as strong fixed attractors -- confirmed real props, not a
+# diffuse field guess, so they get full strength regardless of the
+# threshold that gates field-driven motivators.
+_AMENITY_MOTIVATOR = {
+    "fountain": "water", "water_plane": "water", "water_cascade_block": "water",
+    "bench_assembly": "rest", "restroom_pod": "rest",
+}
+
+
+def sample_attraction_points(engine, typology_specs, motivator_weights=None,
+                              field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None,
+                              path_hints=None):
+    """
+    Builds a manageable (tens-to-~150-point) set of weighted, motivator-
+    labeled Attractors from the same real per-voxel fields/placed amenities
+    TerracingEngine/TypologyAssetEngine already compute -- NOT one point per
+    voxel (2680 voxels would be far too dense/slow for the growth loop).
+
+    Field-driven motivators (foot_traffic/deficit) and boolean-mask
+    motivators (trees/rest) are bucketed into 27ft x 27ft cells
+    (BUCKET_VOXELS * voxel_ft == STRUCTURAL_BAY_FT, reusing the same real
+    structural-bay unit already load-bearing elsewhere in this pipeline)
+    and deduped to one Attractor per non-empty bucket, at the bucket's
+    survivor centroid. Already-placed amenity props are used directly as
+    strong fixed attractors (see _AMENITY_MOTIVATOR above).
+
+    zones (2026-07-12, optional): logic/program_placement.py's
+    place_programs() output (a list of zone dicts, each with an "entrance"
+    key) -- each zone's entrance becomes a strong fixed "program" attractor,
+    same full-strength/no-threshold treatment as the amenity loop below, so
+    pedestrian paths actually connect to placed amenities, not just painted
+    masks.
+
+    path_hints (2026-07-23, optional): points sampled from a 2D-diagram
+    PEDESTRIAN_PATH layer's own geometry (see
+    ingest_diagram_svg.extract_path_hints_from_composed_layers(), persisted
+    as logic/pershing_api.py's PATH_HINT_POINTS global) -- each becomes a
+    strong fixed "path_hint" attractor, same full-strength/no-threshold
+    treatment as program zone entrances above, so a hand-drawn 2D path
+    actually pulls growth toward/through it instead of being silently
+    discarded (PEDESTRIAN_PATH previously had zero special handling in the
+    2D->3D bridge at all).
+    """
+    weights = {**DEFAULT_MOTIVATOR_WEIGHTS, **(motivator_weights or {})}
+    buckets = {}  # (bucket_key, motivator) -> list of (wx, wy, value)
+
+    for row in engine.voxels:
+        for v in row:
+            if v.foot_traffic_influence >= field_threshold:
+                key = (_bucket_key(v.wx, v.wy, engine), "foot_traffic")
+                buckets.setdefault(key, []).append((v.wx, v.wy, v.foot_traffic_influence))
+            if v.deficit_influence >= field_threshold:
+                key = (_bucket_key(v.wx, v.wy, engine), "deficit")
+                buckets.setdefault(key, []).append((v.wx, v.wy, v.deficit_influence))
+            # 2026-07-11 fix: this bucket previously read is_water_shade (the
+            # old combined mask) -- a real bug, not just a stale name, since
+            # it meant every painted water cell became a "trees" attractor
+            # too, even where no trees were ever painted. Now reads the
+            # split is_tree mask directly (field renamed from is_shade,
+            # 2026-07-16, alongside the paint category's shade->trees
+            # rename). NOTE: "water" has no equivalent direct-mask bucket
+            # here -- it still only enters via _AMENITY_MOTIVATOR below
+            # (i.e. only already-excavated GROTTO water_plane/
+            # water_cascade_block props become "water" attractors, unlike
+            # "trees" which now reads its mask unconditionally regardless of
+            # excavation). Known asymmetry, not addressed by this fix --
+            # flagged in MILESTONE_07112026_PlanningSession.md as a possible
+            # follow-on.
+            if v.is_tree:
+                key = (_bucket_key(v.wx, v.wy, engine), "trees")
+                buckets.setdefault(key, []).append((v.wx, v.wy, 1.0))
+            if v.is_amenity_resting:
+                key = (_bucket_key(v.wx, v.wy, engine), "rest")
+                buckets.setdefault(key, []).append((v.wx, v.wy, 1.0))
+
+    attractors = []
+    for (_key, motivator), samples in buckets.items():
+        cx = sum(s[0] for s in samples) / len(samples)
+        cy = sum(s[1] for s in samples) / len(samples)
+        strength = max(s[2] for s in samples)
+        attractors.append(Attractor(cx, cy, strength * weights.get(motivator, 1.0), motivator))
+
+    for spec in typology_specs:
+        motivator = _AMENITY_MOTIVATOR.get(spec.kind)
+        if motivator is None:
+            continue
+        attractors.append(Attractor(spec.x_ft, spec.y_ft, 1.0 * weights.get(motivator, 1.0), motivator))
+
+    for zone in (zones or []):
+        entrance = zone.get("entrance")
+        if entrance is None:
+            continue
+        attractors.append(Attractor(entrance["x_ft"], entrance["y_ft"],
+                                     1.0 * weights.get("program", 1.0), "program"))
+
+    for hint in (path_hints or []):
+        attractors.append(Attractor(hint["x_ft"], hint["y_ft"],
+                                     1.0 * weights.get("path_hint", 1.0), "path_hint"))
+
+    return attractors
+
+
+class CirculationNetworkEngine:
+    """
+    "Circulation Growth Network" (UI name, 2026-07-12) -- Space Colonization
+    pedestrian-path growth engine. Roots at the real Metro station entrance
+    (terracing_engine.entrance_x/entrance_y -- real_geometry
+    ["secondary_entrance_anchor"]) plus additional site-boundary entry
+    points (see __init__); grows toward the weighted attraction points
+    sample_attraction_points() builds; classifies the resulting edges into
+    real construction guidance (footpath/ramp/escalator, optionally
+    "_bridge"-suffixed) plus lookout_point markers at qualifying leaf tips.
+    """
+
+    def __init__(self, real_geometry, terracing_engine, typology_specs,
+                 motivator_weights=None, step_ft=DEFAULT_STEP_FT,
+                 max_iterations=DEFAULT_MAX_ITERATIONS,
+                 field_threshold=FIELD_ATTRACTOR_THRESHOLD, zones=None, path_hints=None):
+        self.rg = real_geometry
+        self.te = terracing_engine
+        self.step_ft = step_ft
+        self.max_iterations = max_iterations
+        # attraction_radius/kill_radius are DERIVED from step_ft, never
+        # independently exposed -- guarantees attraction_radius > kill_radius
+        # always, which the algorithm requires (an attractor consumed
+        # before any node ever grows toward it is a degenerate state a
+        # naive three-independent-knob UI could otherwise produce).
+        self.attraction_radius_ft = 3.0 * step_ft
+        self.kill_radius_ft = 1.2 * step_ft
+
+        self.attractors = sample_attraction_points(
+            terracing_engine, typology_specs, motivator_weights, field_threshold,
+            zones=zones, path_hints=path_hints)
+
+        root_z = _voxel_at(terracing_engine, terracing_engine.entrance_x, terracing_engine.entrance_y).z_ft
+        self.nodes = [NetworkNode(0, terracing_engine.entrance_x, terracing_engine.entrance_y, root_z,
+                                   source="metro_entrance")]
+
+        # Additional roots (2026-07-12): real pedestrians don't only arrive
+        # via the Metro entrance -- they also walk in from the surrounding
+        # street edges. No real survey of where those entries actually are,
+        # so this approximates them at the 4 site corners plus the midpoint
+        # of each long edge (site_length_ft > site_width_ft at this site, so
+        # the long edges are the two running along x=0 and x=site_width_ft)
+        # -- "realistically fabricated," per an explicit design decision,
+        # not survey data like the Metro anchor. Tagged source="site_edge"
+        # (vs "metro_entrance") so a caller can distinguish/filter these
+        # branches later if the fabricated-vs-real distinction matters
+        # downstream (see _classify_edges()). Safe to seed multiple roots
+        # here -- _grow() below already operates generically over
+        # self.nodes, nearest-node assignment naturally treats every root
+        # as an independent trunk.
+        w, l = terracing_engine.site_width_ft, terracing_engine.site_length_ft
+        site_edge_points = [(0.0, 0.0), (w, 0.0), (0.0, l), (w, l), (0.0, l / 2.0), (w, l / 2.0)]
+        for ex, ey in site_edge_points:
+            ez = _voxel_at(terracing_engine, ex, ey).z_ft
+            self.nodes.append(NetworkNode(len(self.nodes), ex, ey, ez, source="site_edge"))
+
+    def _grow(self):
+        te = self.te
+        for _ in range(self.max_iterations):
+            active = [a for a in self.attractors if not a.consumed]
+            if not active:
+                break
+
+            node_xy = np.array([[n.x, n.y] for n in self.nodes])
+            attr_xy = np.array([[a.x, a.y] for a in active])
+            dist = np.linalg.norm(attr_xy[:, None, :] - node_xy[None, :, :], axis=2)  # (K, M)
+            nearest_idx = dist.argmin(axis=1)
+            nearest_dist = dist[np.arange(len(active)), nearest_idx]
+
+            assigned = {}
+            for k, a in enumerate(active):
+                if nearest_dist[k] <= self.attraction_radius_ft:
+                    assigned.setdefault(int(nearest_idx[k]), []).append(a)
+
+            if not assigned:
+                # Bootstrap fallback: every node is farther than
+                # attraction_radius_ft from every remaining attractor -- a
+                # real condition at this site (the metro entrance root sits
+                # ~180ft from the nearest meaningful attractor cluster,
+                # farther than a typical step_ft's radius reaches). Rather
+                # than silently stall at zero growth, reach directly toward
+                # the single globally nearest attractor once, ignoring the
+                # radius gate -- normal radius-gated colonization resumes
+                # automatically next round once that reach has closed the
+                # gap.
+                k = int(nearest_dist.argmin())
+                assigned[int(nearest_idx[k])] = [active[k]]
+
+            new_nodes = []
+            for node_idx, attrs in assigned.items():
+                parent = self.nodes[node_idx]
+                dx = dy = 0.0
+                for a in attrs:
+                    vx, vy = a.x - parent.x, a.y - parent.y
+                    d = math.hypot(vx, vy) or 1e-6
+                    dx += a.strength * vx / d
+                    dy += a.strength * vy / d
+                mag = math.hypot(dx, dy)
+                closest = min(attrs, key=lambda a: math.hypot(a.x - parent.x, a.y - parent.y))
+                if mag < 1e-6:
+                    # Exactly-opposing attractors -- steer toward the single
+                    # closest one instead of stalling; a real motivator
+                    # can't cancel out to literally nothing and still be
+                    # respected.
+                    dx, dy = closest.x - parent.x, closest.y - parent.y
+                    mag = math.hypot(dx, dy) or 1e-6
+                new_x = min(max(parent.x + (dx / mag) * self.step_ft, 0.0), te.site_width_ft)
+                new_y = min(max(parent.y + (dy / mag) * self.step_ft, 0.0), te.site_length_ft)
+
+                # Near-cancelling (not exactly opposing) blended directions
+                # can point somewhere that makes no real progress toward
+                # ANY assigned attractor -- confirmed empirically: without
+                # this guard, a node stuck between two flanking attractors
+                # gets reassigned round after round with the identical
+                # nearest-distance value, endlessly spawning dead-end
+                # children instead of ever closing the gap. Fall back to
+                # heading straight at the single closest attractor whenever
+                # the blended step wouldn't even improve on that one.
+                old_min = math.hypot(closest.x - parent.x, closest.y - parent.y)
+                new_min = math.hypot(closest.x - new_x, closest.y - new_y)
+                if new_min >= old_min:
+                    fdx, fdy = closest.x - parent.x, closest.y - parent.y
+                    fmag = math.hypot(fdx, fdy) or 1e-6
+                    new_x = min(max(parent.x + (fdx / fmag) * self.step_ft, 0.0), te.site_width_ft)
+                    new_y = min(max(parent.y + (fdy / fmag) * self.step_ft, 0.0), te.site_length_ft)
+
+                if math.hypot(new_x - parent.x, new_y - parent.y) < STALL_EPS_FRAC * self.step_ft:
+                    continue  # clamped back onto the parent (site edge) -- would be a zero-length stub
+                new_id = len(self.nodes) + len(new_nodes)
+                z = _voxel_at(te, new_x, new_y).z_ft
+                new_nodes.append(NetworkNode(new_id, new_x, new_y, z, parent_id=parent.id,
+                                              source=parent.source))
+
+            if not new_nodes:
+                break  # nothing grew this round -> nothing will grow next round either
+            self.nodes.extend(new_nodes)
+
+            all_xy = np.array([[n.x, n.y] for n in self.nodes])
+            for a in self.attractors:
+                if a.consumed:
+                    continue
+                d = np.linalg.norm(all_xy - np.array([a.x, a.y]), axis=1)
+                min_i = int(d.argmin())
+                if d[min_i] <= self.kill_radius_ft:
+                    a.consumed = True
+                    self.nodes[min_i].captured += 1
+
+    def _compute_flow(self):
+        by_id = {n.id: n for n in self.nodes}
+        for n in self.nodes:
+            n.flow = n.captured
+        for n in reversed(self.nodes):  # creation order is a valid reverse-topological order
+            if n.parent_id is not None:
+                by_id[n.parent_id].flow += n.flow
+
+    @staticmethod
+    def _grade_kind(grade):
+        if grade <= FOOTPATH_MAX_GRADE:
+            return "footpath"
+        if grade <= RAMP_MAX_GRADE:
+            return "ramp"
+        return "escalator"
+
+    def _is_bridge(self, parent, child):
+        te = self.te
+        for i in range(1, BRIDGE_SAMPLE_COUNT + 1):
+            t = i / (BRIDGE_SAMPLE_COUNT + 1)
+            x = parent.x + (child.x - parent.x) * t
+            y = parent.y + (child.y - parent.y) * t
+            deck_z = parent.z_ft + (child.z_ft - parent.z_ft) * t
+            terrain_z = _voxel_at(te, x, y).z_ft
+            if deck_z - terrain_z > BRIDGE_CLEARANCE_FT:
+                return True
+        return False
+
+    def _classify_edges(self):
+        by_id = {n.id: n for n in self.nodes}
+        specs = []
+        for n in self.nodes:
+            if n.parent_id is None:
+                continue
+            parent = by_id[n.parent_id]
+            run = math.hypot(n.x - parent.x, n.y - parent.y)
+            grade = abs(n.z_ft - parent.z_ft) / max(run, 1e-6)
+            kind = self._grade_kind(grade)
+            if self._is_bridge(parent, n):
+                kind += "_bridge"
+            radius_ft = min(MAX_PATH_RADIUS_FT, BASE_PATH_RADIUS_FT + FLOW_WIDTH_PER_UNIT_FT * n.flow)
+            spec = StructuralElement(kind, parent.x, parent.y, parent.z_ft, 0.0, radius_ft=radius_ft,
+                                      source=n.source)
+            spec.x2_ft, spec.y2_ft, spec.z2_ft = n.x, n.y, n.z_ft
+            specs.append(spec)
+        return specs
+
+    def _detect_lookouts(self):
+        te = self.te
+        has_child = {n.parent_id for n in self.nodes if n.parent_id is not None}
+        specs = []
+        for n in self.nodes:
+            if n.id in has_child or n.parent_id is None:
+                continue  # not a leaf, or is the root itself
+            near_perimeter = (
+                n.x <= LOOKOUT_PERIMETER_MARGIN_FT or n.x >= te.site_width_ft - LOOKOUT_PERIMETER_MARGIN_FT or
+                n.y <= LOOKOUT_PERIMETER_MARGIN_FT or n.y >= te.site_length_ft - LOOKOUT_PERIMETER_MARGIN_FT
+            )
+            near_deep_grotto = False
+            v = _voxel_at(te, n.x, n.y)
+            for ngx, ngy in ((v.gx + 1, v.gy), (v.gx - 1, v.gy), (v.gx, v.gy + 1), (v.gx, v.gy - 1)):
+                if 0 <= ngx < te.nx and 0 <= ngy < te.nz:
+                    nv = te.voxels[ngx][ngy]
+                    if nv.typology == "GROTTO" and nv.level <= -2:
+                        near_deep_grotto = True
+                        break
+            if near_perimeter or near_deep_grotto:
+                specs.append(StructuralElement(
+                    "lookout_point", n.x, n.y, n.z_ft + LOOKOUT_PLATFORM_HEIGHT_FT, LOOKOUT_PLATFORM_HEIGHT_FT))
+        return specs
+
+    def run(self):
+        self._grow()
+        self._compute_flow()
+        return self._classify_edges() + self._detect_lookouts()
+
+
+# --- Canyon-carve along the primary trunk (2026-07-23) ---------------------
+# Explicit action (POST /api/pershing/carve-network-canyon), NOT part of
+# automatic network growth -- see logic/pershing_api.py's carve_network_canyon()
+# docstring for why carving stays a deliberate one-time commit even though
+# growth itself became automatic on 2026-07-23 (auto-carving on every
+# debounced rebuild would risk a drift loop: carve reshapes terrain -> next
+# auto-regrow sees new terrain -> path shifts -> recarve drifts further).
+_PATH_KINDS = {"footpath", "ramp", "escalator", "footpath_bridge", "ramp_bridge", "escalator_bridge"}
+NETWORK_CANYON_WEIGHT = 0.85  # tunable; passes through _effective_influence()'s clamp01, same magnitude as ingest_diagram_svg.OVERLAP_CANYON_WEIGHT for a comparably "strong but not maximal" cut
+
+
+def rasterize_network_canyon(specs, nx, nz, voxel_ft, flow_percentile=75):
+    """
+    Carves a canyon corridor along the grown network's primary trunk only --
+    NOT the whole tree (see the plan discussion this session: "every
+    segment, no threshold" cuts dozens of thin cracks across most of the
+    site, since Space Colonization trees are structurally lopsided, many
+    thin twigs and few thick trunk segments; a percentile-based flow
+    threshold instead selects the small number of segments that actually
+    read as "the path," matching the original ask -- a canyon running from
+    the Metro entrance to a placed amenity, not a fractured lattice).
+
+    Uses each qualifying segment's own already-computed radius_ft (see
+    CirculationNetworkEngine._classify_edges -- BASE_PATH_RADIUS_FT +
+    FLOW_WIDTH_PER_UNIT_FT * flow, clamped) as BOTH the selection signal
+    (radius_ft is a monotonic function of flow, so thresholding by radius_ft
+    percentile is equivalent to thresholding by flow) AND the corridor half-
+    width, so the carved cut naturally tapers the same way the rendered path
+    width already does -- one signal drives both, they can't visually drift
+    apart.
+
+    Returns an (nx, nz) numpy array of canyon weight (0 or
+    NETWORK_CANYON_WEIGHT per cell, cell-wise max where segments overlap) --
+    caller is responsible for merging this against any existing canyon
+    source (also via max, never overwrite -- see carve_network_canyon()).
+    lookout_point (a single-point spec, no x2/y2/z2) and any non-path kind
+    are excluded, only real two-point path segments contribute.
+    """
+    path_specs = [s for s in specs if s.kind in _PATH_KINDS]
+    if not path_specs:
+        return np.zeros((nx, nz))
+
+    radii = np.array([s.radius_ft for s in path_specs])
+    threshold = np.percentile(radii, flow_percentile)
+    trunk_specs = [s for s in path_specs if s.radius_ft >= threshold]
+
+    gx_centers = (np.arange(nx) + 0.5) * voxel_ft
+    gy_centers = (np.arange(nz) + 0.5) * voxel_ft
+    gxx, gyy = np.meshgrid(gx_centers, gy_centers, indexing="ij")
+    grid_pts = np.stack([gxx.ravel(), gyy.ravel()], axis=1)  # (N, 2)
+
+    canyon = np.zeros(len(grid_pts))
+    for s in trunk_specs:
+        p1 = np.array([s.x_ft, s.y_ft])
+        p2 = np.array([s.x2_ft, s.y2_ft])
+        seg = p2 - p1
+        seg_len2 = seg.dot(seg)
+        if seg_len2 < 1e-9:
+            dist = np.linalg.norm(grid_pts - p1, axis=1)
+        else:
+            t = np.clip(((grid_pts - p1) @ seg) / seg_len2, 0.0, 1.0)
+            proj = p1 + t[:, None] * seg
+            dist = np.linalg.norm(grid_pts - proj, axis=1)
+        inside = dist <= s.radius_ft
+        canyon = np.maximum(canyon, np.where(inside, NETWORK_CANYON_WEIGHT, 0.0))
+
+    return canyon.reshape(nx, nz)

@@ -231,8 +231,24 @@ def load_image_sketch(image_path, site_width_ft, site_length_ft, threshold=100,
     return np.column_stack([fx * site_width_ft, fy * site_length_ft])
 
 
-def find_latest_sketch(folder=r"D:\MemoryMachine\data\sketches"):
+# Resolved from this file's own location rather than hardcoded to
+# D:\MemoryMachine -- this repo is Syncthing-synced across machines with
+# different drive letters and usernames, so an absolute default silently
+# broke sketch discovery anywhere the checkout isn't literally on D:.
+# Same reasoning as hotspot_csv.survey_dir().
+DEFAULT_SKETCHES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sketches")
+
+
+def find_latest_sketch(folder=None):
     """Return the most recently modified sketch file (.svg/.png/.jpg/.jpeg) in `folder`, or None."""
+    if folder is None:
+        folder = DEFAULT_SKETCHES_DIR
+    # Guarded rather than letting os.listdir raise: "no sketch available"
+    # is a supported state (see logic/pershing_api.get_sketch_info()'s
+    # "both None if data/sketches/ is empty" contract), and a missing
+    # folder means exactly that -- it shouldn't crash callers at import.
+    if not os.path.isdir(folder):
+        return None
     exts = (".svg", ".png", ".jpg", ".jpeg")
     candidates = [
         os.path.join(folder, f) for f in os.listdir(folder)
@@ -244,7 +260,7 @@ def find_latest_sketch(folder=r"D:\MemoryMachine\data\sketches"):
 
 
 def build_sketch_weights(engine, svg_path=None, image_path=None, use_latest=False,
-                          sketches_folder=r"D:\MemoryMachine\data\sketches",
+                          sketches_folder=None,
                           sample_step_ft=1.0, threshold=100, falloff_scale_ft=None,
                           flip_x=True, flip_y=True, **image_kwargs):
     """
@@ -270,6 +286,9 @@ def build_sketch_weights(engine, svg_path=None, image_path=None, use_latest=Fals
         raise ValueError("pass exactly one of svg_path, image_path, or use_latest=True")
 
     if use_latest:
+        # Resolve the default here too, so the error below names the real
+        # folder that was searched rather than printing "None".
+        sketches_folder = sketches_folder or DEFAULT_SKETCHES_DIR
         latest = find_latest_sketch(sketches_folder)
         if latest is None:
             raise FileNotFoundError(f"no sketch files found in {sketches_folder}")
@@ -565,7 +584,7 @@ def find_closed_svg_regions(svg_path, site_width_ft, site_length_ft, nx, nz, vox
 
 
 def build_hardscape_regions(engine, svg_path=None, image_path=None, use_latest=False,
-                             sketches_folder=r"D:\MemoryMachine\data\sketches", **kwargs):
+                             sketches_folder=None, **kwargs):
     """
     Convenience dispatcher mirroring build_sketch_weights: pass exactly one
     of svg_path, image_path, or use_latest=True, get back the list of
@@ -583,6 +602,9 @@ def build_hardscape_regions(engine, svg_path=None, image_path=None, use_latest=F
         raise ValueError("pass exactly one of svg_path, image_path, or use_latest=True")
 
     if use_latest:
+        # Resolve the default here too, so the error below names the real
+        # folder that was searched rather than printing "None".
+        sketches_folder = sketches_folder or DEFAULT_SKETCHES_DIR
         latest = find_latest_sketch(sketches_folder)
         if latest is None:
             raise FileNotFoundError(f"no sketch files found in {sketches_folder}")

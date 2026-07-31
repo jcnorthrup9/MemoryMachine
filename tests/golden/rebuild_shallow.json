@@ -1,0 +1,43 @@
+{
+  "counts": {
+    "program_boxes": 105,
+    "program_zones": 14,
+    "real_columns": 295,
+    "real_slabs": 22,
+    "spatial_summary": 19,
+    "structural": 2256,
+    "voxels": 2680,
+    "voxels_excavated": 540
+  },
+  "depth_ft": {
+    "max": 0.0,
+    "mean": -1.813433,
+    "min": -9.0
+  },
+  "hash": "2f0dcf9fdb1d7054",
+  "kind_counts": {
+    "concrete_floor_block": 540,
+    "concrete_retaining_block": 1624,
+    "tree_canopy": 46,
+    "tree_trunk": 46
+  },
+  "scalars": {
+    "excavation_scale": 1.0,
+    "max_canyon_depth_ft": 9.0,
+    "slab_harvest_tons": 3280.5,
+    "used_real_amenity_data": false,
+    "used_real_foot_traffic_data": false,
+    "used_real_noise_data": false,
+    "voxel_ft": 9.0
+  },
+  "structural_kinds": {
+    "concrete_floor_block": 540,
+    "concrete_retaining_block": 1624,
+    "tree_canopy": 46,
+    "tree_trunk": 46
+  },
+  "typologies": {
+    "<none>": 2667,
+    "CIRCULATION": 13
+  }
+}

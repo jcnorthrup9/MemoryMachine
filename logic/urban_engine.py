@@ -91,8 +91,11 @@ guideline_manager = GuidelineManager(os.path.join(BASE_DIR, "urban_design_guidel
 def remix_layers(seed_items):
     """
     Offsets and scales the selected SVG layers within the Pershing Square bounds.
-    Cardinal location from AI is translated to SVG-space offsets relative to site center.
-    Pershing Square boundary is ~436x468 SVG units — offsets are tuned to that scale.
+    Cardinal location from AI is translated to fractional offsets (of
+    Pershing's own detected boundary size) relative to site center -- see
+    LOCATION_OFFSET_FRAC in ingest_diagram_svg.py, which is what actually
+    resolves these into real placement (this function only picks WHICH
+    layer/site/location, not the final pixel math).
     """
     import random
     import math
@@ -109,15 +112,25 @@ def remix_layers(seed_items):
     if "HARDSCAPE" not in valid_layers:
         valid_layers.append("HARDSCAPE")
 
-    SVG_DIR = os.path.join(BASE_DIR, 'data', 'ParkSVG')
+    # 2026-07-16: repointed at the current canonical precedent SVG dir
+    # (data/ParkSVG was the OLD, stale source -- huge multi-MB files with
+    # sync-conflict artifacts, superseded 2026-07-14 by this cleaner,
+    # solid-filled export set that diagram_tool/ and ingest_diagram_svg.py
+    # already use as the single source of truth).
+    SVG_DIR = os.path.join(BASE_DIR, 'data', 'PershingMetabolizer', 'parkSVG', 'PrecedentSVG')
 
-    # Bug fix #3: normalize site names to match svgCache keys used by JS
+    # Bug fix #3: normalize site names to match the canonical SVG filenames
+    # in SVG_DIR above (2026-07-16: corrected to match those exact
+    # filenames -- "ParcVillette"/"GardensBytheBay", not the old
+    # "ParcdelaVillette"/"GardensByTheBay" spellings, which don't exist in
+    # the current directory and would have silently failed to resolve).
     SITE_NAME_CANONICAL = {
         "pershingsquare":    "PershingSquare",
-        "parcdelavillette":  "ParcdelaVillette",
+        "parcdelavillette":  "ParcVillette",
+        "parcvillette":      "ParcVillette",
         "zaryadyepark":      "ZaryadyePark",
         "schouwburgplein":   "Schouwburgplein",
-        "gardensbythebay":   "GardensByTheBay",
+        "gardensbythebay":   "GardensBytheBay",
     }
     valid_sites = list(SITE_NAME_CANONICAL.values())
     if os.path.exists(SVG_DIR):
@@ -128,34 +141,41 @@ def remix_layers(seed_items):
                 if canonical not in valid_sites:
                     valid_sites.append(canonical)
 
-    # Layers that only exist in specific SVGs — always route to their canonical site
-    LAYER_SITE_AFFINITY = {
-        "SHADE":            "Schouwburgplein",
-        "HARDSCAPE":        "Schouwburgplein",   # also in ZaryadyePark
-        "AMPHITHEATRE":     "ZaryadyePark",
-        # Bug fix #2: MAJOR/MINOR_ATTRACTORS don't exist — alias to UNIQUE_ELEMENTS
-        "MAJOR_ATTRACTORS": "PershingSquare",
-        "MINOR_ATTRACTORS": "PershingSquare",
+    # Layers that only exist in specific SVGs — route to a site that actually
+    # has them. 2026-07-17: replaced the old single-site hardcode (every
+    # HARDSCAPE pick forced to Schouwburgplein, every AMPHITHEATRE pick
+    # forced to ZaryadyePark) with the real per-layer membership, verified
+    # by grepping <g id="..."> out of every file in PrecedentSVG/. The old
+    # map collapsed AI/random site variety onto one site per layer even
+    # though HARDSCAPE exists in 3 of 5 sites and AMPHITHEATRE in 4 of 5 --
+    # a real contributor to "the remixes look the same every few pulls".
+    #
+    # MAJOR_ATTRACTORS/MINOR_ATTRACTORS were previously force-aliased to
+    # UNIQUE_ELEMENTS below on the premise that they "don't exist" -- false,
+    # confirmed by the same SVG grep: MAJOR_ATTRACTORS is real in
+    # ParcVillette/Schouwburgplein/ZaryadyePark, MINOR_ATTRACTORS in
+    # GardensBytheBay/ParcVillette/Schouwburgplein. Preserving them as their
+    # own layers (rather than aliasing away) is what lets a diagram's real
+    # attractor-marker positions reach ingest_diagram_svg's
+    # extract_attractor_points_from_composed_layers() and actually flow
+    # into 3D program placement -- aliasing them to UNIQUE_ELEMENTS (a
+    # plain area-fill layer, not a point marker) silently dropped that.
+    LAYER_SITE_MEMBERSHIP = {
+        "SHADE":            ["Schouwburgplein"],
+        "HARDSCAPE":        ["PershingSquare", "Schouwburgplein", "ZaryadyePark"],
+        "AMPHITHEATRE":     ["GardensBytheBay", "PershingSquare", "Schouwburgplein", "ZaryadyePark"],
+        "UNIQUE_ELEMENTS":  ["PershingSquare", "Schouwburgplein"],
+        "MAJOR_ATTRACTORS": ["ParcVillette", "Schouwburgplein", "ZaryadyePark"],
+        "MINOR_ATTRACTORS": ["GardensBytheBay", "ParcVillette", "Schouwburgplein"],
     }
 
-    # Bug fix #2: layer name aliases — remap to the geometry that actually exists
-    LAYER_ALIAS = {
-        "MAJOR_ATTRACTORS": "UNIQUE_ELEMENTS",
-        "MINOR_ATTRACTORS": "UNIQUE_ELEMENTS",
-    }
-
-    # Bug fix #1: cardinal location → SVG-space offsets (park ~436w x 468h)
-    LOCATION_OFFSETS = {
-        "Center":     (   0,    0),
-        "North":      (   0, -140),
-        "South":      (   0,  140),
-        "East":       ( 160,    0),
-        "West":       (-160,    0),
-        "North-East": ( 120, -110),
-        "North-West": (-120, -110),
-        "South-East": ( 120,  110),
-        "South-West": (-120,  110),
-    }
+    # Bug fix #1: cardinal location -> FRACTIONAL offsets (2026-07-16,
+    # replacing hand-tuned pixel values calibrated against a since-replaced
+    # precedent SVG -- see ingest_diagram_svg.py's LOCATION_OFFSET_FRAC,
+    # the single source of truth for these fractions now; kept here as a
+    # plain re-export so this function's own composed["transform"] shape
+    # doesn't need a second copy of the same table).
+    from ingest_diagram_svg import LOCATION_OFFSET_FRAC as LOCATION_OFFSETS
 
     composed = []
 
@@ -169,9 +189,6 @@ def remix_layers(seed_items):
         layer     = item.get("layer", "GREEN_SPACE")
         location  = item.get("location", "Center")
 
-        # Bug fix #2: alias before validity check
-        layer = LAYER_ALIAS.get(layer, layer)
-
         if layer not in valid_layers:
             layer = "GREEN_SPACE"
 
@@ -179,20 +196,24 @@ def remix_layers(seed_items):
         raw_key = raw_site.replace("_", "").replace(" ", "").lower()
         site = SITE_NAME_CANONICAL.get(raw_key, raw_site)
 
-        # Override site if the layer only exists in a specific SVG
-        if layer in LAYER_SITE_AFFINITY:
-            site = LAYER_SITE_AFFINITY[layer]
+        # Override site only if the current pick doesn't actually have this
+        # layer -- preserves the AI's/random pick's site whenever it's
+        # already valid, instead of always overwriting it.
+        if layer in LAYER_SITE_MEMBERSHIP:
+            valid_for_layer = LAYER_SITE_MEMBERSHIP[layer]
+            if site not in valid_for_layer:
+                site = random.choice(valid_for_layer)
         elif site not in valid_sites:
             site = "PershingSquare"
 
         prim = primitives_map.get(layer, "box")
 
-        # Bug fix #1: translate cardinal location to x/y offset
-        x, y = LOCATION_OFFSETS.get(location, (0, 0))
+        # Bug fix #1: translate cardinal location to a fractional offset
+        x_frac, y_frac = LOCATION_OFFSETS.get(location, (0.0, 0.0))
 
         transform = {
-            "x": x,
-            "y": y,
+            "x_frac": x_frac,
+            "y_frac": y_frac,
             "scale": 1.0,
             "rot": 0
         }
@@ -207,19 +228,3 @@ def remix_layers(seed_items):
             "primitive": prim
         })
     return composed
-
-def apply_zonal_grid(stack_items: list):
-    """
-    Calculates the current programmatic coverage percentage 
-    to feed back into the HUD (Zonal Constraints).
-    """
-    total_area = 800 * 600 # Total site bounding box area
-    coverage = {"SOFT": 0, "HARD": 0, "PROG": 0, "BLUE": 0}
-    
-    for item in stack_items:
-        area = item.get("width", 1) * item.get("height", 1)
-        layer_type = item.get("layer", "").split('_')[0]
-        if layer_type in coverage:
-            coverage[layer_type] += (area / total_area) * 100
-            
-    return coverage

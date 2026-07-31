@@ -256,8 +256,47 @@ const Engine2D = {
       svg.appendChild(bClone);
     }
 
+    // 4. SITE GRID: spatial-organizer overlay (see logic/site_grid.py) --
+    // drawn last so it's visible on top; clipped to the boundary and kept
+    // out of MemoryState.stack so it never reaches getProgramStats()'s tally.
+    if (MemoryState.siteGrid) {
+      this.renderGrid(svg, ns, bbox, MemoryState.siteGrid, isLightMode);
+    }
+
     container.innerHTML = '';
     container.appendChild(svg);
+  },
+
+  /**
+   * Draws each site-grid cell (from GET /api/site-grid) as a rotated quad,
+   * converting each corner's x_frac/y_frac (fraction of the site's own real
+   * width/length, 0.0 at center -- same convention _fracToPixel() in
+   * main.js uses for stack-item placement) into this SVG's world space via
+   * the live boundary bbox, exactly like a stack item's transform would.
+   */
+  renderGrid(svg, ns, bbox, grid, isLightMode) {
+    const cx = bbox.x + bbox.w / 2;
+    const cy = bbox.y + bbox.h / 2;
+    const gridColor = isLightMode ? '#0066cc' : '#00e5ff';
+
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('class', 'site-grid-overlay');
+    g.setAttribute('clip-path', 'url(#clip-boundary)');
+    g.setAttribute('stroke', gridColor);
+    g.setAttribute('stroke-width', '0.5');
+    g.setAttribute('fill', 'none');
+    g.setAttribute('opacity', '0.6');
+
+    (grid.cells || []).forEach(cell => {
+      const pts = cell.corners_frac.map(([xf, yf]) =>
+        `${cx + xf * bbox.w},${cy + yf * bbox.h}`
+      ).join(' ');
+      const poly = document.createElementNS(ns, 'polygon');
+      poly.setAttribute('points', pts);
+      g.appendChild(poly);
+    });
+
+    svg.appendChild(g);
   }
 };
 
