@@ -66,7 +66,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from terracing_engine import (  # noqa: E402
-    TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, STRUCTURAL_BAY_FT)
+    TerracingEngine, StructuralFramingEngine, TypologyAssetEngine, STRUCTURAL_BAY_FT, KIND_REGISTRY)
 # amenity_deficit.py only needs the stdlib csv module -- unlike
 # sketch_weight_mapper.py (PIL/svgpathtools), safe to import directly in
 # Blender's bundled Python, no precompute-cache step needed.
@@ -76,6 +76,7 @@ from amenity_deficit import load_deficit_hotspots_from_csv, find_latest_csv  # n
 # PIL/svgpathtools (those imports are local to the functions that need them,
 # not at module scope, so importing the module itself doesn't require them).
 from sketch_weight_mapper import find_latest_sketch  # noqa: E402
+from logic.canopy_engine import CanopyEngine  # noqa: E402
 
 with open(REAL_GEOMETRY_PATH) as f:
     REAL_GEOMETRY = json.load(f)
@@ -87,16 +88,23 @@ SKETCH_WEIGHTS = _cache["weights"]
 HARDSCAPE_MASK = _cache.get("hardscape_mask") or [[False] * len(SKETCH_WEIGHTS[0]) for _ in SKETCH_WEIGHTS]
 
 # Programmatic Typology Mixing Engine inputs (New Feature Directives section
-# 4) -- Water/Shade, Greenscape, Amenity/Resting. Bootstrap empty (same
+# 4) -- Water, Shade, Greenscape, Amenity/Resting. Bootstrap empty (same
 # pattern HARDSCAPE_MASK used before real hardscape sketch data existed);
 # setup_paint_canvas/bake_paint_canvas below populate these live once the
-# designer paints the corresponding category and hits Bake.
+# designer paints the corresponding category and hits Bake. Water/Shade
+# split into two masks 2026-07-11 -- see terracing_engine.py's Voxel
+# docstring and logic/pershing_api.py's bootstrap migration comment for why.
 def _empty_mask():
     return [[False] * len(SKETCH_WEIGHTS[0]) for _ in SKETCH_WEIGHTS]
 
-WATER_SHADE_MASK = _empty_mask()
+WATER_MASK = _empty_mask()
+TREE_MASK = _empty_mask()
 GREENSCAPE_MASK = _empty_mask()
 AMENITY_RESTING_MASK = _empty_mask()
+# Canopy Engine (2026-07-13) -- continuous weight grid, same role as
+# SKETCH_WEIGHTS above (painted alpha IS the weight, not a boolean zone
+# mask). See logic/canopy_engine.py.
+CANOPY_MASK = _empty_mask()
 
 AMENITY_CSV_PATH = find_latest_csv()
 SKETCH_IMAGE_PATH = find_latest_sketch()
@@ -123,34 +131,35 @@ STRUCTURAL_COLLECTION_NAME = "mm_structural_frame"
 # by reusing the same technique build_terrace_mesh already uses for voxels:
 # concatenate every instance of a kind into ONE bmesh/object per kind, same
 # pattern, same speed.
+#
+# Derived from KIND_REGISTRY (2026-07-10 consolidation pass -- terracing_
+# engine.py's shared import of frontend/src/kindRegistry.json), replacing a
+# hand-maintained copy that had independently drifted from Viewport.jsx's:
+# it never picked up circulation_network.py's footpath/ramp/escalator kinds
+# or the typology tree_trunk/tree_canopy/building_mass kinds, which meant
+# build_structural_meshes (below, iterates _ALL_STRUCT_KINDS rather than
+# whatever's actually in a given rebuild's specs) silently dropped those
+# kinds' meshes in this Blender-side tool even though the live web app
+# rendered them fine. Deriving from the shared registry fixes that gap.
 _PROTOTYPE_DIMS_FT = {
-    "concrete_floor_block": (9.0, 9.0, 8.0 / 12.0),
-    "concrete_retaining_block": (3.0, 3.0, 8.0 / 12.0),
-    "steel_collar_sleeve": (2.0, 2.0, 1.0),
-    "gusset_plate": (1.5, 0.1, 1.5),
-    "steel_strap_band": (2.2, 0.15, 1.0),
-    "footing_shoe": (1.3, 1.3, 1.0),
-    "glulam_post": (1.0, 1.0, 1.0),
-    # Programmatic Typology Mixing Engine (New Feature Directives section 4)
-    # -- GROTTO/SANCTUARY furnishing kinds, see TypologyAssetEngine.
-    "water_plane": (8.0, 8.0, 0.2),
-    "water_cascade_block": (4.0, 1.5, 1.0),
-    "misting_line": (0.15, 0.15, 1.0),
-    "bench_assembly": (6.0, 2.0, 1.5),
-    "restroom_pod": (10.0, 8.0, 8.0),
-    "fountain": (4.0, 4.0, 3.0),
+    kind: tuple(entry["dims_ft"]) for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "box"
 }
 # Two-point kinds are detected at runtime (spec.x2_ft is not None); these
 # sets are only for the remaining single-point non-box kinds.
-_VERTICAL_CYLINDER_KINDS = {"steel_bolt", "bolt_flange_plate"}
-_HEX_KINDS = {"steel_turnbuckle"}
+_VERTICAL_CYLINDER_KINDS = {
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "vertical_cylinder"
+}
+_HEX_KINDS = {kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "hex"}
+# 2026-07-16 Canopy Redesign -- flat individually-oriented panels
+# (canopy_panel), needs a full per-instance basis from a normal vector
+# (see _add_panel), not just a rotation_deg like the box path.
+_PANEL_KINDS = {kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] == "panel"}
 # Every kind that can ever appear -- iterated even when a given rebuild
 # produces zero of a kind, so switching STEEL <-> WOOD (or dropping a
 # connection condition) correctly empties that kind's mesh instead of
 # leaving stale geometry from the last rebuild.
-_ALL_STRUCT_KINDS = (
-    tuple(_PROTOTYPE_DIMS_FT) + tuple(_VERTICAL_CYLINDER_KINDS) + tuple(_HEX_KINDS)
-    + ("steel_strut", "steel_tie_rod", "knee_brace", "timber_beam")
+_ALL_STRUCT_KINDS = tuple(
+    kind for kind, entry in KIND_REGISTRY["kinds"].items() if entry["shape"] != "real"
 )
 
 _BOX_FACES = ((0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7))
@@ -205,6 +214,43 @@ def _add_cylinder(bm, p0, p1, radius, segments=8):
     bm.faces.new(ring1)
 
 
+# Circulation paths (2026-07-13) render as flat ribbons, not round tubes --
+# see _add_ribbon/CIRCULATION_PATH_KINDS below.
+CIRCULATION_PATH_KINDS = {
+    "footpath", "ramp", "escalator", "footpath_bridge", "ramp_bridge", "escalator_bridge",
+}
+PATH_HALF_THICKNESS_FT = 0.25  # slightly thickened, not a paper-thin plane -- see Viewport.jsx's twin constant
+
+
+def _add_ribbon(bm, p0, p1, half_width, half_thickness):
+    """Flat, slightly-thickened plank between two points -- same u/v basis
+    _add_cylinder uses above, but a 4-corner rectangle cross-section
+    instead of a circular ring, so an inclined ramp's cross-section tilts
+    naturally with grade instead of staying flat. Used for
+    circulation_network.py's footpath/ramp/escalator kinds (2026-07-13,
+    replacing round cylinders -- these are walkable path surfaces, not
+    structural rods)."""
+    p0 = mathutils.Vector(p0)
+    p1 = mathutils.Vector(p1)
+    axis = p1 - p0
+    length = axis.length
+    if length < 1e-6:
+        return
+    axis_n = axis / length
+    ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(axis_n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
+    u = ref.cross(axis_n).normalized()  # width axis
+    v = axis_n.cross(u).normalized()    # thickness axis
+    corners = (u * half_width + v * half_thickness, -u * half_width + v * half_thickness,
+               -u * half_width - v * half_thickness, u * half_width - v * half_thickness)
+    ring0 = [bm.verts.new(p0 + c) for c in corners]
+    ring1 = [bm.verts.new(p1 + c) for c in corners]
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((ring0[i], ring0[j], ring1[j], ring1[i]))
+    bm.faces.new(ring0[::-1])
+    bm.faces.new(ring1)
+
+
 def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
     """Elongated hexagonal prism -- the structural turnbuckle at the dead
     center of each STEEL X-brace."""
@@ -221,6 +267,44 @@ def _add_hex_prism(bm, center, radius, height, rotation_deg=0.0):
         bm.faces.new((ring_bottom[i], ring_bottom[j], ring_top[j], ring_top[i]))
     bm.faces.new(ring_top)
     bm.faces.new(ring_bottom[::-1])
+
+
+def _add_panel(bm, center, normal, width, depth, thickness, rotation_deg=0.0):
+    """Flat individually-oriented plate (canopy_panel) -- 2026-07-16 Canopy
+    Redesign. Same u/v basis construction _add_cylinder above already uses
+    (world-Z unless the direction vector is nearly vertical, i.e. abs(.z)
+    >= 0.9, then fall back to world-X; u = ref x n, v = n x u) -- same
+    threshold, same cross-product order as Viewport.jsx's
+    CanopyPanelInstances (that component works in Three.js's Y-up frame
+    post-toThreeDir(), this one works directly in Blender's native Z-up
+    frame on the raw real-feet normal, so the reference axis is Z here vs
+    Y there BY DESIGN, not a discrepancy -- both must still tilt the same
+    real panel the same way once compared side by side, see the Canopy
+    Redesign plan's cross-tool handedness verification step, do not skip
+    it if this is ever touched again).
+
+    rotation_deg (2026-07-24, site_grid panel faceting) spins u/v around n
+    AFTER the tilt basis is built -- the in-plane seam orientation from
+    logic/canopy_engine.py's build_site_grid()-driven panel grid, mirrored
+    in Viewport.jsx's CanopyPanelInstances via u.applyAxisAngle(normal, ...)."""
+    center_v = mathutils.Vector(center)
+    n = mathutils.Vector(normal).normalized()
+    ref = mathutils.Vector((0.0, 0.0, 1.0)) if abs(n.z) < 0.9 else mathutils.Vector((1.0, 0.0, 0.0))
+    u = ref.cross(n).normalized()
+    if rotation_deg:
+        u = mathutils.Matrix.Rotation(math.radians(rotation_deg), 3, n) @ u
+    v = n.cross(u).normalized()
+    hw, hd, ht = width / 2, depth / 2, thickness / 2
+    bottom, top = [], []
+    for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+        base = center_v + u * (su * hw) + v * (sv * hd)
+        bottom.append(bm.verts.new(base - n * ht))
+        top.append(bm.verts.new(base + n * ht))
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((bottom[i], bottom[j], top[j], top[i]))
+    bm.faces.new(bottom[::-1])
+    bm.faces.new(top)
 
 
 def build_structural_meshes(coll, specs):
@@ -247,17 +331,26 @@ def build_structural_meshes(coll, specs):
         bm = bmesh.new()
         for spec in by_kind.get(kind, []):
             if spec.x2_ft is not None:
-                _add_cylinder(bm, (spec.x_ft, spec.y_ft, spec.z_top_ft),
-                               (spec.x2_ft, spec.y2_ft, spec.z2_ft), spec.radius_ft or 0.2)
+                p0 = (spec.x_ft, spec.y_ft, spec.z_top_ft)
+                p1 = (spec.x2_ft, spec.y2_ft, spec.z2_ft)
+                if kind in CIRCULATION_PATH_KINDS:
+                    _add_ribbon(bm, p0, p1, spec.radius_ft or 0.2, PATH_HALF_THICKNESS_FT)
+                else:
+                    _add_cylinder(bm, p0, p1, spec.radius_ft or 0.2)
             elif kind in _HEX_KINDS:
                 _add_hex_prism(bm, (spec.x_ft, spec.y_ft, spec.z_top_ft), spec.radius_ft or 0.3,
                                 spec.height_ft, rotation_deg=spec.rotation_deg)
+            elif kind in _PANEL_KINDS:
+                normal = (spec.normal_x or 0.0, spec.normal_y or 0.0, spec.normal_z or 1.0)
+                _add_panel(bm, (spec.x_ft, spec.y_ft, spec.z_top_ft), normal,
+                           spec.scale, spec.scale_y if spec.scale_y is not None else spec.scale, spec.height_ft,
+                           rotation_deg=spec.rotation_deg)
             elif kind in _VERTICAL_CYLINDER_KINDS:
                 p0 = (spec.x_ft, spec.y_ft, spec.z_top_ft - spec.height_ft)
                 p1 = (spec.x_ft, spec.y_ft, spec.z_top_ft)
                 _add_cylinder(bm, p0, p1, spec.radius_ft or 0.2)
             else:
-                base_sx, base_sy, _ = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0, 1.0))
+                base_sx, base_sy = _PROTOTYPE_DIMS_FT.get(kind, (1.0, 1.0))
                 size = (base_sx * spec.scale, base_sy * spec.scale, spec.height_ft)
                 center = (spec.x_ft, spec.y_ft, spec.z_top_ft - spec.height_ft / 2)
                 _add_rotated_box(bm, center, size, _rotation_for(spec))
@@ -306,6 +399,37 @@ def build_terrace_mesh(mesh, engine, voxels):
     bm.free()
 
 
+CANOPY_OBJ_NAME = "mm_canopy"
+
+
+def build_canopy_mesh(mesh, height_matrix, voxel_ft, puncture_mask=None):
+    """Continuous heightfield mesh (one bmesh vert per (gx, gy) grid point,
+    one quad face per cell) -- NOT box-per-voxel like build_terrace_mesh
+    above, a real continuous surface, same cx/cy centering convention.
+    Duplicated from blender/pershing_headless_build.py's version of the same
+    function rather than imported -- this file already independently
+    duplicates build_terrace_mesh against that same script, same reasoning.
+    Cells where puncture_mask[gx][gy] is true skip their face entirely,
+    leaving a real hole rather than a solid quad there."""
+    bm = bmesh.new()
+    nx = len(height_matrix)
+    nz = len(height_matrix[0]) if nx else 0
+    verts = [[None] * nz for _ in range(nx)]
+    for gx in range(nx):
+        for gy in range(nz):
+            cx = gx * voxel_ft + voxel_ft / 2
+            cy = gy * voxel_ft + voxel_ft / 2
+            verts[gx][gy] = bm.verts.new((cx, cy, height_matrix[gx][gy]))
+    for gx in range(nx - 1):
+        for gy in range(nz - 1):
+            if puncture_mask and puncture_mask[gx][gy]:
+                continue
+            bm.faces.new((verts[gx][gy], verts[gx + 1][gy], verts[gx + 1][gy + 1], verts[gx][gy + 1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+
+
 def rebuild_all(scene):
     """
     One canyon, one rebuild. Canyon Width/Depth are not a second excavation
@@ -335,7 +459,8 @@ def rebuild_all(scene):
     engine = TerracingEngine(REAL_GEOMETRY, sketch_weights=SKETCH_WEIGHTS, sketch_alpha=scene.mm_sketch_alpha,
                               hardscape_regions=hardscape_regions, deficit_hotspots=deficit_hotspots,
                               transit_falloff_ft=transit_falloff_ft, max_canyon_depth_ft=max_canyon_depth_ft,
-                              water_shade_regions=[{"mask": WATER_SHADE_MASK}],
+                              water_regions=[{"mask": WATER_MASK}],
+                              tree_regions=[{"mask": TREE_MASK}],
                               greenscape_regions=[{"mask": GREENSCAPE_MASK}],
                               amenity_resting_regions=[{"mask": AMENITY_RESTING_MASK}])
     voxels = engine.run(phase=3)
@@ -363,7 +488,63 @@ def rebuild_all(scene):
 
     typology = TypologyAssetEngine(REAL_GEOMETRY, engine)
     all_specs = result["harvested_blocks"] + result["structural"] + typology.run()
+
+    # Canopy Engine (2026-07-16 Canopy Redesign -- rebuilt from the
+    # original 2026-07-13 flat-beam-grid version, see logic/canopy_engine.py's
+    # module docstring for the full paint-as-footprint / sliders-as-shape
+    # design). zones=[] -- this cockpit module has no program_placement.py
+    # integration (unlike logic/pershing_api.py's rebuild(), which already
+    # computes real program zones); the civic/sports crest term is simply a
+    # no-op here rather than backfilling program placement into this
+    # already-drifted module as an unrelated side effect of this feature.
+    # Only the 4 existing scene sliders are exposed here (base height, wave
+    # amplitude, smoothing, puncture threshold) -- this cockpit tool is a
+    # secondary, non-primary front-end (see PIPELINE_STATUS_AND_NEXT_STEPS.md),
+    # so the newer wave-length/phase/sculpt/panel/support tunables use the
+    # same fixed defaults CanopyParams (logic/pershing_api.py) uses on the
+    # primary web app, rather than registering a dozen more bpy.props here.
+    # Run BEFORE build_structural_meshes below so panel_specs/support_specs
+    # can be merged into all_specs first and render through the same
+    # box/two_point pipelines every other structural kind already uses.
+    canopy = CanopyEngine(
+        REAL_GEOMETRY, engine, voxels, zones=[],
+        canopy_mask=CANOPY_MASK,
+        base_height_ft=scene.mm_canopy_base_height,
+        wave_amplitude_ft=scene.mm_canopy_wave_amplitude,
+        wave_length_x_ft=120.0, wave_length_y_ft=90.0, wave_phase_x=0.0, wave_phase_y=0.0,
+        dip_weight_ft=6.0, program_boost_ft=6.0, sculpt_radius_scale=1.3,
+        smoothing_iterations=scene.mm_canopy_smoothing_iterations,
+        puncture_threshold=scene.mm_canopy_puncture_threshold,
+        panel_pitch_ft=9.0, panel_thickness_ft=0.15,
+        fork_height_fraction=0.6, fork_spread_ft=4.0, column_search_radius_ft=40.0,
+        footprint_paint_threshold=0.05, support_tie_back_tolerance_ft=15.0,
+    )
+    _height_matrix, _puncture_mask, panel_specs, support_specs = canopy.run()
+    all_specs = all_specs + panel_specs + support_specs
+
     build_structural_meshes(coll, all_specs)
+
+    # Glass CanopyOverlay-equivalent mesh (build_canopy_mesh) disabled
+    # 2026-07-16, same reasoning as Viewport.jsx's CanopyOverlay on the
+    # primary web app: superseded by the panelized canopy_panel mesh above
+    # (rendered through build_structural_meshes/_add_panel), which is the
+    # confirmed design goal (individually-oriented panels, not a smooth
+    # continuous surface) -- not "pending re-enable." Also, height_matrix
+    # is now full-site regardless of paint (see canopy_engine.py's module
+    # docstring), so this old call would draw across the whole site
+    # ignoring the painted footprint if left on. build_canopy_mesh() itself
+    # is left defined, unused, for reference only.
+    #
+    # canopy_obj = bpy.data.objects.get(CANOPY_OBJ_NAME)
+    # if canopy_obj is None:
+    #     canopy_mesh = bpy.data.meshes.new(CANOPY_OBJ_NAME)
+    #     canopy_obj = bpy.data.objects.new(CANOPY_OBJ_NAME, canopy_mesh)
+    #     bpy.context.collection.objects.link(canopy_obj)
+    # else:
+    #     canopy_mesh = canopy_obj.data
+    #     canopy_mesh.clear_geometry()
+    # build_canopy_mesh(canopy_mesh, _height_matrix, engine.voxel_ft, _puncture_mask)
+    # canopy_mesh.update()
 
     scene.mm_slab_harvest_label = f"Slab Material Harvested: {result['slab_harvest_tons']:.0f} Tons"
     hardscape_note = "on" if scene.mm_hardscape_enabled else "off"
@@ -385,9 +566,17 @@ PAINT_CAM_NAME = "mm_paint_cam"
 PAINT_CATEGORIES = (
     ("canyon", "Canyon", (0.0, 0.0, 0.0), True),
     ("hardscape", "Hardscape", (0.15, 0.35, 1.0), False),
-    ("water_shade", "Water/Shade", (0.15, 0.85, 0.95), False),
+    ("water", "Water", (0.15, 0.85, 0.95), False),
+    # Tan/beige (0xBCAAA4), matches the frontend's trees brush and the
+    # legacy diagram tool's ZONE_MATERIALS.SHADE -- kept consistent across
+    # all three so "trees" reads as the same color everywhere it appears.
+    # (renamed from "shade" 2026-07-16 -- always meant "place trees here")
+    ("trees", "Trees", (0.74, 0.67, 0.64), False),
     ("greenscape", "Greenscape", (0.2, 0.75, 0.25), False),
     ("amenity_resting", "Amenity/Resting", (1.0, 0.55, 0.1), False),
+    # 2026-07-13 Canopy Engine: continuous weight, like Canyon -- see
+    # logic/canopy_engine.py.
+    ("canopy", "Canopy Weight", (0.3, 0.82, 0.89), True),
 )
 PAINT_ZONE_THRESHOLD = 0.3
 PAINT_PX_PER_CELL = 8
@@ -509,7 +698,7 @@ def _set_paint_view(active):
     if canvas_obj is None or paint_cam is None:
         return
     canvas_obj.hide_set(not active)
-    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "ramps"):
+    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "metro_connector", "ramps"):
         obj = bpy.data.objects.get(name)
         if obj is not None:
             obj.hide_set(active)
@@ -600,13 +789,14 @@ def _sample_mask_grid(img, continuous):
 
 def bake_paint_canvas(scene):
     """
-    Sample all 5 painted mask images into SKETCH_WEIGHTS/HARDSCAPE_MASK/
-    WATER_SHADE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK, then trigger the
-    one real rebuild. No falloff math needed -- the painted alpha itself
-    already IS the continuous weight (Canyon) or the filled-region claim
-    (everything else), since brush painting fills its own interior directly.
+    Sample all 7 painted mask images into SKETCH_WEIGHTS/HARDSCAPE_MASK/
+    WATER_MASK/TREE_MASK/GREENSCAPE_MASK/AMENITY_RESTING_MASK/CANOPY_MASK,
+    then trigger the one real rebuild. No falloff math needed -- the painted
+    alpha itself already IS the continuous weight (Canyon, Canopy) or the
+    filled-region claim (everything else), since brush painting fills its
+    own interior directly.
     """
-    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_SHADE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK
+    global SKETCH_WEIGHTS, HARDSCAPE_MASK, WATER_MASK, TREE_MASK, GREENSCAPE_MASK, AMENITY_RESTING_MASK, CANOPY_MASK
     painted_counts = {}
     for key, label, tint, continuous in PAINT_CATEGORIES:
         img = bpy.data.images.get(_mask_image_name(key))
@@ -617,12 +807,16 @@ def bake_paint_canvas(scene):
             SKETCH_WEIGHTS = grid
         elif key == "hardscape":
             HARDSCAPE_MASK = grid
-        elif key == "water_shade":
-            WATER_SHADE_MASK = grid
+        elif key == "water":
+            WATER_MASK = grid
+        elif key == "trees":
+            TREE_MASK = grid
         elif key == "greenscape":
             GREENSCAPE_MASK = grid
         elif key == "amenity_resting":
             AMENITY_RESTING_MASK = grid
+        elif key == "canopy":
+            CANOPY_MASK = grid
         painted_counts[key] = sum(1 for row in grid for v in row if (v > 0.01 if continuous else v))
 
     _set_paint_view(False)
@@ -655,6 +849,10 @@ def _on_amenity_update(self, context):
 
 
 def _on_structural_update(self, context):
+    rebuild_all(context.scene)
+
+
+def _on_canopy_update(self, context):
     rebuild_all(context.scene)
 
 
@@ -704,7 +902,7 @@ def setup_axo_view(real_geometry):
     u, v = _axo_basis(AXO_VIEW_DIR)
 
     mirror = mathutils.Matrix(((1, 0, 0, 0), (0, -1, 0, L), (0, 0, 1, 0), (0, 0, 0, 1)))
-    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "ramps"):
+    for name in (TERRACE_OBJ_NAME, "columns", "tunnel", "secondary_entrance", "metro_connector", "ramps"):
         obj = bpy.data.objects.get(name)
         if obj is not None:
             obj.matrix_world = mirror
@@ -755,6 +953,13 @@ class MM_PT_cockpit(bpy.types.Panel):
         box.prop(context.scene, "mm_material_mode")
         box.prop(context.scene, "mm_shoring_density", slider=True)
         box.label(text=context.scene.mm_slab_harvest_label)
+
+        canopy_box = self.layout.box()
+        canopy_box.label(text="Canopy Engine")
+        canopy_box.prop(context.scene, "mm_canopy_base_height", slider=True)
+        canopy_box.prop(context.scene, "mm_canopy_wave_amplitude", slider=True)
+        canopy_box.prop(context.scene, "mm_canopy_smoothing_iterations", slider=True)
+        canopy_box.prop(context.scene, "mm_canopy_puncture_threshold", slider=True)
 
         box2 = self.layout.box()
         box2.label(text="Live Sketch (Paint on Photo)")
@@ -818,6 +1023,30 @@ def register():
         name="Slab Harvest Readout",
         default="Slab Material Harvested: 0 Tons",
     )
+    bpy.types.Scene.mm_canopy_base_height = bpy.props.FloatProperty(
+        name="Canopy Base Height (ft)",
+        description="Baseline canopy clearance datum (see logic/canopy_engine.py)",
+        default=20.0, min=8.0, max=40.0,
+        update=_on_canopy_update,
+    )
+    bpy.types.Scene.mm_canopy_wave_amplitude = bpy.props.FloatProperty(
+        name="Canopy Wave Amplitude",
+        description="Maximum crest/valley deviation from the base height",
+        default=3.0, min=0.0, max=10.0,
+        update=_on_canopy_update,
+    )
+    bpy.types.Scene.mm_canopy_smoothing_iterations = bpy.props.IntProperty(
+        name="Canopy Smoothing Iterations",
+        description="Laplacian relaxation passes blending the canopy into fluid curves",
+        default=4, min=0, max=20,
+        update=_on_canopy_update,
+    )
+    bpy.types.Scene.mm_canopy_puncture_threshold = bpy.props.FloatProperty(
+        name="Canopy Puncture Threshold",
+        description="Canopy weight above which painted trees/water cells punch an opening",
+        default=0.5, min=0.0, max=1.0,
+        update=_on_canopy_update,
+    )
     for cls in (MM_PT_cockpit, MM_OT_paint_category, MM_OT_bake_paint):
         if cls.__name__ in dir(bpy.types):
             bpy.utils.unregister_class(getattr(bpy.types, cls.__name__))
@@ -835,6 +1064,10 @@ def unregister():
     del bpy.types.Scene.mm_material_mode
     del bpy.types.Scene.mm_shoring_density
     del bpy.types.Scene.mm_slab_harvest_label
+    del bpy.types.Scene.mm_canopy_base_height
+    del bpy.types.Scene.mm_canopy_wave_amplitude
+    del bpy.types.Scene.mm_canopy_smoothing_iterations
+    del bpy.types.Scene.mm_canopy_puncture_threshold
 
 
 register()
