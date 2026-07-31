@@ -1,3 +1,5 @@
+import PROGRAM_COLORS from '../programColors.json';
+
 function Section({ title, children }) {
   return (
     <div className="p-container border-b border-border space-y-4">
@@ -22,30 +24,13 @@ function Empty({ children }) {
   return <p className="font-mono-sm text-mono-sm text-on-surface-variant opacity-60">{children}</p>;
 }
 
-// Ported from drawing_styles.py's PROGRAM_COLOR (the DRAWINGS page's former
-// "DIAGRAM" style, now rendered natively here instead -- see
-// ProgramDistribution below) / Viewport.jsx's own copy -- same duplicated
-// source-of-truth pattern this codebase already uses for that map.
-const PROGRAM_COLOR = {
-  'Green Space & Park Infrastructure': '#2e7d32',
-  'Community Garden': '#9ccc65',
-  'Soccer Field': '#d32f2f',
-  'Public Gym': '#7b1fa2',
-  'Skatepark': '#303f9f',
-  'Volleyball Court': '#00838f',
-  'Computer / Tech Space': '#1565c0',
-  'Classrooms / Study Rooms': '#0288d1',
-  'Music Practice Space': '#5e35b1',
-  'Arts & Crafts Studio': '#00acc1',
-  'Playground': '#558b2f',
-  'Picnic / Grill Site': '#00695c',
-  'Workout Equipment': '#9e9d24',
-  'Individual Practice Office': '#e91e63',
-  'Veterinary': '#f06292',
-  'Restrooms (Metro Entrance)': '#546e7a',
-  'Restrooms (Recreation Cluster)': '#6d4c41',
-};
-const PROGRAM_FALLBACK_COLOR = '#9e9e9e';
+// Shared per-program colors (2026-07-28) -- this was a third hand-copied
+// duplicate of the same map (Viewport.jsx and drawing_styles.py held the
+// other two); all three now read programColors.json. Used by the Program
+// Distribution bars below, which are the DRAWINGS page's former "DIAGRAM"
+// style rendered natively in this tab instead.
+const PROGRAM_COLOR = PROGRAM_COLORS.programs;
+const PROGRAM_FALLBACK_COLOR = PROGRAM_COLORS.fallback;
 
 // Bar width is proportional to claimed bay count (same "space claimed"
 // meaning as drawing_styles.py's _diagram_rows band_width), not achieved_sf

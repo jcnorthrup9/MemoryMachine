@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # Starts diagram_tool (Memory Machine // Diagram Tool) -- the standalone
 # 2D diagram-authoring + AI Remix app, decoupled from the old Digital
-# Palimpsest app (root index.html + static/main.js, launched via
-# `npm run dev`) and from Pershing Metabolizer itself (frontend/ + app.py
-# on :8000). See diagram_tool/app.py's module docstring for how the three
-# relate.
+# Palimpsest app (root index.html + static/main.js, served by app.py at
+# http://127.0.0.1:8000/) and from Pershing Metabolizer itself (frontend/ +
+# app.py on :8000). See diagram_tool/app.py's module docstring for how the
+# three relate.
+#
+# 2026-07-28: the Palimpsest app is NOT launched via `npm run dev` -- that
+# comment described a root-level vite scaffold (package name "temp-app")
+# that was never wired to anything and has now been deleted. index.html
+# loads /static/style.css and /static/main.js by absolute path, which only
+# resolve under the FastAPI mount in app.py, so uvicorn is and was the only
+# way it actually ran.
 #
 # 2026-07-17: repointed from a plain `http.server` serving the now-
 # superseded PershingMetabolizer_Prototype/index.html to this. Needs

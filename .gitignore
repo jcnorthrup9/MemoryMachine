@@ -103,3 +103,23 @@ archive/workflowScreenshots/
 # accumulated untracked before this rule was added (quarantined to
 # archive/_sync_conflicts_20260722/, not deleted).
 *.sync-conflict-*
+
+# LoRA training sets (2026-07-28, logic/lora_harvest.py) live at
+# data/lora_datasets/ and need NO rule of their own -- the blanket `data/`
+# rule above already covers them, which is correct for the ~200MB+ of
+# harvested archival imagery (all re-downloadable from the manifest, none
+# of it authored here).
+#
+# Worth knowing: that also means each set's manifest.json and
+# ATTRIBUTION.md are untracked. They're small, and they're the provenance
+# of what a model was trained on -- including the CC BY-SA credits that
+# have to travel with any published render. If those should survive in git,
+# they need to move out of data/, not be negated back in (git cannot
+# re-include a file whose parent directory is excluded).
+
+# LoRA decay series renders (2026-07-28, logic/lora_decay_series.py) --
+# regenerable from series.json (which records base checkpoint, prompt,
+# seed, sampler and every frame's LoRA), and a full run is dozens of 1024px
+# PNGs plus two GIFs. The existing `outputs/*.png` rule above only matches
+# the top level, so this subfolder needs its own.
+outputs/lora_decay/

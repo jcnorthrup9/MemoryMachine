@@ -1,0 +1,10 @@
+{
+  "hash": null,
+  "kind_counts": {
+    "escalator": 21,
+    "escalator_bridge": 7,
+    "footpath": 199,
+    "lookout_point": 11
+  },
+  "segment_count": 238
+}

@@ -1,0 +1,21 @@
+{
+  "bays_per_program": {
+    "Arts & Crafts Studio": 3,
+    "Classrooms / Study Rooms": 2,
+    "Community Garden": 1,
+    "Computer / Tech Space": 2,
+    "Green Space & Park Infrastructure": 14,
+    "Music Practice Space": 1,
+    "Picnic / Grill Site": 3,
+    "Playground": 11,
+    "Public Gym": 35,
+    "Restrooms (Metro Entrance)": 1,
+    "Restrooms (Recreation Cluster)": 1,
+    "Skatepark": 21,
+    "Volleyball Court": 7,
+    "Workout Equipment": 3
+  },
+  "hash": "6b4c2e4b4b892991",
+  "placed_count": 14,
+  "zone_count": 14
+}

@@ -28,11 +28,21 @@ matplotlib is the dependency-free path already available.
 Reads from vector_export.py and stylized_pattern_export.py -- neither
 existing module is modified by this one.
 """
+import json
 import os
 import tempfile
 
 import vector_export
 import stylized_pattern_export as spe
+
+# Shared per-program color registry (2026-07-28 consolidation pass) -- same
+# single-source-of-truth pattern, and same frontend/src/ location, that
+# kindRegistry.json already established for structural kinds. See that
+# file's own _meta for why it lives under frontend/src/ rather than data/.
+_PROGRAM_COLORS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "frontend", "src", "programColors.json")
+with open(_PROGRAM_COLORS_PATH) as _f:
+    _PROGRAM_COLORS = json.load(_f)
 
 
 def _unavailable_svg(message, width=600.0, height=100.0):
@@ -374,30 +384,14 @@ def export_color_dxf(program_boxes, circulation_specs, voxels, voxel_ft,
 
 # --- Style 3: DIAGRAM -- abstract stacked program bands -----------------
 
-# Ported from frontend/src/components/Viewport.jsx's PROGRAM_COLOR
-# (~line 1129) -- a duplicated source of truth, kept in sync manually, same
-# as this codebase's other cross-language constants (e.g. RebuildParams
-# mirrors frontend DEFAULT_PARAMS with its own explicit sync comment).
-PROGRAM_COLOR = {
-    'Green Space & Park Infrastructure': '#2e7d32',
-    'Community Garden': '#9ccc65',
-    'Soccer Field': '#d32f2f',
-    'Public Gym': '#7b1fa2',
-    'Skatepark': '#303f9f',
-    'Volleyball Court': '#00838f',
-    'Computer / Tech Space': '#1565c0',
-    'Classrooms / Study Rooms': '#0288d1',
-    'Music Practice Space': '#5e35b1',
-    'Arts & Crafts Studio': '#00acc1',
-    'Playground': '#558b2f',
-    'Picnic / Grill Site': '#00695c',
-    'Workout Equipment': '#9e9d24',
-    'Individual Practice Office': '#e91e63',
-    'Veterinary': '#f06292',
-    'Restrooms (Metro Entrance)': '#546e7a',
-    'Restrooms (Recreation Cluster)': '#6d4c41',
-}
-PROGRAM_FALLBACK_COLOR = '#9e9e9e'
+# Read from frontend/src/programColors.json (2026-07-28) -- this used to be
+# a hand-maintained copy of Viewport.jsx's map, with its own comment
+# admitting it was "a duplicated source of truth, kept in sync manually."
+# A third copy then appeared in DiagnosticsPanel.jsx, which is what
+# prompted the consolidation. Names kept identical so every existing
+# reference below still reads the same.
+PROGRAM_COLOR = _PROGRAM_COLORS["programs"]
+PROGRAM_FALLBACK_COLOR = _PROGRAM_COLORS["fallback"]
 
 BAND_HEIGHT_PX = 14.0
 BAND_GAP_PX = 3.0

@@ -15,8 +15,36 @@ import urllib.request
 import urllib.error
 import os
 
-COMFY_URL   = "http://127.0.0.1:8188"
-COMFY_OUTPUT = r"C:\ComfyUI_windows_portable\ComfyUI\output"
+COMFY_URL   = os.environ.get("COMFY_URL", "http://127.0.0.1:8188")
+
+
+def _resolve_comfy_output():
+    """Locate ComfyUI's output directory instead of hardcoding one drive.
+
+    This was pinned to C:\\ComfyUI_windows_portable, but the install on at
+    least one of the Syncthing-synced machines is on D:, so poll_for_output()
+    below was returning paths that do not exist -- silently breaking
+    /api/comfy-render and /api/comfy-text-to-3d, which both depend on it.
+    logic/bake_to_blender.py had already hit this and grown its own D:-then-C:
+    fallback (lines 9-11); this is the same fix, applied where the rest of
+    the codebase actually reads from, plus an env override for anyone whose
+    install is somewhere else entirely.
+    """
+    env = os.environ.get("COMFY_OUTPUT_DIR")
+    if env:
+        return env
+    candidates = [
+        r"D:\ComfyUI_windows_portable\ComfyUI\output",
+        r"C:\ComfyUI_windows_portable\ComfyUI\output",
+        os.path.expanduser(r"~\ComfyUI\output"),
+    ]
+    for c in candidates:
+        if os.path.isdir(c):
+            return c
+    return candidates[0]
+
+
+COMFY_OUTPUT = _resolve_comfy_output()
 POLL_INTERVAL = 2.0   # seconds between status checks
 POLL_TIMEOUT  = 300   # seconds before giving up
 

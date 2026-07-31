@@ -55,6 +55,7 @@ import drawing_styles  # noqa: E402
 # route handler), which would otherwise shadow the imported module of the
 # same name at module scope.
 from logic import juror_chat as juror_chat_agent  # noqa: E402
+from logic.version import get_version  # noqa: E402
 import ingest_diagram_svg  # noqa: E402
 
 REAL_GEOMETRY_PATH = os.path.join(BASE_DIR, "PershingMetabolizer_Prototype", "real_geometry.json")
@@ -1915,7 +1916,16 @@ def save_build_to_archive(payload: ArchiveSaveRequest):
     label = payload.label.strip()
     slug = "".join(c if c.isalnum() else "-" for c in label).strip("-")[:60] or "build"
     filename = f"{int(time.time() * 1000)}_{slug}.json"
-    record = {**payload.snapshot, "label": label}
+    # "provenance" (2026-07-28): which commit produced this geometry. Added
+    # server-side rather than in App.jsx's buildSnapshot() because the
+    # browser has no way to know the backend's commit, and the backend is
+    # what actually ran the engines. See logic/version.py for why this
+    # matters -- geometry semantics have shifted under identical params
+    # before (the canopy grid phase change), and without this a snapshot
+    # that won't reproduce is untraceable. Snapshots written before this
+    # existed simply won't have the key; every reader must treat it as
+    # optional.
+    record = {**payload.snapshot, "label": label, "provenance": get_version()}
     _atomic_write_json(os.path.join(ARCHIVE_DIR, filename), record)
     return {"filename": filename, "saved_at": record.get("saved_at"), "label": label}
 
@@ -1937,6 +1947,11 @@ def list_archived_builds():
         data = record.get("data") or {}
         params = record.get("params") or {}
         program_zones = record.get("program_zones") or {}
+        # Optional -- absent on every build archived before 2026-07-28, and
+        # absent on any machine without git. None is the honest answer for
+        # "we don't know what made this," which is exactly the state those
+        # older snapshots are in.
+        provenance = record.get("provenance") or {}
         entries.append({
             "filename": fname,
             "saved_at": record.get("saved_at"),
@@ -1951,6 +1966,8 @@ def list_archived_builds():
             # get_archived_build() round-trip per card. Empty when the build
             # was produced by painting directly rather than via SPATIALIZE.
             "spatial_seed": record.get("spatial_seed") or [],
+            "commit_short": provenance.get("commit_short"),
+            "commit_dirty": provenance.get("dirty"),
         })
     return entries
 

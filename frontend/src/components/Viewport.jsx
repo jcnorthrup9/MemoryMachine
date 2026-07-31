@@ -7,6 +7,7 @@ import BlenderBuild from './BlenderBuild.jsx';
 import { exportViewPng } from '../api.js';
 import { materialProps, outlineMaterialProps, OUTLINE_SCALE, SHADING_MODES, showsOutline, castsShadows } from '../shading.js';
 import KIND_REGISTRY from '../kindRegistry.json';
+import PROGRAM_COLORS from '../programColors.json';
 import { computeZones, pointInZone, clipStructuralSpec, clipRectBounds } from '../siteZones.js';
 
 // Rounds an instance count up to the next power of 2 (min 8) -- 2026-07-10,
@@ -1127,43 +1128,15 @@ const PROGRAM_ZONE_LABEL_HEIGHT_FT = 12;
 // Court) rendered in the exact same orange, indistinguishable from each
 // other except by (often overlapping) text labels. Keyed by program_item
 // (the label string place_programs() returns and ProgramZones already uses
-// as its React key -- no new identifier needed). Grouped by hue family per
-// category (red/purple/indigo/teal = sports_recreation, blue/violet/cyan =
-// enrichment_civic, etc.) so category identity still reads at a glance,
-// but each program within a category is genuinely distinct. Deliberately
-// avoids the orange/amber/beige family already load-bearing elsewhere in
-// this viewport (ramp_slab #e8a23c, floor_slab #c9c2b3, amenity fixtures
-// #ff8c26, salvage #8a8580) -- the old sports_recreation orange (#ff9800)
-// was easy to mistake for ramp/slab geometry for exactly this reason (see
-// the "yellow slab" investigation this map is a direct answer to).
-const PROGRAM_COLOR = {
-  'Green Space & Park Infrastructure': '#2e7d32',
-  'Community Garden': '#9ccc65',
-  'Soccer Field': '#d32f2f',
-  'Public Gym': '#7b1fa2',
-  'Skatepark': '#303f9f',
-  'Volleyball Court': '#00838f',
-  'Computer / Tech Space': '#1565c0',
-  'Classrooms / Study Rooms': '#0288d1',
-  'Music Practice Space': '#5e35b1',
-  'Arts & Crafts Studio': '#00acc1',
-  'Playground': '#558b2f',
-  'Picnic / Grill Site': '#00695c',
-  'Workout Equipment': '#9e9d24',
-  'Individual Practice Office': '#e91e63',
-  'Veterinary': '#f06292',
-  // 2026-07-17 restrooms correlation logic (support_amenity, first program
-  // in this category) -- two new hues, distinct from every family above and
-  // from the excluded orange/amber/beige group (ramp_slab/floor_slab/
-  // amenity fixtures/salvage) this map's own comment already avoids.
-  'Restrooms (Metro Entrance)': '#546e7a',
-  'Restrooms (Recreation Cluster)': '#6d4c41',
-};
-// Fallback for any program_item not in the map above (e.g. a
-// data/program_requirements.json entry added later without a color
-// picked yet) -- neutral grey, visually flags "needs a color" rather than
-// silently colliding with an existing category/kind color.
-const PROGRAM_FALLBACK_COLOR = '#9e9e9e';
+// as its React key -- no new identifier needed).
+//
+// Moved into programColors.json 2026-07-28: this map had been hand-copied
+// into drawing_styles.py and DiagnosticsPanel.jsx, three copies to keep in
+// sync by hand. Same consolidation kindRegistry.json already did for
+// structural kinds -- see that file's _palette_rationale for the hue-family
+// grouping and the orange/amber/beige colors it deliberately avoids.
+const PROGRAM_COLOR = PROGRAM_COLORS.programs;
+const PROGRAM_FALLBACK_COLOR = PROGRAM_COLORS.fallback;
 
 function ProgramZoneFootprint({ bays, bayFt, color, siteLengthFt, shadingMode }) {
   const meshRef = useRef();

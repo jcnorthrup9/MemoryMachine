@@ -177,6 +177,18 @@ export default function ArchivePanel({ getSnapshot, onRestoreSnapshot, canSave, 
                   {entry.slab_harvest_tons != null ? `${entry.slab_harvest_tons.toFixed(0)}t slab` : 'no slab data'}
                   {entry.program_zone_count ? ` · ${entry.program_zone_count} program zones` : ''}
                 </span>
+                {/* Which commit produced this geometry (2026-07-28) -- see
+                    logic/version.py. Absent on anything archived before that,
+                    so this row simply doesn't render for older builds rather
+                    than showing a misleading placeholder. The dirty marker
+                    matters: it means uncommitted work was in the tree, so the
+                    commit alone won't fully reproduce the build. */}
+                {entry.commit_short && (
+                  <span className="font-mono-label text-[10px] text-on-surface-variant opacity-60">
+                    {entry.commit_short.slice(0, 7)}
+                    {entry.commit_dirty ? ' (dirty)' : ''}
+                  </span>
+                )}
               </div>
               <div className="flex gap-2 mt-auto">
                 <button

@@ -34,6 +34,26 @@ import os
 
 DEFAULT_RADIUS_FT = 50.0
 
+# Repo root, resolved from this file's own location rather than hardcoded.
+# amenity_deficit.py/foot_traffic.py/noise_survey.py all sit at the repo
+# root alongside this module, so dirname(__file__) IS the root.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def survey_dir(folder_name):
+    """Absolute path to a data/<folder_name>/ survey directory.
+
+    Exists because all three channels' find_latest_csv() defaults used to
+    hardcode `D:\\MemoryMachine\\data\\...`. This repo is Syncthing-synced
+    across machines with different drive letters and usernames, so on any
+    machine where the checkout isn't literally D:\\MemoryMachine those
+    lookups silently returned None -- which does NOT surface as an error,
+    it just makes the channel quietly fall back to terracing_engine.py's
+    DEFAULT_*_HOTSPOTS placeholder while the UI toggle still reads as
+    available. Anchoring to __file__ makes the default correct everywhere.
+    """
+    return os.path.join(BASE_DIR, "data", folder_name)
+
 
 def load_hotspots_from_csv(csv_path, site_width_ft, site_length_ft, default_radius_ft=DEFAULT_RADIUS_FT):
     """

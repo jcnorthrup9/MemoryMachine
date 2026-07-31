@@ -21,6 +21,7 @@ from logic.ai_synthesizer import (
     generate_spatial_seed, generate_mermaid_diagram, apply_deficit_weighting
 )
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
+from logic.version import get_version
 from logic.pershing_api import (
     RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, GenerateDrawingsRequest,
     SaveDrawingRequest, JurorChatRequest, CritiqueRequest,
@@ -635,6 +636,25 @@ async def comfy_render(payload: ComfyRenderPayload):
         "image_path": img_path,
         "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
     }
+
+
+@app.get("/api/version")
+async def api_version():
+    """Which commit this running backend was loaded from (2026-07-28).
+
+    Exists mainly to make process staleness diagnosable in seconds. Python
+    doesn't hot-reload, so a `logic/*.py` change has no effect until the
+    server is killed and restarted -- a failure mode this project has hit
+    repeatedly across its Syncthing-synced machines (see
+    HANDOFF_07242026's cross-machine investigation, where a stale process
+    was the eventual cause, and HANDOFF_07132026's "READ THIS FIRST").
+    Comparing this against `git rev-parse HEAD` on the same machine
+    answers "is the server running the code on disk?" directly.
+
+    Deliberately unauthenticated and read-only -- it exposes a commit hash
+    and branch name on a local single-user dev tool, nothing more.
+    """
+    return get_version()
 
 
 @app.get("/api/pershing/config")

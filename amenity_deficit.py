@@ -34,7 +34,7 @@ with foot_traffic.py/noise_survey.py, which had grown into byte-for-byte
 copies of this same contract) -- this module now just wraps it with this
 channel's own default radius/folder.
 """
-from hotspot_csv import load_hotspots_from_csv, find_latest_csv_in, DEFAULT_RADIUS_FT
+from hotspot_csv import load_hotspots_from_csv, find_latest_csv_in, survey_dir, DEFAULT_RADIUS_FT
 
 
 def load_deficit_hotspots_from_csv(csv_path, site_width_ft, site_length_ft,
@@ -51,6 +51,10 @@ def load_deficit_hotspots_from_csv(csv_path, site_width_ft, site_length_ft,
     return load_hotspots_from_csv(csv_path, site_width_ft, site_length_ft, default_radius_ft)
 
 
-def find_latest_csv(folder=r"D:\MemoryMachine\data\amenity_survey"):
-    """Return the most recently modified .csv file in `folder`, or None."""
-    return find_latest_csv_in(folder)
+def find_latest_csv(folder=None):
+    """Return the most recently modified .csv file in `folder`, or None.
+
+    Defaults to data/amenity_survey/ relative to the repo root -- see
+    hotspot_csv.survey_dir() for why this isn't an absolute path anymore.
+    """
+    return find_latest_csv_in(folder if folder is not None else survey_dir("amenity_survey"))

@@ -1,10 +1,16 @@
 @echo off
 REM Starts diagram_tool (Memory Machine // Diagram Tool) -- the standalone
 REM 2D diagram-authoring + AI Remix app, decoupled from the old Digital
-REM Palimpsest app (root index.html plus static main.js, launched via
-REM npm run dev) and from Pershing Metabolizer itself (frontend plus
-REM app.py on port 8000). See diagram_tool/app.py's module docstring for
-REM how the three relate.
+REM Palimpsest app (root index.html plus static main.js, served by app.py
+REM at http://127.0.0.1:8000/) and from Pershing Metabolizer itself
+REM (frontend plus app.py on port 8000). See diagram_tool/app.py's module
+REM docstring for how the three relate.
+REM
+REM 2026-07-28: the Palimpsest app is NOT launched via npm run dev -- that
+REM comment described a root-level vite scaffold (package name "temp-app")
+REM that was never wired to anything and has now been deleted. index.html
+REM loads /static/style.css and /static/main.js by absolute path, which
+REM only resolve under the FastAPI mount in app.py.
 REM
 REM 2026-07-17: repointed from a plain http.server serving the now-
 REM superseded PershingMetabolizer_Prototype/index.html to this, since that

@@ -1,0 +1,19 @@
+{
+  "column_kinds": {
+    "canopy_column_branch": 516,
+    "canopy_column_trunk": 258
+  },
+  "counts": {
+    "columns": 774,
+    "panels": 2020
+  },
+  "hash": "2104d33eb980c174",
+  "panel_z_ft": {
+    "max": 33.995299,
+    "mean": 21.259806,
+    "min": 10.920931
+  },
+  "rotation_deg_distinct": [
+    0.0
+  ]
+}
