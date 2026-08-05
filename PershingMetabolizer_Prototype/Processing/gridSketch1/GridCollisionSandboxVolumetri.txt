@@ -1,0 +1,127 @@
+// Grid Collision Sandbox - Volumetric Overlap & Tectonic Color Systems
+float gridASpacing = 27;    // Standard Downtown LA Base Grid
+float gridBSpacing = 27;    // Rotated Infrastructure Track
+float rotationAngle = 0.35; // The structural grid shift of the city layout
+float squareSize = 27;      // Boosted to 38px to force deep structural overlaps
+
+// LA Archaeological Palette Definition (Albers-inspired transparency)
+color colorConcrete = color(175, 170, 160);  // Base: Raw Infrastructural Concrete
+color colorCool = color(90, 105, 160);       // System A: Legorreta Postmodern Blue
+color colorWarm = color(205, 100, 80);       // System B: Historic Masonry Terracotta
+color colorOverlap = color(85, 60, 95);      // The Hybrid: Synthesized Violet Core
+color bgInk = color(248, 246, 240);          // Muted Parchment
+
+void setup() {
+  size(900, 700);
+  noLoop(); 
+}
+
+void draw() {
+  background(bgInk); 
+  
+  ArrayList<PVector> collisions = new ArrayList<PVector>();
+  
+  // 1. SPATIAL INTERFERENCE SAMPLING
+  for (int x = 0; x < width; x += 3) { 
+    for (int y = 0; y < height; y += 3) {
+      float distToA_X = x % gridASpacing;
+      float distToA_Y = y % gridASpacing;
+      boolean nearA = (distToA_X < 1.0 || distToA_X > gridASpacing - 1.0) || 
+                      (distToA_Y < 1.0 || distToA_Y > gridASpacing - 1.0);
+      
+      float tx = x - width/2;
+      float ty = y - height/2;
+      float rx = tx * cos(-rotationAngle) - ty * sin(-rotationAngle);
+      float ry = tx * sin(-rotationAngle) + ty * cos(-rotationAngle);
+      
+      float distToB_X = abs(rx) % gridBSpacing;
+      float distToB_Y = abs(ry) % gridBSpacing;
+      boolean nearB = (distToB_X < 1.0 || distToB_X > gridBSpacing - 1.0) || 
+                      (distToB_Y < 1.0 || distToB_Y > gridBSpacing - 1.0);
+      
+      if (nearA && nearB) {
+        collisions.add(new PVector(x, y));
+      }
+    }
+  }
+
+  // 2. LAYERED COLOR SUPERPOSITION ENGINE
+  // To paint explicit colors on overlapping zones, we evaluate the canvas pixel-by-pixel
+  rectMode(CENTER);
+  noStroke();
+  
+  for (int x = 0; x < width; x += 4) {
+    for (int y = 0; y < height; y += 4) {
+      int overlapCount = 0;
+      
+      // Count how many scaled modules occupy this precise coordinate
+      for (PVector c : collisions) {
+        // Evaluate the local coordinate space of each mass
+        float distanceToCenter = dist(c.x, c.y, width/2, height/2);
+        float localRot = map(distanceToCenter, 0, width, HALF_PI / 4, 0);
+        
+        float tx = x - c.x;
+        float ty = y - c.y;
+        float rx = tx * cos(-localRot) - ty * sin(-localRot);
+        float ry = tx * sin(-localRot) + ty * cos(-localRot);
+        
+        if (abs(rx) <= squareSize/2 && abs(ry) <= squareSize/2) {
+          overlapCount++;
+        }
+      }
+      
+      // Apply strict, un-muddy color logic based on structural intersection
+      if (overlapCount == 1) {
+        // Single volume boundaries alternate based on localized urban quadrant
+        if ((x + y) % 8 == 0) {
+          fill(colorCool, 200);
+        } else {
+          fill(colorWarm, 200);
+        }
+        rect(x, y, 4, 4);
+      } else if (overlapCount > 1) {
+        // Deep Overlap Zones: A completely new structural substance is synthesized
+        fill(colorOverlap);
+        rect(x, y, 4, 4);
+      }
+    }
+  }
+
+  // 3. DRAW RIGID CITY BASELINE (Grid A)
+  stroke(70, 75, 85, 40); 
+  strokeWeight(0.8);
+  for (int x = 0; x < width; x += gridASpacing) {
+    line(x, 0, x, height);
+  }
+  for (int y = 0; y < height; y += gridASpacing) {
+    line(0, y, width, y);
+  }
+
+  // 4. GENERATE & DRAW WARPED INFRASRUCTURE LINES (Grid B)
+  stroke(colorWarm, 70); 
+  strokeWeight(0.9);
+  
+  for (float k = -width * 1.5; k < width * 1.5; k += gridBSpacing) {
+    beginShape();
+    noFill();
+    for (float localY = -height * 1.5; localY <= height * 1.5; localY += 6) {
+      float globalX = width/2 + (k * cos(rotationAngle) - localY * sin(rotationAngle));
+      float globalY = height/2 + (k * sin(rotationAngle) + localY * cos(rotationAngle));
+      
+      for (PVector c : collisions) {
+        float d = dist(globalX, globalY, c.x, c.y);
+        float maxRadius = map(c.x + c.y, 0, width + height, 32, 18);
+        float maxForce = map(c.x + c.y, 0, width + height, 16, 6);
+        
+        if (d < maxRadius) {
+          float force = map(d, 0, maxRadius, maxForce, 0);
+          float angle = atan2(globalY - c.y, globalX - c.x);
+          globalX += cos(angle) * force;
+          globalY += sin(angle) * force;
+        }
+      }
+      vertex(globalX, globalY);
+    }
+    endShape();
+  }
+}
