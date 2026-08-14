@@ -6,6 +6,7 @@ python-multipart
 pillow
 opencv-python-headless
 trimesh
+embreex
 scipy
 rtree
 manifold3d
@@ -15,3 +16,6 @@ matplotlib
 mcp
 requests
 chromadb
+qrcode
+shapely
+ddgs

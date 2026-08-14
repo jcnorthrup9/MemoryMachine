@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import time
 import requests
 import re
@@ -11,6 +12,15 @@ except ImportError:
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+
+def _log(msg):
+    """print(), but survives emoji/non-Latin text on a Windows console
+    stuck on a narrow codepage (e.g. cp1252) -- same fix as
+    fetch_park_precedent.py's helper of the same name (see that module's
+    docstring for the original crash this was confirmed to fix live)."""
+    enc = sys.stdout.encoding or "utf-8"
+    print(msg.encode(enc, errors="replace").decode(enc, errors="replace"))
 
 def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
@@ -31,7 +41,7 @@ def scrape_info(target_name, location):
     extracted_text = []
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-    print(f"🔎 Booting up Wikipedia API scraper for '{search_term}'...")
+    _log(f"🔎 Booting up Wikipedia API scraper for '{search_term}'...")
     for query in queries[:2]: # Limit wiki queries to avoid spamming
         try:
             search_url = "https://en.wikipedia.org/w/api.php"
@@ -62,9 +72,9 @@ def scrape_info(target_name, location):
                         extracted_text.append(page_info["extract"])
             time.sleep(1)
         except Exception as e:
-            print(f"      ❌ Error querying Wikipedia: {e}")
-            
-    print("🔎 Attempting DuckDuckGo fallback...")
+            _log(f"      ❌ Error querying Wikipedia: {e}")
+
+    _log("🔎 Attempting DuckDuckGo fallback...")
     try:
         import warnings
         warnings.filterwarnings("ignore")
@@ -75,7 +85,7 @@ def scrape_info(target_name, location):
                     for res in results:
                         extracted_text.append(res.get('body', ''))
     except Exception as e:
-        print(f"      ❌ Error querying DuckDuckGo: {e}")
+        _log(f"      ❌ Error querying DuckDuckGo: {e}")
 
     # Filter and deduplicate
     final_text = []
@@ -90,7 +100,7 @@ def scrape_info(target_name, location):
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write("\n\n---\n\n".join(final_text))
         
-    print(f"✅ Successfully compiled {len(final_text)} text snippets into {output_path}")
+    _log(f"✅ Successfully compiled {len(final_text)} text snippets into {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
