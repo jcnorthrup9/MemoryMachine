@@ -26,19 +26,22 @@ CATEGORY_HARDSCAPE = "HARDSCAPE"  # renamed 2026-07-23 from "PATHS" -- was
 
 CATEGORIES = (CATEGORY_BUILDING, CATEGORY_CIRCULATION, CATEGORY_LANDSCAPE, CATEGORY_HARDSCAPE)
 
-# Standard site-plan color convention (per user confirmation): magenta
-# buildings, blue circulation, green landscape, yellow hardscape.
+# 2026-08-15: swapped to a muted pastel palette (dusty rose / powder blue /
+# sage / butter) after a 5-palette comparison review against the iter008
+# instance. Prior convention (magenta/blue/green/yellow, still visible in
+# STYLE_COLORS_ACI's inline hue names below) is easy to restore -- these
+# are the only two dicts anything reads color from.
 STYLE_COLORS_HEX = {
-    CATEGORY_BUILDING: "#FF00AA",
-    CATEGORY_CIRCULATION: "#29B6F6",
-    CATEGORY_LANDSCAPE: "#66BB6A",
-    CATEGORY_HARDSCAPE: "#FDD835",
+    CATEGORY_BUILDING: "#D9A6A6",
+    CATEGORY_CIRCULATION: "#AFC6D9",
+    CATEGORY_LANDSCAPE: "#A9C1A0",
+    CATEGORY_HARDSCAPE: "#E3C888",
 }
 
 # AutoCAD Color Index approximations of the same palette -- DXF's basic
 # layer-color scheme has no native hex-RGB, only ACI indices.
 STYLE_COLORS_ACI = {
-    CATEGORY_BUILDING: 6,    # magenta
+    CATEGORY_BUILDING: 1,    # red (closest ACI hue to dusty rose)
     CATEGORY_CIRCULATION: 5, # blue
     CATEGORY_LANDSCAPE: 3,   # green
     CATEGORY_HARDSCAPE: 2,   # yellow
