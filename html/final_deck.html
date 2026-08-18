@@ -1,0 +1,773 @@
+﻿﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Machine // Urban Babble</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #e0e0e0;
+            --accent: #fff4ca;
+            --dim: #1e1e1e;
+            --muted: #555;
+            --border: #222;
+            --green: #88ff88;
+        }
+        body.light-mode {
+            --bg: #ffffff;
+            --text: #111111;
+            --accent: #3d6b28;
+            --dim: #f0f0f0;
+            --muted: #666666;
+            --border: #dddddd;
+            --green: #2d6e2d;
+        }
+        body.light-mode .viewer { background: var(--bg); }
+        body.light-mode #theme-toggle { color: #1a1a1a; border-color: #a8c88a; }
+        body.light-mode p { color: #2a2a2a; }
+        body.light-mode .vignette { color: #2a2a2a; }
+        body.light-mode .case-item p { color: #2a2a2a; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .viewer {
+            width: 96vw;
+            max-width: 1800px;
+            height: 92vh;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spread-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .spread {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        .spread.active { display: flex; }
+
+        /* ── Column system ── */
+        .col {
+            width: 50%;
+            height: 100%;
+            padding: 50px 55px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .col.full {
+            width: 100%;
+            border-right: none;
+            padding: 40px 70px;
+        }
+
+        /* ── Typography ── */
+        .slide-label {
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+        h1 {
+            font-size: 1.9rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 28px;
+            letter-spacing: 3px;
+            flex-shrink: 0;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+        h1.hero {
+            font-size: 4rem;
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 10px;
+            letter-spacing: 6px;
+            line-height: 1.05;
+        }
+        h2 {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+            font-weight: normal;
+        }
+        h3 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+            font-weight: normal;
+        }
+        p {
+            font-size: 0.88rem;
+            line-height: 1.75;
+            color: #aaa;
+            text-align: justify;
+            text-align-last: left;
+        }
+
+        /* ── Quotes ── */
+        .quote {
+            border-left: 2px solid var(--accent);
+            padding-left: 18px;
+            margin-bottom: 26px;
+            flex-shrink: 0;
+        }
+        .quote-text {
+            font-size: 1.05rem;
+            color: var(--accent);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        .quote-source {
+            font-size: 0.65rem;
+            color: var(--muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ── Vignettes ── */
+        .vignette {
+            border-left: 1px solid var(--accent);
+            padding-left: 16px;
+            margin-bottom: 16px;
+            font-size: 0.83rem;
+            color: #aaa;
+            line-height: 1.65;
+            flex-shrink: 0;
+        }
+        .vignette strong { color: var(--text); }
+
+        /* ── Code / JSON ── */
+        pre.json {
+            color: var(--green);
+            font-size: 0.78rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        pre.mono {
+            color: #444;
+            font-size: 0.82rem;
+            line-height: 1.65;
+            white-space: pre-wrap;
+        }
+
+        /* ── Divider ── */
+        .rule {
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            margin: 18px 0;
+            flex-shrink: 0;
+        }
+
+        /* ── Placeholders ── */
+        .ph {
+            border: 1px dashed #252525;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2a2a2a;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 16px;
+            flex-shrink: 0;
+        }
+        .ph.grow { flex: 1; min-height: 0; }
+        .ph.fixed { min-height: 110px; }
+        .ph:has(img) { border: none; background: none; padding: 0; }
+
+        /* ── Three-column phase grid ── */
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            flex: 1;
+            min-height: 0;
+        }
+        .phase-col {
+            display: flex;
+            flex-direction: column;
+            padding: 0 28px;
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .phase-col:first-child { padding-left: 0; }
+        .phase-col:last-child { border-right: none; padding-right: 0; }
+
+        /* ── Case study grid ── */
+        .case-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            flex: 1;
+            min-height: 0;
+        }
+        .case-item {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .case-phase-tag {
+            font-size: 0.62rem;
+            letter-spacing: 3px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .case-item .case-phase-tag { font-size: 0.85rem; }
+        .case-item h3 { font-size: 0.62rem; }
+
+        /* ── Crossfade: source capture (photo/Rhino) <-> rendered image ── */
+        .crossfade { position: relative; }
+        .crossfade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        .crossfade img.cf-source   { animation: cf-out 9s ease-in-out infinite; }
+        .crossfade img.cf-rendered { animation: cf-in  9s ease-in-out infinite; }
+        @keyframes cf-out { 0%, 40% { opacity: 1; } 50%, 90% { opacity: 0; } 100% { opacity: 1; } }
+        @keyframes cf-in  { 0%, 40% { opacity: 0; } 50%, 90% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* ── Checklist (repurposed as punchy bullet rows) ── */
+        .check {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 0.88rem;
+            line-height: 1.65;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+        .check.done { color: #333; }
+        .check .mark { color: var(--accent); flex-shrink: 0; width: 14px; }
+        .check.done .mark { color: #2a2a2a; }
+
+        /* ── Stack header (for phase + case study slides) ── */
+        .slide-header-row {
+            display: flex;
+            align-items: baseline;
+            gap: 24px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .slide-header-row h1 {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            font-size: 1.5rem;
+        }
+
+        /* ── Iteration frame (slide 00): vertical frame flipping through the
+           batch-export diagram iterations, in place of the old scattered
+           ghost-flicker effect ── */
+        .iteration-frame {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 3 / 4;
+            height: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            border: none;
+        }
+        .iteration-frame img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+
+        /* ── Footer nav ── */
+        footer {
+            padding: 11px 28px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: var(--bg);
+            flex-shrink: 0;
+            letter-spacing: 1px;
+        }
+        footer button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 18px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        footer button:hover { border-color: #444; background: var(--dim); }
+    </style>
+</head>
+<body class="light-mode">
+<div class="viewer">
+    <div class="spread-container">
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 00 · STATEMENT                                              -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread active" id="spread-1">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">00 // STATEMENT</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="justify-content: center;">
+                <h1 class="hero">MEMORY<br>MACHINE</h1>
+                <div class="vignette" style="border-left-width: 2px; font-size: 1.08rem; margin-top: 95px;">
+                    Memory Machine addresses under-utilized public space by converting community reviews into spatial data, reimagining the site as a high-performing park dynamically responsive to its users. Its data ingestion engine pairs qualitative feedback with quantitative metrics to drive spatial organization based on amenity deficits, infrastructural needs, and community desires. By merging expert analysis with experiential civic data, Memory Machine establishes an autopoietic design system—democratizing the design process to create a spatial framework that continuously adapts and maintains itself over time.
+                </div>
+                <div style="margin-top: auto; font-size: 0.68rem; color: #2a2a2a; letter-spacing: 3px; line-height: 2.2;">
+                    JOHN NORTHRUP<br>
+                    SCI-ARC // THESIS 2026<br>
+                    [ MEM-MACH-v2.1 // SYSTEM ACTIVE ]
+                </div>
+            </div>
+            <div class="col" style="padding: 24px; align-items: center; justify-content: center;">
+                <div class="iteration-frame">
+                    <img id="iteration-img" src="">
+                </div>
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 01 · PRECEDENTS                                             -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-2">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+
+                <!-- HEADER BAR -->
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">01 // PRECEDENTS</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">Formal System vs. Informal Agency</span>
+                </div>
+
+                <div class="col full" style="flex:1; height:auto; min-height:0; display:flex; flex-direction:column;">
+                <div class="case-grid" style="flex:1; min-height:0;">
+                    <div class="case-item">
+                        <div class="case-phase-tag">Formal System &#8596; Informal Reception</div>
+                        <h3>Bottega Louie</h3>
+                        <h2>Commercial Interior &middot; Los Angeles</h2>
+                        <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
+                            <img class="cf-source" src="../archive/render_output/bottegaLouieInterior/ViewCapture20260817_163017.png">
+                            <img class="cf-rendered" src="../archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg">
+                        </div>
+                        <div style="margin-top:12px; flex-shrink:0;">
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>High-volume review density vs. formal architectural critique</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Commercial acoustic/spatial performance vs. sensory overload</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Restrained design control, uncontrolled public response</span></div>
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">Formal System &#8596; Bounded Autonomy</div>
+                        <h3>Nakagin Capsule Tower</h3>
+                        <h2>Kisho Kurokawa &middot; Tokyo &middot; 1972</h2>
+                        <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
+                            <img class="cf-source" src="../archive/render_output/Nakagin/nakaginRhinoScreenshot.png">
+                            <img class="cf-rendered" src="../archive/render_output/Nakagin/unused/flux2_klein_00110_.png">
+                        </div>
+                        <div style="margin-top:12px; flex-shrink:0;">
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Individual modular autonomy bounded within a rigid structural lattice</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Metabolist ideology of organic growth vs. systemic obsolescence</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Adaptive-reuse potential trapped by formal constraint</span></div>
+                        </div>
+                    </div>
+                    <div class="case-item">
+                        <div class="case-phase-tag">Informal Agency &#8596; Formal Erasure</div>
+                        <h3>O.T. Johnson Building</h3>
+                        <h2>356 S. Broadway &middot; Los Angeles</h2>
+                        <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
+                            <img class="cf-source" src="../archive/render_output/OTjohnsonExterior/ViewCapture20260817_162539.png">
+                            <img class="cf-rendered" src="../archive/render_output/OTjohnsonExterior/flux2_klein_00101_.png">
+                        </div>
+                        <div style="margin-top:12px; flex-shrink:0;">
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Seven-story Romanesque Revival structure, glazed pressed-brick facade</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Hidden archways obscured by later architectural interventions</span></div>
+                            <div class="check" style="font-size:0.78rem;"><span class="mark">&mdash;</span><span>Unauthorized vernacular adaptation clashing with the historic shell ("Pirate Building")</span></div>
+                        </div>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+
+            </div><!-- /flex column -->
+        </div><!-- /spread-2 -->
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 02 · METHODOLOGY                                            -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-3">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:12px 50px; border-bottom:1px solid var(--border); flex-shrink:0;">
+                    <div style="display:flex; align-items:baseline; gap:24px; margin-bottom:6px;">
+                        <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">02 // METHODOLOGY</span>
+                        <span style="font-size:1.3rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Data Ingestion &amp; Accessibility</span>
+                    </div>
+                    <div style="display:flex; gap:36px; font-size:0.66rem; color:var(--muted); letter-spacing:0.5px; line-height:1.5;">
+                        <span><strong style="color:var(--text);">DATASET SCOPE</strong> — 50-park global comparative library (Gardens by the Bay, Millennium Park, Parc de la Villette, Zaryadye, Schouwburgplein, Pershing Sq. + more) — baseline amenity-to-sentiment ratios</span>
+                        <span><strong style="color:var(--text);">DELIVERABLES</strong> — System flow diagram &middot; Matrix/deficit chart vs. baselines</span>
+                    </div>
+                </div>
+                <div style="display:flex; flex:1; min-height:0; align-items:center; padding:26px 50px;">
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:24px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:14px; min-height:37px; flex-shrink:0;">Data Harvest</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 14px 0; min-height:110px; flex-shrink:0;">Scrape historical archives, visitor reviews, and spatial coordinates.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">DATA HARVEST</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 H290" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M290,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="0" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="50" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">HISTORICAL</text>
+                                <text x="50" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">ARCHIVES</text>
+
+                                <rect x="120" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="170" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">VISITOR</text>
+                                <text x="170" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">REVIEWS</text>
+
+                                <rect x="240" y="100" width="100" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="290" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">SPATIAL</text>
+                                <text x="290" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">COORDINATES</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:24px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:14px; min-height:37px; flex-shrink:0;">Spatial Parsing</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 14px 0; min-height:110px; flex-shrink:0;">Extract and parse qualitative and quantitative data using markdown and JSON files.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">SPATIAL PARSING</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 H250" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M250,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="20" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="90" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">QUALITATIVE DATA</text>
+                                <text x="90" y="145" text-anchor="middle" style="fill:var(--muted); font-size:7px;">&#8594; MARKDOWN</text>
+
+                                <rect x="180" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="250" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">QUANTITATIVE DATA</text>
+                                <text x="250" y="145" text-anchor="middle" style="fill:var(--muted); font-size:7px;">&#8594; JSON</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:24px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:14px; min-height:37px; flex-shrink:0;">Generation</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 14px 0; min-height:110px; flex-shrink:0;">Procedurally rebuild the structural massing via python scripts and rhino/blender mcp.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">GENERATION</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 H250" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M90,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M250,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="20" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="90" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">PYTHON</text>
+                                <text x="90" y="145" text-anchor="middle" style="fill:var(--text); font-size:7px;">SCRIPTS</text>
+
+                                <rect x="180" y="100" width="140" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="250" y="130" text-anchor="middle" style="fill:var(--text); font-size:7px;">RHINO /</text>
+                                <text x="250" y="145" text-anchor="middle" style="fill:var(--text); font-size:7px;">BLENDER MCP</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                    <div style="flex-shrink:0; width:44px; display:flex; align-items:center; justify-content:center; color:#252525; font-size:1rem;">→</div>
+
+                    <div style="flex:1; border:1px solid var(--border); background:var(--bg); padding:24px; align-self:stretch; display:flex; flex-direction:column;">
+                        <div style="font-size:0.72rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-weight:bold; padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:14px; min-height:37px; flex-shrink:0;">Synthesis</div>
+                        <p style="font-size:0.78rem; line-height:1.7; color:var(--text); margin:0 0 14px 0; min-height:110px; flex-shrink:0;">Compiles forensic information into Memory Machine database, generates diagrams, compiles spatial data and implements 3D output.</p>
+                        <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <svg viewBox="0 0 340 190" style="width:100%; height:auto; aspect-ratio:340/190; overflow:visible;" preserveAspectRatio="xMidYMid meet">
+                            <g style="font-family:'Courier New',monospace; letter-spacing:0.5px;">
+                                <rect x="90" y="0" width="160" height="50" fill="none" style="stroke:var(--accent); stroke-width:1.5;"/>
+                                <text x="170" y="21" text-anchor="middle" style="fill:var(--accent); font-size:8px; font-weight:bold;">SYNTHESIS</text>
+                                <text x="170" y="38" text-anchor="middle" style="fill:var(--muted); font-size:7px;">ENGINE</text>
+
+                                <path d="M170,50 V80" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 H290" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M50,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M130,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M210,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+                                <path d="M290,80 V100" fill="none" style="stroke:var(--muted); stroke-width:1;"/>
+
+                                <rect x="15" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="50" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">MM</text>
+                                <text x="50" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">DATABASE</text>
+
+                                <rect x="95" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="130" y="135" text-anchor="middle" style="fill:var(--text); font-size:7px;">DIAGRAMS</text>
+
+                                <rect x="175" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="210" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">SPATIAL</text>
+                                <text x="210" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">DATA</text>
+
+                                <rect x="255" y="100" width="70" height="70" fill="none" style="stroke:var(--border); stroke-width:1;"/>
+                                <text x="290" y="128" text-anchor="middle" style="fill:var(--text); font-size:7px;">3D</text>
+                                <text x="290" y="140" text-anchor="middle" style="fill:var(--text); font-size:7px;">OUTPUT</text>
+                            </g>
+                        </svg>
+                        </div>
+                    </div>
+
+                </div>
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 03 · SITE DIAGNOSTICS — PERSHING SQUARE                     -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-4">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">03 // SITE DIAGNOSTICS</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Pershing Square</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="padding-top:28px;">
+                <h2>Los Angeles, CA — Downtown · Est. 1866</h2>
+                <p style="margin-bottom: 14px;">Los Angeles' oldest public park. A site of dense public memory — historically a speaker's corner, political gathering ground, and urban anchor.</p>
+                <div class="rule" style="margin:10px 0;"></div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>HISTORICAL FRICTION</strong><br>
+                    <div class="check" style="font-size:0.83rem; margin-top:8px; margin-bottom:4px;"><span class="mark">&mdash;</span><span>19th-century public square, est. 1866</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>1950s subterranean parking deck buried the ground plane</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:0;"><span class="mark">&mdash;</span><span>1990s Legorreta postmodern enclosure sealed it from the street</span></div>
+                </div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>PARK SYMPTOMS</strong><br>
+                    <div class="check" style="font-size:0.83rem; margin-top:8px; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Severe hardscape thermal load, near-zero shade canopy</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Spatial, visual, and grade isolation from street-level circulation</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:0;"><span class="mark">&mdash;</span><span>Major Metro station directly below; near-zero surface dwell time</span></div>
+                </div>
+                <div style="width:100%; aspect-ratio:4/3; overflow:hidden; flex-shrink:0; margin-top:14px; border:1px solid var(--border); display:flex; align-items:flex-start; justify-content:center;">
+                    <img src="../archive/diagrams/pershing_square_map.jpg"
+                         style="width:100%; height:100%; object-fit:contain; object-position:center top;">
+                </div>
+            </div>
+            <div class="col" style="padding: 28px; justify-content: center; align-items: center;">
+                <img src="../archive/reference_images/PershingSquare/pershing_square_hero_resized.webp"
+                     style="width:100%; height:100%; object-fit:cover; border:1px solid var(--border);">
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 04 · SITE ITERATION — STRUCTURAL GEOMETRY                   -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-5">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">04 // SITE ITERATION</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">Dual-Grid Alignment &amp; Programmatic Distribution</span>
+                </div>
+                <div class="col full" style="flex:1; height:auto; min-height:0;">
+                <div class="case-grid">
+                    <div class="case-item">
+                        <div class="case-phase-tag">Grid Logic</div>
+                        <h3>Dual-Grid Alignment</h3>
+                        <h2>Two Surveys, One Block</h2>
+                        <div class="ph grow" style="border:1px solid var(--border); background:#ffffff; padding:8px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <img src="../archive/rhinoScreenshots/ViewCapture20260817_185200.png"
+                                 alt="Rhino model: dual-grid alignment, cardinal survey grid overlaid with 36°-rotated Laws of the Indies grid"
+                                 style="width:100%; height:100%; object-fit:contain; transform:scale(1.1); transform-origin:center;">
+                        </div>
+                        <div style="margin-top:10px; flex-shrink:0;">
+                            <div class="check" style="font-size:0.75rem;"><span class="mark" style="color:var(--muted);">&mdash;</span><span>Cardinal N-S grid — American survey, post-1849</span></div>
+                            <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Laws of the Indies grid — 36° rotated, 1573 royal ordinance</span></div>
+                        </div>
+                    </div>
+                    <div class="case-item" style="border-left:2px solid var(--accent); padding-left:14px; grid-column: span 2;">
+                        <div class="case-phase-tag">&#9733; Park Iteration</div>
+                        <h3>Generative Site Massing</h3>
+                        <h2>Iterative Park Layouts</h2>
+                        <div class="ph grow" style="border:1px solid var(--border); background:#f4f4f0; padding:0; overflow:hidden;">
+                            <img src="../archive/diagrams/diagramGIF.gif"
+                                 alt="Animated sequence of park layout iterations across the Pershing Square block"
+                                 style="width:100%; height:100%; object-fit:cover; object-position:center; transform:scale(1.1); transform-origin:center;">
+                        </div>
+                        <div style="margin-top:10px; flex-shrink:0;">
+                            <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Oblique NE&#8594;SW circulation axis held constant across iterations</span></div>
+                            <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Programmatic allocation (shade, market, cultural anchor, green infra) re-solved each pass against amenity deficits</span></div>
+                        </div>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 05 · THE APP                                                -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-6">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">05 // THE APP</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Live System</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="width:100%; flex-shrink:0; padding: 16px;">
+                <iframe src="http://127.0.0.1:5174/"
+                        style="width:100%; height:100%; border:1px solid var(--border); background:#000;"
+                        allow="cross-origin-isolated"></iframe>
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+    </div><!-- /spread-container -->
+
+    <footer>
+        <div id="page-indicator">00 // STATEMENT — 1 of 6</div>
+        <div class="nav-controls">
+            <button onclick="prevSpread()">[ PREV ]</button>
+            <button onclick="nextSpread()">[ NEXT ]</button>
+        </div>
+    </footer>
+</div><!-- /viewer -->
+
+<button id="theme-toggle" onclick="toggleTheme()" style="position:fixed; top:16px; left:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
+
+<script>
+    // ── Theme toggle ────────────────────────────────────────────
+    function toggleTheme() {
+        const btn = document.getElementById('theme-toggle');
+        const isLight = document.body.classList.toggle('light-mode');
+        btn.textContent = isLight ? 'LIGHT' : 'DARK';
+    }
+
+    // ── Navigation ──────────────────────────────────────────────
+    const labels = [
+        "00 // STATEMENT",
+        "01 // PRECEDENTS",
+        "02 // METHODOLOGY",
+        "03 // SITE DIAGNOSTICS",
+        "04 // SITE ITERATION",
+        "05 // THE APP",
+    ];
+    const total = labels.length;
+    let current = 1;
+
+    function showSpread(n) {
+        document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('spread-' + n);
+        if (el) el.classList.add('active');
+        document.getElementById('page-indicator').innerText =
+            labels[n - 1] + ' – ' + n + ' of ' + total;
+        current = n;
+        if (n === 1) startIterationFrame(); else stopIterationFrame();
+    }
+    function nextSpread() { showSpread(current < total ? current + 1 : 1); }
+    function prevSpread() { showSpread(current > 1 ? current - 1 : total); }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSpread();
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevSpread();
+    });
+
+    // ── Iteration frame (slide 00) ──────────────────────────────
+    // Vertical frame flipping through the 190-iteration batch-export run
+    // (outputs/batchExport/colorDiagrams/iterNNN_color.png), in place of
+    // the old scattered ghost-flicker effect.
+    const ITERATION_COUNT = 190;
+    const iterationImages = Array.from({ length: ITERATION_COUNT }, (_, i) =>
+        `../outputs/batchExport/colorDiagrams/iter${String(i + 1).padStart(3, '0')}_color.png`);
+    const ITERATION_MS = 900;
+    let iterationIndex = 0;
+    let iterationInterval = null;
+
+    function showIteration() {
+        const img = document.getElementById('iteration-img');
+        if (!img) return;
+        img.src = iterationImages[iterationIndex];
+    }
+
+    function startIterationFrame() {
+        stopIterationFrame();
+        iterationIndex = Math.floor(Math.random() * iterationImages.length);
+        showIteration();
+        iterationInterval = setInterval(() => {
+            iterationIndex = (iterationIndex + 1) % iterationImages.length;
+            showIteration();
+        }, ITERATION_MS);
+    }
+
+    function stopIterationFrame() {
+        if (iterationInterval) { clearInterval(iterationInterval); iterationInterval = null; }
+    }
+
+    // Slide 00 is active on load
+    startIterationFrame();
+</script>
+</body>
+</html>
