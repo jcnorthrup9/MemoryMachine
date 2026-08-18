@@ -31,7 +31,7 @@ colors:
   border: "#e5e7eb"
   outline: "#71717a"
   outline-variant: "#d1d5db"
-  accent: "#00CC52"          # active-state / terminal-variable color, use sparingly
+  accent: "#3E6D8E"          # active-state / terminal-variable color, use sparingly -- deepened from the CIRCULATION pastel (#AFC6D9) in drawing_styles.py's diagram palette for cross-artifact consistency
   success: "#00CC52"
   warning: "#d97706"
   error: "#dc2626"
@@ -134,7 +134,7 @@ consistent across the app -- read this before inventing a new variant.
 
 ## Accent usage rule
 
-`accent` (#00CC52) is reserved for **active-state and live-data signaling**
+`accent` (#FF7F50) is reserved for **active-state and live-data signaling**
 only -- the current nav item, an enabled toggle, a live/streaming indicator,
 a value currently changing. It is not a general highlight color; overusing
 it flattens its meaning.

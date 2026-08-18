@@ -68,6 +68,175 @@ def query_ai(system_prompt: str, user_prompt: str) -> str:
         print(f"      -> [OLLAMA ERROR] Could not connect to local AI: {e}")
         return ""
 
+# 2026-08-13: loose natural-language recognition for explicit site/element
+# requests (e.g. "give me something from Gardens by the Bay", "more
+# blacktop", "it's too hot") -- see extract_prompt_hints()'s own docstring
+# for why relying on the LLM alone to honor these isn't reliable enough.
+SITE_NAME_ALIASES = {
+    "PershingSquare":   ["pershing square", "pershing"],
+    "ParcVillette":      ["parc villette", "parc de la villette", "la villette", "villette"],
+    "ZaryadyePark":      ["zaryadye park", "zaryadye"],
+    "Schouwburgplein":   ["schouwburgplein", "schouwburg"],
+    "GardensBytheBay":   ["gardens by the bay", "gardens bythe bay", "gardensbythebay"],
+}
+
+# Canonical layer id -> loose synonyms a user might actually type. "hot"/
+# "sunny"/etc are deliberately mapped to SHADE (not a separate "weather"
+# concept) -- the user's own example ("if someone says something is too hot
+# then it pulls more shade into the design") is exactly this: sentiment
+# about heat should resolve to requesting the SHADE layer, not require its
+# own special-cased pipeline.
+LAYER_NAME_ALIASES = {
+    "HARDSCAPE":        ["hardscape", "blacktop", "concrete", "pavement", "paving", "paved", "plaza", "asphalt"],
+    "GREEN_SPACE":       ["green space", "greenscape", "grass", "lawn", "turf", "meadow", "greenery", "lawns"],
+    "SHADE":             ["shade", "shady", "shaded", "canopy", "tree cover", "trees", "too hot", "overheated",
+                           "sunny", "sun exposure", "cooler", "more cool", "cool it down"],
+    "WATER_FEATURES":    ["water feature", "water", "pond", "fountain", "pool", "stream", "lake"],
+    "PEDESTRIAN_PATH":   ["pedestrian path", "walkway", "footpath", "sidewalk", "walking path"],
+    "PARKING":           ["parking lot", "parking", "garage"],
+    "STREET_FURNITURE":  ["street furniture", "benches", "seating"],
+    "MAJOR_ATTRACTORS":  ["major attractor", "centerpiece", "landmark"],
+    "MINOR_ATTRACTORS":  ["minor attractor"],
+    "UNIQUE_ELEMENTS":   ["unique element", "sculpture", "art installation", "installation"],
+}
+
+
+def _decamel(name):
+    """'GoldenGatePark' -> 'golden gate park' -- inverse of
+    fetch_park_precedent.safe_site_name()'s title-case-and-concatenate,
+    used to derive a matchable loose alias for an auto-fetched precedent
+    without needing a hand-written SITE_NAME_ALIASES entry for it."""
+    return re.sub(r"(?<!^)(?=[A-Z])", " ", name).lower()
+
+
+def _dynamic_site_aliases():
+    """Site aliases for any precedent SVG beyond the hardcoded
+    SITE_NAME_ALIASES 5 -- e.g. one fetch_park_precedent.py wrote earlier
+    this session (see generate_spatial_seed()'s auto-trigger). Lets a
+    SECOND mention of an already-fetched park (a different audience
+    member, a follow-up message) get recognized as an explicit hint too,
+    not left purely to the LLM noticing it's already available."""
+    svg_dir = os.path.join(BASE_DIR, "data", "PershingMetabolizer", "parkSVG", "PrecedentSVG")
+    if not os.path.isdir(svg_dir):
+        return {}
+    known = {name.lower() for name in SITE_NAME_ALIASES}
+    aliases = {}
+    for f in os.listdir(svg_dir):
+        if not f.lower().endswith(".svg"):
+            continue
+        name = f[:-4]
+        if name.lower() in known:
+            continue
+        aliases[name] = [_decamel(name)]
+    return aliases
+
+
+def extract_prompt_hints(prompt):
+    """Loose, deterministic keyword/alias matching over free-text prompt
+    text, so an explicit site or element request reliably maps to this
+    app's canonical site/layer vocabulary -- NOT dependent on the LLM
+    correctly inferring intent from prose. This matters because
+    generate_spatial_seed()'s own system prompt has a built-in tension: its
+    CRITICAL RULE 5 tells the model to actively AVOID repeating the same
+    site, which directly fights an explicit "use park X" request, and
+    there's no code-level fallback if the LLM just doesn't comply (or
+    Ollama is unavailable and the request falls through to the
+    non-prompt-aware random_spatial_seed() safety net entirely). See
+    _ensure_hints_present() below for how these hints get GUARANTEED into
+    the final seed_items, not just suggested to the LLM.
+
+    Case-insensitive substring match; longest alias first within each
+    canonical key so e.g. "gardens by the bay" matches before any shorter
+    accidental substring would. Returns {"sites": [...], "layers": [...]},
+    each de-duplicated, in first-seen order (prompt reading order)."""
+    if not prompt:
+        return {"sites": [], "layers": []}
+    text = prompt.lower()
+
+    sites = []
+    all_site_aliases = {**SITE_NAME_ALIASES, **_dynamic_site_aliases()}
+    for canonical, aliases in all_site_aliases.items():
+        for alias in sorted(aliases, key=len, reverse=True):
+            if alias in text:
+                if canonical not in sites:
+                    sites.append(canonical)
+                break
+
+    layers = []
+    for canonical, aliases in LAYER_NAME_ALIASES.items():
+        for alias in sorted(aliases, key=len, reverse=True):
+            if alias in text:
+                if canonical not in layers:
+                    layers.append(canonical)
+                break
+
+    return {"sites": sites, "layers": layers}
+
+
+def _ensure_hints_present(seed_items, hints, available_sites):
+    """Deterministically guarantees every explicitly-requested site/layer
+    (from extract_prompt_hints) actually appears in seed_items -- the real
+    reliability guarantee, not just a best-effort LLM instruction.
+
+    Pairing logic (2026-08-13, revised after live testing surfaced a real
+    gap: a prompt mentioning one site and multiple layers, e.g. "Zaryadye's
+    water feature, and it's too hot" -> layers=[SHADE, WATER_FEATURES],
+    was pairing the site with only the FIRST layer positionally, leaving
+    WATER_FEATURES un-anchored to Zaryadye at all):
+      - Exactly one hinted site + one or more hinted layers: that ONE site
+        is used for EVERY hinted layer (the common "give me X's stuff"
+        case) -- not just positionally paired with the first.
+      - Multiple hinted sites: falls back to positional pairing between
+        sites and layers (no reliable way to know which site goes with
+        which layer from keyword matching alone).
+      - A layer or site mentioned with no site/layer partner respectively
+        gets its own pick with the other field left for remix_layers()'
+        own resolution (random valid site for a layer-only hint,
+        GREEN_SPACE default for a site-only hint).
+
+    PREPENDED, not appended -- remix_layers() caps seed_items at 5, so an
+    explicit request must survive that cap ahead of the free-form/AI picks,
+    not risk being sliced off the end. Marks each forced item
+    "_explicit_hint": True so remix_layers()'s automatic category-coverage
+    anchor (_best_area_anchor) can skip adding a competing pick for a
+    category the user already explicitly addressed (see that function's
+    own docstring)."""
+    hinted_sites = (hints or {}).get("sites") or []
+    hinted_layers = (hints or {}).get("layers") or []
+    if not hinted_sites and not hinted_layers:
+        return seed_items or []
+
+    seed_items = list(seed_items or [])
+    locations = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West", "Center"]
+
+    if len(hinted_sites) == 1 and hinted_layers:
+        pairs = [(hinted_sites[0], layer) for layer in hinted_layers]
+    elif hinted_layers:
+        pairs = [(hinted_sites[i] if i < len(hinted_sites) else None, layer)
+                 for i, layer in enumerate(hinted_layers)]
+        pairs += [(site, None) for site in hinted_sites[len(hinted_layers):]]
+    else:
+        pairs = [(site, None) for site in hinted_sites]
+
+    forced = []
+    for site, layer in pairs:
+        already = any(
+            (site is None or it.get("site") == site) and (layer is None or it.get("layer") == layer)
+            for it in seed_items
+        )
+        if already:
+            continue
+        forced.append({
+            "site": site or random.choice(available_sites),
+            "layer": layer or "GREEN_SPACE",
+            "location": random.choice(locations),
+            "width": 20, "height": 20,
+            "_explicit_hint": True,
+        })
+
+    return forced + seed_items
+
+
 def _weighted_choice(items, weights):
     """Weighted random choice without a numpy dependency. weights need not
     sum to 1; falls back to uniform choice if every weight is 0/negative."""
@@ -212,6 +381,25 @@ def generate_spatial_seed(prompt: str, matches: list = None) -> tuple:
     random.shuffle(available_sites)
     random.shuffle(available_layers)
 
+    # 2026-08-13: see extract_prompt_hints()'s own docstring -- detected
+    # BEFORE the LLM call so the system prompt can ask for them explicitly,
+    # and enforced AFTER (via _ensure_hints_present, at every return point
+    # below) so honoring them doesn't depend on the LLM actually complying.
+    hints = extract_prompt_hints(prompt)
+    hint_instruction = ""
+    if hints["sites"] or hints["layers"]:
+        parts = []
+        if hints["sites"]:
+            parts.append(f"site(s) {', '.join(hints['sites'])}")
+        if hints["layers"]:
+            parts.append(f"layer(s) {', '.join(hints['layers'])}")
+        hint_instruction = (
+            f"\nCRITICAL RULE 7 (Explicit Request Override): The user's prompt explicitly names "
+            f"{' and '.join(parts)}. You MUST include at least one pick using each of these, even if "
+            f"it means repeating a site or ignoring CRITICAL RULE 5's variety preference -- an explicit "
+            f"request always outranks variety.\n"
+        )
+
     # 1. Build Semantic Context from ChromaDB
     context_text = ""
     if matches:
@@ -238,6 +426,7 @@ def generate_spatial_seed(prompt: str, matches: list = None) -> tuple:
         "CRITICAL RULE 4: PROG_01 layers are 'UNIQUE_ELEMENTS' (available at PershingSquare/Schouwburgplein), 'MAJOR_ATTRACTORS' (available at ParcVillette/Schouwburgplein/ZaryadyePark), and 'MINOR_ATTRACTORS' (available at GardensBytheBay/ParcVillette/Schouwburgplein) -- pick whichever is real for the site you're drawing that layer from.\n"
         "CRITICAL RULE 5 (Variety): Do not default to the same site/layer/location combination every time. Actively vary your selections between requests, even for similar prompts — treat repeated or similar prompts as an opportunity to explore a different valid layout, not to repeat your last answer.\n"
         f"CRITICAL RULE 6 (Recreation & Parks mix): Across your 5 picks, roughly aim for this zonal balance (you won't hit it exactly with only 5 discrete picks, but let it guide how many SOFT vs HARD vs PROG vs BLUE layers you choose): {guideline_text}.\n"
+        f"{hint_instruction}"
         "Output ONLY a valid JSON object. Do not write any markdown or conversational text.\n"
         "The JSON object must have exactly four keys:\n"
         "1. 'narrative': A short 2-sentence explanation of why these pieces were chosen, explicitly naming the real-world park that inspired you.\n"
@@ -270,19 +459,51 @@ def generate_spatial_seed(prompt: str, matches: list = None) -> tuple:
                 if insp_park and isinstance(coords, dict) and "lat" in coords and "lon" in coords:
                     fetch_osm_map(coords["lat"], coords["lon"], insp_park)
 
+                    # 2026-08-14: auto-fetch a REAL, usable precedent for
+                    # this park (not just the flat reference image above)
+                    # when the AI reached beyond the existing precedent set
+                    # -- see fetch_park_precedent.py's own docstring for the
+                    # OSM-vector-data approach and why it needs no ML model.
+                    # Folded into `hints` (already computed pre-call, from
+                    # the user's own prompt text) rather than a separate
+                    # code path: _ensure_hints_present() below already
+                    # guarantees anything in `hints["sites"]` survives into
+                    # THIS SAME response's seed_items, not just future
+                    # calls once the new file exists on disk. Best-effort:
+                    # any failure here (network, no OSM coverage, etc.)
+                    # just leaves hints unchanged -- generate_spatial_seed()
+                    # must never fail because a precedent fetch failed.
+                    normalized_insp = re.sub(r"[^a-z0-9]", "", insp_park.lower())
+                    already_available = any(
+                        re.sub(r"[^a-z0-9]", "", s.lower()) == normalized_insp for s in available_sites
+                    )
+                    if not already_available:
+                        try:
+                            import fetch_park_precedent
+                            new_site = fetch_park_precedent.fetch_and_write_precedent(
+                                city="", park_name=insp_park, lat=coords["lat"], lon=coords["lon"])
+                        except Exception as e:
+                            print(f"      -> [PRECEDENT FETCH ERROR] {e}")
+                            new_site = None
+                        if new_site:
+                            available_sites.append(new_site)
+                            hints = {"sites": hints["sites"] + [new_site], "layers": hints["layers"]}
+                            print(f"      -> [PRECEDENT FETCH] New real-world precedent available: {new_site!r}")
+
                 if isinstance(seed_items, list) and len(seed_items) > 0:
                     print(f"      -> [AI] Successfully synthesized {len(seed_items)} semantic layers!")
-                    return seed_items, narrative
+                    return _ensure_hints_present(seed_items, hints, available_sites), narrative
             # Fallback just in case Llama disobeys and returns the raw list
             elif isinstance(res_data, list) and len(res_data) > 0:
                 print(f"      -> [AI] Successfully synthesized {len(res_data)} semantic layers!")
-                return res_data, "AI curated spatial arrangement applied."
+                return _ensure_hints_present(res_data, hints, available_sites), "AI curated spatial arrangement applied."
         except Exception as e:
             print(f"      -> [AI PARSE ERROR] Llama 3 returned invalid JSON. Falling back to math.")
 
     # 3. Algorithmic Safety Net
     print("      -> [FALLBACK] Executing strict compliance algorithm...")
     seed_items = random_spatial_seed(zonal_metadata, available_sites, guidelines)
+    seed_items = _ensure_hints_present(seed_items, hints, available_sites)
     return seed_items, "AI Core offline or parse failed. Algorithmic safety net engaged: generating mathematically compliant layout."
 
 def generate_mermaid_diagram(prompt, matches, spatial_params):

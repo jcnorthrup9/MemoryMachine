@@ -123,3 +123,11 @@ archive/workflowScreenshots/
 # PNGs plus two GIFs. The existing `outputs/*.png` rule above only matches
 # the top level, so this subfolder needs its own.
 outputs/lora_decay/
+
+# Batch diagram export + precedent-comparison test runs (2026-08-18,
+# batch_export_worker.py / run_batch_export.py) -- same "regenerable
+# derived output" reasoning as the rest of this section. outputs/batchExport/
+# alone was 120MB+ uncommitted.
+outputs/batchExport/
+outputs/precedent_comparison/
+outputs/precedent_international_test/

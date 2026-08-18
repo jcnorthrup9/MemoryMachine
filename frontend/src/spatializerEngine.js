@@ -109,8 +109,13 @@ export function render(container, { svgCache, stack, baseCleared }) {
   const bbox = getBoundaryBBox(baseSVGEl);
   if (!bbox) return;
 
-  const bgFill = '#050505';
-  const bndStroke = '#ffffff';
+  // 2026-08-17: white background kept from the brief monochrome-diagram
+  // pass, but boundary/context/intervention colors reverted back to the
+  // original category-colored look (green/blue/orange/gray translucent
+  // fills) per user feedback -- only the background stayed white, so
+  // bndStroke inverted from white (invisible on white) to black.
+  const bgFill = '#ffffff';
+  const bndStroke = '#000000';
 
   const svg = document.createElementNS(ns, 'svg');
   const pad = bbox.w * 0.20;
@@ -124,7 +129,10 @@ export function render(container, { svgCache, stack, baseCleared }) {
   // 1. DYNAMIC CONTEXT
   const contextGroup = document.createElementNS(ns, 'g');
   contextGroup.setAttribute('class', 'context-group');
-  let contextKeywords = ['STREET', 'BUILDING', 'PARKING', 'PEDESTRIAN', 'GREEN_SPACE', 'WATER', 'SHADE', 'FURNITURE'];
+  let contextKeywords = [
+    'STREET', 'BUILDING', 'PARKING', 'PEDESTRIAN', 'GREEN_SPACE', 'WATER', 'SHADE', 'FURNITURE',
+    'HARDSCAPE', 'UNIQUE_ELEMENTS', 'INFRASTRUCTURE_CONNECTIONS', 'AMPHITHEATRE',
+  ];
   if (baseCleared) contextKeywords = ['STREET', 'BUILDING'];
 
   baseSVGEl.querySelectorAll('g').forEach((g) => {
@@ -142,11 +150,28 @@ export function render(container, { svgCache, stack, baseCleared }) {
       else if (upperId.includes('PEDESTRIAN')) darkCol = '#888888';
       else darkCol = '#666666';
 
+      // 2026-08-17: BUILDING context (neighboring city blocks, not the site
+      // itself) always renders outline-only -- its source fill is a solid
+      // dark gray that reads as a heavy, distracting block around the site
+      // data. HARDSCAPE (added 2026-08-18) gets the same treatment -- its
+      // source fill (#787878) covers most of the site's own plaza area as a
+      // flat gray backdrop, which was obscuring the diagram underneath it.
+      // Other categories (water/green hatch textures etc.) still keep their
+      // real source fill.
+      const isOutlineOnlyContext = upperId.includes('BUILDING') || upperId.includes('HARDSCAPE');
       c.querySelectorAll('path, polyline, line, polygon, rect, circle').forEach((p) => {
         p.setAttribute('stroke', darkCol);
         p.style.stroke = darkCol;
-        p.setAttribute('fill', 'none');
-        p.style.fill = 'none';
+        if (!isOutlineOnlyContext && hasRealFill(p)) {
+          // Keep the source SVG's own hatch fill (e.g. WATER_FEATURES::hatch,
+          // GREEN_SPACE::hatch) instead of blanket-stripping it -- only
+          // stroke-only linework (no original fill) collapses to fill:none.
+          p.setAttribute('fill-opacity', p.getAttribute('fill-opacity') || '1');
+          p.style.fillOpacity = p.style.fillOpacity || '1';
+        } else {
+          p.setAttribute('fill', 'none');
+          p.style.fill = 'none';
+        }
         const sw = parseFloat(p.getAttribute('stroke-width') || '1');
         if (sw > 0.8) { p.setAttribute('stroke-width', '0.8'); p.style.strokeWidth = '0.8'; }
       });

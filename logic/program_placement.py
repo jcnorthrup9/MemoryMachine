@@ -26,6 +26,7 @@ and PRIORITY (need_level), never WHERE.
 import json
 import math
 import os
+import random
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROGRAM_REQUIREMENTS_PATH = os.path.join(BASE_DIR, "data", "program_requirements.json")
@@ -378,11 +379,29 @@ def _aspect_ratio_bonus(island_bays, candidate, target_ratio):
     return SHAPE_WEIGHT / (1.0 + abs(ratio - target_ratio))
 
 
-def place_programs(bay_grid, programs):
+def place_programs(bay_grid, programs, placement_seed=None):
     """
     bay_grid: the dict returned by logic.pershing_api.get_bay_grid() (or an
     equivalent {"nx_bays", "nz_bays", "bays": [...]} structure).
     programs: a list from load_programs().
+
+    placement_seed (2026-08-12, opt-in, default None): every candidate
+    bay's score below is a real-valued sum of continuous mask/distance
+    data (confirmed by reading -- not literal ties), so this is a deterministic
+    greedy packer: the same inputs always produce the same bay claims, every
+    time, with no randomness anywhere in this function. That's the correct
+    default (a rebuild with unchanged params should give a stable result),
+    but it also means NEEDED-tier programs always claim the same top-scoring
+    bays first, regardless of any other varied input -- e.g. a batch of
+    randomized RebuildParams sweeps still converges to near-identical
+    building footprints. When placement_seed is an int, a small additive
+    jitter (~±0.5, small relative to SECONDARY_WEIGHT=1.0's tie-break band,
+    far below PRIMARY_WEIGHT=10.0's real-match band) is added to every
+    candidate score below via one `random.Random(placement_seed)` for the
+    whole call, reordering close candidates enough to produce genuinely
+    different bay claims per seed without ever overriding a real category
+    match. None (default) adds zero jitter -- byte-identical to this
+    function's pre-2026-08-12 behavior, no live-app regression.
 
     Greedy region-growing bin-packing: for each program in priority order,
     seed at the best-scoring unclaimed bay, then repeatedly grow into the
@@ -421,6 +440,11 @@ def place_programs(bay_grid, programs):
     real elevation -- see floor_elev_ft below for the single-value (seed-
     bay) summary kept for buildings/entrance-attractor purposes.
     """
+    rng = random.Random(placement_seed) if placement_seed is not None else None
+
+    def _jitter():
+        return rng.uniform(-0.5, 0.5) if rng is not None else 0.0
+
     bays_by_index = {(b["gx"], b["gy"]): b for b in bay_grid["bays"]}
     nx_bays, nz_bays = bay_grid["nx_bays"], bay_grid["nz_bays"]
     claimed = set()
@@ -467,7 +491,7 @@ def place_programs(bay_grid, programs):
             for idx, bay in bays_by_index.items()
             if idx not in claimed
         }
-        candidates = {idx: s for idx, s in candidates.items() if s is not None}
+        candidates = {idx: s + _jitter() for idx, s in candidates.items() if s is not None}
         # Unlike _aspect_ratio_bonus/_level_spread_bonus (genuinely undefined
         # before this program has claimed any bay of its own -- "every
         # candidate ties"), gathering_proximity_bonus is well-defined even
@@ -553,7 +577,7 @@ def place_programs(bay_grid, programs):
                                      + _level_spread_bonus(bays_by_index[idx], claimed_levels)
                                      + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
                                      + proximity_weight * _gathering_proximity_bonus(bays_by_index[idx], proximity_bay_centers))
-                            frontier[idx] = score + bonus
+                            frontier[idx] = score + bonus + _jitter()
                 if frontier:
                     best = max(frontier, key=frontier.get)
                     placed_bays.append(best)
@@ -577,6 +601,7 @@ def place_programs(bay_grid, programs):
                     idx: s + _level_spread_bonus(bays_by_index[idx], claimed_levels)
                           + gathering_weight * _gathering_proximity_bonus(bays_by_index[idx], gathering_bay_centers)
                           + proximity_weight * _gathering_proximity_bonus(bays_by_index[idx], proximity_bay_centers)
+                          + _jitter()
                     for idx, s in remaining.items() if s is not None
                 }
                 if not remaining:

@@ -666,19 +666,21 @@ function makeTextSprite(text) {
   sprite.renderOrder = 999;
   return sprite;
 }
-// 2026-07-03: corrected per user's real Rhino model -- the Metro entrance
-// (z~27, near z=0) sits off Hill St at the upper-right/NE corner, so z=0 is
-// 5th St (north) and z=max is 6th St (south). This REVERSES the south=0/
-// north=max assumption inherited from urban_interference_solver.py's SVG-
-// based grid comment, which was only ever verified for the SVG dataset, not
-// this OBJ-derived one -- the two were never cross-checked against each
-// other. Confirm against your Rhino Top view before trusting this for a
-// final drawing.
+// 2026-07-03 correction (REVERTED): a prior edit here claimed the Metro
+// entrance sat near z~27 (near z=0), so it flipped these labels to z=0=5th/
+// z=max=6th. That z~27 value was itself a bug -- extract_real_geometry.py's
+// 2026-07-09 Z-axis sign fix corrected the real entrance anchor to z~566
+// (near z=max), and PIPELINE_STATUS_AND_NEXT_STEPS.md documents the user
+// independently verifying against a live Rhino Top view that the real
+// entrance is at 5th & Hill, i.e. the z=max end. MASSING_FRAME.md and
+// FIDELITY_GRID_1.md's "Hill St / metro-entrance corner" origins (z~570-596)
+// corroborate the same z=max=5th reading. Restored to match the block
+// header above: z=0 is 6th St, z=max is 5th St.
 const streetLabels = [
   { text: 'OLIVE ST (x=0)',        pos: toWorld(0, SITE_LENGTH_FT / 2, 40) },
   { text: 'HILL ST (x=max)',       pos: toWorld(SITE_WIDTH_FT, SITE_LENGTH_FT / 2, 40) },
-  { text: '5TH ST (z=0)',          pos: toWorld(SITE_WIDTH_FT / 2, 0, 40) },
-  { text: '6TH ST (z=max)',        pos: toWorld(SITE_WIDTH_FT / 2, SITE_LENGTH_FT, 40) },
+  { text: '6TH ST (z=0)',          pos: toWorld(SITE_WIDTH_FT / 2, 0, 40) },
+  { text: '5TH ST (z=max)',        pos: toWorld(SITE_WIDTH_FT / 2, SITE_LENGTH_FT, 40) },
 ];
 for (const { text, pos } of streetLabels) {
   const sprite = makeTextSprite(text);

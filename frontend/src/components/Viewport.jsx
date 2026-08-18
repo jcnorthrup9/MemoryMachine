@@ -1265,46 +1265,31 @@ function ProgramZones({ zones, bayFt, siteLengthFt, shadingMode, showLabels = tr
   );
 }
 
-// Plain HTML/CSS overlay (2026-07-13), NOT inside <Canvas> -- the 3D
-// billboard labels ProgramZones already draws stay useful for spatial
-// reference, but visibly overlap/clip in a dense layout (confirmed live),
-// so program names aren't reliably readable from the viewport alone. This
-// is the guaranteed-legible list: every currently-placed program's name
-// with its actual PROGRAM_COLOR swatch, same corner-panel visual style as
-// the VIEW/SHADING/TOP SLAB HUD panels below.
-function ProgramLegend({ zones }) {
-  // Collapsed by default state is local/UI-only (2026-07-17) -- purely a
-  // display convenience, not design data, so it doesn't need to be lifted
-  // to App.jsx/visibleLayers like the real layer toggles.
-  const [collapsed, setCollapsed] = useState(false);
-  if (!zones) return null;
-  const placedZones = zones.filter((z) => z.bays.length > 0);
-  if (placedZones.length === 0) return null;
+// Compact rounded pill switch (2026-08-03) -- replaces the old ON/OFF
+// button-pair pattern for binary HUD toggles (SALVAGE/TOP SLAB/LABELS/
+// ZONES below), which took as much space as the multi-option VIEW/SHADING
+// boxes despite only ever having two states.
+function ToggleSwitch({ label, checked, onChange, title }) {
   return (
-    <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col max-h-[70vh] overflow-y-auto">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center justify-between gap-3 px-3 pt-2 pb-1 text-on-surface-variant hover:text-on-surface"
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      title={title}
+      className="flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-lg px-2 py-1"
+    >
+      <span className="text-on-surface-variant text-[8px] font-mono-sm uppercase tracking-wide">{label}</span>
+      <span
+        className={`relative inline-flex h-3.5 w-6 shrink-0 items-center rounded-full transition-colors ${
+          checked ? 'bg-accent' : 'bg-border'
+        }`}
       >
-        <span className="text-[10px] font-mono-sm">PROGRAMS</span>
-        <span className="text-[10px] font-mono-sm">{collapsed ? '+' : '−'}</span>
-      </button>
-      {!collapsed && (
-        <div className="flex flex-col px-3 pb-2 gap-1">
-          {placedZones.map((zone) => (
-            <div key={zone.program_item} className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 shrink-0 border border-border"
-                style={{ backgroundColor: PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR }}
-              />
-              <span className="font-mono-sm text-[11px] text-on-surface-variant whitespace-nowrap">
-                {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        <span
+          className={`inline-block h-2.5 w-2.5 transform rounded-full bg-surface transition-transform ${
+            checked ? 'translate-x-3' : 'translate-x-0.5'
+          }`}
+        />
+      </span>
+    </button>
   );
 }
 
@@ -1390,7 +1375,7 @@ export default function Viewport({
   // RealSlabs' mesh) -- it's just `!removeTopSlab` now instead of an
   // independent boolean.
   const showTopSlab = !removeTopSlab;
-  const [viewMode, setViewMode] = useState('perspective');
+  const [viewMode, setViewMode] = useState('plan');
   const [showBlenderBuild, setShowBlenderBuild] = useState(false);
   const [hoveredZone, setHoveredZone] = useState(null);
   const canvasRef = useRef(null);
@@ -1721,15 +1706,15 @@ export default function Viewport({
           />
         )}
       </Canvas>
-      <div className="absolute top-4 left-4 flex gap-4">
+      <div className="absolute top-4 left-4 flex flex-wrap items-start gap-2">
         <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">VIEW</span>
+          <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">VIEW</span>
           <div className="flex">
             {Object.entries(VIEW_PRESETS).map(([key, p]) => (
               <button
                 key={key}
                 onClick={() => setViewMode(key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                className={`px-2 py-0.5 font-mono-sm text-[9px] uppercase border-t border-border ${
                   viewMode === key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
                 }`}
               >
@@ -1739,13 +1724,13 @@ export default function Viewport({
           </div>
         </div>
         <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">SHADING</span>
+          <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">SHADING</span>
           <div className="flex">
             {SHADING_MODES.map((m) => (
               <button
                 key={m.key}
                 onClick={() => setShadingMode(m.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                className={`px-2 py-0.5 font-mono-sm text-[9px] uppercase border-t border-border ${
                   shadingMode === m.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
                 }`}
               >
@@ -1754,76 +1739,20 @@ export default function Viewport({
             ))}
           </div>
         </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">SALVAGE</span>
-          <div className="flex">
-            {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
-              <button
-                key={String(opt.key)}
-                onClick={() => setShowSalvage(opt.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
-                  showSalvage === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">TOP SLAB</span>
-          <div className="flex">
-            {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
-              <button
-                key={String(opt.key)}
-                onClick={() => onToggleRemoveTopSlab?.(!opt.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
-                  showTopSlab === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LABELS</span>
-          <div className="flex">
-            {[{ key: true, label: 'ON' }, { key: false, label: 'OFF' }].map((opt) => (
-              <button
-                key={String(opt.key)}
-                onClick={() => setShowLabels(opt.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
-                  showLabels === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">ZONES</span>
-          <div className="flex">
-            {[{ key: false, label: 'OFF' }, { key: true, label: 'ON' }].map((opt) => (
-              <button
-                key={String(opt.key)}
-                onClick={() => onToggleZones?.(opt.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
-                  zonesEnabled === opt.key ? 'text-accent bg-surface-container-high' : 'text-on-surface-variant hover:text-primary'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <ToggleSwitch label="SALVAGE" checked={showSalvage} onChange={setShowSalvage} />
+        <ToggleSwitch
+          label="TOP SLAB"
+          checked={showTopSlab}
+          onChange={(next) => onToggleRemoveTopSlab?.(!next)}
+        />
+        <ToggleSwitch label="LABELS" checked={showLabels} onChange={setShowLabels} />
+        <ToggleSwitch label="ZONES" checked={zonesEnabled} onChange={(next) => onToggleZones?.(next)} />
         {zonesEnabled && activeZone && (
           <button
             onClick={() => onExportZone?.(activeZone)}
             disabled={exportingZone}
             title={`Builds an OBJ in Blender containing only ${activeZone.label}'s voxels/structure/program boxes.`}
-            className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+            className="bg-accent text-background px-2 py-1 font-mono-sm text-[9px] font-bold uppercase rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {exportingZone ? 'Exporting...' : `Export ${activeZone.label}`}
           </button>
@@ -1836,7 +1765,7 @@ export default function Viewport({
               ? 'Downloads a PNG screenshot. Vector linework export needs an orthographic view mode (Axo/Plan/Front/Side).'
               : 'Downloads a PNG screenshot and a vector linework SVG (Blender Line Art, real geometry, depth-layered).'
           }
-          className="bg-accent text-background px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="bg-accent text-background px-2 py-1 font-mono-sm text-[9px] font-bold uppercase rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {exportingVectorView ? 'Exporting Linework...' : 'Export Current View'}
         </button>
@@ -1844,14 +1773,14 @@ export default function Viewport({
           onClick={onSaveBuild}
           disabled={!canSaveBuild || savingBuild}
           title="Saves the current build (params, geometry, network, program zones) into the repo's build archive (outputs/pershing_archive/) -- browse or recall it from the ARCHIVE tab."
-          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+          className="bg-surface-container-high text-primary border border-border px-2 py-1 font-mono-sm text-[9px] font-bold uppercase rounded self-start hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {savingBuild ? 'Saving...' : 'Save Build'}
         </button>
         <button
           onClick={() => loadBuildInputRef.current?.click()}
           title="Load a previously saved build JSON file to recall that exact iteration."
-          className="bg-surface-container-high text-primary border border-border px-4 py-2 font-mono-sm text-mono-sm font-bold uppercase tracking-widest rounded self-start hover:brightness-110 transition-all active:scale-[0.98]"
+          className="bg-surface-container-high text-primary border border-border px-2 py-1 font-mono-sm text-[9px] font-bold uppercase rounded self-start hover:brightness-110 transition-all active:scale-[0.98]"
         >
           Load Build
         </button>
@@ -1884,9 +1813,6 @@ export default function Viewport({
             View Line Art
           </button>
         )}
-      </div>
-      <div className="absolute bottom-4 right-4">
-        <ProgramLegend zones={programZones} />
       </div>
     </div>
   );

@@ -1,3 +1,9 @@
+import { useState } from 'react';
+import PROGRAM_COLORS from '../programColors.json';
+
+const PROGRAM_COLOR = PROGRAM_COLORS.programs;
+const PROGRAM_FALLBACK_COLOR = PROGRAM_COLORS.fallback;
+
 function Slider({ label, value, min, max, step, onChange, format }) {
   return (
     <div className="space-y-2">
@@ -64,7 +70,12 @@ export default function ParamPanel({
   onBuildInBlender, lineartEnabled, onLineartEnabledChange, networkParams, onNetworkParamsChange,
   networkResult, onCarveCanyon, carvingCanyon,
   canopyParams, onCanopyParamsChange, onGenerateCanopy, generatingCanopy, canopyResult,
+  programZones,
 }) {
+  // Minimized by default (2026-08-03) -- most of the time the 3D view is
+  // the point, not this sidebar; a slim edge tab expands it back on demand.
+  const [collapsed, setCollapsed] = useState(true);
+
   const set = (key) => (value) => onParamsChange({ ...params, [key]: value });
   const blenderBusy = blenderBuild?.status === 'queued' || blenderBuild?.status === 'running';
 
@@ -76,11 +87,32 @@ export default function ParamPanel({
   const setNetworkField = (key) => (value) => onNetworkParamsChange({ ...networkParams, [key]: value });
   const setCanopyField = (key) => (value) => onCanopyParamsChange({ ...canopyParams, [key]: value });
 
+  if (collapsed) {
+    return (
+      <aside className="w-8 border-l border-border bg-surface flex flex-col items-center pt-3 shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          title="Expand parameters"
+          className="text-on-surface-variant hover:text-primary font-mono-sm text-mono-sm px-1 py-2 rounded"
+        >
+          ‹
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-80 border-l border-border bg-surface flex flex-col shrink-0 overflow-y-auto">
       <div className="p-container border-b border-border space-y-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="font-headline-md text-headline-md text-primary">PARAMETERS</h3>
+          <button
+            onClick={() => setCollapsed(true)}
+            title="Collapse parameters"
+            className="text-on-surface-variant hover:text-primary font-mono-sm text-mono-sm px-2 py-1 rounded"
+          >
+            ›
+          </button>
         </div>
 
         <Slider
@@ -315,6 +347,29 @@ export default function ParamPanel({
           );
         })}
       </div>
+
+      {(() => {
+        const placedZones = (programZones ?? []).filter((z) => z.bays.length > 0);
+        if (placedZones.length === 0) return null;
+        return (
+          <div className="p-container border-b border-border space-y-2">
+            <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">
+              Programs Placed
+            </h4>
+            {placedZones.map((zone) => (
+              <div key={zone.program_item} className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 shrink-0 border border-border"
+                  style={{ backgroundColor: PROGRAM_COLOR[zone.program_item] || PROGRAM_FALLBACK_COLOR }}
+                />
+                <span className="font-mono-sm text-[11px] text-on-surface-variant whitespace-nowrap">
+                  {zone.program_item}{zone.fulfilled ? '' : ' (partial)'}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="p-container border-b border-border space-y-3">
         <h4 className="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-widest rounded">

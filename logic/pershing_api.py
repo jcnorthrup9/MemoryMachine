@@ -461,6 +461,14 @@ class RebuildParams(BaseModel):
     # before this existed). See _program_zones_from_engine's
     # disabled_programs param and ParamPanel.jsx's Programs checklist.
     disabled_programs: list[str] = []
+    # 2026-08-12: opt-in program-placement randomization -- see
+    # program_placement.place_programs()'s own docstring for why this is
+    # needed (placement is otherwise fully deterministic, no randomness
+    # lever at all) and why None (default, zero jitter, byte-identical to
+    # pre-2026-08-12 behavior) is the right default for the live app. Batch/
+    # scripted callers that want genuinely diverse building footprints
+    # across a param sweep should pass a different int per run.
+    placement_seed: int | None = None
     # 2026-07-23: optional inline circulation-network growth -- when set,
     # rebuild() also runs CirculationNetworkEngine using the SAME engine/
     # voxels/typology_specs its own _run_pipeline() call already produced
@@ -827,7 +835,7 @@ def get_bay_grid():
     return _bay_grid_from_engine(engine, voxels)
 
 
-def _program_zones_from_engine(engine, voxels, disabled_programs=None):
+def _program_zones_from_engine(engine, voxels, disabled_programs=None, placement_seed=None):
     """Body of get_program_zones(), extracted (2026-07-12) the same way as
     _bay_grid_from_engine() -- see that function's docstring for why.
 
@@ -835,10 +843,14 @@ def _program_zones_from_engine(engine, voxels, disabled_programs=None):
     passed straight through to load_programs()'s exclude_ids -- None here
     (get_program_zones()'s own default-params wrapper below) means every
     program participates, same pre-existing behavior; rebuild() passes
-    params.disabled_programs instead (see its own call site)."""
+    params.disabled_programs instead (see its own call site).
+
+    placement_seed (2026-08-12): passed straight through to
+    place_programs()'s own placement_seed -- see that function's docstring.
+    None here means zero jitter, same pre-existing deterministic behavior."""
     bay_grid = _bay_grid_from_engine(engine, voxels)
     programs = load_programs(exclude_ids=disabled_programs)
-    return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs)}
+    return {"bay_ft": bay_grid["bay_ft"], "zones": place_programs(bay_grid, programs, placement_seed=placement_seed)}
 
 
 def get_program_zones():
@@ -1013,7 +1025,8 @@ def rebuild(params: RebuildParams):
     different feature)."""
     engine, voxels, typology_specs, base_specs, meta = _run_pipeline(params)
 
-    zones = _program_zones_from_engine(engine, voxels, disabled_programs=params.disabled_programs)["zones"]
+    zones = _program_zones_from_engine(
+        engine, voxels, disabled_programs=params.disabled_programs, placement_seed=params.placement_seed)["zones"]
 
     # 2026-07-24: typology_specs/base_specs above were already computed
     # inside _run_pipeline(), BEFORE zones existed (chicken-and-egg: zones
@@ -1330,7 +1343,8 @@ def generate_canopy(payload: GenerateCanopyRequest):
     """
     engine, voxels, _typology_specs, _base_specs, _meta = _run_pipeline(payload.rebuild)
     zones = _program_zones_from_engine(
-        engine, voxels, disabled_programs=payload.rebuild.disabled_programs)["zones"]
+        engine, voxels, disabled_programs=payload.rebuild.disabled_programs,
+        placement_seed=payload.rebuild.placement_seed)["zones"]
 
     canopy = CanopyEngine(
         REAL_GEOMETRY, engine, voxels, zones,
@@ -1415,14 +1429,15 @@ def generate_drawings(payload: GenerateDrawingsRequest):
     """
     engine, voxels, typology_specs, _base_specs, _meta = _run_pipeline(payload.rebuild)
     zones = _program_zones_from_engine(
-        engine, voxels, disabled_programs=payload.rebuild.disabled_programs)["zones"]
+        engine, voxels, disabled_programs=payload.rebuild.disabled_programs,
+        placement_seed=payload.rebuild.placement_seed)["zones"]
 
     style = payload.drawing.style
     show_labels = payload.drawing.show_labels
     if style == "lineweight":
         svg = drawing_styles.render_lineweight_svg(
             REAL_GEOMETRY, engine, voxels, view=payload.drawing.view,
-            level=payload.drawing.level, show_labels=show_labels)
+            level=payload.drawing.level, show_labels=show_labels, typology_specs=typology_specs, zones=zones)
         return {"svg": svg}
 
     program_boxes = _drawing_program_boxes(zones)
@@ -1433,7 +1448,7 @@ def generate_drawings(payload: GenerateDrawingsRequest):
         svg = drawing_styles.render_color_svg(
             program_boxes, circulation_specs, voxels, engine.voxel_ft,
             REAL_GEOMETRY, typology_specs, engine.site_width_ft, engine.site_length_ft,
-            show_labels=show_labels,
+            show_labels=show_labels, zones=zones,
         )
         return {"svg": svg}
 
@@ -1484,7 +1499,8 @@ def save_drawing(payload: SaveDrawingRequest):
 
     engine, voxels, typology_specs, _base_specs, _meta = _run_pipeline(payload.rebuild)
     zones = _program_zones_from_engine(
-        engine, voxels, disabled_programs=payload.rebuild.disabled_programs)["zones"]
+        engine, voxels, disabled_programs=payload.rebuild.disabled_programs,
+        placement_seed=payload.rebuild.placement_seed)["zones"]
 
     written = []
 
@@ -1497,14 +1513,17 @@ def save_drawing(payload: SaveDrawingRequest):
     if style == "lineweight":
         level = payload.drawing.level
         _write(f"{slug}.svg", "w", drawing_styles.render_lineweight_svg(
-            REAL_GEOMETRY, engine, voxels, view=view, level=level, show_labels=show_labels))
+            REAL_GEOMETRY, engine, voxels, view=view, level=level, show_labels=show_labels,
+            typology_specs=typology_specs, zones=zones))
         _write(f"{slug}.png", "wb", drawing_styles.render_lineweight_png(
-            REAL_GEOMETRY, engine, voxels, view=view, level=level, show_labels=show_labels))
-        layers, title = drawing_styles.lineweight_layers(REAL_GEOMETRY, engine, voxels, view, level=level)
+            REAL_GEOMETRY, engine, voxels, view=view, level=level, show_labels=show_labels,
+            typology_specs=typology_specs, zones=zones))
+        layers, title, hatch_layers = drawing_styles.lineweight_layers(
+            REAL_GEOMETRY, engine, voxels, view, level=level, typology_specs=typology_specs, zones=zones)
         if layers is not None:
             drawing_styles.export_lineweight_dxf(
                 REAL_GEOMETRY, engine, layers, title,
-                os.path.join(DRAWINGS_EXPORT_DIR, f"{slug}.dxf"), show_labels=show_labels)
+                os.path.join(DRAWINGS_EXPORT_DIR, f"{slug}.dxf"), show_labels=show_labels, hatch_layers=hatch_layers)
             written.append(f"{slug}.dxf")
 
     elif style == "color":
@@ -1513,10 +1532,10 @@ def save_drawing(payload: SaveDrawingRequest):
             REAL_GEOMETRY, engine, typology_specs, zones=zones, path_hints=PATH_HINT_POINTS).run()
         args = (program_boxes, circulation_specs, voxels, engine.voxel_ft,
                  REAL_GEOMETRY, typology_specs, engine.site_width_ft, engine.site_length_ft)
-        _write(f"{slug}.svg", "w", drawing_styles.render_color_svg(*args, show_labels=show_labels))
-        _write(f"{slug}.png", "wb", drawing_styles.render_color_png(*args, show_labels=show_labels))
+        _write(f"{slug}.svg", "w", drawing_styles.render_color_svg(*args, show_labels=show_labels, zones=zones))
+        _write(f"{slug}.png", "wb", drawing_styles.render_color_png(*args, show_labels=show_labels, zones=zones))
         drawing_styles.export_color_dxf(
-            *args, out_path=os.path.join(DRAWINGS_EXPORT_DIR, f"{slug}.dxf"), show_labels=show_labels)
+            *args, out_path=os.path.join(DRAWINGS_EXPORT_DIR, f"{slug}.dxf"), show_labels=show_labels, zones=zones)
         written.append(f"{slug}.dxf")
 
     elif style == "diagram":

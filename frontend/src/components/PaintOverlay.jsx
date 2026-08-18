@@ -210,7 +210,12 @@ export default function PaintOverlay({ config, initialCategory, onClose, onBaked
       const result = await bakePaint(grids);
       log?.(`baked: ${JSON.stringify(result.counts)}`);
       setModalError(null);
-      await onBaked?.();
+      // 2026-08-17: closeAfterBake doubles as "this was the explicit Bake
+      // button, not the 600ms debounced auto-bake-while-painting" -- passed
+      // through so App.jsx can autosave to the Archive only on the
+      // deliberate action, not on every pause mid-stroke (see App.jsx's
+      // doRebuild autoSaveArchive comment).
+      await onBaked?.(closeAfterBake);
       if (closeAfterBake) onClose?.();
     } catch (err) {
       log?.(String(err), 'error');

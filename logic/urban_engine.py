@@ -30,15 +30,49 @@ def _infer_raster_role(layer_id):
     return "hardscape"
 
 
+def _weighted_choice(items, weights):
+    """Weighted random choice without a numpy dependency. Mirrors
+    logic/ai_synthesizer.py's helper of the same name -- duplicated rather
+    than imported since ai_synthesizer.py imports THIS module (guideline_
+    manager), so importing back here would be circular. Falls back to
+    uniform choice if every weight is 0/negative."""
+    total = sum(w for w in weights if w > 0)
+    if total <= 0:
+        return random.choice(items)
+    r = random.uniform(0, total)
+    upto = 0
+    for item, w in zip(items, weights):
+        if w <= 0:
+            continue
+        upto += w
+        if upto >= r:
+            return item
+    return items[-1]
+
+
 def _best_area_anchor(layers, layer_site_membership, valid_sites):
     """Among every (layer, site) combo for this category's candidate
     layers, measure each one's NATURAL (scale=1.0) rasterized area and
-    return a randomly-chosen one from those within 80% of the best --
-    biasing toward real headroom (see remix_layers()'s comment on why
-    "resolves at all" isn't a strong enough bar) while keeping some site
-    variety between generations instead of deterministically always
-    picking the single largest. Returns None if nothing in this category
-    resolves to any real geometry anywhere."""
+    return one chosen by weighted random (weight = area) across every
+    candidate with nonzero area -- biases toward real headroom (see
+    remix_layers()'s comment on why "resolves at all" isn't a strong
+    enough bar) while giving every site with any real coverage a genuine,
+    non-zero chance, instead of deterministically always picking the
+    single largest. Returns None if nothing in this category resolves to
+    any real geometry anywhere.
+
+    2026-08-13: replaced the original "randomize among top 20% by area"
+    hard cutoff -- confirmed empirically (direct area measurement across
+    all 5 precedent sites) to collapse to exactly ONE candidate for EVERY
+    guideline category given this precedent set's real area distribution
+    (e.g. GREEN_SPACE: ParcVillette=628 vs runner-up ZaryadyePark=390,
+    only 62% of best, already below the 80% floor -- HARDSCAPE/
+    WATER_FEATURES/MAJOR_ATTRACTORS all showed the identical one-candidate
+    collapse), making every generated diagram's anchor layers fully
+    deterministic despite the "random" framing. Weighted-random restores
+    genuine variety (matching this function's pre-2026-07-31 unweighted-
+    random spirit) while keeping the real-coverage guarantee that
+    pre-2026-07-31 behavior lacked."""
     import ingest_diagram_svg
 
     candidates = []
@@ -66,9 +100,8 @@ def _best_area_anchor(layers, layer_site_membership, valid_sites):
 
     if not candidates:
         return None
-    best_area = max(c[0] for c in candidates)
-    near_best = [c for c in candidates if c[0] >= 0.8 * best_area]
-    _area, layer, site = random.choice(near_best)
+    areas = [c[0] for c in candidates]
+    _area, layer, site = _weighted_choice(candidates, areas)
     return layer, site
 
 class GuidelineManager:
@@ -252,6 +285,15 @@ def remix_layers(seed_items):
         raw_site  = item.get("site", "PershingSquare")
         layer     = item.get("layer", "GREEN_SPACE")
         location  = item.get("location", "Center")
+        # The AI's raw generation response occasionally puts a nested object
+        # in "location" instead of a cardinal string (e.g. "Center"/"North")
+        # -- LOCATION_OFFSETS.get(location, ...) below then crashes with
+        # "unhashable type: 'dict'" since dicts can't be dict keys. Only
+        # plain strings are ever valid LOCATION_OFFSETS keys, so fall back
+        # to the same default this field already has instead of trusting
+        # whatever shape the AI actually returned.
+        if not isinstance(location, str):
+            location = "Center"
 
         if layer not in valid_layers:
             layer = "GREEN_SPACE"
@@ -289,7 +331,13 @@ def remix_layers(seed_items):
             "opacity": 0.85,
             "target_width": 400,
             "target_height": 400,
-            "primitive": prim
+            "primitive": prim,
+            # 2026-08-13: carried through from seed_items so the anchor
+            # loop below can tell "user explicitly asked for this
+            # category" apart from "the AI/random picker happened to land
+            # here" -- see extract_prompt_hints()/_ensure_hints_present()
+            # in logic/ai_synthesizer.py.
+            "_explicit_hint": bool(item.get("_explicit_hint")),
         })
 
     layer_to_category = {
@@ -325,6 +373,18 @@ def remix_layers(seed_items):
     # "when the category is empty".
     for cat, layers in zonal_metadata.items():
         if not layers:
+            continue
+        # 2026-08-13: don't add a competing anchor for a category the user
+        # already explicitly requested (via extract_prompt_hints) -- even
+        # though this wouldn't overwrite their pick, appending a different
+        # site's layer in the same category visually dilutes/competes with
+        # what they specifically asked for. See composed's own
+        # "_explicit_hint" field, set above.
+        category_explicitly_requested = any(
+            it.get("_explicit_hint") and layer_to_category.get(it["layerId"]) == cat
+            for it in composed
+        )
+        if category_explicitly_requested:
             continue
         anchor = _best_area_anchor(layers, LAYER_SITE_MEMBERSHIP, valid_sites)
         if anchor is None:

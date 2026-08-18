@@ -76,7 +76,7 @@ function timeNow() {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('RECONSTRUCT');
+  const [activeTab, setActiveTab] = useState('SPATIALIZE');
   const [config, setConfig] = useState(null);
   const [programZones, setProgramZones] = useState(null);
   // Mirrors SpatializerPanel's live diagram (2026-07-24) -- reported up via
@@ -107,7 +107,9 @@ export default function App() {
   // renders) need to share this state.
   const [visibleLayers, setVisibleLayers] = useState({
     realContext: true, structural: true, greenscape: true, trees: true,
-    circulation: true, canopy: true, programZones: true, staticContext: true,
+    // 2026-08-17: canopy off by default -- opt-in via ParamPanel's layer
+    // checkboxes instead of cluttering the initial RECONSTRUCT view.
+    circulation: true, canopy: false, programZones: true, staticContext: true,
     // 2026-07-24: on by default -- extruded placeholder massing is now the
     // default view (previously opt-in, see logic/pershing_api.py's
     // rebuild() docstring for why this is a separate toggle from both
@@ -143,13 +145,26 @@ export default function App() {
   // the just-restored snapshot with a fresh live recompute -- see
   // restoreSnapshot's own comment for the full race.
   const skipNextRebuildRef = useRef(false);
+  // 2026-08-17: bumped by doRebuild after a bake-triggered rebuild commits
+  // -- see the autosave effect further down for why this indirection
+  // exists instead of saving directly from doRebuild.
+  const [autoSaveNonce, setAutoSaveNonce] = useState(0);
 
   const log = useCallback((text, level = 'info') => {
     setLogs((prev) => [...prev.slice(-49), { time: timeNow(), text, level }]);
   }, []);
 
+  // 2026-08-17: optional 3rd arg so callers that represent an actual
+  // bake+rebuild (SpatializerPanel/PaintOverlay's onBaked) can opt into
+  // autosaving the result to the Archive -- see the autoSaveNonce effect
+  // below for why this bumps a counter instead of calling handleSaveBuild
+  // directly (avoids saving a stale pre-rebuild snapshot). ParamPanel's
+  // plain "Rebuild" (slider tweaks) deliberately does NOT pass this --
+  // archive entries are multi-MB and a bake is a much rarer, more
+  // deliberate action than dragging a slider.
   const doRebuild = useCallback(
-    async (nextParams, nextNetworkParams) => {
+    async (nextParams, nextNetworkParams, options) => {
+      const { autoSaveArchive = false } = options ?? {};
       setRebuilding(true);
       try {
         const payload = { ...(nextParams ?? params), network: nextNetworkParams ?? networkParams };
@@ -183,6 +198,14 @@ export default function App() {
         log(
           `faces=${result.voxels.length} structural=${result.structural.length} slab=${result.slab_harvest_tons.toFixed(0)}t`,
         );
+        // Bump instead of calling handleSaveBuild() here directly: this
+        // closure's buildSnapshot/handleSaveBuild were captured at the last
+        // render and would still see the PRE-rebuild `data` state (setData
+        // above hasn't been committed/re-rendered yet at this point in the
+        // async flow). The effect below fires after React commits the new
+        // data/network/programZones state, so buildSnapshot() there is
+        // guaranteed fresh.
+        if (autoSaveArchive) setAutoSaveNonce((n) => n + 1);
       } catch (err) {
         log(String(err), 'error');
       } finally {
@@ -764,13 +787,14 @@ export default function App() {
 
   const [savingBuild, setSavingBuild] = useState(false);
 
-  const handleSaveBuild = useCallback(async () => {
+  const handleSaveBuild = useCallback(async (options) => {
+    const { auto = false } = options ?? {};
     const snapshot = buildSnapshot();
     if (!snapshot) return;
     setSavingBuild(true);
     try {
       const result = await saveToArchive(snapshot, '');
-      log(`build saved: ${result.label || result.filename}`);
+      log(`${auto ? 'autosaved after bake' : 'build saved'}: ${result.label || result.filename}`);
       // 2026-07-24: also archives as a "2D generation" record (same shape/
       // dir list2DGenerations() already reads) so the diagram that produced
       // this build shows up in SPATIALIZE's "Recent 2D Generations" panel
@@ -787,6 +811,18 @@ export default function App() {
       setSavingBuild(false);
     }
   }, [buildSnapshot, spatializeState, log]);
+
+  // 2026-08-17: fires after a bake-triggered rebuild's state (data/
+  // network/programZones) has actually committed -- see doRebuild's
+  // autoSaveArchive branch above, which only bumps the nonce, not save
+  // directly, to avoid archiving a stale pre-rebuild snapshot. Guarded by
+  // buildSnapshot's own `if (!data) return null` for the mount-time fire
+  // every useEffect gets for free, so no extra "skip first run" ref needed.
+  useEffect(() => {
+    if (autoSaveNonce === 0) return;
+    handleSaveBuild({ auto: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSaveNonce]);
 
   const handleLoadBuild = useCallback(
     (file) => {
@@ -817,7 +853,10 @@ export default function App() {
         <div className={`flex flex-1 overflow-hidden ${activeTab === 'SPATIALIZE' ? '' : 'hidden'}`}>
           <SpatializerPanel
             onBaked={async () => {
-              await doRebuild(params);
+              // Both of SpatializerPanel's own bake actions (Bake+Rebuild,
+              // Load+Bake This Generation) are deliberate clicks, not a
+              // debounced auto-trigger, so always autosave here.
+              await doRebuild(params, undefined, { autoSaveArchive: true });
             }}
             onPaint={() => setShowPaint(true)}
             log={log}
@@ -896,6 +935,7 @@ export default function App() {
               onGenerateCanopy={handleGenerateCanopy}
               generatingCanopy={generatingCanopy}
               canopyResult={canopyResult}
+              programZones={programZones?.zones}
             />
           </>
         )}
@@ -915,9 +955,13 @@ export default function App() {
           // PaintOverlay's own call (closeAfterBake), since auto-bake while
           // painting (2026-07-10) must rebuild WITHOUT closing, and this
           // single onBaked prop is shared by both the explicit Bake button
-          // and the auto-bake path.
-          onBaked={async () => {
-            await doRebuild(params);
+          // and the auto-bake path. explicit (PaintOverlay's closeAfterBake)
+          // gates the Archive autosave: only the deliberate "Bake Painted
+          // Sketch" click qualifies, not the 600ms debounced auto-bake that
+          // fires on every pause mid-stroke -- that would spam the Archive
+          // with a multi-MB snapshot several times a minute while painting.
+          onBaked={async (explicit) => {
+            await doRebuild(params, undefined, { autoSaveArchive: !!explicit });
           }}
           log={log}
         />

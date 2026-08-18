@@ -21,6 +21,7 @@ match architectural/DXF convention. real_geometry.json's meshes are Y-up
 is converted via (x, y_obj, z_obj) -> (x, z_obj, y_obj) on load.
 """
 import math
+import time
 
 import numpy as np
 
@@ -39,6 +40,7 @@ LAYER_PROJECTION = "LAYER_02_PROJECTION"
 LAYER_BOTANICAL = "LAYER_03_BOTANICAL"
 LAYER_GRID = "LAYER_04_GRID"
 LAYER_LABELS = "LAYER_05_LABELS"
+LAYER_GREENSCAPE = "LAYER_06_GREENSCAPE"
 
 LAYER_COLORS = {
     LAYER_CUT: "#000000",
@@ -46,6 +48,44 @@ LAYER_COLORS = {
     LAYER_BOTANICAL: "#2e7d32",
     LAYER_GRID: "#cc0000",
     LAYER_LABELS: "#0066cc",
+    LAYER_GREENSCAPE: "#4caf50",
+}
+
+# 2026-08-04: named hatch patterns for closed massing/ground-cover polygons
+# (see export_svg/export_png/export_dxf's `hatch_layers` param -- a
+# dict of layer_name -> one of these keys, not the raw pattern itself, so
+# each format can supply its own concrete rendering of the same concept).
+# "building" = diagonal poche (standard site-plan massing convention),
+# "grass" = blade/tick texture (standard ground-cover convention -- ezdxf's
+# own built-in pattern is literally named GRASS), "tree" = stipple/dot
+# texture (standard canopy-foliage convention).
+HATCH_BUILDING = "building"
+HATCH_GRASS = "grass"
+HATCH_TREE = "tree"
+
+_PNG_HATCH_CHARS = {HATCH_BUILDING: "///", HATCH_GRASS: "|||", HATCH_TREE: "..."}
+_DXF_HATCH_PATTERN = {HATCH_BUILDING: "ANSI31", HATCH_GRASS: "GRASS", HATCH_TREE: "DOTS"}
+_SVG_HATCH_DEFS = {
+    HATCH_BUILDING: (
+        '<pattern id="hatch-building" patternUnits="userSpaceOnUse" width="4" height="4" '
+        'patternTransform="rotate(45)">'
+        '<rect width="4" height="4" fill="white"/>'
+        '<line x1="0" y1="0" x2="0" y2="4" stroke="#000000" stroke-width="1.1"/>'
+        '</pattern>'
+    ),
+    HATCH_GRASS: (
+        '<pattern id="hatch-grass" patternUnits="userSpaceOnUse" width="4" height="4">'
+        '<rect width="4" height="4" fill="white"/>'
+        '<line x1="1" y1="0.4" x2="1" y2="2.4" stroke="#000000" stroke-width="0.6"/>'
+        '<line x1="3" y1="1.6" x2="3" y2="3.6" stroke="#000000" stroke-width="0.6"/>'
+        '</pattern>'
+    ),
+    HATCH_TREE: (
+        '<pattern id="hatch-tree" patternUnits="userSpaceOnUse" width="3" height="3">'
+        '<rect width="3" height="3" fill="white"/>'
+        '<circle cx="1.5" cy="1.5" r="0.5" fill="#000000"/>'
+        '</pattern>'
+    ),
 }
 
 # Street-edge labels for plan/axo views, in this module's site-local (x, y)
@@ -67,16 +107,27 @@ STREET_LABELS = [
     ("6TH ST", "y0"),
 ]
 
+# 2026-08-03: labels used to sit exactly on the boundary coordinate with no
+# rotation, so long labels on the x0/xmax edges (vertical streets, rendered
+# horizontally) routinely overlapped well past the drawing's own margin into
+# real site geometry. LABEL_OFFSET_FT pushes each label out past the
+# boundary into the margin; street_label_points' rotation lets each label
+# run parallel to its own street instead of always reading left-to-right.
+LABEL_OFFSET_FT = 8.0
+
 
 def street_label_points(site_width_ft, site_length_ft):
-    """(text, (x, y)) pairs at the midpoint of each site edge, for LAYER_LABELS."""
+    """(text, (x, y), rotation_deg) triples at the midpoint of each site
+    edge, offset LABEL_OFFSET_FT outward into the margin and rotated to run
+    parallel to that edge's own street (0 deg for the y0/ymax edges, 90 deg
+    for the x0/xmax edges), for LAYER_LABELS."""
     edge_pos = {
-        "x0": (0.0, site_length_ft / 2),
-        "xmax": (site_width_ft, site_length_ft / 2),
-        "y0": (site_width_ft / 2, 0.0),
-        "ymax": (site_width_ft / 2, site_length_ft),
+        "x0": ((-LABEL_OFFSET_FT, site_length_ft / 2), 90),
+        "xmax": ((site_width_ft + LABEL_OFFSET_FT, site_length_ft / 2), 90),
+        "y0": ((site_width_ft / 2, -LABEL_OFFSET_FT), 0),
+        "ymax": ((site_width_ft / 2, site_length_ft + LABEL_OFFSET_FT), 0),
     }
-    return [(text, edge_pos[edge]) for text, edge in STREET_LABELS]
+    return [(text, *edge_pos[edge]) for text, edge in STREET_LABELS]
 
 
 def _obj_to_site(flat_verts):
@@ -409,6 +460,39 @@ def build_combined_mesh(real_geometry, engine, voxels):
     return trimesh.util.concatenate(all_meshes)
 
 
+def concat_meshes(meshes):
+    """trimesh.util.concatenate, skipping None entries -- lets callers pass
+    build_combined_mesh(...)'s result alongside build_massing_mesh(...)'s
+    (which is None when there's no massing to add) without a None check at
+    every call site."""
+    import trimesh
+    meshes = [m for m in meshes if m is not None]
+    return trimesh.util.concatenate(meshes) if meshes else None
+
+
+def build_massing_mesh(building_specs):
+    """One trimesh box per program-derived building mass (terracing_engine.
+    BuildingMassEngine's StructuralElement("building_mass", ...) output --
+    see drawing_styles.py's own massing box builder for how these get
+    constructed from `zones`). x_ft/y_ft are the box CENTER (BuildingMassEngine's
+    own convention, NOT build_terraced_solid's grid-corner one), z_top_ft is
+    the box TOP -- matches StructuralElement's top-anchored convention used
+    everywhere else in this pipeline. Returns None if building_specs is
+    empty (2026-08-12: section/axo/long_section never included building
+    massing at all before this -- only the separate "plan" aerial view drew
+    it, via its own zones-polygon path -- confirmed by direct code reading
+    that build_combined_mesh() above never touches zones/program massing)."""
+    import trimesh
+    if not building_specs:
+        return None
+    boxes = []
+    for spec in building_specs:
+        box = trimesh.creation.box(extents=[spec.scale, spec.scale_y, spec.height_ft])
+        box.apply_translation([spec.x_ft, spec.y_ft, spec.z_top_ft - spec.height_ft / 2])
+        boxes.append(box)
+    return trimesh.util.concatenate(boxes)
+
+
 def build_named_scene(real_geometry, engine, voxels):
     """
     Same geometry as build_combined_mesh, but kept as separate NAMED parts
@@ -451,14 +535,29 @@ def mirror_mesh_y(mesh, site_length_ft):
 
 
 # Default axonometric view direction: true isometric (equal angles to all
-# three axes). Chosen (2026-07-03) per user request -- camera "pointing
-# towards Hill St, entrance on the right" -- verified numerically (this
-# view_dir puts HILL/entrance at the largest positive u of the candidates
-# checked, ~+460/+695, with 5TH still the topmost reference point at
-# v=+174). Applied to the Y-mirrored mesh (see mirror_mesh_y / the
-# axo-section of run_vector_export_demo.py) -- X (Olive/Hill) was already
-# confirmed correct and untouched by that mirror.
-AXO_VIEW_DIR = np.array([1.0, -1.0, 1.0]) / np.sqrt(3.0)
+# three axes). Originally [1,-1,1] (chosen 2026-07-03, "Hill St, entrance
+# on the right"). Corrected 2026-08-12: the real invariant that matters is
+# the Hill St / 5th St corner (the real-world Pershing Square Station
+# entrance location) reading at the TOP of the frame, CONSISTENTLY -- not
+# just "the metro connector mesh happens to look like it's in the top-right
+# region" (an earlier pass here tried [-1,-1,1], picked by eyeballing an
+# unlabeled render; it put the connector on the right side but NOT at the
+# actual top -- see the numeric check below). Verified properly this time
+# by projecting all 4 site corners (via axo_label_points' own u/v basis,
+# same math as the real STREET_LABELS) through each of the 4 above-grade
+# isometric octants and comparing which one ranks the Hill/5th corner
+# (xmax, ymax) highest on the v axis: [-1,-1,1] ranked it only 3rd of 4
+# (Hill/6th was actually topmost there); [-1,1,1] ranks Hill/5th 1st (true
+# topmost) while still 2nd-most-rightward of the 4 corners (not
+# left-leaning) -- confirmed visually too (HILL ST/5TH ST labels meet
+# exactly at the top corner, right at the connector). Still a proper
+# rotation of the same view family, not a post-hoc 2D mirror (a mirror_y
+# page-flip was tried first and rejected -- it broke handedness, since
+# axo's v-axis encodes real 3D structure unlike a flat plan's, making the
+# drawing read as upside-down/mirrored instead of just relocated). Applied
+# to the Y-mirrored mesh (see mirror_mesh_y) -- kept as-is; only this
+# view_dir changed.
+AXO_VIEW_DIR = np.array([-1.0, 1.0, 1.0]) / np.sqrt(3.0)
 
 
 def _axo_basis(view_dir):
@@ -515,18 +614,42 @@ def compute_feature_edges(mesh, view_dir, crease_angle_deg=25.0):
     return edges
 
 
-def _batch_visible(intersector, points, view_dir, eps=0.02):
+def _batch_visible(intersector, points, view_dir, eps=0.02, chunk_size=2000, time_budget_s=60):
     """
     Vectorized orthographic visibility test: a point is visible from the
     camera (positioned at +infinity along view_dir) if a ray cast from that
     point (nudged eps toward the camera, to clear its own source face)
     along view_dir hits nothing before leaving the scene.
+
+    Chunked rather than one intersects_location() call over every point at
+    once -- trimesh's ray-triangle candidate search has a real, confirmed
+    memory pathology on dense grids of touching/coplanar faces (see
+    build_terraced_solid's own comment above, and axonometric_projection's
+    docstring: a live repeat of this during dev testing hit ~50GB RSS on a
+    single monolithic call). Chunking bounds peak memory to whatever one
+    chunk costs regardless of total point count. A chunk that still throws
+    MemoryError, or a total runtime past time_budget_s, fails OPEN (those
+    points are left marked visible, i.e. hidden-line removal is skipped for
+    just that slice) rather than crashing the whole render -- a degraded
+    drawing beats none. Embree (embreex, when installed) makes this path
+    fast/stable enough that chunking rarely matters in practice; it's kept
+    as the defense-in-depth backstop regardless of which ray backend trimesh
+    picked, since embreex isn't guaranteed to be present everywhere this
+    runs.
     """
-    origins = points + view_dir * eps
-    directions = np.tile(view_dir, (len(points), 1))
-    _, index_ray, _ = intersector.intersects_location(origins, directions, multiple_hits=False)
+    origins_all = points + view_dir * eps
+    directions_all = np.tile(view_dir, (len(points), 1))
     hit_mask = np.zeros(len(points), dtype=bool)
-    hit_mask[index_ray] = True
+    start = time.monotonic()
+    for i in range(0, len(points), chunk_size):
+        if time.monotonic() - start > time_budget_s:
+            break
+        try:
+            _, index_ray, _ = intersector.intersects_location(
+                origins_all[i:i + chunk_size], directions_all[i:i + chunk_size], multiple_hits=False)
+            hit_mask[i + index_ray] = True
+        except MemoryError:
+            continue
     return ~hit_mask
 
 
@@ -584,12 +707,16 @@ def axo_label_points(site_width_ft, site_length_ft, view_dir=AXO_VIEW_DIR, mirro
     u, v = _axo_basis(view_dir)
     plan_labels = street_label_points(site_width_ft, site_length_ft)
     out = []
-    for text, (x, y) in plan_labels:
+    # Rotation isn't re-derived for the isometric basis here (this view is
+    # unreachable from the UI -- see drawing_styles.py's view=="axo" comment
+    # -- so it's not worth the extra projection math); the plan-space angle
+    # is passed through unchanged.
+    for text, (x, y), angle in plan_labels:
         if mirror_y:
             y = site_length_ft - y
         pt3d = np.array([[x, y, 0.0]])
         pt2d = _project_points(pt3d, view_dir, u, v)[0]
-        out.append((text, tuple(pt2d)))
+        out.append((text, tuple(pt2d), angle))
     return out
 
 
@@ -605,6 +732,42 @@ def filter_short_polylines(polylines, min_span_ft=DEFAULT_MIN_AXO_SPAN_FT):
     def span(poly):
         return max(np.hypot(*(poly[i] - poly[j])) for i in range(len(poly)) for j in range(i + 1, len(poly)))
     return [p for p in polylines if span(p) >= min_span_ft]
+
+
+def mesh_top_edges(mesh, crease_angle_deg=25.0):
+    """
+    Flattens ONE mesh's silhouette/crease edges straight down (view_dir=
+    [0,0,-1]) to 2D (x, y), with NO depth-sorted hidden-line removal --
+    deliberately skips axonometric_projection's ray-cast visibility pass
+    (_batch_visible/mesh.ray), the documented crash-prone code path on this
+    site's geometry (see lineweight_layers' view=="axo" comment in
+    drawing_styles.py). Candidate edges come from the same cheap, ray-cast-
+    free compute_feature_edges() axonometric_projection also uses
+    (silhouette/crease/boundary edges via face adjacency, O(faces), no
+    rtree).
+
+    2026-08-04: this used to be called ONCE on the entire combined mesh
+    (terrace/excavation solid + all real context objects) to build a whole-
+    site "PLAN -- AERIAL" view -- but that drew excavation/retaining-wall
+    edges regardless of depth, i.e. showed geometry a covering surface
+    would actually hide, which violates real site-plan convention (nothing
+    below what's visible from directly above, no hidden-line dashing).
+    lineweight_layers' view=="plan" branch now calls this per small, real,
+    at-grade context object (secondary entrance, metro connector, columns,
+    ramps -- see vector_export.build_context_meshes) instead, since those
+    are already small/shallow enough that skipping full hidden-line removal
+    on each individually is a safe simplification; the terrace/excavation
+    floor and building massing are instead derived from the voxel/bay grid
+    heightfield directly in drawing_styles.py (exact occlusion, no mesh
+    ray-casting needed there either -- bays are claimed exclusively, so a
+    simple coverage mask is enough).
+    Returns a list of 2D (x, y) polylines.
+    """
+    view_dir = np.array([0.0, 0.0, -1.0])
+    edges = compute_feature_edges(mesh, view_dir, crease_angle_deg)
+    if len(edges) == 0:
+        return []
+    return [edge[:, :2] for edge in edges]
 
 
 def section_cut(mesh, plane_origin, plane_normal):
@@ -702,7 +865,7 @@ def real_slab_plan_layers(real_geometry):
         tag = "RAMP" if slab["kind"] == "ramp_slab" else "SLAB"
         labels.append((
             f"{slab['parent']} [{tag}] {slab['area_ft2']:.0f}sf x {slab['thickness_ft']*12:.0f}\"",
-            (cx, cy),
+            (cx, cy), 0,
         ))
 
     columns = real_geometry.get("real_columns", [])
@@ -710,7 +873,7 @@ def real_slab_plan_layers(real_geometry):
         layers["COLUMNS"] = [_circle_polyline(c["x"], c["z"], c["diameter_ft"] / 2) for c in columns]
         labels.append((
             f"{len(columns)} real columns, {columns[0]['diameter_ft']:.2f}ft dia typ.",
-            (columns[0]["x"], columns[0]["z"]),
+            (columns[0]["x"], columns[0]["z"]), 0,
         ))
 
     return layers, labels
@@ -772,22 +935,30 @@ def _mirror_y(layers, labels, min_y, max_y):
     def flip_pt(p):
         return (p[0], (max_y - p[1]) + min_y)
     mirrored_layers = {name: [[flip_pt(p) for p in poly] for poly in polys] for name, polys in layers.items()}
-    mirrored_labels = [(text, flip_pt(pos)) for text, pos in labels] if labels else labels
+    mirrored_labels = [(text, flip_pt(pos), angle) for text, pos, angle in labels] if labels else labels
     return mirrored_layers, mirrored_labels
 
 
-def export_dxf(out_path, layers, title=None, labels=None, mirror_y=False):
+def export_dxf(out_path, layers, title=None, labels=None, mirror_y=False, hatch_layers=None):
     """
     layers: dict of layer_name -> list of 2D polylines (each a list/array of
     (x, y) points). Writes one DXF with each layer as a named DXF layer;
     LWPOLYLINE for polylines with >=2 points, POINT for single points.
     `title` (e.g. an elevation tag) is placed as TEXT below the drawing.
-    `labels` (e.g. street_label_points() output): list of (text, (x, y)),
-    placed as TEXT in-place on LAYER_LABELS -- this is the "labels" toggle:
-    pass None/[] to omit, pass street_label_points(...) to bake them in.
+    `labels` (e.g. street_label_points() output): list of (text, (x, y),
+    rotation_deg), placed as TEXT in-place on LAYER_LABELS -- this is the
+    "labels" toggle: pass None/[] to omit, pass street_label_points(...)
+    to bake them in.
     `mirror_y`: flip the page vertically (see _mirror_y) -- a layout choice,
     not a geometry fix.
+    `hatch_layers`: see export_svg -- dict of layer_name -> HATCH_BUILDING/
+    HATCH_GRASS/HATCH_TREE. Closed polygons on these layers also get a real
+    DXF HATCH entity (the matching named pattern -- ezdxf ships "ANSI31"/
+    "GRASS"/"DOTS" built in) on top of the LWPOLYLINE outline, so massing/
+    ground-cover reads as a solid tonal shape in CAD too, not just an
+    outline.
     """
+    hatch_layers = hatch_layers or {}
     if mirror_y:
         _, _, min_y, max_y = _layers_bounds(layers)
         layers, labels = _mirror_y(layers, labels, min_y, max_y)
@@ -795,21 +966,26 @@ def export_dxf(out_path, layers, title=None, labels=None, mirror_y=False):
     import ezdxf
     doc = ezdxf.new("R2010")
     msp = doc.modelspace()
-    for name in (LAYER_CUT, LAYER_PROJECTION, LAYER_BOTANICAL, LAYER_GRID, LAYER_LABELS):
+    for name in (LAYER_CUT, LAYER_PROJECTION, LAYER_BOTANICAL, LAYER_GRID, LAYER_LABELS, LAYER_GREENSCAPE):
         if name not in doc.layers:
             doc.layers.add(name)
 
     for layer_name, polylines in layers.items():
+        pattern_key = hatch_layers.get(layer_name)
         for pts in polylines:
             pts = list(pts)
             if len(pts) >= 2:
                 msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name})
+                if pattern_key and len(pts) >= 3:
+                    hatch = msp.add_hatch(dxfattribs={"layer": layer_name})
+                    hatch.set_pattern_fill(_DXF_HATCH_PATTERN.get(pattern_key, "ANSI31"), scale=2.0)
+                    hatch.paths.add_polyline_path(pts, is_closed=True)
             elif len(pts) == 1:
                 msp.add_point(pts[0], dxfattribs={"layer": layer_name})
 
     if title:
         min_x, max_x, min_y, max_y = _layers_bounds(layers)
-        text_height = max((max_x - min_x), (max_y - min_y)) * 0.02
+        text_height = max((max_x - min_x), (max_y - min_y)) * 0.01
         msp.add_text(title, dxfattribs={"height": text_height, "layer": LAYER_GRID}).set_placement(
             (min_x, min_y - text_height * 2)
         )
@@ -817,18 +993,28 @@ def export_dxf(out_path, layers, title=None, labels=None, mirror_y=False):
     if labels:
         min_x, max_x, min_y, max_y = _layers_bounds(layers)
         text_height = max((max_x - min_x), (max_y - min_y)) * 0.015
-        for text, pos in labels:
-            msp.add_text(text, dxfattribs={"height": text_height, "layer": LAYER_LABELS}).set_placement(pos)
+        for text, pos, angle in labels:
+            msp.add_text(
+                text, dxfattribs={"height": text_height, "layer": LAYER_LABELS, "rotation": angle}
+            ).set_placement(pos)
 
     doc.saveas(out_path)
     return out_path
 
 
-def export_svg(out_path, layers, margin=20.0, title=None, labels=None, mirror_y=False):
+def export_svg(out_path, layers, margin=20.0, title=None, labels=None, mirror_y=False, hatch_layers=None):
     """Minimal hand-rolled SVG writer -- one <g> per layer, polylines as <polyline>.
     `title` (e.g. an elevation tag) is placed as <text> below the drawing.
     `labels`: see export_dxf -- placed as in-place <text> on LAYER_LABELS.
-    `mirror_y`: see export_dxf -- flips the page vertically, a layout choice."""
+    `mirror_y`: see export_dxf -- flips the page vertically, a layout choice.
+    `hatch_layers` (2026-08-04): dict of layer_name -> HATCH_BUILDING/
+    HATCH_GRASS/HATCH_TREE for layers whose polylines are closed massing/
+    ground-cover footprints -- rendered as hatch-filled <polygon>s with a
+    bolder outline instead of plain unfilled <polyline> strokes, so each
+    reads as a solid tonal shape at a glance (standard site-plan "poche"/
+    ground-cover convention) instead of just more thin outline
+    indistinguishable from the site's other linework."""
+    hatch_layers = hatch_layers or {}
     if mirror_y:
         _, _, min_y0, max_y0 = _layers_bounds(layers)
         layers, labels = _mirror_y(layers, labels, min_y0, max_y0)
@@ -845,31 +1031,41 @@ def export_svg(out_path, layers, margin=20.0, title=None, labels=None, mirror_y=
 
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width:.2f} {height:.2f}">']
     parts.append(f'<rect width="{width:.2f}" height="{height:.2f}" fill="white"/>')
+    used_patterns = set(hatch_layers.values())
+    if used_patterns:
+        defs = "".join(_SVG_HATCH_DEFS[p] for p in used_patterns if p in _SVG_HATCH_DEFS)
+        parts.append(f'<defs>{defs}</defs>')
     for layer_name, polylines in layers.items():
         color = layer_colors.get(layer_name, "#000000")
-        parts.append(f'<g id="{layer_name}" stroke="{color}" fill="none" stroke-width="0.5">')
+        pattern_key = hatch_layers.get(layer_name)
+        hatched = pattern_key is not None
+        fill = f'url(#hatch-{pattern_key})' if hatched else 'none'
+        stroke_width = 0.9 if hatched else 0.5
+        parts.append(f'<g id="{layer_name}" stroke="{color}" fill="{fill}" stroke-width="{stroke_width}">')
         for pts in polylines:
             pts = list(pts)
             if len(pts) >= 2:
                 pts_str = " ".join(f"{p[0]:.3f},{p[1]:.3f}" for p in (flip(p) for p in pts))
-                parts.append(f'<polyline points="{pts_str}" />')
+                tag = 'polygon' if hatched else 'polyline'
+                parts.append(f'<{tag} points="{pts_str}" />')
             elif len(pts) == 1:
                 fx, fy = flip(pts[0])
                 parts.append(f'<circle cx="{fx:.3f}" cy="{fy:.3f}" r="1" fill="{color}" stroke="none"/>')
         parts.append("</g>")
     if labels:
         parts.append(f'<g id="{LAYER_LABELS}" fill="{layer_colors[LAYER_LABELS]}">')
-        for text, pos in labels:
+        for text, pos, angle in labels:
             fx, fy = flip(pos)
+            rotate = f' transform="rotate({angle} {fx:.3f} {fy:.3f})"' if angle else ''
             parts.append(
                 f'<text x="{fx:.3f}" y="{fy:.3f}" font-family="sans-serif" '
-                f'font-size="10" text-anchor="middle">{text}</text>'
+                f'font-size="10" text-anchor="middle"{rotate}>{text}</text>'
             )
         parts.append("</g>")
     if title:
         parts.append(
             f'<text x="{margin:.2f}" y="{height - 6:.2f}" '
-            f'font-family="sans-serif" font-size="14" fill="#000000">{title}</text>'
+            f'font-family="sans-serif" font-size="7" fill="#000000">{title}</text>'
         )
     parts.append("</svg>")
 
@@ -878,19 +1074,24 @@ def export_svg(out_path, layers, margin=20.0, title=None, labels=None, mirror_y=
     return out_path
 
 
-def export_png(out_path, layers, title=None, labels=None, mirror_y=False, dpi=150):
+def export_png(out_path, layers, title=None, labels=None, mirror_y=False, dpi=150, hatch_layers=None):
     """
     Raster PNG rendering of the same layer data as export_svg -- a quick
     visual reference, not a CAD deliverable (that's DXF/SVG). Uses
     matplotlib (already a project dependency) rather than rasterizing the
     SVG, so there's no extra rendering-library dependency to keep in sync
     with the vector writers' layer/color scheme.
+    `hatch_layers`: see export_svg -- rendered as hatch-filled polygons via
+    matplotlib's native `hatch=` patch support (_PNG_HATCH_CHARS maps each
+    pattern key to a valid matplotlib hatch string).
     """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
+    from matplotlib.patches import Polygon as MplPolygon
 
+    hatch_layers = hatch_layers or {}
     if mirror_y:
         _, _, min_y0, max_y0 = _layers_bounds(layers)
         layers, labels = _mirror_y(layers, labels, min_y0, max_y0)
@@ -904,6 +1105,14 @@ def export_png(out_path, layers, title=None, labels=None, mirror_y=False, dpi=15
 
     for layer_name, polylines in layers.items():
         color = LAYER_COLORS.get(layer_name, "#000000")
+        pattern_key = hatch_layers.get(layer_name)
+        if pattern_key:
+            hatch_str = _PNG_HATCH_CHARS.get(pattern_key, "///")
+            for pts in polylines:
+                if len(pts) >= 3:
+                    ax.add_patch(MplPolygon(
+                        pts, closed=True, facecolor='none', hatch=hatch_str, edgecolor=color, linewidth=1.0))
+            continue
         lines = [pts for pts in polylines if len(pts) >= 2]
         if lines:
             ax.add_collection(LineCollection(lines, colors=color, linewidths=0.8))
@@ -912,9 +1121,9 @@ def export_png(out_path, layers, title=None, labels=None, mirror_y=False, dpi=15
                 ax.plot(pts[0][0], pts[0][1], "o", color=color, markersize=1.5)
 
     if labels:
-        for text, pos in labels:
+        for text, pos, angle in labels:
             ax.text(pos[0], pos[1], text, color=LAYER_COLORS[LAYER_LABELS],
-                     fontsize=8, ha="center", va="center")
+                     fontsize=8, ha="center", va="center", rotation=angle)
 
     margin = max(width_ft, height_ft) * 0.03
     ax.set_xlim(min_x - margin, max_x + margin)
@@ -922,7 +1131,7 @@ def export_png(out_path, layers, title=None, labels=None, mirror_y=False, dpi=15
     ax.set_aspect("equal")
     ax.axis("off")
     if title:
-        ax.set_title(title, fontsize=10, loc="left")
+        ax.set_title(title, fontsize=5, loc="left")
 
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight", facecolor="white")
     plt.close(fig)

@@ -44,7 +44,7 @@ REM ping as a portable delay -- unlike "timeout /t", it never touches
 REM stdin, so it doesn't break when this script runs with redirected/piped
 REM input (automation, remote invocation, etc).
 ping -n 3 127.0.0.1 >nul
-start "" http://127.0.0.1:5173
+start "" http://127.0.0.1:5174
 goto :done
 
 :done

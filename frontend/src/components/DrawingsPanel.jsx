@@ -16,38 +16,31 @@ const DRAWING_STYLES = [
 // flat categorized site data, DIAGRAM is a fully abstract program-band
 // chart) -- VIEW/LEVEL only apply there.
 //
-// AXO ("axonometric") is deliberately NOT exposed here (2026-07-24), even
-// though logic/drawing_styles.py's render_lineweight_svg/_png/backend
-// support view="axo" -- confirmed live that requesting it actually crashes
-// the whole shared FastAPI process, not just returns the intended graceful
-// "unavailable" message. Root cause: a real, pre-existing trimesh/rtree
-// pathology (already documented in vector_export.py's own comments) in the
-// ray-candidate search for axonometric_projection's hidden-line removal,
-// triggered by this site's many touching/coplanar terrace boxes -- NOT a
-// simple "mesh too big" problem (the real site mesh here is only ~33k
-// faces), so a face-count guard can't reliably predict or prevent it. The
-// Python-level `except MemoryError` in lineweight_layers() doesn't help
-// either, since the actual failure mode observed was the OS killing the
-// process outright before Python's own exception handling ever ran.
-// Re-enable only once that call is isolated in a subprocess (so a crash
-// there can't take the main server down with it) or the underlying
-// trimesh issue is fixed -- don't just remove this comment and add "axo"
-// back to the list below without one of those two things being true.
+// AXO ("axonometric") was hidden here from 2026-07-24 to 2026-08-12 after
+// its hidden-line-removal pass (axonometric_projection() in
+// vector_export.py) was confirmed to crash the whole shared FastAPI
+// process outright (an OS-level kill under memory pressure, not a
+// catchable Python exception) on a real, pre-existing trimesh/rtree
+// ray-candidate-search pathology. Root-caused and fixed 2026-08-12: (1)
+// trimesh was falling back to its slow rtree-based ray intersector because
+// the fast Embree backend wasn't installed -- `embreex` (requirements.txt)
+// fixes that; (2) vector_export._batch_visible() now chunks its ray batch
+// with a bounded-memory, fail-open fallback regardless of which backend is
+// active, so a still-pathological case degrades (partial hidden-line
+// removal) instead of crashing.
 const DRAWING_VIEWS = [
   { key: 'plan', label: 'PLAN' },
   { key: 'section', label: 'SECTION' },
+  { key: 'axo', label: 'AXO' },
 ];
 
 const CURRENT_PROJECT = '__current__';
 
-// Same 4 named elevations vector_export.py's GARAGE_LEVEL_ELEVATIONS_FT
-// already establishes -- only meaningful for view="plan" (a single fixed
-// cut height can't show a meaningful plan once the design has excavated
-// the whole site to varying depths; see
-// drawing_styles.py::lineweight_layers's own docstring).
-const LEVEL_NAMES = ['SURFACE', 'LEVEL 1', 'LEVEL 2', 'LEVEL 3 / METRO'];
-
-const DEFAULT_DRAWING_PARAMS = { style: 'lineweight', view: 'plan', level: 'SURFACE', show_labels: true };
+// 2026-08-03: PLAN is now a whole-site flattened aerial projection (see
+// drawing_styles.py::lineweight_layers), not a single-elevation cut, so
+// there's no LEVEL to pick anymore -- the backend's `level` field keeps its
+// own "SURFACE" default and is simply unused for view="plan".
+const DEFAULT_DRAWING_PARAMS = { style: 'color', view: 'plan', show_labels: false };
 
 export default function DrawingsPanel({ params, log }) {
   const [drawingParams, setDrawingParams] = useState(DEFAULT_DRAWING_PARAMS);
@@ -107,7 +100,6 @@ export default function DrawingsPanel({ params, log }) {
 
   const handleStyleSelect = (style) => updateDrawingParams({ style });
   const handleViewSelect = (view) => updateDrawingParams({ view });
-  const handleLevelSelect = (level) => updateDrawingParams({ level });
   const handleLabelsToggle = (show_labels) => updateDrawingParams({ show_labels });
 
   const handleProjectSelect = async (value) => {
@@ -146,15 +138,15 @@ export default function DrawingsPanel({ params, log }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
-      <div className="absolute top-4 left-4 flex gap-4 z-10">
+      <div className="absolute top-4 left-4 flex flex-wrap items-start gap-2 z-10">
         <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">STYLE</span>
+          <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">STYLE</span>
           <div className="flex">
             {DRAWING_STYLES.map((s) => (
               <button
                 key={s.key}
                 onClick={() => handleStyleSelect(s.key)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                className={`px-2 py-0.5 font-mono-sm text-[9px] uppercase border-t border-border ${
                   drawingParams.style === s.key
                     ? 'text-accent bg-surface-container-high'
                     : 'text-on-surface-variant hover:text-primary'
@@ -168,13 +160,13 @@ export default function DrawingsPanel({ params, log }) {
 
         {isLineweight && (
           <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-            <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">VIEW</span>
+            <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">VIEW</span>
             <div className="flex">
               {DRAWING_VIEWS.map((v) => (
                 <button
                   key={v.key}
                   onClick={() => handleViewSelect(v.key)}
-                  className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                  className={`px-2 py-0.5 font-mono-sm text-[9px] uppercase border-t border-border ${
                     drawingParams.view === v.key
                       ? 'text-accent bg-surface-container-high'
                       : 'text-on-surface-variant hover:text-primary'
@@ -187,27 +179,12 @@ export default function DrawingsPanel({ params, log }) {
           </div>
         )}
 
-        {isLineweight && drawingParams.view === 'plan' && (
-          <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-            <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LEVEL</span>
-            <select
-              value={drawingParams.level}
-              onChange={(e) => handleLevelSelect(e.target.value)}
-              className="bg-transparent px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant border-t border-border focus:text-primary outline-none"
-            >
-              {LEVEL_NAMES.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">PROJECT</span>
+          <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">PROJECT</span>
           <select
             value={projectSource}
             onChange={(e) => handleProjectSelect(e.target.value)}
-            className="bg-transparent px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant border-t border-border focus:text-primary outline-none"
+            className="bg-transparent px-2 py-0.5 font-mono-sm text-[9px] uppercase text-on-surface-variant border-t border-border focus:text-primary outline-none"
           >
             <option value={CURRENT_PROJECT}>CURRENT (live)</option>
             {archivedEntries.map((entry) => (
@@ -219,7 +196,7 @@ export default function DrawingsPanel({ params, log }) {
         </div>
 
         <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col">
-          <span className="text-on-surface-variant text-[10px] font-mono-sm px-3 pt-2">LABELS</span>
+          <span className="text-on-surface-variant text-[8px] font-mono-sm px-2 pt-0.5">LABELS</span>
           <div className="flex">
             {[
               { value: true, label: 'ON' },
@@ -228,7 +205,7 @@ export default function DrawingsPanel({ params, log }) {
               <button
                 key={String(opt.value)}
                 onClick={() => handleLabelsToggle(opt.value)}
-                className={`px-3 py-2 font-mono-sm text-mono-sm uppercase border-t border-border ${
+                className={`px-2 py-0.5 font-mono-sm text-[9px] uppercase border-t border-border ${
                   drawingParams.show_labels === opt.value
                     ? 'text-accent bg-surface-container-high'
                     : 'text-on-surface-variant hover:text-primary'
@@ -243,7 +220,7 @@ export default function DrawingsPanel({ params, log }) {
         <button
           onClick={() => generate(activeParams, drawingParams)}
           disabled={loading}
-          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-primary disabled:opacity-50 self-start rounded"
+          className="bg-surface/80 backdrop-blur-sm border border-border px-2 py-1 font-mono-sm text-[9px] uppercase text-on-surface-variant hover:text-primary disabled:opacity-50 self-start rounded"
         >
           {loading ? 'GENERATING...' : 'REFRESH'}
         </button>
@@ -251,7 +228,7 @@ export default function DrawingsPanel({ params, log }) {
         <button
           onClick={handleSave}
           disabled={saving || !svg}
-          className="bg-surface/80 backdrop-blur-sm border border-border px-3 py-2 font-mono-sm text-mono-sm uppercase text-on-surface-variant hover:text-accent disabled:opacity-50 self-start rounded"
+          className="bg-surface/80 backdrop-blur-sm border border-border px-2 py-1 font-mono-sm text-[9px] uppercase text-on-surface-variant hover:text-accent disabled:opacity-50 self-start rounded"
         >
           {saving ? 'SAVING...' : 'SAVE / EXPORT'}
         </button>

@@ -34,6 +34,11 @@ const API_PROXY = {
   '/static': 'http://127.0.0.1:8000',
   '/archive': 'http://127.0.0.1:8000',
 };
+// frontend/public/loading-frames.json (SpatializerPanel.jsx's GENERATE
+// loading animation) is deliberately NOT proxied here -- Vite serves
+// public/ directly with zero dependency on the FastAPI backend, which
+// matters because that backend goes fully unresponsive to everything,
+// static routes included, during a synchronous generate call.
 
 export default defineConfig({
   plugins: [react()],

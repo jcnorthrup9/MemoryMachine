@@ -30,7 +30,7 @@ export default {
         border: '#e5e7eb',
         outline: '#71717a',
         'outline-variant': '#d1d5db',
-        accent: '#00CC52',
+        accent: '#3E6D8E',
         success: '#00CC52',
         warning: '#d97706',
         error: '#dc2626',
