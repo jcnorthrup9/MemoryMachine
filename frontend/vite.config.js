@@ -46,6 +46,14 @@ export default defineConfig({
     host: '127.0.0.1', // this PC's "localhost" DNS resolution is broken -- bind the literal loopback address, not the hostname
     port: 5174, // moved off 5173 2026-07-30 -- see start_metabolizer.bat
     proxy: API_PROXY,
+    // 2026-08-18: Vite's dev server rejects requests whose Host header it
+    // doesn't recognize (DNS-rebinding protection) -- blocks a Cloudflare
+    // Tunnel/ngrok hostname by default. Only matters when PRESENTATION_LIVE_
+    // DEMO.md's temporary tunnel is actually running; this dev server is
+    // never itself exposed to the internet otherwise (bound to 127.0.0.1
+    // above), so disabling the check isn't a real production security
+    // boundary here.
+    allowedHosts: true,
   },
   preview: {
     host: '127.0.0.1',

@@ -674,10 +674,20 @@
                 <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
                     <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">05 // THE APP</span>
                     <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Live System</span>
+                    <!-- 2026-08-18: presentation-specific live link. Cloudflare quick
+                         tunnels generate a new random URL every time cloudflared is
+                         restarted -- this one only works while that tunnel process is
+                         actually running on the presenter's machine (see
+                         PRESENTATION_LIVE_DEMO.md). Update or remove after the
+                         presentation this was set up for. -->
+                    <a href="https://fcc-identified-checking-tier.trycloudflare.com/" target="_blank"
+                       style="margin-left:auto; font-size:0.7rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-family:'Courier New',monospace; text-decoration:underline; white-space:nowrap;">
+                        Open Live App ↗
+                    </a>
                 </div>
                 <div style="display:flex; flex:1; min-height:0;">
             <div class="col" style="width:100%; flex-shrink:0; padding: 16px;">
-                <iframe src="http://127.0.0.1:5174/"
+                <iframe id="app-frame" src="http://127.0.0.1:5174/"
                         style="width:100%; height:100%; border:1px solid var(--border); background:#000;"
                         allow="cross-origin-isolated"></iframe>
             </div>
@@ -699,6 +709,25 @@
 <button id="theme-toggle" onclick="toggleTheme()" style="position:fixed; top:16px; left:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
 
 <script>
+    // ── Live app URL override (2026-08-18) ─────────────────────
+    // "05 // THE APP" slide's iframe defaults to the local dev server
+    // (127.0.0.1:5174), which only resolves on THIS machine -- fine for
+    // presenting from here, but a link sent to someone else would show a
+    // blank/broken frame, since their 127.0.0.1 is their own machine, not
+    // this one. For the one presentation that needs to work as a shared
+    // link, run the app normally, start a temporary tunnel (see
+    // PRESENTATION_LIVE_DEMO.md), and open this deck as
+    // final_deck.html?app=<tunnel URL> -- no file edits needed, and
+    // nothing to remember to revert afterward since omitting ?app entirely
+    // falls back to the original 127.0.0.1:5174 behavior.
+    (function () {
+        const appUrl = new URLSearchParams(window.location.search).get('app');
+        if (appUrl) {
+            const frame = document.getElementById('app-frame');
+            if (frame) frame.src = appUrl;
+        }
+    })();
+
     // ── Theme toggle ────────────────────────────────────────────
     function toggleTheme() {
         const btn = document.getElementById('theme-toggle');
