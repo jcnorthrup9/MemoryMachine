@@ -50,6 +50,49 @@ def _weighted_choice(items, weights):
     return items[-1]
 
 
+_AREA_CACHE = {}
+
+
+def _rasterized_area(layer, site):
+    """Cached NATURAL (scale=1.0) rasterized area for one (layer, site) pair.
+
+    2026-08-18: split out of _best_area_anchor()'s inner loop and memoized.
+    Precedent SVGs are static for the life of the running process, so this
+    is a pure (layer, site) -> area computation that never needs to redo its
+    SVG parse + grid rasterize twice -- but _best_area_anchor() was calling
+    it fresh on every candidate of every /api/generate request, unchanged
+    since the precedent library was 5 sites. Now that it's 51 (Expand
+    precedent library to 50 parks, c2983c6) and most layers aren't in the
+    small hardcoded LAYER_SITE_MEMBERSHIP table (so fall back to ALL 51
+    valid_sites), this loop was measured taking ~95s of a ~100s /api/generate
+    call. Caching makes every request after the first-ever cold pass for a
+    given (layer, site) near-instant, with identical results since the
+    underlying SVGs don't change mid-process.
+    """
+    key = (layer, site)
+    if key in _AREA_CACHE:
+        return _AREA_CACHE[key]
+
+    import ingest_diagram_svg
+    area = 0
+    try:
+        root = ingest_diagram_svg._load_precedent_svg(site)
+        g = ingest_diagram_svg._find_layer_group(root, layer)
+        if g is not None and ingest_diagram_svg._group_polygons(g):
+            probe_item = {
+                "site": site, "layerId": layer, "role": _infer_raster_role(layer),
+                "transform": {"x_frac": 0.0, "y_frac": 0.0, "scale": 1.0, "rot": 0},
+            }
+            masks, resolved = ingest_diagram_svg.rasterize_precedent_layers([probe_item], nx=None, nz=None)
+            if resolved:
+                area = sum(row.count(True) for row in masks[probe_item["role"]])
+    except FileNotFoundError:
+        area = 0
+
+    _AREA_CACHE[key] = area
+    return area
+
+
 def _best_area_anchor(layers, layer_site_membership, valid_sites):
     """Among every (layer, site) combo for this category's candidate
     layers, measure each one's NATURAL (scale=1.0) rasterized area and
@@ -73,28 +116,12 @@ def _best_area_anchor(layers, layer_site_membership, valid_sites):
     genuine variety (matching this function's pre-2026-07-31 unweighted-
     random spirit) while keeping the real-coverage guarantee that
     pre-2026-07-31 behavior lacked."""
-    import ingest_diagram_svg
-
     candidates = []
     for layer in layers:
         if layer == "BOUNDARY" or _infer_raster_role(layer) not in _RASTERIZABLE_ROLES:
             continue
         for site in (layer_site_membership.get(layer) or valid_sites):
-            try:
-                root = ingest_diagram_svg._load_precedent_svg(site)
-            except FileNotFoundError:
-                continue
-            g = ingest_diagram_svg._find_layer_group(root, layer)
-            if g is None or not ingest_diagram_svg._group_polygons(g):
-                continue
-            probe_item = {
-                "site": site, "layerId": layer, "role": _infer_raster_role(layer),
-                "transform": {"x_frac": 0.0, "y_frac": 0.0, "scale": 1.0, "rot": 0},
-            }
-            masks, resolved = ingest_diagram_svg.rasterize_precedent_layers([probe_item], nx=None, nz=None)
-            if not resolved:
-                continue
-            area = sum(row.count(True) for row in masks[probe_item["role"]])
+            area = _rasterized_area(layer, site)
             if area > 0:
                 candidates.append((area, layer, site))
 

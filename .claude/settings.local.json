@@ -179,7 +179,8 @@
       "PowerShell(Start-Process py -ArgumentList \"-3\",\"-m\",\"http.server\",\"8802\" -WorkingDirectory \"C:\\\\Users\\\\jcnor\\\\MemoryMachine\" -WindowStyle Hidden)",
       "PowerShell(Start-Process -FilePath $venvPy -ArgumentList \"app.py\" -WorkingDirectory \"C:\\\\Users\\\\jcnor\\\\MemoryMachine\" -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError \"C:\\\\Users\\\\jcnor\\\\MemoryMachine\\\\_backend_debug_err.log\")",
       "Bash(curl -s http://127.0.0.1:8000/api/pershing/2d-generations --max-time 5)",
-      "Bash(mkdir -p C:/Users/jcnor/AppData/Local/Temp/claude/C--Users-jcnor-MemoryMachine/5ffac39e-09f9-4ba6-bf4a-fa8d9b4d1c73/scratchpad)"
+      "Bash(mkdir -p C:/Users/jcnor/AppData/Local/Temp/claude/C--Users-jcnor-MemoryMachine/5ffac39e-09f9-4ba6-bf4a-fa8d9b4d1c73/scratchpad)",
+      "Bash(/c/Users/jcnor/MemoryMachine/.venv/Scripts/python.exe -c ' *)"
     ]
   },
   "enableAllProjectMcpServers": true,
