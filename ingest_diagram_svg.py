@@ -195,7 +195,19 @@ def _group_polygons(group_el):
     one point cloud) so each can be properly filled via point-in-polygon
     testing rather than just plotting its corner vertices. Skips any shape
     without a real fill (see _has_real_fill) -- pure linework contributes
-    no zone area, matching diagram_tool's own on-screen semantics."""
+    no zone area, matching diagram_tool's own on-screen semantics.
+
+    2026-08-18: NOTE -- a nested <g id="*::hatch"> subtree (e.g. HARDSCAPE
+    contains HARDSCAPE::hatch) is NOT decorative overlay to be excluded here.
+    Confirmed by direct inspection: for layers like HARDSCAPE/GREEN_SPACE,
+    the real filled coverage IS represented as a mosaic of many small filled
+    shapes living *inside* the ::hatch group -- there is no separate solid
+    polygon anywhere else. An earlier version of this function tried
+    skipping ::hatch subtrees to cut down on point-in-polygon calls and
+    silently returned 0 polygons (0 area) for these layers, which is wrong,
+    not just slow. Reverted -- see logic/urban_engine.py's _rasterized_area
+    cache and this module's rasterize_zone_polygons() for the actual
+    (correctness-preserving) performance fixes for this path."""
     polys = []
     for child in group_el.iter():
         if child is group_el:
@@ -536,6 +548,9 @@ def _load_precedent_svg(site):
     return _precedent_svg_cache[site]
 
 
+_boundary_bbox_cache = {}
+
+
 def _boundary_bbox_center_and_size(root):
     """(cx, cy, w, h) of the BOUNDARY group's cv2.minAreaRect, in this SVG's
     own pixel space -- the same detection detect_boundary_affine_from_svg
@@ -555,7 +570,22 @@ def _boundary_bbox_center_and_size(root):
     fit-scale for every layer pulled from a boundary-less site; the same
     fallback engine2D.js's getBoundaryBBox() uses client-side, which this
     module deliberately does NOT mirror here since it's demonstrably wrong
-    for this use)."""
+    for this use).
+
+    2026-08-18: memoized by id(root). rasterize_precedent_layers() calls
+    this on PershingSquare's root once per invocation, and
+    _solve_zonal_scales()'s scale sweep calls rasterize_precedent_layers()
+    100+ times per /api/generate request -- re-parsing the same static
+    BOUNDARY geometry (regex-heavy _extract_vertices, cv2.minAreaRect) from
+    scratch every time measured as over half of one request's total time.
+    id(root) is a safe cache key here because _load_precedent_svg() already
+    caches parsed roots per site for the life of the process -- the same
+    site always yields the exact same root object, whose content never
+    changes without a process restart."""
+    cache_key = id(root)
+    if cache_key in _boundary_bbox_cache:
+        return _boundary_bbox_cache[cache_key]
+
     boundary_groups = _find_groups_by_id_substring(root, ["BOUNDARY"])
     if boundary_groups:
         pts = np.vstack([_group_vertices(g) for g in boundary_groups])
@@ -570,7 +600,9 @@ def _boundary_bbox_center_and_size(root):
             raise ValueError("no BOUNDARY group and no shape geometry at all in this precedent SVG")
         pts = np.vstack(all_pts)
     (cx, cy), (w, h), _angle = cv2.minAreaRect(pts.astype(np.float32))
-    return cx, cy, w, h
+    result = (cx, cy, w, h)
+    _boundary_bbox_cache[cache_key] = result
+    return result
 
 
 def _find_layer_group(root, layer_id):

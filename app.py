@@ -405,13 +405,6 @@ def capture_dashboard(payload: CapturePayload):
 
 @app.post("/api/generate")
 async def generate_memory_node(payload: MemoryPrompt):
-    import time as _time
-    _t0 = _time.time()
-    def _mark(label):
-        nonlocal _t0
-        _t1 = _time.time()
-        print(f"      -> [TIMING] {label}: {_t1 - _t0:.2f}s")
-        _t0 = _t1
     prompt = payload.prompt
 
     # 1. Retrieval (ChromaDB)
@@ -421,11 +414,9 @@ async def generate_memory_node(payload: MemoryPrompt):
             results = collection.query(query_texts=[prompt], n_results=5)
             matches = [{"metadata": m, "document": d} for m, d in zip(results['metadatas'][0], results['documents'][0])]
     except: pass
-    _mark("1. retrieval")
 
     # 2. AI Synthesis (Now routing to Local Ollama API)
     spatial_seed_raw, ai_narrative = generate_spatial_seed(prompt, matches)
-    _mark("2. AI synthesis")
 
     # 2.5 Ground the PROG (amenity/attractor) pick's location in the 3D
     # side's real amenity-deficit signal -- same bridge remix_precedent()
@@ -439,11 +430,9 @@ async def generate_memory_node(payload: MemoryPrompt):
         spatial_seed_raw = apply_deficit_weighting(spatial_seed_raw, gm_data.get("metadata", {}), deficit_weights)
     except Exception as e:
         print(f"      -> [DEFICIT WEIGHTING ERROR] {e}")
-    _mark("2.5 deficit weighting")
 
     # 3. Remix
     spatial_seed = remix_layers(spatial_seed_raw)
-    _mark("3. remix")
 
     # 3.1 Geometric Truth: Base Seed
     base_seed = {
@@ -485,11 +474,9 @@ async def generate_memory_node(payload: MemoryPrompt):
             "materials": ["concrete", "vegetation"] if "GREEN" in layer_id else ["weathered_steel", "glass"]
         }
         geometries.extend(build_geometries(params))
-    _mark("3.5 geometry generation")
 
     # 4. Metadata
     diagram = generate_mermaid_diagram(prompt, matches, {"geometry_type": "Hybrid Assembly", "height_m": 15})
-    _mark("4. mermaid diagram")
 
     # 5. Archive the generation's own data alongside the frontend's SVG/JPG
     # auto-export (static/main.js's autoExportEnabled pipeline) -- that only
@@ -498,7 +485,6 @@ async def generate_memory_node(payload: MemoryPrompt):
     # reconstructed. Best-effort: a write failure here shouldn't fail the
     # actual generation.
     archive_generation_record(prompt, ai_narrative, spatial_seed, diagram)
-    _mark("5. archive")
 
     return {
         "status": "success",

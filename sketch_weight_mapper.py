@@ -488,11 +488,33 @@ def _points_in_polygon(polygon_xy, test_pts):
     project dependency and this is a small, standard algorithm.
     `polygon_xy`: (P, 2) vertex loop (site-local ft). `test_pts`: (N, 2)
     points to test. Returns an (N,) bool array.
+
+    2026-08-18: bounding-box pre-filter added. Callers like
+    ingest_diagram_svg.rasterize_zone_polygons() test every candidate
+    polygon against the FULL site grid (thousands of points), but these
+    polygons (e.g. one hardscape mosaic tile) are often tiny relative to
+    that grid -- any point outside the polygon's own bbox is guaranteed
+    False (a point outside a shape's bounding box can never be inside the
+    shape), so the per-edge ray-cast loop below only needs to run on the
+    (often much smaller) subset of points inside the bbox. Result is
+    identical to running the full test on every point -- this is a pure
+    speedup, not an approximation. Measured contributing ~23s of a ~100s
+    /api/generate call (33,840 calls across one request, most against a
+    full ~2700-point grid for small tile polygons) before this change.
     """
     poly = np.asarray(polygon_xy, dtype=float)
-    x, y = test_pts[:, 0], test_pts[:, 1]
-    inside = np.zeros(len(test_pts), dtype=bool)
     n = len(poly)
+    inside_full = np.zeros(len(test_pts), dtype=bool)
+
+    min_x, min_y = poly[:, 0].min(), poly[:, 1].min()
+    max_x, max_y = poly[:, 0].max(), poly[:, 1].max()
+    x_all, y_all = test_pts[:, 0], test_pts[:, 1]
+    candidate_mask = (x_all >= min_x) & (x_all <= max_x) & (y_all >= min_y) & (y_all <= max_y)
+    if not candidate_mask.any():
+        return inside_full
+
+    x, y = x_all[candidate_mask], y_all[candidate_mask]
+    inside = np.zeros(len(x), dtype=bool)
     j = n - 1
     for i in range(n):
         xi, yi = poly[i]
@@ -502,7 +524,9 @@ def _points_in_polygon(polygon_xy, test_pts):
         cond = ((yi > y) != (yj > y)) & (x < (xj - xi) * (y - yi) / dy + xi)
         inside ^= cond
         j = i
-    return inside
+
+    inside_full[candidate_mask] = inside
+    return inside_full
 
 
 def find_closed_svg_regions(svg_path, site_width_ft, site_length_ft, nx, nz, voxel_ft,
