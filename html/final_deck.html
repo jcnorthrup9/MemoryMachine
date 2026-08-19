@@ -42,11 +42,9 @@
         }
 
         .viewer {
-            width: 96vw;
-            max-width: 1800px;
-            height: 92vh;
+            width: 100vw;
+            height: 100vh;
             background: var(--bg);
-            border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
         }
@@ -731,13 +729,6 @@
 
     </div><!-- /spread-container -->
 
-    <footer>
-        <div id="page-indicator">00 // STATEMENT — 1 of 7</div>
-        <div class="nav-controls">
-            <button onclick="prevSpread()">[ PREV ]</button>
-            <button onclick="nextSpread()">[ NEXT ]</button>
-        </div>
-    </footer>
 </div><!-- /viewer -->
 
 <button id="theme-toggle" onclick="toggleTheme()" style="position:fixed; top:16px; left:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
@@ -805,8 +796,6 @@
         document.querySelectorAll('.spread').forEach(s => s.classList.remove('active'));
         const el = document.getElementById('spread-' + n);
         if (el) el.classList.add('active');
-        document.getElementById('page-indicator').innerText =
-            labels[n - 1] + ' – ' + n + ' of ' + total;
         current = n;
         if (n === 1) startIterationFrame(); else stopIterationFrame();
     }
