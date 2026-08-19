@@ -684,12 +684,23 @@
                        style="margin-left:auto; font-size:0.7rem; color:var(--accent); letter-spacing:2px; text-transform:uppercase; font-family:'Courier New',monospace; text-decoration:underline; white-space:nowrap;">
                         Open Live App ↗
                     </a>
+                    <!-- 2026-08-19: manual fallback toggle. Corporate/venue firewalls can
+                         block Cloudflare Tunnel domains outright, and there's no reliable
+                         cross-browser way to detect an iframe silently failing to load, so
+                         this is a presenter-operated switch rather than automatic
+                         detection -- if the live iframe doesn't come up, click this once. -->
+                    <button onclick="toggleAppFallback()" id="fallback-toggle-btn"
+                            style="font-size:0.7rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; font-family:'Courier New',monospace; background:none; border:1px solid var(--border); padding:4px 10px; cursor:pointer; white-space:nowrap;">
+                        Show Recorded Demo
+                    </button>
                 </div>
                 <div style="display:flex; flex:1; min-height:0;">
-            <div class="col" style="width:100%; flex-shrink:0; padding: 16px;">
+            <div class="col" style="width:100%; flex-shrink:0; padding: 16px; position:relative;">
                 <iframe id="app-frame" src="http://127.0.0.1:5174/"
                         style="width:100%; height:100%; border:1px solid var(--border); background:#000;"
                         allow="cross-origin-isolated"></iframe>
+                <img id="app-fallback" src="../archive/diagrams/live_demo_fallback.gif" alt="Recorded live-demo fallback"
+                     style="display:none; position:absolute; top:16px; left:16px; right:16px; bottom:16px; width:calc(100% - 32px); height:calc(100% - 32px); object-fit:contain; border:1px solid var(--border); background:#000;">
             </div>
                 </div><!-- /slide-body -->
             </div><!-- /slide-wrap -->
@@ -709,6 +720,25 @@
 <button id="theme-toggle" onclick="toggleTheme()" style="position:fixed; top:16px; left:16px; z-index:9999; width:110px; height:110px; background:transparent; border:none; color:transparent; cursor:pointer;"></button>
 
 <script>
+    // ── Live app / recorded-demo fallback toggle (2026-08-19) ──
+    // Instant, presenter-operated swap between the live iframe and a
+    // recorded GIF walkthrough (archive/diagrams/live_demo_fallback.gif),
+    // both occupying the exact same frame on slide "05 // THE APP". Manual
+    // rather than automatic: there's no reliable cross-browser signal for
+    // "this iframe silently failed to load" (network-level blocks, e.g. a
+    // venue firewall blocking the tunnel domain, often don't fire iframe
+    // onerror at all), so the presenter just clicks the button if the live
+    // app doesn't show up within a couple seconds.
+    function toggleAppFallback() {
+        const frame = document.getElementById('app-frame');
+        const fallback = document.getElementById('app-fallback');
+        const btn = document.getElementById('fallback-toggle-btn');
+        const showingFallback = fallback.style.display !== 'none';
+        fallback.style.display = showingFallback ? 'none' : 'block';
+        frame.style.visibility = showingFallback ? 'visible' : 'hidden';
+        btn.textContent = showingFallback ? 'Show Recorded Demo' : 'Show Live App';
+    }
+
     // ── Live app URL override (2026-08-18) ─────────────────────
     // "05 // THE APP" slide's iframe defaults to the local dev server
     // (127.0.0.1:5174), which only resolves on THIS machine -- fine for
