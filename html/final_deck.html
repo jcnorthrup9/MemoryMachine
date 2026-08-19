@@ -17,7 +17,7 @@
         body.light-mode {
             --bg: #ffffff;
             --text: #111111;
-            --accent: #3d6b28;
+            --accent: #000000;
             --dim: #f0f0f0;
             --muted: #666666;
             --border: #dddddd;
@@ -623,12 +623,36 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- 04 · SITE ITERATION — STRUCTURAL GEOMETRY                   -->
+        <!-- 04 · PRECEDENT LIBRARY — 50-PARK WALLPAPER                  -->
         <!-- ═══════════════════════════════════════════════════════════ -->
         <div class="spread" id="spread-5">
             <div style="display:flex; flex-direction:column; width:100%; height:100%;">
                 <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
-                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">04 // SITE ITERATION</span>
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">04 // PRECEDENT LIBRARY</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">50-Park Global Comparative Survey</span>
+                </div>
+                <div class="col full" style="flex:1; height:auto; min-height:0; display:flex; flex-direction:column;">
+                    <div style="flex:1; min-height:0; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; background:#ffffff;">
+                        <img src="../archive/diagrams/park_precedent_wallpaper.png"
+                             alt="Tiled wallpaper composite of 50 real-world park precedent site plans, extracted geometry over OSM data"
+                             style="width:100%; height:100%; object-fit:contain;">
+                    </div>
+                    <div style="margin-top:10px; flex-shrink:0; display:flex; gap:40px;">
+                        <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Real-world OSM geometry extracted per park — green space, water, circulation, structures</span></div>
+                        <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Baseline amenity-to-sentiment ratios cross-referenced against Pershing Square deficits</span></div>
+                    </div>
+                </div>
+                </div><!-- /col full -->
+            </div><!-- /slide-wrap -->
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 05 · SITE ITERATION — STRUCTURAL GEOMETRY                   -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-6">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">05 // SITE ITERATION</span>
                     <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">Dual-Grid Alignment &amp; Programmatic Distribution</span>
                 </div>
                 <div class="col full" style="flex:1; height:auto; min-height:0;">
@@ -667,12 +691,12 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- 05 · THE APP                                                -->
+        <!-- 06 · THE APP                                                -->
         <!-- ═══════════════════════════════════════════════════════════ -->
-        <div class="spread" id="spread-6">
+        <div class="spread" id="spread-7">
             <div style="display:flex; flex-direction:column; width:100%; height:100%;">
                 <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
-                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">05 // THE APP</span>
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">06 // THE APP</span>
                     <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Live System</span>
                     <!-- 2026-08-18: presentation-specific live link. Cloudflare quick
                          tunnels generate a new random URL every time cloudflared is
@@ -709,7 +733,7 @@
     </div><!-- /spread-container -->
 
     <footer>
-        <div id="page-indicator">00 // STATEMENT — 1 of 6</div>
+        <div id="page-indicator">00 // STATEMENT — 1 of 7</div>
         <div class="nav-controls">
             <button onclick="prevSpread()">[ PREV ]</button>
             <button onclick="nextSpread()">[ NEXT ]</button>
@@ -723,7 +747,7 @@
     // ── Live app / recorded-demo fallback toggle (2026-08-19) ──
     // Instant, presenter-operated swap between the live iframe and a
     // recorded GIF walkthrough (archive/diagrams/live_demo_fallback.gif),
-    // both occupying the exact same frame on slide "05 // THE APP". Manual
+    // both occupying the exact same frame on slide "06 // THE APP". Manual
     // rather than automatic: there's no reliable cross-browser signal for
     // "this iframe silently failed to load" (network-level blocks, e.g. a
     // venue firewall blocking the tunnel domain, often don't fire iframe
@@ -740,7 +764,7 @@
     }
 
     // ── Live app URL override (2026-08-18) ─────────────────────
-    // "05 // THE APP" slide's iframe defaults to the local dev server
+    // "06 // THE APP" slide's iframe defaults to the local dev server
     // (127.0.0.1:5174), which only resolves on THIS machine -- fine for
     // presenting from here, but a link sent to someone else would show a
     // blank/broken frame, since their 127.0.0.1 is their own machine, not
@@ -771,8 +795,9 @@
         "01 // PRECEDENTS",
         "02 // METHODOLOGY",
         "03 // SITE DIAGNOSTICS",
-        "04 // SITE ITERATION",
-        "05 // THE APP",
+        "04 // PRECEDENT LIBRARY",
+        "05 // SITE ITERATION",
+        "06 // THE APP",
     ];
     const total = labels.length;
     let current = 1;
