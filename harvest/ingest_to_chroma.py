@@ -57,8 +57,16 @@ for filename in os.listdir(DATA_DIR):
 if docs:
     _log(f"📦 Embedding and storing {len(docs)} memories into the latent space...")
     # Upsert (not add) so re-runs update/replace existing chunks by their
-    # deterministic id instead of erroring or duplicating.
-    collection.upsert(documents=docs, metadatas=metadatas, ids=ids)
+    # deterministic id instead of erroring or duplicating. Chunked into
+    # batches under the client's max_batch_size (chromadb enforces this
+    # server-side -- confirmed live: a single 5919-doc upsert 400'd with
+    # "Batch size of 5919 is greater than max batch size of 5461" once the
+    # 150-park precedent expansion pushed the corpus past the old
+    # single-call size).
+    max_batch = chroma_client.get_max_batch_size()
+    for start in range(0, len(docs), max_batch):
+        end = start + max_batch
+        collection.upsert(documents=docs[start:end], metadatas=metadatas[start:end], ids=ids[start:end])
     _log("\n✅ INGESTION COMPLETE! The Memory Machine AI Agent is fully loaded.")
 else:
     _log("⚠️ No data found to ingest.")
