@@ -650,14 +650,10 @@
             <div style="display:flex; flex-direction:column; width:100%; height:100%;">
                 <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
                     <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">04 // PRECEDENT LIBRARY</span>
-                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">50-Park Global Comparative Survey</span>
+                    <span style="font-size:0.85rem; color:var(--accent); letter-spacing:1px; font-family:'Courier New',monospace;">150-Park Global Comparative Survey</span>
                 </div>
                 <div class="col full" style="flex:1; height:auto; min-height:0; display:flex; flex-direction:column;">
-                    <div style="flex:1; min-height:0; border:1px solid var(--border); overflow:hidden; display:flex; align-items:center; justify-content:center; background:#ffffff;">
-                        <img src="../archive/diagrams/park_precedent_wallpaper.png"
-                             alt="Tiled wallpaper composite of 50 real-world park precedent site plans, extracted geometry over OSM data"
-                             style="width:100%; height:100%; object-fit:contain;">
-                    </div>
+                    <div id="precedent-grid" style="flex:1; min-height:0; border:1px solid var(--border); overflow:hidden; display:grid; grid-template-columns:repeat(10,1fr); grid-template-rows:repeat(5,1fr); gap:1px; background:var(--border);"></div>
                     <div style="margin-top:10px; flex-shrink:0; display:flex; gap:40px;">
                         <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Real-world OSM geometry extracted per park — green space, water, circulation, structures</span></div>
                         <div class="check" style="font-size:0.75rem;"><span class="mark">&mdash;</span><span>Baseline amenity-to-sentiment ratios cross-referenced against Pershing Square deficits</span></div>
@@ -665,6 +661,10 @@
                 </div><!-- /col full -->
             </div><!-- /slide-wrap -->
         </div>
+
+        <!-- PRECEDENT_GRID_DATA_START -->
+        <script id="precedent-grid-data" type="application/json">[{"cycle": ["../static/thumbnails/precedent/AlAzharPark.jpg", "../static/thumbnails/precedent/WellingtonBotanicGarden.jpg", "../static/thumbnails/precedent/RockCreekPark.jpg"], "names": ["Al-Azhar Park", "Wellington Botanic Garden", "Rock Creek Park"]}, {"cycle": ["../static/thumbnails/precedent/BeihaiPark.jpg", "../static/thumbnails/precedent/ParqueKennedy.jpg", "../static/thumbnails/precedent/Peterhof.jpg"], "names": ["Beihai Park", "Parque Kennedy", "Peterhof"]}, {"cycle": ["../static/thumbnails/precedent/Frognerparken.jpg", "../static/thumbnails/precedent/RizalPark.jpg", "../static/thumbnails/precedent/FairmountPark.jpg"], "names": ["Frognerparken", "Rizal Park", "Fairmount Park"]}, {"cycle": ["../static/thumbnails/precedent/YarkonPark.jpg", "../static/thumbnails/precedent/ViharamahadeviPark.jpg", "../static/thumbnails/precedent/ParcDeLaCiutadella.jpg"], "names": ["Yarkon Park", "Viharamahadevi Park", "Parc de la Ciutadella"]}, {"cycle": ["../static/thumbnails/precedent/ChapultepecPark.jpg", "../static/thumbnails/precedent/MenaraGardens.jpg", "../static/thumbnails/precedent/ZilkerPark.jpg"], "names": ["Chapultepec Park", "Menara Gardens", "Zilker Park"]}, {"cycle": ["../static/thumbnails/precedent/CornwallPark.jpg", "../static/thumbnails/precedent/HibiyaPark.jpg", "../static/thumbnails/precedent/JardinsDuLuxembourg.jpg"], "names": ["Cornwall Park", "Hibiya Park", "Jardins du Luxembourg"]}, {"cycle": ["../static/thumbnails/precedent/IbirapueraPark.jpg", "../static/thumbnails/precedent/PhoenixPark.jpg", "../static/thumbnails/precedent/CityPark.jpg"], "names": ["Ibirapuera Park", "Phoenix Park", "City Park"]}, {"cycle": ["../static/thumbnails/precedent/GardensByTheBay.jpg", "../static/thumbnails/precedent/RiyamPark.jpg", "../static/thumbnails/precedent/GiardinoDiBoboli.jpg"], "names": ["Gardens by the Bay", "Riyam Park", "Giardino di Boboli"]}, {"cycle": ["../static/thumbnails/precedent/CubbonPark.jpg", "../static/thumbnails/precedent/GriffithPark.jpg", "../static/thumbnails/precedent/SouthPointePark.jpg"], "names": ["Cubbon Park", "Griffith Park", "South Pointe Park"]}, {"cycle": ["../static/thumbnails/precedent/KirstenboschNationalBotanicalGarden.jpg", "../static/thumbnails/precedent/NewFarmPark.jpg", "../static/thumbnails/precedent/VillaPamphili.jpg"], "names": ["Kirstenbosch National Botanical Garden", "New Farm Park", "Villa Pamphili"]}, {"cycle": ["../static/thumbnails/precedent/NamsanPark.jpg", "../static/thumbnails/precedent/ParqueSimonBolivar.jpg", "../static/thumbnails/precedent/HighPark.jpg"], "names": ["Namsan Park", "Parque Simon Bolivar", "High Park"]}, {"cycle": ["../static/thumbnails/precedent/GulhanePark.jpg", "../static/thumbnails/precedent/ThongNhatPark.jpg", "../static/thumbnails/precedent/ParcoSempione.jpg"], "names": ["Gulhane Park", "Thong Nhat Park", "Parco Sempione"]}, {"cycle": ["../static/thumbnails/precedent/ZabeelPark.jpg", "../static/thumbnails/precedent/RamnaPark.jpg", "../static/thumbnails/precedent/MountRoyalPark.jpg"], "names": ["Zabeel Park", "Ramna Park", "Mount Royal Park"]}, {"cycle": ["../static/thumbnails/precedent/CheviotHillsPark.jpg", "../static/thumbnails/precedent/UnityPark.jpg", "../static/thumbnails/precedent/JardimDaEstrela.jpg"], "names": ["Cheviot Hills Park", "Unity Park", "Jardim da Estrela"]}, {"cycle": ["../static/thumbnails/precedent/RoyalBotanicGarden.jpg", "../static/thumbnails/precedent/HongKongPark.jpg", "../static/thumbnails/precedent/QueenElizabethPark.jpg"], "names": ["Royal Botanic Garden", "Hong Kong Park", "Queen Elizabeth Park"]}, {"cycle": ["../static/thumbnails/precedent/ParqueCentenario.jpg", "../static/thumbnails/precedent/Prater.jpg", "../static/thumbnails/precedent/JardinsDoPalacioDeCristal.jpg"], "names": ["Parque Centenario", "Prater", "Jardins do Palacio de Cristal"]}, {"cycle": ["../static/thumbnails/precedent/LumphiniPark.jpg", "../static/thumbnails/precedent/MillenniumPark.jpg", "../static/thumbnails/precedent/ParqueMexico.jpg"], "names": ["Lumphini Park", "Millennium Park", "Parque Mexico"]}, {"cycle": ["../static/thumbnails/precedent/LodhiGardens.jpg", "../static/thumbnails/precedent/RymillPark.jpg", "../static/thumbnails/precedent/NationalGarden.jpg"], "names": ["Lodhi Gardens", "Rymill Park", "National Garden"]}, {"cycle": ["../static/thumbnails/precedent/UhuruGardens.jpg", "../static/thumbnails/precedent/ParqueForestal.jpg", "../static/thumbnails/precedent/ParqueFundidora.jpg"], "names": ["Uhuru Gardens", "Parque Forestal", "Parque Fundidora"]}, {"cycle": ["../static/thumbnails/precedent/UenoPark.jpg", "../static/thumbnails/precedent/KandawgyiPark.jpg", "../static/thumbnails/precedent/Stadspark.jpg"], "names": ["Ueno Park", "Kandawgyi Park", "Stadspark"]}, {"cycle": ["../static/thumbnails/precedent/HydePark.jpg", "../static/thumbnails/precedent/ParcDuBelvedere.jpg", "../static/thumbnails/precedent/BosqueLosColomos.jpg"], "names": ["Hyde Park", "Parc du Belvedere", "Bosque Los Colomos"]}, {"cycle": ["../static/thumbnails/precedent/KhalifaPark.jpg", "../static/thumbnails/precedent/DaAnForestPark.jpg", "../static/thumbnails/precedent/BoisDeLaCambre.jpg"], "names": ["Khalifa Park", "Da'an Forest Park", "Bois de la Cambre"]}, {"cycle": ["../static/thumbnails/precedent/GoldenGatePark.jpg", "../static/thumbnails/precedent/Schouwburgplein.jpg", "../static/thumbnails/precedent/ParqueAlmendares.jpg"], "names": ["Golden Gate Park", "Schouwburgplein", "Parque Almendares"]}, {"cycle": ["../static/thumbnails/precedent/KingsPark.jpg", "../static/thumbnails/precedent/HighLine.jpg", "../static/thumbnails/precedent/AmsterdamseBos.jpg"], "names": ["Kings Park", "High Line", "Amsterdamse Bos"]}, {"cycle": ["../static/thumbnails/precedent/ParqueTresDeFebrero.jpg", "../static/thumbnails/precedent/CommonwealthPark.jpg", "../static/thumbnails/precedent/ParqueOmar.jpg"], "names": ["Parque Tres de Febrero", "Commonwealth Park", "Parque Omar"]}, {"cycle": ["../static/thumbnails/precedent/TaoDanPark.jpg", "../static/thumbnails/precedent/ParqueRodo.jpg", "../static/thumbnails/precedent/Kungstradgarden.jpg"], "names": ["Tao Dan Park", "Parque Rodo", "Kungstradgarden"]}, {"cycle": ["../static/thumbnails/precedent/HangingGardens.jpg", "../static/thumbnails/precedent/ParcDeLaLigueArabe.jpg", "../static/thumbnails/precedent/ParqueLaSabana.jpg"], "names": ["Hanging Gardens", "Parc de la Ligue Arabe", "Parque La Sabana"]}, {"cycle": ["../static/thumbnails/precedent/KaruraForest.jpg", "../static/thumbnails/precedent/OsakaCastlePark.jpg", "../static/thumbnails/precedent/Orstedsparken.jpg"], "names": ["Karura Forest", "Osaka Castle Park", "Orstedsparken"]}, {"cycle": ["../static/thumbnails/precedent/YoyogiPark.jpg", "../static/thumbnails/precedent/Tiergarten.jpg", "../static/thumbnails/precedent/BalboaPark.jpg"], "names": ["Yoyogi Park", "Tiergarten", "Balboa Park"]}, {"cycle": ["../static/thumbnails/precedent/LazienkiPark.jpg", "../static/thumbnails/precedent/GrandPark.jpg", "../static/thumbnails/precedent/EsplanadiPark.jpg"], "names": ["Lazienki Park", "Grand Park", "Esplanadi Park"]}, {"cycle": ["../static/thumbnails/precedent/AspirePark.jpg", "../static/thumbnails/precedent/RoyalTasmanianBotanicalGardens.jpg", "../static/thumbnails/precedent/Laugardalur.jpg"], "names": ["Aspire Park", "Royal Tasmanian Botanical Gardens", "Laugardalur"]}, {"cycle": ["../static/thumbnails/precedent/ProspectPark.jpg", "../static/thumbnails/precedent/ParqueDelEste.jpg", "../static/thumbnails/precedent/Stadtpark.jpg"], "names": ["Prospect Park", "Parque del Este", "Stadtpark"]}, {"cycle": ["../static/thumbnails/precedent/FitzroyGardens.jpg", "../static/thumbnails/precedent/MaruyamaPark.jpg", "../static/thumbnails/precedent/Olympiapark.jpg"], "names": ["Fitzroy Gardens", "Maruyama Park", "Olympiapark"]}, {"cycle": ["../static/thumbnails/precedent/ParqueDoFlamengo.jpg", "../static/thumbnails/precedent/VillaBorghese.jpg", "../static/thumbnails/precedent/TreptowerPark.jpg"], "names": ["Parque do Flamengo", "Villa Borghese", "Treptower Park"]}, {"cycle": ["../static/thumbnails/precedent/PerdanaBotanicalGarden.jpg", "../static/thumbnails/precedent/WashingtonSquarePark.jpg", "../static/thumbnails/precedent/LetnaPark.jpg"], "names": ["Perdana Botanical Garden", "Washington Square Park", "Letna Park"]}, {"cycle": ["../static/thumbnails/precedent/Maidan.jpg", "../static/thumbnails/precedent/YongdusanPark.jpg", "../static/thumbnails/precedent/MargaretIsland.jpg"], "names": ["Maidan", "Yongdusan Park", "Margaret Island"]}, {"cycle": ["../static/thumbnails/precedent/CompanySGarden.jpg", "../static/thumbnails/precedent/Vondelpark.jpg", "../static/thumbnails/precedent/CismigiuGardens.jpg"], "names": ["Company's Garden", "Vondelpark", "Cismigiu Gardens"]}, {"cycle": ["../static/thumbnails/precedent/NaraPark.jpg", "../static/thumbnails/precedent/DoloresPark.jpg", "../static/thumbnails/precedent/BorisovaGradina.jpg"], "names": ["Nara Park", "Dolores Park", "Borisova Gradina"]}, {"cycle": ["../static/thumbnails/precedent/ParcDeLaVillette.jpg", "../static/thumbnails/precedent/PeopleSPark.jpg", "../static/thumbnails/precedent/MaksimirPark.jpg"], "names": ["Parc de la Villette", "People's Park", "Maksimir Park"]}, {"cycle": ["../static/thumbnails/precedent/SalamPark.jpg", "../static/thumbnails/precedent/ZaryadyePark.jpg", "../static/thumbnails/precedent/TivoliPark.jpg"], "names": ["Salam Park", "Zaryadye Park", "Tivoli Park"]}, {"cycle": ["../static/thumbnails/precedent/StanleyPark.jpg", "../static/thumbnails/precedent/LincolnPark.jpg", "../static/thumbnails/precedent/OgrodSaski.jpg"], "names": ["Stanley Park", "Lincoln Park", "Ogrod Saski"]}, {"cycle": ["../static/thumbnails/precedent/SydneyBotanicGarden.jpg", "../static/thumbnails/precedent/TangParadise.jpg", "../static/thumbnails/precedent/GorkyPark.jpg"], "names": ["Sydney Botanic Garden", "Tang Paradise", "Gorky Park"]}, {"cycle": ["../static/thumbnails/precedent/ParqueElEjido.jpg", "../static/thumbnails/precedent/RegentSPark.jpg", "../static/thumbnails/precedent/SummerGarden.jpg"], "names": ["Parque El Ejido", "Regent's Park", "Summer Garden"]}, {"cycle": ["../static/thumbnails/precedent/TamanSuropati.jpg", "../static/thumbnails/precedent/DiscoveryPark.jpg", "../static/thumbnails/precedent/GenclikParki.jpg"], "names": ["Taman Suropati", "Discovery Park", "Genclik Parki"]}, {"cycle": ["../static/thumbnails/precedent/SemmozhiPoonga.jpg", "../static/thumbnails/precedent/YuexiuPark.jpg", "../static/thumbnails/precedent/EmirganPark.jpg"], "names": ["Semmozhi Poonga", "Yuexiu Park", "Emirgan Park"]}, {"cycle": ["../static/thumbnails/precedent/ZooLake.jpg", "../static/thumbnails/precedent/BoisDeBoulogne.jpg", "../static/thumbnails/precedent/KelvingrovePark.jpg"], "names": ["Zoo Lake", "Bois de Boulogne", "Kelvingrove Park"]}, {"cycle": ["../static/thumbnails/precedent/YuyuanGarden.jpg", "../static/thumbnails/precedent/ForestPark.jpg", "../static/thumbnails/precedent/PrincesStreetGardens.jpg"], "names": ["Yuyuan Garden", "Forest Park", "Princes Street Gardens"]}, {"cycle": ["../static/thumbnails/precedent/ParqueDelRetiro.jpg", "../static/thumbnails/precedent/EnglischerGarten.jpg", "../static/thumbnails/precedent/StStephenSGreen.jpg"], "names": ["Parque del Retiro", "Englischer Garten", "St Stephen's Green"]}, {"cycle": ["../static/thumbnails/precedent/HorshBeirut.jpg", "../static/thumbnails/precedent/BostonCommon.jpg", "../static/thumbnails/precedent/ButePark.jpg"], "names": ["Horsh Beirut", "Boston Common", "Bute Park"]}, {"cycle": ["../static/thumbnails/precedent/CentralPark.jpg", "../static/thumbnails/precedent/KadriorgPark.jpg", "../static/thumbnails/precedent/BotanicGardens.jpg"], "names": ["Central Park", "Kadriorg Park", "Botanic Gardens"]}]</script>
+        <!-- PRECEDENT_GRID_DATA_END -->
 
         <!-- ═══════════════════════════════════════════════════════════ -->
         <!-- 05 · SITE ITERATION — STRUCTURAL GEOMETRY                   -->
@@ -692,7 +692,7 @@
                         </div>
                     </div>
                     <div class="case-item" style="border-left:2px solid var(--accent); padding-left:14px; grid-column: span 2;">
-                        <div class="case-phase-tag">&#9733; Park Iteration</div>
+                        <div class="case-phase-tag">Park Iteration</div>
                         <h3>Generative Site Massing</h3>
                         <h2>Iterative Park Layouts</h2>
                         <div class="ph grow" style="border:1px solid var(--border); background:#f4f4f0; padding:0; overflow:hidden;">
@@ -821,6 +821,7 @@
         if (el) el.classList.add('active');
         current = n;
         if (n === 1) startIterationFrame(); else stopIterationFrame();
+        if (n === 5) startPrecedentGrid(); else stopPrecedentGrid();
     }
     function nextSpread() { showSpread(current < total ? current + 1 : 1); }
     function prevSpread() { showSpread(current > 1 ? current - 1 : total); }
@@ -859,6 +860,68 @@
 
     function stopIterationFrame() {
         if (iterationInterval) { clearInterval(iterationInterval); iterationInterval = null; }
+    }
+
+    // ── Precedent grid (slide 04) ───────────────────────────────
+    // 50 tiles, each a fixed cycle of exactly 3 parks (150 parks / 50
+    // tiles -- see data/precedent_park_list.py). Each tile schedules its
+    // own independent setInterval with a randomized start delay and
+    // period, so all 50 desync rather than flipping in lockstep -- the
+    // "randomness" here is purely about per-tile timing, never which
+    // parks appear (that per-tile 3-park cycle is fixed by the build
+    // script, not chosen at runtime).
+    let precedentTimers = [];
+    let precedentGridBuilt = false;
+
+    function buildPrecedentGrid() {
+        if (precedentGridBuilt) return;
+        const container = document.getElementById('precedent-grid');
+        const dataEl = document.getElementById('precedent-grid-data');
+        if (!container || !dataEl) return;
+        let tiles = [];
+        try { tiles = JSON.parse(dataEl.textContent || '[]'); } catch (e) { tiles = []; }
+        tiles.forEach(tile => {
+            const img = document.createElement('img');
+            img.src = tile.cycle[0];
+            img.alt = tile.names ? tile.names[0] : '';
+            img.style.cssText = 'width:100%; height:100%; object-fit:contain; background:#ffffff; display:block;';
+            img.dataset.cycle = JSON.stringify(tile.cycle);
+            img.dataset.names = JSON.stringify(tile.names || []);
+            img.dataset.idx = '0';
+            container.appendChild(img);
+        });
+        precedentGridBuilt = true;
+    }
+
+    function startPrecedentGrid() {
+        buildPrecedentGrid();
+        stopPrecedentGrid();
+        const container = document.getElementById('precedent-grid');
+        if (!container) return;
+        container.querySelectorAll('img').forEach(img => {
+            const cycle = JSON.parse(img.dataset.cycle || '[]');
+            const names = JSON.parse(img.dataset.names || '[]');
+            if (cycle.length < 2) return;
+            const period = 4000 + Math.random() * 3000;
+            const startDelay = Math.random() * 4000;
+            const tick = () => {
+                const idx = (parseInt(img.dataset.idx, 10) + 1) % cycle.length;
+                img.dataset.idx = String(idx);
+                img.src = cycle[idx];
+                img.alt = names[idx] || '';
+            };
+            const timeoutId = setTimeout(() => {
+                tick();
+                const intervalId = setInterval(tick, period);
+                precedentTimers.push(intervalId);
+            }, startDelay);
+            precedentTimers.push(timeoutId);
+        });
+    }
+
+    function stopPrecedentGrid() {
+        precedentTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
+        precedentTimers = [];
     }
 
     // Slide 00 is active on load
