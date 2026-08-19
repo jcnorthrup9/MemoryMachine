@@ -902,8 +902,8 @@
             const cycle = JSON.parse(img.dataset.cycle || '[]');
             const names = JSON.parse(img.dataset.names || '[]');
             if (cycle.length < 2) return;
-            const period = 4000 + Math.random() * 3000;
-            const startDelay = Math.random() * 4000;
+            const period = 8000 + Math.random() * 6000;
+            const startDelay = Math.random() * 8000;
             const tick = () => {
                 const idx = (parseInt(img.dataset.idx, 10) + 1) % cycle.length;
                 img.dataset.idx = String(idx);
