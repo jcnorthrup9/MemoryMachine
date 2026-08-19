@@ -261,6 +261,14 @@
         @keyframes cf-out { 0%, 40% { opacity: 1; } 50%, 90% { opacity: 0; } 100% { opacity: 1; } }
         @keyframes cf-in  { 0%, 40% { opacity: 0; } 50%, 90% { opacity: 1; } 100% { opacity: 0; } }
 
+        /* ── Crossfade3: source-photo carousel, 3 images cycling in sequence ── */
+        .crossfade3 { position: relative; }
+        .crossfade3 img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: 0; }
+        .crossfade3 img:nth-child(1) { animation: cf3-cycle 13.5s ease-in-out infinite; animation-delay: 0s; }
+        .crossfade3 img:nth-child(2) { animation: cf3-cycle 13.5s ease-in-out infinite; animation-delay: -4.5s; }
+        .crossfade3 img:nth-child(3) { animation: cf3-cycle 13.5s ease-in-out infinite; animation-delay: -9s; }
+        @keyframes cf3-cycle { 0% { opacity: 0; } 4% { opacity: 1; } 29% { opacity: 1; } 33% { opacity: 0; } 100% { opacity: 0; } }
+
         /* ── Checklist (repurposed as punchy bullet rows) ── */
         .check {
             display: flex;
@@ -389,6 +397,11 @@
                         <div class="case-phase-tag">Formal System &#8596; Informal Reception</div>
                         <h3>Bottega Louie</h3>
                         <h2>Commercial Interior &middot; Los Angeles</h2>
+                        <div class="ph grow crossfade3" style="flex: 0 0 250px; overflow:hidden; margin-bottom:14px;">
+                            <img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_10.jpg">
+                            <img src="../archive/reference_images/BottegaLouie/bottega_louie_ref_7.jpg">
+                            <img src="../archive/reference_images/BottegaLouie/8368f423-3a98-456b-bfa9-b661efd009ac.jpg">
+                        </div>
                         <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
                             <img class="cf-source" src="../archive/render_output/bottegaLouieInterior/ViewCapture20260817_163017.png">
                             <img class="cf-rendered" src="../archive/render_output/bottegaLouieInterior/bottegaInterior01.jpg">
@@ -403,6 +416,11 @@
                         <div class="case-phase-tag">Formal System &#8596; Bounded Autonomy</div>
                         <h3>Nakagin Capsule Tower</h3>
                         <h2>Kisho Kurokawa &middot; Tokyo &middot; 1972</h2>
+                        <div class="ph grow crossfade3" style="flex: 0 0 250px; overflow:hidden; margin-bottom:14px;">
+                            <img src="../archive/reference_images/nakaginCapsuleTower/2362d526d98b4e9d982ec03b92f753db.f5fb7444.jpg">
+                            <img src="../archive/reference_images/nakaginCapsuleTower/Nakagin.jpg">
+                            <img src="../archive/reference_images/nakaginCapsuleTower/where-are-the-23-modules-saved-from-the-demolished-nakagin-capsule-tower-now_1.jpg">
+                        </div>
                         <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
                             <img class="cf-source" src="../archive/render_output/Nakagin/nakaginRhinoScreenshot.png">
                             <img class="cf-rendered" src="../archive/render_output/Nakagin/unused/flux2_klein_00110_.png">
@@ -417,6 +435,11 @@
                         <div class="case-phase-tag">Informal Agency &#8596; Formal Erasure</div>
                         <h3>O.T. Johnson Building</h3>
                         <h2>356 S. Broadway &middot; Los Angeles</h2>
+                        <div class="ph grow crossfade3" style="flex: 0 0 250px; overflow:hidden; margin-bottom:14px;">
+                            <img src="../archive/reference_images/ot_johnson/ot_johnson_ref_1.png">
+                            <img src="../archive/reference_images/ot_johnson/ot_johnson_ref_3.png">
+                            <img src="../archive/reference_images/ot_johnson/ot_johnson_ref_2.jpg">
+                        </div>
                         <div class="ph grow crossfade" style="flex: 0 0 42%; overflow:hidden;">
                             <img class="cf-source" src="../archive/render_output/OTjohnsonExterior/ViewCapture20260817_162539.png">
                             <img class="cf-rendered" src="../archive/render_output/OTjohnsonExterior/flux2_klein_00101_.png">
