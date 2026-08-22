@@ -1568,6 +1568,46 @@ export default function Viewport({
   // Comfy-Org flux_depth_lora_example template, which inverts its own
   // Lotus depth-estimator output for the exact same reason) -- keeps this
   // capture a plain, uncorrected depth render.
+  //
+  // Depth capture uses a CUSTOM linear-distance shader, not
+  // THREE.MeshDepthMaterial -- found 2026-08-22 (renders reported as "not
+  // very accurate") that no near/far tuning of the built-in depth material
+  // fixes this reliably. That material packs the standard *reciprocal*
+  // (1/z) NDC depth buffer into a single 8-bit channel, which concentrates
+  // nearly all of its precision within the first few percent of distance
+  // from the near plane regardless of what near/far are set to -- with
+  // real content several hundred ft out, that range gets crushed to 1-2
+  // times out of 256 (visually solid black), and pulling near in close
+  // enough to give near-camera space real precision just moves the
+  // crushing to the FAR end instead (verified via pixel histograms: exact
+  // near/far tuning attempts here all still landed >99% of pixels in a
+  // single 8-bit value). A linear distance encoding has none of this:
+  // output is literally camera-distance / maxDistance, so the full 0-255
+  // range spreads evenly across whatever the scene's actual depth extent
+  // is, at any zoom level, with no reciprocal compression to fight.
+  const linearDepthMaterialRef = useRef(null);
+  if (!linearDepthMaterialRef.current) {
+    linearDepthMaterialRef.current = new THREE.ShaderMaterial({
+      uniforms: { maxDist: { value: 1 } },
+      vertexShader: `
+        varying float vDist;
+        void main() {
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vDist = -mvPosition.z;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float maxDist;
+        varying float vDist;
+        void main() {
+          float d = clamp(vDist / maxDist, 0.0, 1.0);
+          gl_FragColor = vec4(vec3(d), 1.0);
+        }
+      `,
+    });
+  }
+
   const handleSendToComfy = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !onSendToComfy) return;
@@ -1578,7 +1618,25 @@ export default function Viewport({
     const camera = controlsRef.current?.object;
     if (state && camera) {
       const prevOverride = state.scene.overrideMaterial;
-      state.scene.overrideMaterial = new THREE.MeshDepthMaterial();
+
+      // Farthest scene-bounding-box corner from the camera sets the
+      // normalization distance -- everything from 0 (at the camera) to
+      // that distance maps linearly across the full output range.
+      const sceneBox = new THREE.Box3().setFromObject(state.scene);
+      const corners = [
+        new THREE.Vector3(sceneBox.min.x, sceneBox.min.y, sceneBox.min.z),
+        new THREE.Vector3(sceneBox.min.x, sceneBox.min.y, sceneBox.max.z),
+        new THREE.Vector3(sceneBox.min.x, sceneBox.max.y, sceneBox.min.z),
+        new THREE.Vector3(sceneBox.min.x, sceneBox.max.y, sceneBox.max.z),
+        new THREE.Vector3(sceneBox.max.x, sceneBox.min.y, sceneBox.min.z),
+        new THREE.Vector3(sceneBox.max.x, sceneBox.min.y, sceneBox.max.z),
+        new THREE.Vector3(sceneBox.max.x, sceneBox.max.y, sceneBox.min.z),
+        new THREE.Vector3(sceneBox.max.x, sceneBox.max.y, sceneBox.max.z),
+      ];
+      const farthestDist = Math.max(...corners.map((c) => camera.position.distanceTo(c)));
+      linearDepthMaterialRef.current.uniforms.maxDist.value = farthestDist + 20;
+
+      state.scene.overrideMaterial = linearDepthMaterialRef.current;
       state.gl.render(state.scene, camera);
       depthDataUrl = canvas.toDataURL('image/png');
       state.scene.overrideMaterial = prevOverride;
