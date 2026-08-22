@@ -8,23 +8,30 @@ POLL_TIMEOUT (comfy_client.py, currently 300s) to come back, so it has no
 business blocking a FastAPI request/response cycle. Runs in a background
 thread and returns a job id immediately; the caller polls get_job().
 
-Two workflows live here:
+Three workflows live here:
+  - _run_flux2_render_body (FLUX2_WORKFLOW_PATH, flux2_klein_depth.json) --
+    the ACTIVE one (see _run_render_body's dispatch below), added
+    2026-08-22 to replace Flux.1 as the default: Flux.1's outputs were
+    reported "too loose" -- plausible-looking but not structurally
+    grounded in the actual depth signal, uncanny in a way that isn't
+    appropriate for this project. Uses FLUX.2 Klein 9B (kv/image-edit
+    variant, fp8) + its Qwen3-8B text encoder, official Comfy-Org
+    reference-latent pattern (single reference image = our depth capture,
+    no external depth-ESTIMATION model needed since we already have a
+    true depth render). Needs flux-2-klein-9b-kv-fp8.safetensors (~9.15GB)
+    + qwen_3_8b_fp8mixed.safetensors (~8.07GB) -- both a real download,
+    not bundled with a stock ComfyUI install.
   - _run_depth_render_body (DEPTH_WORKFLOW_PATH, flux1_depth_lora.json) --
-    the ACTIVE one (see _run_render_body's dispatch below). Uses the
-    official Comfy-Org flux1-depth-dev-lora graph: a true depth-pass render
-    of the Viewport (captured client-side via THREE.MeshDepthMaterial, see
-    Viewport.jsx's handleSendToComfy) drives generation via
-    InstructPixToPixConditioning, giving much better structural/perspective
-    fidelity than the Kontext workflow below. Needs the full flux1-dev.safe-
-    tensors checkpoint (23.8GB) + flux1-depth-dev-lora.safetensors, so the
-    first render after a ComfyUI restart pays a real model-load cost.
+    the Flux.1 depth-lora pipeline this feature launched the depth-capture
+    approach with (2026-08-21/22). Kept working and unused rather than
+    deleted -- swap _run_render_body's dispatch back to this one if
+    Flux.2's extra VRAM/download cost isn't worth it for a given session;
+    only needs flux1-dev.safetensors (23.8GB, already resident) +
+    flux1-depth-dev-lora.safetensors.
   - _run_kontext_render_body (KONTEXT_WORKFLOW_PATH, flux1dev.json) -- the
     ORIGINAL workflow this feature launched with (2026-08-21), takes the
-    plain color capture through Flux Kontext. Kept working and unused
-    rather than deleted (2026-08-22) -- swap _run_render_body's dispatch
-    back to this one if the depth pipeline's extra VRAM/time cost isn't
-    worth it for a given session; it only needs the lighter fp8 Kontext
-    checkpoint already resident from earlier testing.
+    plain color capture through Flux Kontext, no depth capture at all.
+    Kept working and unused; only needs the lighter fp8 Kontext checkpoint.
 """
 import base64
 import os
@@ -40,6 +47,7 @@ from logic.comfy_client import (
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KONTEXT_WORKFLOW_PATH = os.path.join(BASE_DIR, "data", "comfy", "flux1dev.json")
 DEPTH_WORKFLOW_PATH = os.path.join(BASE_DIR, "data", "comfy", "flux1_depth_lora.json")
+FLUX2_WORKFLOW_PATH = os.path.join(BASE_DIR, "data", "comfy", "flux2_klein_depth.json")
 
 REALISM_SUFFIX = (
     "Architectural visualization, urban park, golden hour lighting, "
@@ -83,9 +91,10 @@ def _run_render(job_id, image_b64, depth_b64, narrative):
 
 def _run_render_body(job_id, image_b64, depth_b64, narrative):
     # See this module's docstring -- swap this one line to
-    # _run_kontext_render_body(job_id, image_b64, narrative) to go back to
-    # the lighter, non-depth pipeline.
-    _run_depth_render_body(job_id, image_b64, depth_b64, narrative)
+    # _run_depth_render_body(...) for the Flux.1 depth-lora pipeline, or
+    # _run_kontext_render_body(job_id, image_b64, narrative) for the
+    # original no-depth pipeline.
+    _run_flux2_render_body(job_id, image_b64, depth_b64, narrative)
 
 
 def _archive_source_capture(job_id, image_b64):
@@ -103,6 +112,60 @@ def _archive_source_capture(job_id, image_b64):
     except Exception as e:
         print(f"[COMFY] Warning: failed to archive source capture for job {job_id}: {e}")
         return None
+
+
+def _run_flux2_render_body(job_id, image_b64, depth_b64, narrative):
+    """FLUX.2 Klein 9B (kv/image-edit variant), conditioned on our own
+    depth capture via ReferenceLatent -- see module docstring. Node "5" is
+    CLIPTextEncode (the prompt), node "7" is the LoadImage the depth
+    capture gets written into (same COMFY_INPUT write pattern as the
+    Flux.1 depth pipeline below)."""
+    _JOBS[job_id]["status"] = "running"
+
+    if not ping():
+        _JOBS[job_id].update(status="error", error="ComfyUI not reachable at 127.0.0.1:8188")
+        return
+
+    if not os.path.exists(FLUX2_WORKFLOW_PATH):
+        _JOBS[job_id].update(status="error", error=f"Workflow not found: {FLUX2_WORKFLOW_PATH}")
+        return
+
+    if not depth_b64:
+        _JOBS[job_id].update(status="error", error="No depth capture provided (depth_b64 missing)")
+        return
+
+    _archive_source_capture(job_id, image_b64)
+
+    os.makedirs(COMFY_INPUT, exist_ok=True)
+    depth_filename = f"mm_depth_{int(time.time() * 1000)}.png"
+    depth_path = os.path.join(COMFY_INPUT, depth_filename)
+
+    try:
+        with open(depth_path, "wb") as f:
+            f.write(_decode_data_url(depth_b64))
+    except Exception as e:
+        _JOBS[job_id].update(status="error", error=f"Bad depth image data: {e}")
+        return
+
+    workflow = load_workflow(FLUX2_WORKFLOW_PATH)
+    full_prompt = f"{narrative}. {REALISM_SUFFIX}"
+
+    patched = patch_workflow(workflow, {
+        "5": {"text": full_prompt},        # CLIPTextEncode positive prompt
+        "7": {"image": depth_filename},    # LoadImage -- the depth-pass capture
+    })
+
+    prompt_id = queue_workflow(patched)
+    if not prompt_id:
+        _JOBS[job_id].update(status="error", error="Failed to queue render workflow")
+        return
+
+    img_path = poll_for_output(prompt_id, ".png")
+    if not img_path:
+        _JOBS[job_id].update(status="error", error="Timed out waiting for render output")
+        return
+
+    _finish_job(job_id, img_path)
 
 
 def _run_depth_render_body(job_id, image_b64, depth_b64, narrative):
