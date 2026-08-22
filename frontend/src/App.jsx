@@ -422,7 +422,7 @@ export default function App() {
   }, []);
 
   const handleSendToComfy = useCallback(
-    async (dataUrl, narrative) => {
+    async (dataUrl, depthDataUrl, narrative) => {
       stopComfyPoll();
       setComfyRender({ status: 'queued', imageUrl: null, error: null });
       try {
@@ -432,7 +432,7 @@ export default function App() {
           setComfyRender({ status: 'error', imageUrl: null, error: 'ComfyUI not reachable' });
           return;
         }
-        const { job_id } = await startComfyRender(dataUrl, narrative);
+        const { job_id } = await startComfyRender(dataUrl, depthDataUrl, narrative);
         log(`comfy render queued: ${job_id}`);
         comfyPollRef.current = setInterval(async () => {
           try {

@@ -107,20 +107,26 @@ export async function getBlenderBuildStatus(jobId) {
 
 // Perspective-mode "Send to ComfyUI" (Viewport.jsx) -- same capture-then-
 // POST technique as exportViewPng above, but routed into ComfyUI's Flux
-// Kontext workflow (logic/comfy_render_job.py) for an atmospheric render
-// instead of a plain file save. Async job/poll, same shape as the Blender
-// build pair above -- a ComfyUI render can take minutes.
+// Depth-LoRA workflow (logic/comfy_render_job.py) for a structurally-
+// faithful atmospheric render instead of a plain file save. Async job/poll,
+// same shape as the Blender build pair above -- a ComfyUI render can take
+// minutes (plus a one-time model-load cost on the first render).
 export async function getComfyStatus() {
   const res = await fetch('/api/comfy-status');
   if (!res.ok) throw new Error(`comfy status fetch failed: ${res.status}`);
   return res.json();
 }
 
-export async function startComfyRender(dataUrl, narrative) {
+// depthDataUrl: a true depth-pass render of the same frame (Viewport.jsx's
+// handleSendToComfy, via scene.overrideMaterial = MeshDepthMaterial) -- this
+// is what actually drives the depth-lora generation; dataUrl (the plain
+// color capture) is archived server-side for reference/the deck's before/
+// after pairing but isn't fed into ComfyUI itself.
+export async function startComfyRender(dataUrl, depthDataUrl, narrative) {
   const res = await fetch('/api/comfy-render', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_b64: dataUrl, narrative }),
+    body: JSON.stringify({ image_b64: dataUrl, depth_b64: depthDataUrl, narrative }),
   });
   if (!res.ok) throw new Error(`comfy render start failed: ${res.status}`);
   return res.json();

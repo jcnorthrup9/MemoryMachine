@@ -216,8 +216,9 @@ class ComfyTextTo3DPayload(BaseModel):
     position_z: float = 0.0   # Three.js world Z (from 2D transform Y)
 
 class ComfyRenderPayload(BaseModel):
-    image_b64: str       # base64 PNG from Three.js canvas
-    narrative: str       # spatial quality narrative for the prompt
+    image_b64: str            # base64 color capture from Three.js canvas -- archived server-side, not fed into ComfyUI
+    depth_b64: str | None = None  # base64 depth-pass capture (Viewport.jsx's MeshDepthMaterial render) -- drives the depth-lora generation
+    narrative: str             # spatial quality narrative for the prompt
 
 # --- ROUTES ---
 
@@ -575,7 +576,7 @@ async def comfy_render(payload: ComfyRenderPayload):
     render (Viewport.jsx's "Send to ComfyUI" button). Returns immediately;
     poll /api/comfy-render/{job_id} for status.
     """
-    job_id = comfy_render_job.start_render_job(payload.image_b64, payload.narrative)
+    job_id = comfy_render_job.start_render_job(payload.image_b64, payload.depth_b64, payload.narrative)
     return {"job_id": job_id, "status": "queued"}
 
 

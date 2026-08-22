@@ -1388,6 +1388,11 @@ export default function Viewport({
   const [hoveredZone, setHoveredZone] = useState(null);
   const canvasRef = useRef(null);
   const controlsRef = useRef(null);
+  // Populated by <Canvas>'s onCreated below with the live R3F state (gl,
+  // scene, camera) -- needed for the depth-pass capture in
+  // handleSendToComfy, which (like handleExport) runs outside the <Canvas>
+  // tree and so can't reach these via useThree().
+  const r3fStateRef = useRef(null);
   // toThree()'s Z range is now [0, siteLengthFt] (fixed 2026-07-09, see
   // toThree's own comment) -- center must sit at the midpoint of THAT
   // range, not the old (buggy) [-siteLengthFt, 0] range's midpoint.
@@ -1526,18 +1531,61 @@ export default function Viewport({
   }, [viewMode, onExportVectorView]);
 
   // "Send to ComfyUI" (perspective mode only) -- captures the canvas the
-  // same way handleExport does, then hands it off (as a plain PNG data URL,
-  // not saved to disk first) to App.jsx's handleSendToComfy, which queues
-  // it through /api/comfy-render (logic/comfy_render_job.py) for an
-  // atmospheric Flux Kontext render. Scoped to perspective mode because
-  // that's the free-orbit "zoom into a part of the site" view this feature
-  // is for -- orthographic modes already have their own dedicated export
-  // (vector linework) via the button above.
+  // same way handleExport does (the color image, kept only for archiving/
+  // the deck's before/after crossfade -- ComfyUI's depth-lora workflow
+  // below never sees it), PLUS a true depth pass of the exact same frame,
+  // then hands both off to App.jsx's handleSendToComfy, which queues them
+  // through /api/comfy-render (logic/comfy_render_job.py, flux1_depth_lora
+  // workflow) for a structurally-faithful atmospheric render.
+  //
+  // The depth pass is a real render, not an estimate: swap every material
+  // in the scene for THREE.MeshDepthMaterial via scene.overrideMaterial
+  // (the standard r3f/three.js escape hatch for "render this frame with
+  // one material"), render once with the SAME gl/camera the visible frame
+  // just used, read it back with toDataURL, then immediately restore the
+  // normal material and re-render so the on-screen frame isn't left showing
+  // the depth pass. All synchronous, no await in between, so r3f's own rAF
+  // render loop can't interleave and steal a frame mid-swap.
+  //
+  // Camera comes from controlsRef.current.object, NOT r3fStateRef's own
+  // .camera -- same reasoning handleExport above already relies on
+  // (controls.object.position...): ViewCamera swaps in a brand new
+  // PerspectiveCamera/OrthographicCamera instance on every viewMode change
+  // (drei's makeDefault), but r3fStateRef was only ever populated once, at
+  // <Canvas>'s onCreated, so `.camera` on it stays pinned to whatever
+  // camera existed at first mount. controlsRef, by contrast, is remounted
+  // fresh every viewMode change (key={viewMode} on <OrbitControls>), so
+  // `.object` always points at the camera actually in use right now --
+  // confirmed live 2026-08-22: without this fix, every depth capture came
+  // out identical regardless of how far the user had orbited/zoomed, since
+  // it was silently re-rendering the very first frame's camera every time.
+  //
+  // Three.js's raw depth output is near=dark/far=bright (standard
+  // normalized-device-depth convention) -- the OPPOSITE of what depth-
+  // conditioned diffusion models expect (near=bright, matching MiDaS/Lotus-
+  // style depth estimators). Rather than inverting here, the ComfyUI
+  // workflow itself does it (an ImageInvert node, matching the official
+  // Comfy-Org flux_depth_lora_example template, which inverts its own
+  // Lotus depth-estimator output for the exact same reason) -- keeps this
+  // capture a plain, uncorrected depth render.
   const handleSendToComfy = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !onSendToComfy) return;
     const dataUrl = canvas.toDataURL('image/png');
-    onSendToComfy(dataUrl, comfyPrompt);
+
+    let depthDataUrl = null;
+    const state = r3fStateRef.current;
+    const camera = controlsRef.current?.object;
+    if (state && camera) {
+      const prevOverride = state.scene.overrideMaterial;
+      state.scene.overrideMaterial = new THREE.MeshDepthMaterial();
+      state.gl.render(state.scene, camera);
+      depthDataUrl = canvas.toDataURL('image/png');
+      state.scene.overrideMaterial = prevOverride;
+      state.gl.render(state.scene, camera);
+    }
+
+    onSendToComfy(dataUrl, depthDataUrl, comfyPrompt);
   }, [onSendToComfy, comfyPrompt]);
 
   // Real cast shadows (2026-07-11 fix, "flat" viewport report): every mode
@@ -1570,13 +1618,14 @@ export default function Viewport({
         ref={canvasRef}
         shadows="soft"
         gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
-        onCreated={({ gl }) => {
+        onCreated={(state) => {
           // Matches PershingMetabolizer_Prototype's renderer setup --
           // ACES tone mapping reads noticeably less flat/dark than the
           // default linear mapping, especially on the muted concrete/
           // steel tints this scene uses.
-          gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.15;
+          state.gl.toneMapping = THREE.ACESFilmicToneMapping;
+          state.gl.toneMappingExposure = 1.15;
+          r3fStateRef.current = state;
         }}
       >
         <ViewCamera view={viewMode} center={center} siteWidthFt={siteWidthFt} siteLengthFt={siteLengthFt} />
