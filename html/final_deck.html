@@ -815,26 +815,27 @@
                 </div>
                 <div style="display:flex; flex:1; min-height:0;">
             <div class="col" style="padding-top:28px;">
-                <h2>Atmospheric Render Pipeline</h2>
-                <p style="margin-bottom: 14px;">From inside the live 3D reconstruction, orbit and zoom into any part of the massing in perspective view, then capture that exact framing and route it through a local ComfyUI / Flux Kontext workflow for an atmospheric, photoreal render — closing the loop between procedural generation and generative visualization.</p>
+                <h2>Depth-Guided Render Pipeline</h2>
+                <p style="margin-bottom: 14px;">From inside the live 3D reconstruction, orbit and zoom into any part of the massing in perspective view, then capture that exact camera's true depth pass and route it through a local ComfyUI Flux depth-LoRA workflow for a structurally-faithful, photoreal render — closing the loop between procedural generation and generative visualization.</p>
                 <div class="rule" style="margin:10px 0;"></div>
                 <div class="vignette" style="margin-bottom:10px;">
                     <strong>PIPELINE</strong><br>
-                    <div class="check" style="font-size:0.83rem; margin-top:8px; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Live perspective-camera capture — no manual screenshot step</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-top:8px; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Real depth-pass capture of the live camera — not an estimate</span></div>
                     <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Async job queue against ComfyUI — non-blocking, polled to completion</span></div>
                     <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Editable narrative prompt, prefilled from the SPATIALIZE generation</span></div>
                     <div class="check" style="font-size:0.83rem; margin-bottom:0;"><span class="mark">&mdash;</span><span>Finished renders archived automatically alongside the build's other exports</span></div>
                 </div>
             </div>
             <div class="col" style="padding: 28px; display:flex; flex-direction:column; align-items: center; justify-content: center;">
-                <div style="flex:1; min-height:0; width:100%; overflow:hidden;">
-                    <img src="../archive/render_output/PershingSquare/comfyPipelineDemo_perspectiveCapture.png"
-                         alt="ComfyUI/Flux atmospheric render generated from a captured perspective view of the Pershing Square reconstruction"
-                         style="width:100%; height:100%; object-fit:cover; border:1px solid var(--border);">
+                <div class="ph grow crossfade" style="flex:1; min-height:0; width:100%; overflow:hidden;">
+                    <img class="cf-source" src="../archive/render_output/PershingSquare/comfyPipelineDemo_sourceCapture.png"
+                         alt="Raw perspective-view capture of the Pershing Square reconstruction, before rendering">
+                    <img class="cf-rendered" src="../archive/render_output/PershingSquare/comfyPipelineDemo_perspectiveCapture.png"
+                         alt="ComfyUI Flux depth-LoRA render generated from that same captured perspective view">
                 </div>
                 <div class="quote" style="width:100%; margin-top:14px; margin-bottom:0; flex-shrink:0;">
                     <div class="quote-source" style="margin-bottom:4px;">Prompt Used</div>
-                    <div class="quote-text" style="font-size:0.78rem; line-height:1.5;">&ldquo;pershing square park perspective render, sunny afternoon. Architectural visualization, urban park, golden hour lighting, photorealistic render, high detail, cinematic composition.&rdquo;</div>
+                    <div class="quote-text" style="font-size:0.78rem; line-height:1.5;">&ldquo;street-level walkway through pershing square with shade trees, sunny afternoon. Architectural visualization, urban park, golden hour lighting, photorealistic render, high detail, cinematic composition.&rdquo;</div>
                 </div>
             </div>
                 </div><!-- /slide-body -->
