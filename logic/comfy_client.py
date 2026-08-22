@@ -36,6 +36,14 @@ def _resolve_comfy_output():
     candidates = [
         r"D:\ComfyUI_windows_portable\ComfyUI\output",
         r"C:\ComfyUI_windows_portable\ComfyUI\output",
+        # NVIDIA's own portable build (comfyanonymous's Windows+CUDA bundle,
+        # distinct from the plain ComfyUI_windows_portable dir above) nests
+        # an extra ComfyUI_windows_portable level under this folder -- found
+        # 2026-08-21 on a machine with no D: drive at all, where every
+        # candidate above missed and the old code fell through to a
+        # hardcoded D:\ path, crashing os.makedirs() with WinError 3 on a
+        # drive that doesn't exist.
+        r"C:\ComfyUI_windows_portable_nvidia\ComfyUI_windows_portable\ComfyUI\output",
         os.path.expanduser(r"~\ComfyUI\output"),
     ]
     for c in candidates:
@@ -44,7 +52,29 @@ def _resolve_comfy_output():
     return candidates[0]
 
 
+def _resolve_comfy_input():
+    """Same fix as _resolve_comfy_output() above, for ComfyUI's input/
+    folder (where /api/comfy-render writes the capture LoadImage reads
+    back) -- was hardcoded to C:\\ComfyUI_windows_portable, breaking on
+    any machine whose install lives elsewhere."""
+    env = os.environ.get("COMFY_INPUT_DIR")
+    if env:
+        return env
+    candidates = [
+        r"D:\ComfyUI_windows_portable\ComfyUI\input",
+        r"C:\ComfyUI_windows_portable\ComfyUI\input",
+        # See the matching comment in _resolve_comfy_output() above.
+        r"C:\ComfyUI_windows_portable_nvidia\ComfyUI_windows_portable\ComfyUI\input",
+        os.path.expanduser(r"~\ComfyUI\input"),
+    ]
+    for c in candidates:
+        if os.path.isdir(c):
+            return c
+    return candidates[0]
+
+
 COMFY_OUTPUT = _resolve_comfy_output()
+COMFY_INPUT = _resolve_comfy_input()
 POLL_INTERVAL = 2.0   # seconds between status checks
 POLL_TIMEOUT  = 300   # seconds before giving up
 
@@ -113,17 +143,29 @@ def poll_for_output(prompt_id: str, expected_ext: str = ".glb") -> str | None:
                 print(f"[COMFY] Execution error: {msgs}")
                 return None
 
-            # Walk all node outputs to find a file matching expected_ext
+            # Walk all node outputs to find a file matching expected_ext.
+            # A workflow can wire the same generation into both a SaveImage
+            # node (type "output", lands under COMFY_OUTPUT, permanent) and
+            # a PreviewImage node (type "temp", lands in ComfyUI's sibling
+            # temp/ dir, cleared periodically, NOT under COMFY_OUTPUT) --
+            # e.g. flux1dev.json does exactly this (nodes 136/173). dict
+            # iteration order isn't guaranteed to put the real output first,
+            # and the app's /comfy-output static mount only serves
+            # COMFY_OUTPUT, so a "temp"-type match must never be returned --
+            # doing so used to produce a URL that 404s (found 2026-08-21).
+            # Only "output"-type images are eligible; a workflow with no
+            # SaveImage node correctly times out below instead.
             outputs = job.get("outputs", {})
             for node_id, node_out in outputs.items():
                 # Images output: {"images": [{"filename": ..., "subfolder": ..., "type": "output"}]}
                 for img in node_out.get("images", []):
                     fn = img.get("filename", "")
-                    if fn.lower().endswith(expected_ext):
-                        subfolder = img.get("subfolder", "")
-                        full_path = os.path.join(COMFY_OUTPUT, subfolder, fn)
-                        print(f"[COMFY] Output found: {full_path}")
-                        return full_path
+                    if img.get("type") != "output" or not fn.lower().endswith(expected_ext):
+                        continue
+                    subfolder = img.get("subfolder", "")
+                    full_path = os.path.join(COMFY_OUTPUT, subfolder, fn)
+                    print(f"[COMFY] Output found: {full_path}")
+                    return full_path
 
                 # Mesh/GLB output — ComfyUI uses "3d" key for SaveGLB node output
                 for key in ("mesh", "3d"):

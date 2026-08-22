@@ -105,6 +105,33 @@ export async function getBlenderBuildStatus(jobId) {
   return res.json();
 }
 
+// Perspective-mode "Send to ComfyUI" (Viewport.jsx) -- same capture-then-
+// POST technique as exportViewPng above, but routed into ComfyUI's Flux
+// Kontext workflow (logic/comfy_render_job.py) for an atmospheric render
+// instead of a plain file save. Async job/poll, same shape as the Blender
+// build pair above -- a ComfyUI render can take minutes.
+export async function getComfyStatus() {
+  const res = await fetch('/api/comfy-status');
+  if (!res.ok) throw new Error(`comfy status fetch failed: ${res.status}`);
+  return res.json();
+}
+
+export async function startComfyRender(dataUrl, narrative) {
+  const res = await fetch('/api/comfy-render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_b64: dataUrl, narrative }),
+  });
+  if (!res.ok) throw new Error(`comfy render start failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getComfyRenderStatus(jobId) {
+  const res = await fetch(`/api/comfy-render/${jobId}`);
+  if (!res.ok) throw new Error(`comfy render status fetch failed: ${res.status}`);
+  return res.json();
+}
+
 // Grows the Space Colonization pedestrian circulation network against the
 // given terrain params -- synchronous (see logic/pershing_api.py's
 // grow_network() docstring for why this doesn't need the blender-build

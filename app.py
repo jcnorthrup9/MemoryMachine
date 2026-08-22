@@ -20,7 +20,9 @@ from logic.urban_engine import GuidelineManager, remix_layers, guideline_manager
 from logic.ai_synthesizer import (
     generate_spatial_seed, generate_mermaid_diagram, apply_deficit_weighting
 )
+from logic import comfy_client
 from logic.comfy_client import ping as comfy_ping, load_workflow, patch_workflow, queue_workflow, poll_for_output
+from logic import comfy_render_job
 from logic.version import get_version
 from logic.pershing_api import (
     RebuildParams, BakeGrids, GrowNetworkRequest, GenerateCanopyRequest, GenerateDrawingsRequest,
@@ -120,9 +122,8 @@ models_dir = os.path.join(BASE_DIR, 'models')
 os.makedirs(models_dir, exist_ok=True)
 app.mount("/models", StaticFiles(directory="models"), name="models")
 
-comfy_output_dir = r"C:\ComfyUI_windows_portable\ComfyUI\output"
-if os.path.exists(comfy_output_dir):
-    app.mount("/comfy-output", StaticFiles(directory=comfy_output_dir), name="comfy-output")
+if os.path.exists(comfy_client.COMFY_OUTPUT):
+    app.mount("/comfy-output", StaticFiles(directory=comfy_client.COMFY_OUTPUT), name="comfy-output")
 
 # Static real-world context (columns/tunnel/secondary_entrance/ramps) for
 # the Pershing viewport -- same site_named.obj blender_cockpit.py's
@@ -562,80 +563,28 @@ async def comfy_text_to_3d(payload: ComfyTextTo3DPayload):
 
 
 # ── COMFY: 3D SCENE CAPTURE → FLUX KONTEXT RENDER ────────────────────────────
+# Async job-queue pair, matching /api/pershing/blender-build's shape below --
+# a ComfyUI render can take minutes (see comfy_client.POLL_TIMEOUT), so this
+# used to block the request for all of that (see git history); now it just
+# kicks off logic/comfy_render_job.py's background thread and returns a
+# job_id immediately, and the browser polls the status route for it.
 @app.post("/api/comfy-render")
 async def comfy_render(payload: ComfyRenderPayload):
     """
-    Phase 3: Three.js canvas capture + narrative → Flux Kontext atmospheric render.
-    Writes the base64 image to a temp file, patches flux1dev.json, queues, polls.
-    Returns the output image URL.
+    Perspective-mode viewport capture + narrative → Flux Kontext atmospheric
+    render (Viewport.jsx's "Send to ComfyUI" button). Returns immediately;
+    poll /api/comfy-render/{job_id} for status.
     """
-    if not comfy_ping():
-        return JSONResponse(status_code=503, content={"error": "ComfyUI not reachable at localhost:8188"})
+    job_id = comfy_render_job.start_render_job(payload.image_b64, payload.narrative)
+    return {"job_id": job_id, "status": "queued"}
 
-    wf_path = os.path.join(BASE_DIR, "data", "comfy", "flux1dev.json")
-    if not os.path.exists(wf_path):
-        return JSONResponse(status_code=500, content={"error": f"Workflow not found: {wf_path}"})
 
-    # Write the canvas capture to ComfyUI's input folder so LoadImage can find it
-    comfy_input_dir = r"C:\ComfyUI_windows_portable\ComfyUI\input"
-    os.makedirs(comfy_input_dir, exist_ok=True)
-    temp_filename = f"mm_capture_{int(time.time()*1000)}.png"
-    temp_path = os.path.join(comfy_input_dir, temp_filename)
-
-    try:
-        # Strip base64 header if present
-        img_data = payload.image_b64
-        if "," in img_data:
-            img_data = img_data.split(",", 1)[1]
-        with open(temp_path, "wb") as f:
-            f.write(base64.b64decode(img_data))
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"error": f"Bad image data: {e}"})
-
-    workflow = load_workflow(wf_path)
-
-    # Build atmospheric architectural prompt from narrative
-    full_prompt = (
-        f"{payload.narrative}. "
-        "Architectural visualization, urban park, golden hour lighting, "
-        "photorealistic render, high detail, cinematic composition."
-    )
-
-    patched = patch_workflow(workflow, {
-        "6":   {"text": full_prompt},          # Positive prompt
-        "142": {"image": temp_filename},        # Input image → LoadImageOutput → use temp file
-    })
-
-    # Node 142 is LoadImageOutput which loads from ComfyUI output folder.
-    # Since we're providing a capture (not a prior output), swap to a standard LoadImage node approach
-    # by injecting the filename directly. ComfyUI will find it in the input/ folder.
-    patched["142"]["class_type"] = "LoadImage"
-    patched["142"]["inputs"] = {"image": temp_filename}
-
-    prompt_id = queue_workflow(patched)
-    if not prompt_id:
-        return JSONResponse(status_code=500, content={"error": "Failed to queue render workflow"})
-
-    img_path = await asyncio.get_running_loop().run_in_executor(
-        None, lambda: poll_for_output(prompt_id, ".png")
-    )
-
-    if not img_path:
-        # Try jpg fallback
-        img_path = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: poll_for_output(prompt_id, ".jpg")
-        )
-
-    if not img_path:
-        return JSONResponse(status_code=504, content={"error": "Timed out waiting for render output"})
-
-    rel_path = os.path.relpath(img_path, r"C:\ComfyUI_windows_portable\ComfyUI\output")
-    return {
-        "status": "success",
-        "prompt_id": prompt_id,
-        "image_path": img_path,
-        "image_url": f"/comfy-output/{rel_path.replace(os.sep, '/')}"
-    }
+@app.get("/api/comfy-render/{job_id}")
+async def comfy_render_status(job_id: str):
+    job = comfy_render_job.get_job(job_id)
+    if job is None:
+        return JSONResponse(status_code=404, content={"error": "unknown job_id"})
+    return job
 
 
 @app.get("/api/version")

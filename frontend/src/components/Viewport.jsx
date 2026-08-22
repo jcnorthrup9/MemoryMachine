@@ -1,4 +1,4 @@
-import { useMemo, useRef, useLayoutEffect, useState, useCallback } from 'react';
+import { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Instances, Instance, PerspectiveCamera, OrthographicCamera, Text, Billboard, Line } from '@react-three/drei';
 import * as THREE from 'three';
@@ -1347,8 +1347,16 @@ export default function Viewport({
   blenderSvgUrl, onShowLineArt, onExportVectorView, exportingVectorView, onSaveBuild, onLoadBuild, canSaveBuild,
   savingBuild, removeTopSlab, onToggleRemoveTopSlab, visibleLayers,
   zonesEnabled, onToggleZones, selectedZoneId, onSelectZone, onExportZone, exportingZone,
+  comfyNarrative, comfyRender, onSendToComfy,
 }) {
   const loadBuildInputRef = useRef(null);
+  // Prefilled from SPATIALIZE's narrative (comfyNarrative prop) but left
+  // editable -- re-syncs whenever a fresh narrative comes in (new GEN),
+  // same "prefill, don't lock" behavior as the rest of this panel's inputs.
+  const [comfyPrompt, setComfyPrompt] = useState(comfyNarrative || '');
+  useEffect(() => {
+    if (comfyNarrative) setComfyPrompt(comfyNarrative);
+  }, [comfyNarrative]);
   const [shadingMode, setShadingMode] = useState('colored');
   // Default OFF (2026-07-10 fix): concrete_floor_block/concrete_retaining_
   // block ("salvage" -- harvested_block_specs() re-instancing removed real
@@ -1516,6 +1524,21 @@ export default function Viewport({
       onExportVectorView(viewDirSite);
     }
   }, [viewMode, onExportVectorView]);
+
+  // "Send to ComfyUI" (perspective mode only) -- captures the canvas the
+  // same way handleExport does, then hands it off (as a plain PNG data URL,
+  // not saved to disk first) to App.jsx's handleSendToComfy, which queues
+  // it through /api/comfy-render (logic/comfy_render_job.py) for an
+  // atmospheric Flux Kontext render. Scoped to perspective mode because
+  // that's the free-orbit "zoom into a part of the site" view this feature
+  // is for -- orthographic modes already have their own dedicated export
+  // (vector linework) via the button above.
+  const handleSendToComfy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !onSendToComfy) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    onSendToComfy(dataUrl, comfyPrompt);
+  }, [onSendToComfy, comfyPrompt]);
 
   // Real cast shadows (2026-07-11 fix, "flat" viewport report): every mode
   // before this rendered lit purely by surface-normal angle to the sun, with
@@ -1769,6 +1792,40 @@ export default function Viewport({
         >
           {exportingVectorView ? 'Exporting Linework...' : 'Export Current View'}
         </button>
+        {viewMode === 'perspective' && onSendToComfy && (
+          <div className="bg-surface/80 backdrop-blur-sm border border-border rounded-lg flex flex-col p-1.5 gap-1 max-w-[220px]">
+            <span className="text-on-surface-variant text-[8px] font-mono-sm">COMFYUI RENDER</span>
+            <input
+              type="text"
+              value={comfyPrompt}
+              onChange={(e) => setComfyPrompt(e.target.value)}
+              placeholder="render prompt / narrative"
+              className="bg-surface-container-high text-primary border border-border rounded px-1.5 py-1 font-mono-sm text-[9px] w-full"
+            />
+            <button
+              onClick={handleSendToComfy}
+              disabled={comfyRender?.status === 'queued' || comfyRender?.status === 'running'}
+              title="Sends this perspective view (as-is, whatever you've orbited/zoomed to) + the prompt above to the local ComfyUI instance for an atmospheric render."
+              className="bg-accent text-background px-2 py-1 font-mono-sm text-[9px] font-bold uppercase rounded hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {comfyRender?.status === 'queued' || comfyRender?.status === 'running'
+                ? 'Rendering...'
+                : 'Send to ComfyUI'}
+            </button>
+            {comfyRender?.status === 'error' && (
+              <span className="text-[8px] font-mono-sm text-red-400">{comfyRender.error}</span>
+            )}
+            {comfyRender?.status === 'done' && comfyRender.imageUrl && (
+              <a href={comfyRender.imageUrl} target="_blank" rel="noreferrer">
+                <img
+                  src={comfyRender.imageUrl}
+                  alt="ComfyUI render"
+                  className="w-full rounded border border-border hover:brightness-110"
+                />
+              </a>
+            )}
+          </div>
+        )}
         <button
           onClick={onSaveBuild}
           disabled={!canSaveBuild || savingBuild}

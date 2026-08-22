@@ -16,6 +16,7 @@ import {
   generateCanopy as generateCanopyApi,
   jurorChat as jurorChatApi, getProgramZones, saveToArchive,
   archiveGeneration as archiveGenerationApi,
+  getComfyStatus, startComfyRender, getComfyRenderStatus,
 } from './api.js';
 import { pointInZone, clipStructuralSpec, clipRectBounds } from './siteZones.js';
 
@@ -131,6 +132,7 @@ export default function App() {
   const [canopyResult, setCanopyResult] = useState(null);
   const [generatingCanopy, setGeneratingCanopy] = useState(false);
   const [exportingVectorView, setExportingVectorView] = useState(false);
+  const [comfyRender, setComfyRender] = useState({ status: 'idle', imageUrl: null, error: null });
   // Site-chunk export (2026-07-23) -- selectedZoneId resets to null whenever
   // zonesEnabled goes off, so re-enabling the toggle never silently resumes
   // isolating a stale zone from a previous session.
@@ -140,6 +142,7 @@ export default function App() {
   const vectorExportPollRef = useRef(null);
   const zoneExportPollRef = useRef(null);
   const blenderPollRef = useRef(null);
+  const comfyPollRef = useRef(null);
   // 2026-07-30: one-shot guard so restoreSnapshot's setParams call doesn't
   // trigger the debounced rebuild effect below into silently overwriting
   // the just-restored snapshot with a fresh live recompute -- see
@@ -404,6 +407,59 @@ export default function App() {
   );
 
   useEffect(() => stopVectorExportPoll, [stopVectorExportPoll]);
+
+  // "Send to ComfyUI" (Viewport.jsx, perspective mode only) -- same job/
+  // poll shape as handleBuildInBlender/handleExportVectorView above, but
+  // against /api/comfy-render (logic/comfy_render_job.py) instead of the
+  // Blender build pipeline. Checks /api/comfy-status first so a cold/absent
+  // ComfyUI instance fails fast with a clear log line instead of queuing a
+  // job that will only discover that 300s later.
+  const stopComfyPoll = useCallback(() => {
+    if (comfyPollRef.current) {
+      clearInterval(comfyPollRef.current);
+      comfyPollRef.current = null;
+    }
+  }, []);
+
+  const handleSendToComfy = useCallback(
+    async (dataUrl, narrative) => {
+      stopComfyPoll();
+      setComfyRender({ status: 'queued', imageUrl: null, error: null });
+      try {
+        const { online } = await getComfyStatus();
+        if (!online) {
+          log('ComfyUI not reachable at 127.0.0.1:8188', 'error');
+          setComfyRender({ status: 'error', imageUrl: null, error: 'ComfyUI not reachable' });
+          return;
+        }
+        const { job_id } = await startComfyRender(dataUrl, narrative);
+        log(`comfy render queued: ${job_id}`);
+        comfyPollRef.current = setInterval(async () => {
+          try {
+            const job = await getComfyRenderStatus(job_id);
+            setComfyRender({ status: job.status, imageUrl: job.image_url, error: job.error });
+            if (job.status === 'done') {
+              stopComfyPoll();
+              log('comfy render done');
+            } else if (job.status === 'error') {
+              stopComfyPoll();
+              log(`comfy render failed: ${job.error}`, 'error');
+            }
+          } catch (err) {
+            stopComfyPoll();
+            log(String(err), 'error');
+            setComfyRender((prev) => ({ ...prev, status: 'error', error: String(err) }));
+          }
+        }, BLENDER_POLL_MS);
+      } catch (err) {
+        log(String(err), 'error');
+        setComfyRender({ status: 'error', imageUrl: null, error: String(err) });
+      }
+    },
+    [log, stopComfyPoll],
+  );
+
+  useEffect(() => stopComfyPoll, [stopComfyPoll]);
 
   const handleToggleZones = useCallback((enabled) => {
     setZonesEnabled(enabled);
@@ -888,6 +944,9 @@ export default function App() {
                   onShowLineArt={() => setShowLineArt(true)}
                   onExportVectorView={handleExportVectorView}
                   exportingVectorView={exportingVectorView}
+                  comfyNarrative={spatializeState.narrative}
+                  comfyRender={comfyRender}
+                  onSendToComfy={handleSendToComfy}
                   onSaveBuild={handleSaveBuild}
                   onLoadBuild={handleLoadBuild}
                   canSaveBuild={!!data}

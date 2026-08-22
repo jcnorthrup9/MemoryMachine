@@ -804,6 +804,37 @@
             </div><!-- /slide-wrap -->
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- 08 · GENERATIVE RENDER — PERSPECTIVE CAPTURE → COMFYUI       -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div class="spread" id="spread-9">
+            <div style="display:flex; flex-direction:column; width:100%; height:100%;">
+                <div style="padding:16px 50px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:baseline; gap:24px;">
+                    <span style="font-size:0.65rem; color:var(--muted); letter-spacing:4px; text-transform:uppercase; white-space:nowrap;">08 // GENERATIVE RENDER</span>
+                    <span style="font-size:1.5rem; color:var(--accent); letter-spacing:3px; text-transform:uppercase; font-family:'Courier New',monospace;">Perspective Capture &#8594; ComfyUI</span>
+                </div>
+                <div style="display:flex; flex:1; min-height:0;">
+            <div class="col" style="padding-top:28px;">
+                <h2>Atmospheric Render Pipeline</h2>
+                <p style="margin-bottom: 14px;">From inside the live 3D reconstruction, orbit and zoom into any part of the massing in perspective view, then capture that exact framing and route it through a local ComfyUI / Flux Kontext workflow for an atmospheric, photoreal render — closing the loop between procedural generation and generative visualization.</p>
+                <div class="rule" style="margin:10px 0;"></div>
+                <div class="vignette" style="margin-bottom:10px;">
+                    <strong>PIPELINE</strong><br>
+                    <div class="check" style="font-size:0.83rem; margin-top:8px; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Live perspective-camera capture — no manual screenshot step</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Async job queue against ComfyUI — non-blocking, polled to completion</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:4px;"><span class="mark">&mdash;</span><span>Editable narrative prompt, prefilled from the SPATIALIZE generation</span></div>
+                    <div class="check" style="font-size:0.83rem; margin-bottom:0;"><span class="mark">&mdash;</span><span>Finished renders archived automatically alongside the build's other exports</span></div>
+                </div>
+            </div>
+            <div class="col" style="padding: 28px; align-items: center; justify-content: center;">
+                <img src="../archive/render_output/PershingSquare/comfyPipelineDemo_perspectiveCapture.png"
+                     alt="ComfyUI/Flux atmospheric render generated from a captured perspective view of the Pershing Square reconstruction"
+                     style="width:100%; height:100%; object-fit:cover; border:1px solid var(--border);">
+            </div>
+                </div><!-- /slide-body -->
+            </div><!-- /slide-wrap -->
+        </div>
+
     </div><!-- /spread-container -->
 
 </div><!-- /viewer -->
@@ -866,6 +897,7 @@
         "05 // PRECEDENT LIBRARY",
         "06 // SITE ITERATION",
         "07 // THE APP",
+        "08 // GENERATIVE RENDER",
     ];
     const total = labels.length;
     let current = 1;
