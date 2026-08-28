@@ -899,7 +899,11 @@
         "07 // THE APP",
         "08 // GENERATIVE RENDER",
     ];
-    const total = labels.length;
+    // 2026-08-25: page 08 (GENERATIVE RENDER, spread-9) temporarily pulled
+    // out of the next/prev cycle per user request -- labels/spread-9's own
+    // markup+script are untouched, just unreachable via navigation. Bump
+    // back to labels.length to restore it.
+    const total = labels.length - 1;
     let current = 1;
 
     function showSpread(n) {
