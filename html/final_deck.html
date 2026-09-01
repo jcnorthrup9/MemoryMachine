@@ -944,6 +944,18 @@
         if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prevSpread();
     });
 
+    // ── Auto-advance auto-start (2026-09-01) ────────────────────
+    // For unattended displays (e.g. a Raspberry Pi kiosk) that can't click
+    // the autoplay button by hand: final_deck.html?autoplay=1 starts the
+    // same 15s cycle toggleAutoplay() already provides. Omitting the param
+    // preserves today's default (off until clicked) -- same override
+    // pattern as ?app= above.
+    (function () {
+        if (new URLSearchParams(window.location.search).get('autoplay') === '1') {
+            toggleAutoplay();
+        }
+    })();
+
     // ── Iteration frame (slide 00) ──────────────────────────────
     // Vertical frame flipping through the 190-iteration batch-export run
     // (outputs/batchExport/colorDiagrams/iterNNN_color.png), in place of
